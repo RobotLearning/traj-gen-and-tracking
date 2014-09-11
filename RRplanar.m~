@@ -50,30 +50,16 @@ classdef RRplanar < Robot
             obj.CON.link1.q.min = -Inf;
             obj.CON.link1.u.max = Inf;
             obj.CON.link1.u.min = -Inf;
-                        obj.CON.link1.q.max = Inf;
-            obj.CON.link1.q.min = -Inf;
-            obj.CON.link1.u.max = Inf;
-            obj.CON.link1.u.min = -Inf;
+            obj.CON.link2.q.max = Inf;
+            obj.CON.link2.q.min = -Inf;
+            obj.CON.link2.u.max = Inf;
+            obj.CON.link2.u.min = -Inf;
             
             % check that the input has all the fields
             assert(all(strcmp(fieldnames(obj.CON), fieldnames(STR))));
             obj.CON = STR;
             
-        end
-        
-        % copies the rectangular bounds on R2 input space
-        function set.bound(obj, mat)
-            
-            if isempty(obj.bound)
-                obj.bound = Inf * [-1,1;
-                                   -1,1];
-            end
-            
-            % make sure the values are tighter
-            obj.bound(:,1) = max(obj.bound(:,1), mat(:,1));
-            obj.bound(:,2) = min(obj.bound(:,2), mat(:,2));
-            
-        end
+        end 
         
         % change the cost function
         function set.COST(obj, Q)
@@ -90,76 +76,84 @@ classdef RRplanar < Robot
         function obj = RRplanar(par,con,cost)
             
             % simulation time step
-            obj.h = 0.02;
+            obj.SIM.h = 0.02;
             % dimension of the x vector
-            obj.dim_x = 5;
+            obj.SIM.dim_x = 2;
             % dimension of the action space
-            obj.dim_u = 2;
-            % 2 dimensions, y and z, are tracked only
-            obj.dim_tr = [1,3]; 
+            obj.SIM.dim_u = 2;
             % noise variance of the model (white noise)
-            obj.eps = 0.00003;
+            obj.SIM.eps = 0.00003;
             
             % set object parameter
             obj.PAR = par;
-            % set object disturbance
-            obj.DIST = dist;
             % set object constraints
-            obj.CON = con;
-            
-            % bounds of the inputs
-            bnd = [con.fmin, con.fmax; 
-                  -con.phi_dot_max, con.phi_dot_max]; 
-            % set object bounds
-            obj.bound = bnd;
-                     
+            obj.CON = con;        
             % cost function handle
-            obj.COST = Q;
-            
-            % experiment file
-            obj.expSavefile = 'quad_exp.mat';
-            obj.flg_exp = false;
-            
-            if ~exist(obj.expSavefile, 'file')
-                % no experiments have been performed so far
-                obj.flg_exp = true;
-            end
-            
-            % estimation file
-            obj.estSavefile = 'quad_est.mat';
-            obj.flg_est = false;
-            
-            if ~exist(obj.estSavefile, 'file')
-                % no estimation has been performed so far
-                obj.flg_est = true;
-            end
+            obj.COST = cost.Q;
         end
         
         % provides nominal model
         function [x_dot,varargout] = nominal(~,obj,x,u,flg)
-            % x_dot = quadrocopterNominalDynamics(t,x,u)
-            % differential equation of the quadrocopter
-            % Dynamics
+            % differential equation of the inverse dynamics
             % x_dot = Ax + B(x)u + C
-            A = [0 1 0 0 0;
-                 zeros(1,5);
-                 0 0 0 1 0;
-                 zeros(2,5)];
-            B = [0          0;
-                 -sin(x(5)) 0;
-                 0          0;
-                 cos(x(5))  0;
-                 0          1];
-            C = [0; 0; 0; -obj.PAR.g; 0];
-            x_dot = A*x + B*u + C;
+            x_dot = obj.inverseDynamics(x,u);
             
             % return jacobian matrices
             if flg
-                vec = [0; -u(1)*cos(x(5)); 0; u(1)*sin(x(5)); 0];
-                dfdx = [A(:,1:4), vec];
-                varargout{1} = dfdx;
-                varargout{2} = B;
+                %TODO
             end
+        end
+        
+        % provides actual model
+        function x_dot = actual(~,obj,x,u)
+            
+            % change parameters
+            par.const.g = g; 
+            par.link1.mass = 1.0 * m1;
+            par.link2.mass = 1.0 * m2;
+            par.link1.length = 1.2 * l1;
+            par.link2.length = 1.2 * l2;
+            par.link1.centre.dist = l_c1;
+            par.link2.centre.dist = l_c2;
+            par.link1.inertia = 1.0 * I1;
+            par.link2.inertia = 1.0 * I2;
+            par.link1.motor.inertia = 1.0 * J_m1;
+            par.link2.motor.inertia = 1.0 * J_m2;
+            par.link1.motor.gear_ratio = 1.0 * r_1;
+            par.link2.motor.gear_ratio = 1.0 * r_2;
+            obj.PAR = par;
+            
+            % differential equation of the inverse dynamics
+            % x_dot = Ax + B(x)u + C
+            x_dot = obj.inverseDynamics(x,u);
+            
+        end
+        
+        % run kinematics using an external function
+        function [x1,x2] = kinematics(obj,q)
+            
+            [x1,x2] = RRplanarKinematics(q,obj.PAR);
+        end
+        
+        % call inverse kinematics from outside
+        function q = inverseKinematics(obj,x)
+            
+            q = RRplanarInverseKinematics(x,obj.PAR);
+        end
+                   
+        % dynamics to get u
+        function u = dynamics(obj,q,qd,qdd)
+            u = RRplanarDynamics(q,qd,qdd,obj.PAR);
+        end
+        
+        % inverse dynamics to qet Qd = [qd,qdd]
+        function Qd = inverseDynamics(obj,Q,u)
+            Qd = RRplanarInverseDynamics(Q,u,obj.PAR);
+        end
+        
+        % make an animation of the robot manipulator
+        function animateArm(x,s)
+            animateRR(x(1,:),x(2,:),s);
         end
         
         % get lifted model constraints

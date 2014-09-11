@@ -61,20 +61,6 @@ classdef RRplanar < Robot
             
         end 
         
-        % copies the rectangular bounds on R2 input space
-        function set.bound(obj, mat)
-            
-            if isempty(obj.bound)
-                obj.bound = Inf * [-1,1;
-                                   -1,1];
-            end
-            
-            % make sure the values are tighter
-            obj.bound(:,1) = max(obj.bound(:,1), mat(:,1));
-            obj.bound(:,2) = min(obj.bound(:,2), mat(:,2));
-            
-        end
-        
         % change the cost function
         function set.COST(obj, Q)
             obj.COST.Q = Q;
@@ -100,17 +86,8 @@ classdef RRplanar < Robot
             
             % set object parameter
             obj.PAR = par;
-            % set object disturbance
-            obj.DIST = dist;
             % set object constraints
-            obj.CON = con;
-            
-            % bounds of the inputs
-            bnd = [con.fmin, con.fmax; 
-                  -con.phi_dot_max, con.phi_dot_max]; 
-            % set object bounds
-            obj.bound = bnd;
-                     
+            obj.CON = con;        
             % cost function handle
             obj.COST = cost.Q;
         end
@@ -119,26 +96,64 @@ classdef RRplanar < Robot
         function [x_dot,varargout] = nominal(~,obj,x,u,flg)
             % differential equation of the inverse dynamics
             % x_dot = Ax + B(x)u + C
-            x_dot = inverseDynamics(x,u);
+            x_dot = obj.inverseDynamics(x,u);
             
             % return jacobian matrices
             if flg
-                vec = [0; -u(1)*cos(x(5)); 0; u(1)*sin(x(5)); 0];
-                dfdx = [A(:,1:4), vec];
-                varargout{1} = dfdx;
-                varargout{2} = B;
+                %TODO
             end
         end
         
         % provides actual model
-        function x_dot = actual(~,obj,x,u,flg)
+        function x_dot = actual(~,obj,x,u)
             
-            % TODO: change parameters
+            % change parameters
+            par.const.g = g; 
+            par.link1.mass = 1.0 * m1;
+            par.link2.mass = 1.0 * m2;
+            par.link1.length = 1.2 * l1;
+            par.link2.length = 1.2 * l2;
+            par.link1.centre.dist = l_c1;
+            par.link2.centre.dist = l_c2;
+            par.link1.inertia = 1.0 * I1;
+            par.link2.inertia = 1.0 * I2;
+            par.link1.motor.inertia = 1.0 * J_m1;
+            par.link2.motor.inertia = 1.0 * J_m2;
+            par.link1.motor.gear_ratio = 1.0 * r_1;
+            par.link2.motor.gear_ratio = 1.0 * r_2;
+            obj.PAR = par;
             
             % differential equation of the inverse dynamics
             % x_dot = Ax + B(x)u + C
-            x_dot = inverseDynamics(x,u);
+            x_dot = obj.inverseDynamics(x,u);
             
+        end
+        
+        % run kinematics using an external function
+        function [x1,x2] = kinematics(obj,q)
+            
+            [x1,x2] = RRplanarKinematics(q,obj.PAR);
+        end
+        
+        % call inverse kinematics from outside
+        function q = inverseKinematics(obj,x)
+            
+            q = RRplanarInverseKinematics(x,obj.PAR);
+        end
+                   
+        % dynamics to get u
+        function u = dynamics(obj,q,qd,qdd)
+            u = RRplanarDynamics(q,qd,qdd,obj.PAR);
+        end
+        
+        % inverse dynamics to qet Qd = [qd,qdd]
+        function Qd = inverseDynamics(obj,Q,u)
+            Qd = RRplanarInverseDynamics(Q,u,obj.PAR);
+        end
+        
+        % make an animation of the robot manipulator
+        function animateArm(x,s)
+            animateRR(x(1,:),x(2,:),s);
         end
         
         % get lifted model constraints

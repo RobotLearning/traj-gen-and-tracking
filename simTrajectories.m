@@ -43,6 +43,22 @@ PAR.link2.motor.inertia = J_m2;
 PAR.link1.motor.gear_ratio = r_1;
 PAR.link2.motor.gear_ratio = r_2;
 
+% form constraints
+CON.link1.q.max = Inf;
+CON.link1.q.min = -Inf;
+CON.link1.u.max = Inf;
+CON.link1.u.min = -Inf;
+CON.link2.q.max = Inf;
+CON.link2.q.min = -Inf;
+CON.link2.u.max = Inf;
+CON.link2.u.min = -Inf;
+
+% cost structure
+COST.Q = eye(2);
+
+% initialize model
+rr = RRplanar(PAR,CON,COST);
+
 %% Generate a desired trajectory
 
 h = 0.01;
