@@ -9,23 +9,10 @@ classdef (Abstract) Model < handle
         PAR
         % constraints structure
         CON
-        % fields necessar
-        % rectangular input bound (matrix)
-        bound
+        % fields necessary for simulation and plotting, noise etc.
+        SIM
         % cost structure, not necessarily quadratic
         COST
-    end
-    
-    % Fields needed for simulation and plotting
-    properties
-        % simulation time step
-        h
-        % dimension of the state space
-        dim_x
-        % dimension of the action space
-        dim_u
-        % noise variance of the model (white noise)
-        eps
     end
     
     % methods to be implemented
@@ -33,14 +20,10 @@ classdef (Abstract) Model < handle
         
         % generate trajectories
         trajectory(t,sp,s,unom)
-        % plot trajectory tracking results
-        plot(obj,trjs)
         % set a nominal model
-        nominal(t,obj,x,u)
+        [xdot,A,B] = nominal(t,obj,x,u)
         % add a disturbance model to the nominal model
-        actual(t,obj,x,u)
-        % linearize around trajectory
-        linearize(obj,trj)
+        xdot = actual(t,obj,x,u)
         % get lifted constraints
         lift(obj,trj)
         
@@ -53,15 +36,16 @@ classdef (Abstract) Model < handle
         % TODO: is it correct to assume u constant?
         function next = step(obj,t,prev,u,fun)
             
+            h = obj.SIM.h;
             % get trajectory of states
             % using classical Runge-Kutta method (RK4)
-            k1 = obj.h * fun(t,obj,prev,u);
+            k1 = h * fun(t,obj,prev,u);
             x_k1 = prev + k1/2;
-            k2 = obj.h * fun(t,obj,x_k1,u);
+            k2 = h * fun(t,obj,x_k1,u);
             x_k2 = prev + k2/2;
-            k3 = obj.h * fun(t,obj,x_k2,u);
+            k3 = h * fun(t,obj,x_k2,u);
             x_k3 = prev + k3;
-            k4 = obj.h * fun(t,obj,x_k3,u);
+            k4 = h * fun(t,obj,x_k3,u);
             next = prev + (k1 + 2*k2 + 2*k3 + k4)/6;
 
         end
@@ -106,34 +90,53 @@ classdef (Abstract) Model < handle
             end
         end
         
-        % generate examples for maximum likelihood estimation
-        % and then estimate with maximum likelihood
-        function est = experiment(obj,shapes,coords)
-           if obj.flg_exp 
-               % apply function to each cell in cell array
-               trjs = cellfun(@(shape,coord) trajectory(obj,shape,coord), ...
-                                shapes, coords, 'UniformOutput', false);
-               % plot trajectories
-               obj.plot(trjs);
-               % save trajectories cell
-               save(obj.expSavefile,'trjs');               
-           else
-               % load trajectories
-               load(obj.expSavefile);
-           end
-           
-           if obj.flg_est
-               est = Estimator(obj);
-               [x,y] = est.processCtrlExp(trjs);
-               est.mle(x',y);
-               % save estimation results
-               save(obj.estSavefile,'est');
-           else
-               % load hyperparameters
-               load(obj.estSavefile);
-           end
-        end       
+        % linearizes the nominal dynamics around the trajectory
+        function [A,B] = linearize(obj,trj)
+            
+            N = trj.N - 1; 
+            t = trj.t;
+            s = trj.s;
+            dimx = obj.SIM.dim_x;
+            dimu = obj.SIM.dim_u;
+            h = obj.SIM.h;
+            unom = trj.unom;
+            A = zeros(dimx,dimx,N);
+            B = zeros(dimx,dimu,N);
+            for i = 1:N
+                [~,A(:,:,i), B(:,:,i)] = obj.nominal(t(i),obj,s(:,i),...
+                                                 unom(:,i),true);
+                % get discrete approximation from jacobian
+                % crude approximation
+                %A(:,:,i) = eye(dimx,dimx) + obj.h * A(:,:,i);
+                %B(:,:,i) = obj.h * B(:,:,i);
+                % exact matrix calculation 
+                Mat = [A(:,:,i), B(:,:,i); zeros(dimu, dimx + dimu)];
+                MD = expm(h * Mat);
+                A(:,:,i) = MD(1:dimx,1:dimx);
+                B(:,:,i) = MD(1:dimx,dimx+1:end);
+            end
+        end
         
+        % plot the control inputs
+        function plot_nom_controls(obj,trj)
+            
+            u = trj.unom;
+            t = trj.t;
+            num_inp = size(u,1);
+            for i = 1:num_inp
+                figure(i);
+                subplot(num_inp,i,1);
+                plot(t,ud(i,:),'LineWidth',2);
+                title(i + 'Control input to');
+            xlabel('Time (s)');
+            ylabel('Scaled voltages u_1 = r_1 * K_m_1 / R_1 * V_1');
+            subplot(1,2,2);
+            plot(t,ud(2,:),'LineWidth',2);
+            title('Control input to second joint');
+            ylabel('Scaled voltages u_2 = r_2 * K_m_2 / R_2 * V_2');
+            xlabel('Time (s)');
+            
+        end
         
     end
 end

@@ -44,8 +44,7 @@ classdef Trajectory < handle
             obj.PERF(end+1).name = name;
             obj.PERF(end+1).u = u;
             obj.PERF(end+1).x = x;
-            diff = x - obj.s;
-            obj.PERF(end+1).cost = fun_cost(diff);
+            obj.PERF(end+1).cost = fun_cost.fnc(x,obj.s);
 
             % display SSE error
             sse = sum(obj.PERF(end+1).cost);

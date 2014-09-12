@@ -9,11 +9,11 @@ classdef RRplanar < Robot
         CON
         % cost function structure (handle and weight matrix)
         COST
-        % input bound
-        bound
-        % cartesian coordinates of the trajectory
+        % fields necessary for simulation and plotting, noise etc.
+        SIM
+        % cartesian coordinates of the nominal trajectory
         x, xd, xdd
-        % joint space coordinates
+        % joint space coordinates of the nominal trajectory
         q, qd, qdd
     end
     
@@ -48,10 +48,18 @@ classdef RRplanar < Robot
             % initialize all fields
             obj.CON.link1.q.max = Inf;
             obj.CON.link1.q.min = -Inf;
+            obj.CON.link1.qd.max = Inf;
+            obj.CON.link1.qd.min = -Inf;
+            obj.CON.link1.qdd.max = Inf;
+            obj.CON.link1.qdd.min = -Inf;
             obj.CON.link1.u.max = Inf;
             obj.CON.link1.u.min = -Inf;
             obj.CON.link2.q.max = Inf;
             obj.CON.link2.q.min = -Inf;
+            obj.CON.link2.qd.max = Inf;
+            obj.CON.link2.qd.min = -Inf;
+            obj.CON.link2.qdd.max = Inf;
+            obj.CON.link2.qdd.min = -Inf;            
             obj.CON.link2.u.max = Inf;
             obj.CON.link2.u.min = -Inf;
             
@@ -60,6 +68,14 @@ classdef RRplanar < Robot
             obj.CON = STR;
             
         end 
+        
+        % set the simulation parameters
+        function set.SIM(obj, sim)
+            obj.SIM.dimx = 2;
+            obj.SIM.dimu = 2;
+            obj.SIM.h = sim.h;
+            obj.SIM.eps = sim.eps;
+        end
         
         % change the cost function
         function set.COST(obj, Q)
@@ -73,17 +89,9 @@ classdef RRplanar < Robot
         
         % constructor for convenience
         % TODO: divide into several methods?
-        function obj = RRplanar(par,con,cost)
+        function obj = RRplanar(par,con,cost,sim)
             
-            % simulation time step
-            obj.SIM.h = 0.02;
-            % dimension of the x vector
-            obj.SIM.dim_x = 2;
-            % dimension of the action space
-            obj.SIM.dim_u = 2;
-            % noise variance of the model (white noise)
-            obj.SIM.eps = 0.00003;
-            
+            obj.SIM = sim;            
             % set object parameter
             obj.PAR = par;
             % set object constraints
@@ -96,11 +104,12 @@ classdef RRplanar < Robot
         function [x_dot,varargout] = nominal(~,obj,x,u,flg)
             % differential equation of the inverse dynamics
             % x_dot = Ax + B(x)u + C
-            x_dot = obj.inverseDynamics(x,u);
+            [x_dot,dfdx,dfdu] = obj.inverseDynamics(x,u,true);
             
             % return jacobian matrices
             if flg
-                %TODO
+                varargout{1} = dfdx;
+                varargout{2} = dfdu;
             end
         end
         
@@ -108,24 +117,24 @@ classdef RRplanar < Robot
         function x_dot = actual(~,obj,x,u)
             
             % change parameters
-            par.const.g = g; 
-            par.link1.mass = 1.0 * m1;
-            par.link2.mass = 1.0 * m2;
-            par.link1.length = 1.2 * l1;
-            par.link2.length = 1.2 * l2;
-            par.link1.centre.dist = l_c1;
-            par.link2.centre.dist = l_c2;
-            par.link1.inertia = 1.0 * I1;
-            par.link2.inertia = 1.0 * I2;
-            par.link1.motor.inertia = 1.0 * J_m1;
-            par.link2.motor.inertia = 1.0 * J_m2;
-            par.link1.motor.gear_ratio = 1.0 * r_1;
-            par.link2.motor.gear_ratio = 1.0 * r_2;
+            par.const.g = obj.PAR.const.g;
+            par.link1.mass = 1.0 * obj.PAR.link1.mass;
+            par.link2.mass = 1.0 * obj.PAR.link2.mass;
+            par.link1.length = 1.2 * obj.PAR.link1.length;
+            par.link2.length = 1.2 * obj.PAR.link2.length;
+            par.link1.centre.dist = obj.PAR.link1.centre.dist;
+            par.link2.centre.dist = obj.PAR.link2.centre.dist;
+            par.link1.inertia = 1.0 * obj.PAR.link1.inertia;
+            par.link2.inertia = 1.0 * obj.PAR.link2.inertia;
+            par.link1.motor.inertia = 1.0 * obj.PAR.link1.motor.inertia;
+            par.link2.motor.inertia = 1.0 * obj.PAR.link2.motor.inertia;
+            par.link1.motor.gear_ratio = 1.0 * obj.PAR.link1.motor.gear_ratio;
+            par.link2.motor.gear_ratio = 1.0 * obj.PAR.link2.motor.gear_ratio;
             obj.PAR = par;
             
             % differential equation of the inverse dynamics
             % x_dot = Ax + B(x)u + C
-            x_dot = obj.inverseDynamics(x,u);
+            x_dot = obj.inverseDynamics(x,u,false);
             
         end
         
@@ -147,79 +156,40 @@ classdef RRplanar < Robot
         end
         
         % inverse dynamics to qet Qd = [qd,qdd]
-        function Qd = inverseDynamics(obj,Q,u)
-            Qd = RRplanarInverseDynamics(Q,u,obj.PAR);
+        function Qd = inverseDynamics(obj,Q,u,flag)
+            Qd = RRplanarInverseDynamics(Q,u,obj.PAR,flag);
         end
         
         % make an animation of the robot manipulator
-        function animateArm(x,s)
-            animateRR(x(1,:),x(2,:),s);
+        function animateArm(obj,q_actual,s)
+            [x1,x2] = obj.kinematics(q_actual);
+            animateRR(x1,x2,s);
         end
-        
-        % get lifted model constraints
-        function [umin,umax,L,q] = lift(obj,trj)
-            
-            N = trj.N - 1; 
-            u_trj = trj.unom(:,1:N);
-            %dimx = obj.dim_x;
-            dimu = obj.dim_u;
-            umin(1,:) = obj.CON.fmin - u_trj(1,:);
-            umin(2,:) = -obj.CON.phi_dot_max - u_trj(2,:);
-            umax(1,:) = obj.CON.fmax - u_trj(1,:);
-            umax(2,:) = obj.CON.phi_dot_max - u_trj(2,:);
 
-            % arrange them in a format suitable for optimization
-            umin = umin(:);
-            umax = umax(:);
-            
-            % construct D
-            D = (diag(ones(1,dimu*(N-1)),dimu) - eye(dimu*N))/obj.h;
-            D = D(1:end-dimu,:);
-            % construct L1 and L2
-            L1 = zeros(N-1, N*dimu);
-            L2 = zeros(N-1, N*dimu);
-            a = 1/4;
-            b = obj.PAR.Iy/(2 * obj.PAR.m * obj.PAR.L); 
-            b = b/obj.h; %b_bar
-            vec1 = [a -b 0 b];
-            vec2 = [a b 0 -b];
-            for i = 1:N-1
-                L1(i,:) = [zeros(1,(i-1)*dimu), vec1, zeros(1,(N-i-1)*dimu)];
-                L2(i,:) = [zeros(1,(i-1)*dimu), vec2, zeros(1,(N-i-1)*dimu)];
+        % using a simple inverse kinematics method
+        % TODO: extend using planning to incorporate constraints
+        function Traj = trajectory(obj,t,x_des)
+
+            h = obj.SIM.h;
+            obj.q = RRplanarInverseKinematics(x_des,obj.PAR);
+            % check for correctness
+            %[x1,x2] = RRplanarKinematics(q,PAR);
+            obj.qd = diff(obj.q')' / h; 
+            obj.qdd = diff(obj.qd')' / h; 
+
+            % keep velocity and acceleration vectors the same length as displacements
+            obj.qd(:,end+1) = obj.qd(:,end);
+            obj.qdd(:,end+1) = obj.qdd(:,end);
+            obj.qdd(:,end+1) = obj.qdd(:,end);
+
+            % get the desired inputs
+            ud = zeros(size(obj.q));
+            for i = 1:size(obj.q,2)
+                ud(:,i) = RRplanarDynamics(obj.q(:,i),obj.qd(:,i),...
+                                           obj.qdd(:,i),obj.PAR);
             end
-            u_dot_max = [4*obj.CON.fi_dot_max; obj.CON.phi_ddot_max];
-            U_dot_max = repmat(u_dot_max,N-1,1);
-            u_star = u_trj(:); 
-
-            L = [D; -D; L1; -L1; L2; -L2];
-            q = [U_dot_max - D*u_star; 
-                 U_dot_max + D*u_star;
-                 obj.CON.fmax - L1*u_star;
-                 -obj.CON.fmin + L1*u_star;
-                 obj.CON.fmax - L2*u_star;
-                 -obj.CON.fmin + L2*u_star];    
             
-        end
-
-        % wrapper for the splines-based trajectory generator method
-        % using the differential flatness of the dynamics
-        function Traj = trajectory(obj,shape,spline)
-
-            spline_x = spline(1,:);
-            spline_y = spline(2,:);
-            [t,u_nom,x_nom] = quad_traj_gen(shape,obj.PAR,obj.CON,...
-                                            obj.h,spline_x,spline_y);
-            fun0 = @(t,obj,x,u) nominal(t,obj,x,u,false);
-            fun = @(t,obj,x,u) nominal(t,obj,x,u,false) ...
-                             + disturbance(t,obj,x,u);
-            x_real = simulate(obj,t,x_nom(:,1),u_nom,fun);
-            x_pred = predict_full(obj,t,x_real,u_nom,fun0);
-            Traj = Trajectory(t,spline,x_nom,u_nom);
-            cost = obj.COST;
-            % trajectory generator generates an extra input
-            Traj.addPerformance(u_nom(:,1:end-1),x_real,...
-                                x_pred,cost,'splines');
-            % TODO add noise to x! (as observed variable)
+            Traj = Trajectory(t,[],x_des,ud);
         end
         
     end

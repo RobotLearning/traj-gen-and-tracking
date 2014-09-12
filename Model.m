@@ -11,8 +11,6 @@ classdef (Abstract) Model < handle
         CON
         % fields necessary for simulation and plotting, noise etc.
         SIM
-        % rectangular input bound (matrix)
-        bound
         % cost structure, not necessarily quadratic
         COST
     end
@@ -26,8 +24,6 @@ classdef (Abstract) Model < handle
         [xdot,A,B] = nominal(t,obj,x,u)
         % add a disturbance model to the nominal model
         xdot = actual(t,obj,x,u)
-        % get lifted constraints
-        lift(obj,trj)
         
     end
     
@@ -75,8 +71,7 @@ classdef (Abstract) Model < handle
         
         % useful to propagate one full iteration of
         % ILC input sequence
-        function x_next = evolve_full(obj,t,x,us)
-            x0 = x(:,1);
+        function x_next = evolve_full(obj,t,x0,us)
             x_next = simulate(obj,t,x0,us,obj.actual);
         end
         
@@ -117,6 +112,23 @@ classdef (Abstract) Model < handle
                 A(:,:,i) = MD(1:dimx,1:dimx);
                 B(:,:,i) = MD(1:dimx,dimx+1:end);
             end
+        end
+        
+        % plot the control inputs
+        function plot_nom_controls(obj,trj)
+            
+            u = trj.unom;
+            t = trj.t;
+            num_inp = size(u,1);
+            for i = 1:num_inp
+                figure(i);
+                subplot(num_inp,i,1);
+                plot(t,u(i,:),'LineWidth',2);
+                title(strcat(num2str(i),'control input'));
+                xlabel('Time (s)');
+                ylabel('Scaled voltages u = r * K_m / R * V');
+            end
+            
         end
         
     end

@@ -46,87 +46,53 @@ PAR.link2.motor.gear_ratio = r_2;
 % form constraints
 CON.link1.q.max = Inf;
 CON.link1.q.min = -Inf;
+CON.link1.qd.max = Inf;
+CON.link1.qd.min = -Inf;
+CON.link1.qdd.max = Inf;
+CON.link1.qdd.min = -Inf;
 CON.link1.u.max = Inf;
 CON.link1.u.min = -Inf;
 CON.link2.q.max = Inf;
 CON.link2.q.min = -Inf;
+CON.link2.qd.max = Inf;
+CON.link2.qd.min = -Inf;
+CON.link2.qdd.max = Inf;
+CON.link2.qdd.min = -Inf;
 CON.link2.u.max = Inf;
 CON.link2.u.min = -Inf;
 
 % cost structure
 COST.Q = eye(2);
 
+% simulation parameters
+SIM.h = 0.02;
+SIM.eps = 3e-4;
+
 % initialize model
-rr = RRplanar(PAR,CON,COST);
+RR = RRplanar(PAR,CON,COST,SIM);
 
 %% Generate a desired trajectory
 
-h = 0.01;
+h = SIM.h;
 y_des = 0.4:h:0.6;
 x_des = 0.6 * ones(1,length(y_des));
 t = h * 1:length(y_des);
 X_des = [x_des;y_des];
-q = RRplanarInverseKinematics(X_des,PAR);
-% check for correctness
-%[x1,x2] = RRplanarKinematics(q,PAR);
-qd = diff(q')' / h; 
-qdd = diff(qd')' / h; 
+Traj = RR.trajectory(t,X_des);
 
-% keep velocity and acceleration vectors the same length as displacements
-qd(:,end+1) = qd(:,end);
-qdd(:,end+1) = qdd(:,end);
-qdd(:,end+1) = qdd(:,end);
-
-% get the desired inputs
-ud = zeros(size(q));
-for i = 1:size(q,2)
-    ud(:,i) = RRplanarDynamics(q(:,i),qd(:,i),qdd(:,i),PAR);
-end
-
-%% Evolve system dynamics
-
-% change parameters as a disturbance model
-PAR.const.g = g; 
-PAR.link1.mass = 1.0 * m1;
-PAR.link2.mass = 1.0 * m2;
-PAR.link1.length = 1.0 * l1;
-PAR.link2.length = 1.0 * l2;
-PAR.link1.centre.dist = l_c1;
-PAR.link2.centre.dist = l_c2;
-PAR.link1.inertia = 1.0 * I1;
-PAR.link2.inertia = 1.0 * I2;
-PAR.link1.motor.inertia = 1.0 * J_m1;
-PAR.link2.motor.inertia = 1.0 * J_m2;
-PAR.link1.motor.gear_ratio = 1.0 * r_1;
-PAR.link2.motor.gear_ratio = 1.0 * r_2;
+%% Evolve system dynamics and animate the robot arm
 
 % TODO: add a nonzero friction matrix B
 
-Q = [q; qd];
-Q_a = Q(:,1);
-fun = @(q,u) RRplanarInverseDynamics(q,u,PAR);
-for i = 1:size(q,2)-1
-    Q_a(:,i+1) = evolveDynamics(h,Q_a(:,i),ud(:,i),fun);
-end
+q0 = RR.q(:,1);
+q_act = RR.evolve_full(t,q0,Traj.unom);
 
 % get the cartesian coordinates of the actual trajectory followed
-q_a = Q_a(1:2,:);
-[x1,x2] = RRplanarKinematics(q_a,PAR);
+q_a = q_act(1:2,:);
 
-%% Plot the controls and animate the robot arm
+% Plot the controls and animate the robot arm
+rr.plot_nom_controls(Traj);
 
-figure(1);
-subplot(1,2,1);
-plot(t,ud(1,:),'LineWidth',2);
-title('Control input to first joint');
-xlabel('Time (s)');
-ylabel('Scaled voltages u_1 = r_1 * K_m_1 / R_1 * V_1');
-subplot(1,2,2);
-plot(t,ud(2,:),'LineWidth',2);
-title('Control input to second joint');
-ylabel('Scaled voltages u_2 = r_2 * K_m_2 / R_2 * V_2');
-xlabel('Time (s)');
-
-animateRR(x1,x2,X_des);
+RR.animateArm(q_a,X_des);
 
 %% Start learning with ILC

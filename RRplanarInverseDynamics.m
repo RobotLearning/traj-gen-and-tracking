@@ -5,7 +5,9 @@
 % Hutchingson, Vidyasagar
 % pg. 260-262 and 290
 
-function Qd = RRplanarInverseDynamics(Q,u,PAR)
+% If flag is set to true, return the jacobians of the dynamics f
+
+function [Qd,varargout] = RRplanarInverseDynamics(Q,u,PAR,flag)
 
 % system states are X = [q(1),q(2),qd(1),qd(2)];
 q = Q(1:2);
@@ -88,3 +90,20 @@ Cx = [zeros(2,1); -G];
 
 Mbig = [eye(2), zeros(2); zeros(2), M];
 Qd = Mbig \ (Ax*Q + Bx*u + Cx);
+
+if flag
+    
+    % Take four differences with h small
+    h = 1e-6;
+    Qh = repmat(Q,1,4) + h * eye(4);
+    Qdh = zeros(4,4);
+    for i = 1:4
+        Qdh(:,i) = RRplanarInverseDynamics(Qh(:,i),u,PAR,false);
+    end
+    der = Qdh - Qd / h;
+    dfdx = [zeros(2), eye(2); der(3:4,:)];
+    dfdu = inv(Mbig);
+    varargout{1} = dfdx;
+    varargout{2} = dfdu;
+    
+end

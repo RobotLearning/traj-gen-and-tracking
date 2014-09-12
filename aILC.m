@@ -116,6 +116,51 @@ classdef aILC < ILC
 
         end
         
+        % get lifted model constraints
+        function [umin,umax,L,q] = lift_constraints(obj,trj)
+            
+            N = trj.N - 1; 
+            u_trj = trj.unom(:,1:N);
+            %dimx = obj.dim_x;
+            dimu = obj.dim_u;
+            umin(1,:) = obj.CON.link1.u.min - u_trj(1,:);
+            umin(2,:) = obj.CON.link2.u.min - u_trj(2,:);
+            umax(1,:) = obj.CON.link1.u.max - u_trj(1,:);
+            umax(2,:) = obj.CON.link2.u.max - u_trj(2,:);
+
+            % arrange them in a format suitable for optimization
+            umin = umin(:);
+            umax = umax(:);
+            
+            % construct D
+            D = (diag(ones(1,dimu*(N-1)),dimu) - eye(dimu*N))/obj.h;
+            D = D(1:end-dimu,:);
+            % construct L1 and L2
+            L1 = zeros(N-1, N*dimu);
+            L2 = zeros(N-1, N*dimu);
+            a = 1/4;
+            b = obj.PAR.Iy/(2 * obj.PAR.m * obj.PAR.L); 
+            b = b/obj.h; %b_bar
+            vec1 = [a -b 0 b];
+            vec2 = [a b 0 -b];
+            for i = 1:N-1
+                L1(i,:) = [zeros(1,(i-1)*dimu), vec1, zeros(1,(N-i-1)*dimu)];
+                L2(i,:) = [zeros(1,(i-1)*dimu), vec2, zeros(1,(N-i-1)*dimu)];
+            end
+            u_dot_max = [4*obj.CON.fi_dot_max; obj.CON.phi_ddot_max];
+            U_dot_max = repmat(u_dot_max,N-1,1);
+            u_star = u_trj(:); 
+
+            L = [D; -D; L1; -L1; L2; -L2];
+            q = [U_dot_max - D*u_star; 
+                 U_dot_max + D*u_star;
+                 obj.CON.fmax - L1*u_star;
+                 -obj.CON.fmin + L1*u_star;
+                 obj.CON.fmax - L2*u_star;
+                 -obj.CON.fmin + L2*u_star];    
+            
+        end
+        
         function us = feedforward(obj,trj,model,dev)
             
             % get rid of x0 in dev
