@@ -21,9 +21,10 @@ classdef (Abstract) Model < handle
         % generate trajectories
         trajectory(t,sp,s,unom)
         % set a nominal model
-        [xdot,A,B] = nominal(t,obj,x,u)
+        [xdot,A,B] = nominal(obj,t,x,u)
         % add a disturbance model to the nominal model
-        xdot = actual(t,obj,x,u)
+        xdot = actual(obj,t,x,u)
+        % lifted vector constraints
         
     end
     
@@ -35,16 +36,24 @@ classdef (Abstract) Model < handle
         function next = step(obj,t,prev,u,fun)
             
             h = obj.SIM.h;
-            % get trajectory of states
-            % using classical Runge-Kutta method (RK4)
-            k1 = h * fun(t,obj,prev,u);
-            x_k1 = prev + k1/2;
-            k2 = h * fun(t,obj,x_k1,u);
-            x_k2 = prev + k2/2;
-            k3 = h * fun(t,obj,x_k2,u);
-            x_k3 = prev + k3;
-            k4 = h * fun(t,obj,x_k3,u);
-            next = prev + (k1 + 2*k2 + 2*k3 + k4)/6;
+            
+            if strcmpi(obj.SIM.int,'Euler')
+                delta = h * fun(t,prev,u);
+                next = prev + delta;                
+            elseif strcmpi(obj.SIM.int,'RK4')
+                % get trajectory of states
+                % using classical Runge-Kutta method (RK4)  
+                k1 = h * fun(t,prev,u);
+                x_k1 = prev + k1/2;
+                k2 = h * fun(t,x_k1,u);
+                x_k2 = prev + k2/2;
+                k3 = h * fun(t,x_k2,u);
+                x_k3 = prev + k3;
+                k4 = h * fun(t,x_k3,u);
+                next = prev + (k1 + 2*k2 + 2*k3 + k4)/6;
+            else
+                error('Method not implemented. Quitting...');
+            end
 
         end
         
@@ -72,7 +81,8 @@ classdef (Abstract) Model < handle
         % useful to propagate one full iteration of
         % ILC input sequence
         function x_next = evolve_full(obj,t,x0,us)
-            x_next = simulate(obj,t,x0,us,obj.actual);
+            %fun = @(t,x,u) obj.actual(t,x,u);
+            x_next = simulate(obj,t,x0,us,@obj.actual);
         end
         
         % simulates whole trajectory
@@ -93,14 +103,14 @@ classdef (Abstract) Model < handle
             N = trj.N - 1; 
             t = trj.t;
             s = trj.s;
-            dimx = obj.SIM.dim_x;
-            dimu = obj.SIM.dim_u;
+            dimx = obj.SIM.dimx;
+            dimu = obj.SIM.dimu;
             h = obj.SIM.h;
             unom = trj.unom;
             A = zeros(dimx,dimx,N);
             B = zeros(dimx,dimu,N);
             for i = 1:N
-                [~,A(:,:,i), B(:,:,i)] = obj.nominal(t(i),obj,s(:,i),...
+                [~,A(:,:,i), B(:,:,i)] = obj.nominal(t(i),s(:,i),...
                                                  unom(:,i),true);
                 % get discrete approximation from jacobian
                 % crude approximation
@@ -120,11 +130,11 @@ classdef (Abstract) Model < handle
             u = trj.unom;
             t = trj.t;
             num_inp = size(u,1);
+            figure(1);
             for i = 1:num_inp
-                figure(i);
-                subplot(num_inp,i,1);
+                subplot(num_inp,1,i);
                 plot(t,u(i,:),'LineWidth',2);
-                title(strcat(num2str(i),'control input'));
+                title(strcat(num2str(i),'. control input'));
                 xlabel('Time (s)');
                 ylabel('Scaled voltages u = r * K_m / R * V');
             end

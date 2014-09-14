@@ -27,7 +27,6 @@ classdef Trajectory < handle
             obj.sp = sp;
             obj.s = s;
             obj.unom = unom;
-            obj.PERF = struct;
         end
         
         % fun_cost is a cost function, not necessarily quadratic
@@ -41,18 +40,21 @@ classdef Trajectory < handle
             end
             
             % append performance
-            obj.PERF(end+1).name = name;
-            obj.PERF(end+1).u = u;
-            obj.PERF(end+1).x = x;
-            obj.PERF(end+1).cost = fun_cost.fnc(x,obj.s);
+            i = length(obj.PERF);
+            obj.PERF(i+1).name = name;
+            obj.PERF(i+1).u = u;
+            obj.PERF(i+1).x = x;
+            obj.PERF(i+1).err = x - obj.s;
+            obj.PERF(i+1).cost = fun_cost.fnc(x,obj.s);
 
             % display SSE error
-            sse = sum(obj.PERF(end+1).cost);
+            sse = sum(obj.PERF(i+1).cost);
             fprintf('Q-SSE for %s is %f \n', name, sse);
             % add to controller
             if ~ischar(controller)
                 controller.record(u,sse);
             end
+            
         end
         
     end

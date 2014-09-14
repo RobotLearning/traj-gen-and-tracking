@@ -27,7 +27,7 @@ classdef Filter < handle
         % initialize variances
         function obj = Filter(model,trj,mats)
             
-            dimx = model.dim_x;
+            dimx = model.SIM.dimx;
             N = trj.N - 1;
             obj.P = eye(dimx*N);
             obj.x = zeros(dimx*N,1);

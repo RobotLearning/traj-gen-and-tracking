@@ -52,6 +52,8 @@ CON.link1.qdd.max = Inf;
 CON.link1.qdd.min = -Inf;
 CON.link1.u.max = Inf;
 CON.link1.u.min = -Inf;
+CON.link1.udot.max = 100;
+CON.link1.udot.min = -100;
 CON.link2.q.max = Inf;
 CON.link2.q.min = -Inf;
 CON.link2.qd.max = Inf;
@@ -60,39 +62,60 @@ CON.link2.qdd.max = Inf;
 CON.link2.qdd.min = -Inf;
 CON.link2.u.max = Inf;
 CON.link2.u.min = -Inf;
+CON.link2.udot.max = 100;
+CON.link2.udot.min = -100;
 
 % cost structure
-COST.Q = eye(2);
+% only penalize positions
+COST.Q = [eye(2), zeros(2); zeros(2,4)];
 
 % simulation parameters
 SIM.h = 0.02;
 SIM.eps = 3e-4;
+SIM.int = 'Euler'; % or RK4
 
 % initialize model
 RR = RRplanar(PAR,CON,COST,SIM);
 
 %% Generate a desired trajectory
 
+% TODO: implement Jacobian and inverse computations of
+% q, qd, qdd from x, xd, xdd
+% Put Jacobian in Kinematics
+
 h = SIM.h;
 y_des = 0.4:h:0.6;
+yd_des = [0, diff(y_des)];
 x_des = 0.6 * ones(1,length(y_des));
+xd_des = [0, diff(x_des)];
 t = h * 1:length(y_des);
-X_des = [x_des;y_des];
-Traj = RR.trajectory(t,X_des);
+s = [x_des; y_des; xd_des; yd_des]; % desired trajectory 
+Traj = RR.trajectory(t,s);
 
 %% Evolve system dynamics and animate the robot arm
 
 % TODO: add a nonzero friction matrix B
 
-q0 = RR.q(:,1);
+q0 = [RR.q(:,1); RR.qd(:,1)];
 q_act = RR.evolve_full(t,q0,Traj.unom);
 
-% get the cartesian coordinates of the actual trajectory followed
-q_a = q_act(1:2,:);
-
 % Plot the controls and animate the robot arm
-rr.plot_nom_controls(Traj);
-
-RR.animateArm(q_a,X_des);
+RR.plot_nom_controls(Traj);
+RR.animateArm(q_act(1:2,:),s(1:2,:));
 
 %% Start learning with ILC
+
+% get the deviations
+% TODO: xd should also be returned
+[~,x] = RR.kinematics(q_act(1:2,:));
+xd = [zeros(2,1), diff(x')'];
+% add performance to trajectory
+Traj.addPerformance(Traj.unom,[x;xd],RR.COST,'Nominal');
+ilc = aILC(RR,Traj);
+% get next inputs
+u1 = ilc.feedforward(Traj,RR,Traj.PERF(end).err);
+% evolve system
+q_act = RR.evolve_full(t,q0,u1);
+% Plot the controls and animate the robot arm
+RR.plot_nom_controls(Traj);
+RR.animateArm(q_act(1:2,:),s(1:2,:));

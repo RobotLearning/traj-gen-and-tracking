@@ -100,9 +100,9 @@ if flag
     for i = 1:4
         Qdh(:,i) = RRplanarInverseDynamics(Qh(:,i),u,PAR,false);
     end
-    der = Qdh - Qd / h;
+    der = (Qdh - repmat(Qd,1,4)) / h;
     dfdx = [zeros(2), eye(2); der(3:4,:)];
-    dfdu = inv(Mbig);
+    dfdu = Mbig \ Bx;
     varargout{1} = dfdx;
     varargout{2} = dfdu;
     

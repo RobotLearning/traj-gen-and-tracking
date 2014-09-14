@@ -54,6 +54,8 @@ classdef RRplanar < Robot
             obj.CON.link1.qdd.min = -Inf;
             obj.CON.link1.u.max = Inf;
             obj.CON.link1.u.min = -Inf;
+            obj.CON.link1.udot.max = Inf;
+            obj.CON.link1.udot.min = -Inf;
             obj.CON.link2.q.max = Inf;
             obj.CON.link2.q.min = -Inf;
             obj.CON.link2.qd.max = Inf;
@@ -62,6 +64,8 @@ classdef RRplanar < Robot
             obj.CON.link2.qdd.min = -Inf;            
             obj.CON.link2.u.max = Inf;
             obj.CON.link2.u.min = -Inf;
+            obj.CON.link2.udot.max = Inf;
+            obj.CON.link2.udot.min = -Inf;
             
             % check that the input has all the fields
             assert(all(strcmp(fieldnames(obj.CON), fieldnames(STR))));
@@ -71,16 +75,19 @@ classdef RRplanar < Robot
         
         % set the simulation parameters
         function set.SIM(obj, sim)
-            obj.SIM.dimx = 2;
+            obj.SIM.dimx = 4;
             obj.SIM.dimu = 2;
             obj.SIM.h = sim.h;
             obj.SIM.eps = sim.eps;
+            assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
+                   'Please input Euler or RK4 as integration method');
+            obj.SIM.int = sim.int;
         end
         
         % change the cost function
         function set.COST(obj, Q)
             obj.COST.Q = Q;
-            obj.COST.fnc = @(x1,x2) (x1-x2)'*Q*(x1-x2);
+            obj.COST.fnc = @(x1,x2) diag((x1-x2)'*Q*(x1-x2));
         end
         
     end
@@ -101,7 +108,7 @@ classdef RRplanar < Robot
         end
         
         % provides nominal model
-        function [x_dot,varargout] = nominal(~,obj,x,u,flg)
+        function [x_dot,varargout] = nominal(obj,~,x,u,flg)
             % differential equation of the inverse dynamics
             % x_dot = Ax + B(x)u + C
             [x_dot,dfdx,dfdu] = obj.inverseDynamics(x,u,true);
@@ -114,27 +121,28 @@ classdef RRplanar < Robot
         end
         
         % provides actual model
-        function x_dot = actual(~,obj,x,u)
+        % TODO: should we wrap the inverse dynamics?
+        function x_dot = actual(obj,~,x,u)
             
             % change parameters
             par.const.g = obj.PAR.const.g;
             par.link1.mass = 1.0 * obj.PAR.link1.mass;
             par.link2.mass = 1.0 * obj.PAR.link2.mass;
-            par.link1.length = 1.2 * obj.PAR.link1.length;
-            par.link2.length = 1.2 * obj.PAR.link2.length;
+            par.link1.length = 1.0 * obj.PAR.link1.length;
+            par.link2.length = 1.0 * obj.PAR.link2.length;
             par.link1.centre.dist = obj.PAR.link1.centre.dist;
             par.link2.centre.dist = obj.PAR.link2.centre.dist;
             par.link1.inertia = 1.0 * obj.PAR.link1.inertia;
             par.link2.inertia = 1.0 * obj.PAR.link2.inertia;
             par.link1.motor.inertia = 1.0 * obj.PAR.link1.motor.inertia;
             par.link2.motor.inertia = 1.0 * obj.PAR.link2.motor.inertia;
-            par.link1.motor.gear_ratio = 1.0 * obj.PAR.link1.motor.gear_ratio;
-            par.link2.motor.gear_ratio = 1.0 * obj.PAR.link2.motor.gear_ratio;
-            obj.PAR = par;
+            par.link1.motor.gear_ratio = 2.0 * obj.PAR.link1.motor.gear_ratio;
+            par.link2.motor.gear_ratio = 2.0 * obj.PAR.link2.motor.gear_ratio;
+            
             
             % differential equation of the inverse dynamics
             % x_dot = Ax + B(x)u + C
-            x_dot = obj.inverseDynamics(x,u,false);
+            x_dot = RRplanarInverseDynamics(x,u,par,false);
             
         end
         
@@ -156,8 +164,14 @@ classdef RRplanar < Robot
         end
         
         % inverse dynamics to qet Qd = [qd,qdd]
-        function Qd = inverseDynamics(obj,Q,u,flag)
-            Qd = RRplanarInverseDynamics(Q,u,obj.PAR,flag);
+        function [Qd, varargout] = inverseDynamics(obj,Q,u,flag)
+            if flag
+                [Qd, dfdx, dfdu] = RRplanarInverseDynamics(Q,u,obj.PAR,flag);
+                varargout{1} = dfdx;
+                varargout{2} = dfdu;
+            else
+                Qd = RRplanarInverseDynamics(Q,u,obj.PAR,flag);
+            end
         end
         
         % make an animation of the robot manipulator
@@ -190,6 +204,39 @@ classdef RRplanar < Robot
             end
             
             Traj = Trajectory(t,[],x_des,ud);
+        end
+        
+        % get lifted model constraints
+        function [umin,umax,L,q] = lift_constraints(obj,trj)
+            
+            h = obj.SIM.h;
+            N = trj.N - 1; 
+            u_trj = trj.unom(:,1:N);
+            %dimx = obj.SIM.dimx;
+            dimu = obj.SIM.dimu;
+            umin(1,:) = obj.CON.link1.u.min - u_trj(1,:);
+            umin(2,:) = obj.CON.link2.u.min - u_trj(2,:);
+            umax(1,:) = obj.CON.link1.u.max - u_trj(1,:);
+            umax(2,:) = obj.CON.link2.u.max - u_trj(2,:);
+
+            % arrange them in a format suitable for optimization
+            umin = umin(:);
+            umax = umax(:);
+            
+            % construct D
+            D = (diag(ones(1,dimu*(N-1)),dimu) - eye(dimu*N))/h;
+            D = D(1:end-dimu,:);
+            
+            u_dot_max = [obj.CON.link1.udot.max; obj.CON.link2.udot.max];
+            u_dot_min = [obj.CON.link1.udot.min; obj.CON.link2.udot.min];
+            U_dot_max = repmat(u_dot_max,N-1,1);
+            U_dot_min = repmat(u_dot_min,N-1,1);
+            u_star = u_trj(:);
+
+            L = [D; -D];
+            q = [U_dot_max - D*u_star;
+                 -U_dot_min + D*u_star];
+            
         end
         
     end
