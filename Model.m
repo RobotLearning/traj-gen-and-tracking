@@ -125,12 +125,18 @@ classdef (Abstract) Model < handle
         end
         
         % plot the control inputs
-        function plot_nom_controls(obj,trj)
+        function plot_controls(obj,trj)
             
-            u = trj.unom;
-            t = trj.t;
+            if ~isempty(trj.PERF)
+                u = trj.PERF(end).u;
+                t = trj.t(1:end-1);
+            else
+                u = trj.unom;
+                t = trj.t;
+            end
+            
             num_inp = size(u,1);
-            figure(1);
+            figure;
             for i = 1:num_inp
                 subplot(num_inp,1,i);
                 plot(t,u(i,:),'LineWidth',2);

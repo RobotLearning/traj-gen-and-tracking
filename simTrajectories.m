@@ -1,6 +1,28 @@
 %% Simulate trajectories for the planar RR arm
+%
+% TODO: Investigate the following
+%
+% Other models (quadrotor, pendulum, RRR arm, ...)
+% Other mismatches (parametric, friction, ...)
+% Adding feedback 
+% DMP 
 
-clc; clear; close all;
+%# store breakpoints
+tmp = dbstatus;
+save('tmp.mat','tmp')
+
+%# clear all
+close all
+clear classes %# clears even more than clear all
+clc
+
+%# reload breakpoints
+load('tmp.mat')
+dbstop(tmp)
+
+%# clean up
+clear tmp
+delete('tmp.mat')
 
 %% Define constants and parameters
 
@@ -13,7 +35,7 @@ m2 = 0.5; %mass of second link, kg
 l1 = 0.50; %length of first link, m
 l2 = 0.40; %length of second link, m
 l_c1 = 0.25; %distance of first link's center of gravity to prev. joint, m
-l_c2 = 0.20; %dist. of second link's c.o.g. to prev. joint, m
+l_c2 = 0.20; %dist. of second link's c.oZ.g. to prev. joint, m
 I1 = (1/12)*m1*l1^2; %assume thin rod moment of inertia around c.o.g.
 I2 = (1/12)*m1*l2^2; %kg m^2
 
@@ -100,10 +122,12 @@ q0 = [RR.q(:,1); RR.qd(:,1)];
 q_act = RR.evolve_full(t,q0,Traj.unom);
 
 % Plot the controls and animate the robot arm
-RR.plot_nom_controls(Traj);
+RR.plot_controls(Traj);
 RR.animateArm(q_act(1:2,:),s(1:2,:));
 
 %% Start learning with ILC
+
+num_trials = 20;
 
 % get the deviations
 % TODO: xd should also be returned
@@ -111,11 +135,23 @@ RR.animateArm(q_act(1:2,:),s(1:2,:));
 xd = [zeros(2,1), diff(x')'];
 % add performance to trajectory
 Traj.addPerformance(Traj.unom,[x;xd],RR.COST,'Nominal');
-ilc = aILC(RR,Traj);
-% get next inputs
-u1 = ilc.feedforward(Traj,RR,Traj.PERF(end).err);
-% evolve system
-q_act = RR.evolve_full(t,q0,u1);
+ilc = bILC(RR,Traj);
+
+for i = 1:num_trials
+    % get next inputs
+    u = ilc.feedforward(Traj,RR,Traj.PERF(end).err);
+    % evolve system
+    q_act = RR.evolve_full(t,q0,u);
+    % get the cartesian coordinates
+    [~,x] = RR.kinematics(q_act(1:2,:));
+    xd = [zeros(2,1), diff(x')'];
+    % add performance to trajectory
+    Traj.addPerformance(u,[x;xd],RR.COST,ilc);
+    % Plot the controls and animate the robot arm
+    %RR.plot_controls(Traj);
+    %RR.animateArm(q_act(1:2,:),s(1:2,:));
+end
+
 % Plot the controls and animate the robot arm
-RR.plot_nom_controls(Traj);
+RR.plot_controls(Traj);
 RR.animateArm(q_act(1:2,:),s(1:2,:));

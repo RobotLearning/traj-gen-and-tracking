@@ -1,7 +1,6 @@
-% Iterative Learning Control using Angela's Kalman-filtering
-% approach
+% Basic Iterative Learning Control using PD-type input update
 
-classdef aILC < ILC
+classdef bILC < ILC
     
     % fields common to all ILCs (defined in abstract ILC class)
     properties
@@ -30,11 +29,7 @@ classdef aILC < ILC
     
     % fields that are particular to this implementation
     properties
-        % L and q are (convex) objective function penalties
-        L
-        q
-        % scaling matrix 
-        S
+        
         % scales for the covariances (process/output)
         eps
         eps_M
@@ -45,11 +40,11 @@ classdef aILC < ILC
     
     methods
         
-        function obj = aILC(model,trj)
+        function obj = bILC(model,trj)
                         
             obj.episode = 0;
-            obj.color = 'k';
-            obj.name = 'Kalman filter based ILC';
+            obj.color = 'b';
+            obj.name = 'Arimoto type ILC';
             obj.error = 0;
             
             N = trj.N - 1;
@@ -61,7 +56,7 @@ classdef aILC < ILC
             obj.H = zeros(N*dim_x,N*dim_u); 
             obj.eps = 0.003;
             obj.eps_M = 0.05;
-            obj.u_last = zeros(dim_u,N);
+            obj.u_last = trj.unom(:,1:N);
             
             obj.lift(model,trj);
             % initialize Kalman filter
@@ -104,63 +99,48 @@ classdef aILC < ILC
             
             % construct umin and umax
             % extract constraints
-            [obj.umin,obj.umax,obj.L,obj.q] = model.lift_constraints(trj);
+            %[obj.umin,obj.umax,obj.L,obj.q] = model.lift_constraints(trj);
             
             % construct scaling matrix S
-            Sx = eye(dim_x);
+            %Sx = eye(dim_x);
             % weighing trajectory deviation by these values
-            Sw = sqrt(model.COST.Q);
-            Tw = eye(dim_x);
-            obj.S = cell(1,N);
-            [obj.S{:}] = deal(Tw * Sx * Sw);
-            obj.S = blkdiag(obj.S{:});
+            %Sw = sqrt(model.COST.Q);
+            %Tw = eye(dim_x);
+            %obj.S = cell(1,N);
+            %[obj.S{:}] = deal(Tw * Sx * Sw);
+            %obj.S = blkdiag(obj.S{:});
 
         end
         
-        function us = feedforward(obj,trj,model,dev)
+        function u_next = feedforward(obj,trj,model,dev)
             
-            h = model.SIM.h;
+            %h = model.SIM.h;
             % get rid of x0 in dev
-            dev = dev(:,2:end);            
-            N = trj.N - 1;
+            ddev = diff(dev(1:2,:)')';
+            dev = dev(1:2,2:end);            
+            %N = trj.N - 1;
             %dim_x = model.SIM.dimx;
-            dim_u = model.SIM.dimu;
-            F = obj.F;
-            S = obj.S;
-            L = obj.L;
-            q = obj.q;
-            umin = obj.umin; 
-            umax = obj.umax;
-            
-            % input deviation penalty matrix D
-            D0 = eye(dim_u*N); 
-%             D1 = (diag(ones(1,dim_u*(N-1)),dim_u) - eye(dim_u*N))/h;
-%             D1 = D1(1:end-dim_u,:); % D1 is (N-1)*dimu x N*dimu dimensional
-%             D2 = (diag(ones(1,dim_u*(N-2)),2*dim_u) - ... 
-%                  2*diag(ones(1,dim_u*(N-1)),dim_u) + eye(dim_u*N)) ...
-%                  /(h^2);
-%             D2 = D2(1:end-2*dim_u,:); % D2 is (N-2)*dimu x N*dimu dimensional
-            % penalty scale
-            a0 = 1e-8;
-%             a1 = 1e-5; 
-%             a2 = 1e-5;
-            % slack for input u
-            %eps_u = 1e-6;
+            %dim_u = model.SIM.dimu;
+            %F = obj.F;
+            %S = obj.S;
+            %L = obj.L;
+            %q = obj.q;
+            %umin = obj.umin; 
+            %umax = obj.umax;
             
             % get disturbance estimate from filter
-            u_pre = obj.u_last(:);
-            obj.filter.predict(u_pre);
-            obj.filter.update(dev,u_pre);
-            d = obj.filter.x;
+            %u_pre = obj.u_last(:);
+            %obj.filter.predict(u_pre);
+            %obj.filter.update(dev,u_pre);
+            %d = obj.filter.x;
     
-            % solve with quadprog
-            options = optimset('Display', 'iter', ...
-                      'Algorithm', 'interior-point-convex');
-            uiter = quadprog(2*(F'*S')*S*F + 2*a0*(D0'*D0), ...
-                          2*F'*S'*d, L, q, [], [], umin, umax, [], options);
+            % set learning rate
+            alpha_p = 0.0 * max(max(obj.u_last))/max(max(abs(dev)));
+            alpha_d = 0.2 * max(max(obj.u_last))/max(max(abs(ddev)));
+            u_next = obj.u_last + alpha_p * dev + alpha_d * ddev;
             
-            obj.u_last = reshape(uiter,dim_u,N);
-            us = trj.unom(:,1:N) + obj.u_last;
+            obj.u_last = u_next;
+            
         end
         
     end

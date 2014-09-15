@@ -41,8 +41,8 @@ classdef (Abstract) ILC < handle
         % get sse costs for the controller
         function record(obj,u_applied,cost)            
             obj.episode = obj.episode + 1;
-            obj.u_last(obj.epi) = u_applied;
-            obj.error(obj.episode) = cost;            
+            obj.u_last = u_applied;
+            obj.error = cost;            
         end
         
     end
