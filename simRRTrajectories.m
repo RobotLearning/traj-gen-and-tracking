@@ -2,7 +2,7 @@
 %
 % TODO: Investigate the following
 %
-% Other models (quadrotor, pendulum, RRR arm, ...)
+% Other models (RRR arm, ...)
 % Other mismatches (parametric, friction, ...)
 % Adding feedback 
 % DMP 

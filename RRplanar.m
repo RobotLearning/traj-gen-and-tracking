@@ -88,6 +88,7 @@ classdef RRplanar < Robot
         function set.COST(obj, Q)
             obj.COST.Q = Q;
             obj.COST.fnc = @(x1,x2) diag((x1-x2)'*Q*(x1-x2));
+            assert(length(Q) == obj.SIM.dimx);
         end
         
     end
