@@ -1,0 +1,52 @@
+% Abstract Iterative Learning Control (ILC) superclass 
+% which all ILC implementations must inherit from
+% for holding performances, plotting, etc...
+
+classdef (Abstract) ILC < handle
+    
+    properties (Abstract)
+        
+        % number of total episodes so far
+        episode
+        % color of particular controller
+        color
+        % name of the particular controller
+        name
+        % costs incurred (Q-SSE)
+        error
+        
+        % ILC's Last input sequence
+        u_last
+        % Lifted state matrix F
+        F
+        % Lifted state matrix G
+        G
+        % Lifted state matrix H
+        H
+        % Lifted state inequalities
+        umin
+        umax
+        
+    end
+    
+    methods (Abstract)
+        
+        % apply feedforward control (sequence of control signals)
+        feedforward(i,trj,model,x)        
+        
+    end
+    
+    methods
+        
+        % get sse costs for the controller
+        function record(obj,u_applied,cost)            
+            obj.episode = obj.episode + 1;
+            obj.u_last = u_applied;
+            obj.error = cost;            
+        end
+        
+    end
+    
+    
+    
+end

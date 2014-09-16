@@ -135,9 +135,9 @@ classdef bILC < ILC
             %d = obj.filter.x;
     
             % set learning rate
-            alpha_p = 0.0 * max(max(obj.u_last))/max(max(abs(dev)));
-            alpha_d = 0.2 * max(max(obj.u_last))/max(max(abs(ddev)));
-            u_next = obj.u_last + alpha_p * dev + alpha_d * ddev;
+            alpha_p = 0.5;
+            alpha_d = 0.1;
+            u_next = obj.u_last - alpha_p * dev - alpha_d * ddev;
             
             obj.u_last = u_next;
             

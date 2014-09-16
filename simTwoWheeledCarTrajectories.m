@@ -1,95 +1,108 @@
-%% Set system parameters
+%% Simulate trajectories for the two-wheeled robot kinematical model
 
-clc; clear, close all;
+%# store breakpoints
+tmp = dbstatus;
+save('tmp.mat','tmp')
 
-%%%%%%%%%%%%% Define System and Constraint Parameters %%%%%%%%
+%# clear all
+close all
+clear classes %# clears even more than clear all
+clc
+
+%# reload breakpoints
+load('tmp.mat')
+dbstop(tmp)
+
+%# clean up
+clear tmp
+delete('tmp.mat')
+
+%% Set system parameters and constraints
+
 % parameter values of the experimental setup
 % radius of the robot
-PAR.R1 = 0.2; % meter
-PAR.R2 = 0.2;
-PAR.d = 0.8;
+PAR.wheel1.radius = 0.2; % meter
+PAR.wheel2.radius = 0.2;
+PAR.length = 0.8;
+
 % constraints on the system dynamics
-CON.x_cnstr = 5; %0.5 or 1
-CON.y_cnstr = 5;
-CON.w1_cnstr = 100;
-CON.w2_cnstr = 100;
+CON.state.x.max = 5; 
+CON.state.x.min = -5;
+CON.state.y.max = 5;
+CON.state.y.min = -5;
+CON.state.theta.max = 2*pi;
+CON.state.theta.min = -2*pi;
+CON.wheel1.u.max = 200;
+CON.wheel1.u.min = -200;
+CON.wheel2.u.max = 200;
+CON.wheel2.u.min = -200;
+CON.wheel1.udot.max = 100;
+CON.wheel1.udot.min = -100;
+CON.wheel2.udot.max = 100;
+CON.wheel2.udot.min = -100;
 
-%%%%%%%%%%%%%%%%%%%%%%% Simulation Values %%%%%%%%%%%%%%%%%
+% Simulation Values 
 % dimension of the x vector
-dim = 3;
+SIM.dimx = 3;
 % dimension of the control input
-dim_u = 2;
+SIM.dimu = 2;
 % time step h 
-h = 0.01;
-tfinal = 1;
-t = 0:h:tfinal;
-N = tfinal/h + 1; 
-Nu = N-1; % one less than the length of t
+SIM.h = 0.01;
 % noise and initial error
-eps = 0.03;
-eps_M = 0.005; % covar of the lifted-domain noise
-d0_hat = 0;
-P0 = eye(N*dim);
-% state trajectories
-x = zeros(dim, N);
-x_0 = 0; y_0 = 0; phi_0 = pi/6; % initial conditions
+SIM.eps = 0.03;
+% integration method
+SIM.int = 'Euler';
 
-%% Create desired trajectory and linearized model
+% cost structure
+% only penalize positions
+COST.Q = diag([1,1,0]);
 
-% generate trajectory from script
-traj_gen;
+% initialize model
+TW = TwoWheeledCar(PAR,CON,COST,SIM);
 
-% make room for learning
-CON.w1_cnstr = 150; 
-CON.w2_cnstr = 150; 
+%% Create desired trajectory 
 
-% Construct linearized model around the desired trajectory
-% structure containing matrices returned
-STR = construct_model(t,x,PAR,u_trj,CON);
+h = SIM.h;
+tfin = 1;
+t = h:h:tfin;
+% create a pre-nominal sine-curve 
+s(1,:) = t;
+s(2,:) = sin(2*pi*t);
+s(3,1:end-1) = atan2(diff(s(2,:)),diff(s(1,:)));
+s(3,end) = s(3,1); % since trajectory is periodical after t = 1
 
-% lifted-domain noise covariance
-M = eps_M * eye(N*dim); % covariance of process x measurement noise
-Omega0 = eps * eye(N*dim); % initial covariance of d noise
+Traj = TW.trajectory(t,s);
 
-%% Iterative Learning Control
+%% Evolve system dynamics and animate the robot arm
 
-w = ones(1,N+1); % equal weighting
-% lsq-cost for trajectory deviation
-lsq_cost = @(x1,x2,w) norm(x1([1,2],:)-x2([1,2],:),2); 
+x0 = s(:,1);
+xact = TW.evolve(t,x0,Traj.unom);
 
-%%%%%%%%%%%%%%%%% CONSTRUCT SCALING MATRIX S %%%%%%%%%%%%%
-% penalize only deviations given by the matrix
-Sx = eye(dim); % scaling matrix
-Sw = diag([1, 1, 0]); % weighing trajectory deviation by these values
-w_l = 0.0; % put weight on last w_l second 
-% emphasizing the performance objective of reaching upright position
-last = w_l * round(1/h);
-Sx1 = cell(1,N - last);
-[Sx1{:}] = deal(Sx * Sw);
-Sx1 = blkdiag(Sx1{:});
-Sx2 = cell(1,last);
-% termination matrix
-Tw = diag(ones(1,dim));
-mat = Tw * Sx * Sw; 
-[Sx2{:}] = deal(mat);
-Sx2 = blkdiag(Sx2{:});
-S = blkdiag(Sx1,Sx2);
+% Plot the controls and animate the robot arm
+TW.plot_controls(Traj);
+TW.animate(xact,s(1:2,:));
 
-%%%%%%%%%%%%%%%% PASS TO STRUCTURE %%%%%%%%%%%%%%%%%%%%%%%
-% Pass necessary parameters through structure
-STR.dim = dim;
-STR.dim_u = dim_u;
-STR.COV.Omega = Omega0;
-STR.COV.M = M;
-STR.CON = CON;
-STR.PAR = PAR;
-STR.d0 = d0_hat * ones(N*dim,1);
-STR.P0 = P0;
-STR.w = w;
-STR.lsq_cost = lsq_cost;
-STR.S = S;
+%% Start learning with ILC
 
-%%%%%%%%%%%%% ITERATIVE LEARNING CONTROL LOOP %%%%%%%%%%%%%%%%%
-fun = @robotTwoWheelsError;
-[err, u_app] = ILC(t,x,u_trj,fun,STR,10);
-% errors can be reused in some other code
+num_trials = 10;
+
+% get the deviations
+% add performance to trajectory
+Traj.addPerformance(Traj.unom,xact,TW.COST,'Nominal');
+ilc = aILC(TW,Traj);
+
+for i = 1:num_trials
+    % get next inputs
+    u = ilc.feedforward(Traj,TW,Traj.PERF(end).err);
+    % evolve system
+    x_act = TW.evolve(t,x0,u);
+    % add performance to trajectory
+    Traj.addPerformance(u,x_act,TW.COST,ilc);
+    % Plot the controls and animate the robot arm
+    %RR.plot_controls(Traj);
+    %RR.animateArm(q_act(1:2,:),s(1:2,:));
+end
+
+% Plot the controls and animate the robot arm
+TW.plot_controls(Traj);
+TW.animate(x_act,s(1:2,:));

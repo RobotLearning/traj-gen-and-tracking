@@ -73,14 +73,9 @@ classdef (Abstract) Model < handle
             end            
         end
         
-        % evolve one step
-        function x_next = evolve(obj,t,x,u)            
-            x_next = step(obj,t,x,u,obj.actual);
-        end
-        
         % useful to propagate one full iteration of
         % ILC input sequence
-        function x_next = evolve_full(obj,t,x0,us)
+        function x_next = evolve(obj,t,x0,us)
             %fun = @(t,x,u) obj.actual(t,x,u);
             x_next = simulate(obj,t,x0,us,@obj.actual);
         end
@@ -142,7 +137,7 @@ classdef (Abstract) Model < handle
                 plot(t,u(i,:),'LineWidth',2);
                 title(strcat(num2str(i),'. control input'));
                 xlabel('Time (s)');
-                ylabel('Scaled voltages u = r * K_m / R * V');
+                ylabel(strcat('Control input u',num2str(i)));
             end
             
         end

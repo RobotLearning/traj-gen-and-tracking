@@ -59,8 +59,8 @@ classdef aILC < ILC
             obj.F = zeros(N*dim_x, N*dim_u);
             obj.G = eye(N*dim_x);
             obj.H = zeros(N*dim_x,N*dim_u); 
-            obj.eps = 0.003;
-            obj.eps_M = 0.05;
+            obj.eps = 1e-6;
+            obj.eps_M = 1e-6;
             obj.u_last = zeros(dim_u,N);
             
             obj.lift(model,trj);
@@ -134,18 +134,21 @@ classdef aILC < ILC
             
             % input deviation penalty matrix D
             D0 = eye(dim_u*N); 
-%             D1 = (diag(ones(1,dim_u*(N-1)),dim_u) - eye(dim_u*N))/h;
-%             D1 = D1(1:end-dim_u,:); % D1 is (N-1)*dimu x N*dimu dimensional
-%             D2 = (diag(ones(1,dim_u*(N-2)),2*dim_u) - ... 
-%                  2*diag(ones(1,dim_u*(N-1)),dim_u) + eye(dim_u*N)) ...
-%                  /(h^2);
-%             D2 = D2(1:end-2*dim_u,:); % D2 is (N-2)*dimu x N*dimu dimensional
+            D1 = (diag(ones(1,dim_u*(N-1)),dim_u) - eye(dim_u*N))/h;
+            D1 = D1(1:end-dim_u,:); % D1 is (N-1)*dimu x N*dimu dimensional
+            D2 = (diag(ones(1,dim_u*(N-2)),2*dim_u) - ... 
+                 2*diag(ones(1,dim_u*(N-1)),dim_u) + eye(dim_u*N)) ...
+                 /(h^2);
+            D2 = D2(1:end-2*dim_u,:); % D2 is (N-2)*dimu x N*dimu dimensional
             % penalty scale
-            a0 = 1e-8;
-%             a1 = 1e-5; 
-%             a2 = 1e-5;
+            a0 = 5e-5;
+            a1 = 5e-5; 
+            a2 = 5e-5;
             % slack for input u
             %eps_u = 1e-6;
+            
+            a = a2;
+            D = D2;
             
             % get disturbance estimate from filter
             u_pre = obj.u_last(:);
@@ -156,7 +159,7 @@ classdef aILC < ILC
             % solve with quadprog
             options = optimset('Display', 'iter', ...
                       'Algorithm', 'interior-point-convex');
-            uiter = quadprog(2*(F'*S')*S*F + 2*a0*(D0'*D0), ...
+            uiter = quadprog(2*(F'*S')*S*F + 2*a*(D'*D), ...
                           2*F'*S'*d, L, q, [], [], umin, umax, [], options);
             
             obj.u_last = reshape(uiter,dim_u,N);
