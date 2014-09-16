@@ -47,9 +47,10 @@ SIM.dimx = 3;
 % dimension of the control input
 SIM.dimu = 2;
 % time step h 
-SIM.h = 0.01;
-% noise and initial error
-SIM.eps = 0.03;
+SIM.h = 0.1;
+% noise and initial disturbance covariance
+SIM.eps = 0.003;
+SIM.eps_d = 0.005;
 % integration method
 SIM.int = 'Euler';
 
@@ -84,11 +85,12 @@ TW.animate(xact,s(1:2,:));
 
 %% Start learning with ILC
 
-num_trials = 10;
+num_trials = 2;
 
 % get the deviations
 % add performance to trajectory
 Traj.addPerformance(Traj.unom,xact,TW.COST,'Nominal');
+%STR = construct_model(t,s,PAR,Traj.unom,CON);
 ilc = aILC(TW,Traj);
 
 for i = 1:num_trials

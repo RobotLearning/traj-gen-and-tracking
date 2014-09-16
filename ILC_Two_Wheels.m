@@ -49,8 +49,10 @@ SIM.dimu = 2;
 % time step h 
 SIM.h = 0.01;
 % noise and initial error
-SIM.eps = 0.03;
-SIM.eps_M = 0.005;
+SIM.eps = 0.003;
+SIM.eps_d = 0.005;
+d0_hat = 0;
+P0_hat = 1; 
 % integration method
 SIM.int = 'Euler';
 
@@ -68,7 +70,8 @@ dim_x = SIM.dimx;
 h = SIM.h;
 tfin = 1;
 t = h:h:tfin;
-N = length(t) - 1;
+N = length(t);
+Nu = N - 1;
 % create a pre-nominal sine-curve 
 s(1,:) = t;
 s(2,:) = sin(2*pi*t);
@@ -81,20 +84,18 @@ Traj = TW.trajectory(t,s);
 
 % Construct linearized model around the desired trajectory
 % structure containing matrices returned
-STR = construct_model(t,s,PAR,Traj.unom,CON);
+STR0 = construct_model(t,s,PAR,Traj.unom,CON);
+ilc = aILC(TW,Traj);
 
 % lifted-domain noise covariance
-M = SIM.eps_M * eye(N*dim_x); % covariance of process x measurement noise
-Omega0 = SIM.eps * eye(N*dim_x); % initial covariance of d noise
+M = SIM.eps * eye(Nu*dim_x); % covariance of process x measurement noise
+Omega0 = SIM.eps_d * eye(Nu*dim_x); % initial covariance of d noise
 
 %% Iterative Learning Control
 
-w = ones(1,N+1); % equal weighting
+w = ones(1,N); % equal weighting
 % lsq-cost for trajectory deviation
 lsq_cost = @(x1,x2,w) norm(x1([1,2],:)-x2([1,2],:),2); 
-
-d0_hat = 0;
-P0 = eye(N*dim_x);
 
 %%%%%%%%%%%%%%%%% CONSTRUCT SCALING MATRIX S %%%%%%%%%%%%%
 % penalize only deviations given by the matrix
@@ -103,7 +104,7 @@ Sw = diag([1, 1, 0]); % weighing trajectory deviation by these values
 w_l = 0.0; % put weight on last w_l second 
 % emphasizing the performance objective of reaching upright position
 last = w_l * round(1/h);
-Sx1 = cell(1,N - last);
+Sx1 = cell(1,Nu - last);
 [Sx1{:}] = deal(Sx * Sw);
 Sx1 = blkdiag(Sx1{:});
 Sx2 = cell(1,last);
@@ -114,22 +115,29 @@ mat = Tw * Sx * Sw;
 Sx2 = blkdiag(Sx2{:});
 S = blkdiag(Sx1,Sx2);
 
+% change parameter values of the experimental setup
+% radius of the robot
+PAR.wheel1.radius = 0.22; % meter
+PAR.wheel2.radius = 0.18;
+PAR.length = 0.8;
+
 %%%%%%%%%%%%%%%% PASS TO STRUCTURE %%%%%%%%%%%%%%%%%%%%%%%
 % Pass necessary parameters through structure
+STR = struct(ilc);
+STR = STR0;
 STR.dim_x = dim_x;
 STR.dim_u = dim_u;
 STR.COV.Omega = Omega0;
 STR.COV.M = M;
 STR.CON = CON;
 STR.PAR = PAR;
-STR.d0 = d0_hat * ones(N*dim_x,1);
-STR.P0 = P0;
+STR.d0 = d0_hat * ones(Nu*dim_x,1);
+STR.P0 = P0_hat * eye(Nu*dim_x);
 STR.w = w;
 STR.lsq_cost = lsq_cost;
 STR.S = S;
 
-u_trj = Traj.unom;
 %%%%%%%%%%%%% ITERATIVE LEARNING CONTROL LOOP %%%%%%%%%%%%%%%%%
 fun = @robotTwoWheelsError;
-[err, u_app] = ILC(t,s,u_trj,fun,STR,10);
+[err, u_app] = oldILC(t,s,Traj.unom(:,1:end-1),fun,STR,10);
 % errors can be reused in some other code

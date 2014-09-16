@@ -37,7 +37,7 @@ classdef aILC < ILC
         S
         % scales for the covariances (process/output)
         eps
-        eps_M
+        eps_d
         % Kalman filter
         filter
         
@@ -59,14 +59,14 @@ classdef aILC < ILC
             obj.F = zeros(N*dim_x, N*dim_u);
             obj.G = eye(N*dim_x);
             obj.H = zeros(N*dim_x,N*dim_u); 
-            obj.eps = 1e-6;
-            obj.eps_M = 1e-6;
+            obj.eps = model.SIM.eps;
+            obj.eps_d = model.SIM.eps_d;
             obj.u_last = zeros(dim_u,N);
             
             obj.lift(model,trj);
             % initialize Kalman filter
-            mats.M = obj.eps_M * eye(N*dim_x); % covariance of process x measurement noise
-            mats.Omega = obj.eps * eye(N*dim_x); % initial covariance of d noise
+            mats.M = obj.eps * eye(N*dim_x); % covariance of process x measurement noise
+            mats.Omega = obj.eps_d * eye(N*dim_x); % initial covariance of d noise
             mats.A = eye(N*dim_x);
             mats.B = zeros(N*dim_x,N*dim_u);
             mats.C = obj.G;
@@ -90,7 +90,7 @@ classdef aILC < ILC
             % construct lifted domain matrix F
             for l = 1:N
                 for m = 1:N
-                    vec_x = (l-1)*dim_x + 1: l*dim_x;
+                    vec_x = (l-1)*dim_x + 1:l*dim_x;
                     vec_u = (m-1)*dim_u + 1:m*dim_u;
                     if m <= l
                         mat = eye(dim_x);

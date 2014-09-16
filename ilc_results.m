@@ -9,9 +9,9 @@ pause(0.5);
 
 figure(2);
 subplot(2,1,1)
-plot(t,u_app(1,:,iter), '-b'); 
+plot(t(1:end-1),u_app(1,:,iter), '-b'); 
 hold on;
 
 subplot(2,1,2)
-plot(t,u_app(2,:,iter), '-b');
+plot(t(1:end-1),u_app(2,:,iter), '-b');
 hold on;

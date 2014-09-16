@@ -7,8 +7,8 @@ dim = size(x,1);
 u_cur = u_trj + u;
 % state trajectories for this iteration
 traj = x;
-Omega = COV.Omega(dim+1:end,dim+1:end);
-M = COV.M(dim+1:end,dim+1:end);
+Omega = COV.Omega;
+M = COV.M;
 
 % simulate real trajectory with RK4
 handle = @robotTwoWheelsKinematics;
@@ -27,4 +27,4 @@ x_vec = x(:);
 x_vec = x_vec(dim+1:end);
 err = y - x_vec;
 % start from x(1)
-err = [zeros(dim,1); err];
+%err = [zeros(dim,1); err];

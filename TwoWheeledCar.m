@@ -63,6 +63,7 @@ classdef TwoWheeledCar < Model
             obj.SIM.dimu = 2;
             obj.SIM.h = sim.h;
             obj.SIM.eps = sim.eps;
+            obj.SIM.eps_d = sim.eps_d;
             assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
                    'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;

@@ -1,5 +1,6 @@
-function MATS = construct_model(t,x,PAR,u_trj,CON)
+function MATS = construct_model(t,s,PAR,u_trj,CON)
 
+x = s(:,1:end-1);
 dim = size(x,1);
 N = length(u_trj);
 Nu = N - 1;
@@ -7,9 +8,9 @@ h = t(2) - t(1);
 dim_u = size(u_trj,1);
 
 %%%%%%%%%%%% CONSTRUCT A and B matrices %%%%%%%%%%%%%%%%%%%%%%%
-A = zeros(dim,dim,N);
-B = zeros(dim,dim_u,N);
-for i = 1:N
+A = zeros(dim,dim,Nu);
+B = zeros(dim,dim_u,Nu);
+for i = 1:Nu
     [~,A(:,:,i), B(:,:,i)] = robotTwoWheelsKinematics(t(i),x(:,i),u_trj(:,i),PAR,true);
     % get discrete approximation from jacobian
     % crude approximation
@@ -24,12 +25,12 @@ end
 
 %%%%%%%%% CONSTRUCT lifted domain matrices F, G, and H %%%%%%%%
 % G is identity matrix, H is zero matrix
-F = zeros(N*dim, Nu*dim_u); % u is two-dimensional
-G = eye(N*dim); % since y(t) = x(t) 
-H = zeros(N*dim,Nu*dim_u); 
-for l = 1:N
+F = zeros(Nu*dim, Nu*dim_u); % u is two-dimensional
+G = eye(Nu*dim); % since y(t) = x(t) 
+H = zeros(Nu*dim,Nu*dim_u); 
+for l = 1:Nu
     for m = 1:Nu
-        vec_x = (l-1)*dim + 1: l*dim;
+        vec_x = (l-1)*dim + 1:l*dim;
         vec_u = (m-1)*dim_u + 1:m*dim_u;
         if m <= l
             MATS = eye(dim);
@@ -62,10 +63,10 @@ umax = umax(:);
 
 %%%%%%%%%%%%%%%% CONSTRUCT x_con %%%%%%%%%%%%%%%%%%%
 
-x_shift = [x(1,2:end), x(1,end)];
+x_shift = [x(1,2:end), s(1,end)];
 x_min = -x_cnstr - min([x(1,:); x_shift]);
 x_max = x_cnstr - max([x(1,:); x_shift]);
-y_shift = [x(2,2:end), x(2,end)];
+y_shift = [x(2,2:end), s(2,end)];
 y_min = -y_cnstr - min([x(2,:); y_shift]);
 y_max = y_cnstr - max([x(2,:); y_shift]);
 
@@ -78,7 +79,7 @@ x_con_min = x_con_min(:);
 x_con = [x_con_max; -x_con_min];
 
 % form the constraint matrix C
-C = cell(1,N);
+C = cell(1,Nu);
 m = [1 0 0; 0 1 0];
 [C{:}] = deal(m);
 C = blkdiag(C{:});
