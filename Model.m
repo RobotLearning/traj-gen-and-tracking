@@ -92,6 +92,26 @@ classdef (Abstract) Model < handle
             end
         end
         
+        % add observation noise to state evolution
+        % lifted vector representation
+        function [y,dev] = observe(obj,t,x0,us)
+            
+            N = length(t);
+            dimx = obj.SIM.dimx;
+            eps = obj.SIM.eps; % covariance of process x measurement noise
+            M = eps * eye(N*dimx);
+            
+            xact = evolve(obj,t,x0,us);
+            % vectorize x_iter into N*dim dimensions
+            x_vec = xact(:);
+            % add observation noise with covariance M
+            y = x_vec + chol(M)*randn(length(x_vec),1);
+            % arrange back to normal form
+            y = reshape(y,dimx,N);
+            dev = y - xact;
+            
+        end
+        
         % linearizes the nominal dynamics around the trajectory
         function [A,B] = linearize(obj,trj)
             

@@ -1,18 +1,18 @@
-function [traj, err] = robotTwoWheelsError(t, u_trj, u, x, PAR, COV, CON)
+function [traj, err] = robotTwoWheelsError(t, u, x, PAR, Omega, M, CON)
 
 % calculates the swing-up error of the pendulum dynamics
 
 dim = size(x,1);
-% current control input u
-u_cur = u_trj + u;
 % state trajectories for this iteration
 traj = x;
-Omega = COV.Omega;
-M = COV.M;
+
+par.wheel1.radius = 1.1 * PAR.wheel1.radius;
+par.wheel2.radius = 0.9 * PAR.wheel2.radius;
+par.length = PAR.length;
 
 % simulate real trajectory with RK4
 handle = @robotTwoWheelsKinematics;
-traj = sim_RK4(t,traj,u_cur,CON,PAR,handle);
+traj = sim_RK4(t,traj,u,CON,par,handle);
 
 % vectorize x_iter into N*dim dimensions
 x_iter_vec = traj(:);

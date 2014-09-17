@@ -19,7 +19,7 @@ classdef Filter < handle
         % process noise covariance
         Omega
         % observation noise covariance
-        M       
+        M
     end
     
     methods

@@ -35,8 +35,9 @@ classdef aILC < ILC
         q
         % scaling matrix 
         S
-        % scales for the covariances (process/output)
+        % scale for the process/output covariance
         eps
+        % scale for the disturbance (d) covariance 
         eps_d
         % Kalman filter
         filter
@@ -61,7 +62,7 @@ classdef aILC < ILC
             obj.H = zeros(N*dim_x,N*dim_u); 
             obj.eps = model.SIM.eps;
             obj.eps_d = model.SIM.eps_d;
-            obj.u_last = zeros(dim_u,N);
+            obj.u_last = trj.unom(:,1:N);
             
             obj.lift(model,trj);
             % initialize Kalman filter
@@ -117,53 +118,50 @@ classdef aILC < ILC
 
         end
         
-        function us = feedforward(obj,trj,model,dev)
+        function unext = feedforward(obj,trj,model,ydev)
+                        
+            %dev = ydev(:,2:end);
+            dev = ydev(:);
             
-            h = model.SIM.h;
-            % get rid of x0 in dev
-            dev = dev(:,2:end);            
-            N = trj.N - 1;
-            %dim_x = model.SIM.dimx;
-            dim_u = model.SIM.dimu;
             F = obj.F;
             S = obj.S;
-            L = obj.L;
-            q = obj.q;
-            umin = obj.umin; 
-            umax = obj.umax;
+            Nu = trj.N - 1;            
+            dim_u = model.SIM.dimu;
+            h = model.SIM.h;
+            % get u from last applied input
+            u = obj.u_last - trj.unom(:,1:Nu);
             
-            % input deviation penalty matrix D
-            D0 = eye(dim_u*N); 
-            D1 = (diag(ones(1,dim_u*(N-1)),dim_u) - eye(dim_u*N))/h;
-            D1 = D1(1:end-dim_u,:); % D1 is (N-1)*dimu x N*dimu dimensional
-            D2 = (diag(ones(1,dim_u*(N-2)),2*dim_u) - ... 
-                 2*diag(ones(1,dim_u*(N-1)),dim_u) + eye(dim_u*N)) ...
-                 /(h^2);
-            D2 = D2(1:end-2*dim_u,:); % D2 is (N-2)*dimu x N*dimu dimensional
-            % penalty scale
-            a0 = 5e-5;
-            a1 = 5e-5; 
-            a2 = 5e-5;
-            % slack for input u
-            %eps_u = 1e-6;
-            
-            a = a2;
-            D = D2;
-            
-            % get disturbance estimate from filter
-            u_pre = obj.u_last(:);
-            obj.filter.predict(u_pre);
-            obj.filter.update(dev,u_pre);
+            % Filter to estimate disturbance
+            obj.filter.predict(u(:));
+            obj.filter.update(dev,u(:));
             d = obj.filter.x;
+
+            % Constraints and penalty matrices
+            
+            % arrange in format Lu <= q
+            % call the particular constraints-generating code
+            L = obj.L; 
+            q = obj.q;
+            umin = obj.umin(:);             
+            umax = obj.umax(:);
+    
+            % input deviation penalty matrix D
+            D0 = eye(length(u)); 
+            D1 = (diag(ones(1,dim_u*(Nu-1)),dim_u) - eye(dim_u*Nu))/h;
+            D1 = D1(1:end-dim_u,:); % D1 is (Nu-1)*nu x Nu*nu dimensional
+            D2 = (diag(ones(1,dim_u*(Nu-2)),2*dim_u) - ... 
+                 2*diag(ones(1,dim_u*(Nu-1)),dim_u) + eye(dim_u*Nu))/(h^2);
+            D2 = D2(1:end-2*dim_u,:); % D2 is (Nu-2)*nu x Nu*nu dimensional
+            % penalty scale
+            a0 = 5e-5; a1 = 5e-5; a2 = 5e-5;
     
             % solve with quadprog
-            options = optimset('Display', 'iter', ...
-                      'Algorithm', 'interior-point-convex');
-            uiter = quadprog(2*(F'*S')*S*F + 2*a*(D'*D), ...
-                          2*F'*S'*d, L, q, [], [], umin, umax, [], options);
+            options = optimset('Display', 'iter', 'Algorithm', 'interior-point-convex');
+            u = quadprog(2*(F'*S')*S*F + 2*a2*(D2'*D2), 2*F'*S'*d, [], [], [], [], umin, umax, [], options);
             
-            obj.u_last = reshape(uiter,dim_u,N);
-            us = trj.unom(:,1:N) + obj.u_last;
+            unext = trj.unom(:,1:Nu) + reshape(u,dim_u,Nu);
+           
+            
         end
         
     end

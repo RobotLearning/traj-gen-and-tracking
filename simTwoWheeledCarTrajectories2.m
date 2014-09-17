@@ -93,33 +93,22 @@ Traj.addPerformance(Traj.unom,xact,TW.COST,'Nominal');
 %% Iterative Learning Control
 
 num_trials = 5;
-
-% initialize ILC
 ilc = aILC(TW,Traj);
-
-r = rng;
-
+% get the deviations
 [y,dev] = TW.observe(t,x0,Traj.unom);
 
-t = Traj.t;
-s = Traj.s;
-u_trj = Traj.unom(:,1:end-1);
-% covariances
-Omega = ilc.filter.Omega; % process noise covariance
-M = ilc.filter.M; % covariance matrices to be passed for calc. error
-
-rng(r);
-[x_iter, y_dev] = robotTwoWheelsError(t, u_trj, s, PAR, Omega, M, CON);
+%[x_iter, y_dev] = robotTwoWheelsError(t, u_trj, s, PAR, Omega, M, CON);
 
 for i = 1:num_trials
     
-    u = ilc.feedforward(Traj,TW,y_dev);
+    u = ilc.feedforward(Traj,TW,dev);
     
     % get error (observed trajectory deviation)
-    [x_iter, y_dev] = robotTwoWheelsError(t, u, s, PAR, Omega, M, CON);
-    Traj.addPerformance(u,x_iter,TW.COST,ilc);
+    xact = TW.evolve(t,x0,u);
+    [y,dev] = TW.observe(t,x0,u);
+    Traj.addPerformance(u,xact,TW.COST,ilc);
     
 end
 
 % Plot the controls and animate the robot arm
-TW.animate(x_iter,s(1:2,:));
+TW.animate(xact,s(1:2,:));
