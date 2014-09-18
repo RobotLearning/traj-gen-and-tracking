@@ -103,16 +103,15 @@ classdef aILC < ILC
                 end
             end
             
-            % construct umin and umax
-            % extract constraints
-            [obj.umin,obj.umax,obj.L,obj.q] = model.lift_constraints(trj);
-            
             % construct scaling matrix S
             Sx = eye(dim_x);
             % weighing trajectory deviation by these values
             Sw = sqrt(model.COST.Q);
             Tw = eye(dim_x);
             obj.S = cell(1,N);
+            % Sx: scaling matrix that scales different state dimensions
+            % Sw: weight different state dimensions by importance
+            % Tw: change the scaling along the trajectory
             [obj.S{:}] = deal(Tw * Sx * Sw);
             obj.S = blkdiag(obj.S{:});
 
@@ -120,8 +119,9 @@ classdef aILC < ILC
         
         function unext = feedforward(obj,trj,model,ydev)
                         
-            %dev = ydev(:,2:end);
-            dev = ydev(:);
+            % deviation vector starts from x(1)
+            dev = ydev(:,2:end);
+            dev = dev(:);
             
             F = obj.F;
             S = obj.S;
@@ -137,6 +137,9 @@ classdef aILC < ILC
             d = obj.filter.x;
 
             % Constraints and penalty matrices
+            % construct umin and umax
+            % extract constraints
+            [obj.umin,obj.umax,obj.L,obj.q] = model.lift_constraints(trj,obj);
             
             % arrange in format Lu <= q
             % call the particular constraints-generating code
@@ -146,7 +149,7 @@ classdef aILC < ILC
             umax = obj.umax(:);
     
             % input deviation penalty matrix D
-            D0 = eye(length(u)); 
+            D0 = eye(dim_u*Nu); 
             D1 = (diag(ones(1,dim_u*(Nu-1)),dim_u) - eye(dim_u*Nu))/h;
             D1 = D1(1:end-dim_u,:); % D1 is (Nu-1)*nu x Nu*nu dimensional
             D2 = (diag(ones(1,dim_u*(Nu-2)),2*dim_u) - ... 

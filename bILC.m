@@ -139,8 +139,6 @@ classdef bILC < ILC
             alpha_d = 0.1;
             u_next = obj.u_last - alpha_p * dev - alpha_d * ddev;
             
-            obj.u_last = u_next;
-            
         end
         
     end

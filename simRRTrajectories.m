@@ -89,11 +89,12 @@ CON.link2.udot.min = -100;
 
 % cost structure
 % only penalize positions
-COST.Q = [eye(2), zeros(2); zeros(2,4)];
+COST.Q = diag([1,1,0,0]);
 
 % simulation parameters
 SIM.h = 0.02;
-SIM.eps = 3e-4;
+SIM.eps = 3e-10;
+SIM.eps_d = 3e-10;
 SIM.int = 'Euler'; % or RK4
 
 % initialize model
@@ -119,11 +120,12 @@ Traj = RR.trajectory(t,s);
 % TODO: add a nonzero friction matrix B
 
 q0 = [RR.q(:,1); RR.qd(:,1)];
-q_act = RR.evolve(t,q0,Traj.unom);
+% observe output
+q_obs = RR.observe(t,q0,Traj.unom);
 
 % Plot the controls and animate the robot arm
 RR.plot_controls(Traj);
-RR.animateArm(q_act(1:2,:),s(1:2,:));
+RR.animateArm(q_obs(1:2,:),s(1:2,:));
 
 %% Start learning with ILC
 
@@ -131,22 +133,25 @@ num_trials = 50;
 
 % get the deviations
 % TODO: xd should also be returned
-[~,x] = RR.kinematics(q_act(1:2,:));
-xd = [zeros(2,1), diff(x')'];
+[~,y] = RR.kinematics(q_obs(1:2,:));
+yd = [zeros(2,1), diff(y')'];
 % add performance to trajectory
-Traj.addPerformance(Traj.unom,[x;xd],RR.COST,'Nominal');
+Traj.addPerformance(Traj.unom,[y;yd],RR.COST,'Nominal');
+% get deviation
+dev = Traj.PERF(end).err;
 ilc = bILC(RR,Traj);
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforward(Traj,RR,Traj.PERF(end).err);
+    u = ilc.feedforward(Traj,RR,dev);
     % evolve system
-    q_act = RR.evolve(t,q0,u);
+    q_obs = RR.observe(t,q0,u);
     % get the cartesian coordinates
-    [~,x] = RR.kinematics(q_act(1:2,:));
-    xd = [zeros(2,1), diff(x')'];
+    [~,y] = RR.kinematics(q_obs(1:2,:));
+    yd = [zeros(2,1), diff(y')'];
     % add performance to trajectory
-    Traj.addPerformance(u,[x;xd],RR.COST,ilc);
+    Traj.addPerformance(u,[y;yd],RR.COST,ilc);
+    dev = Traj.PERF(end).err;
     % Plot the controls and animate the robot arm
     %RR.plot_controls(Traj);
     %RR.animateArm(q_act(1:2,:),s(1:2,:));
@@ -154,4 +159,4 @@ end
 
 % Plot the controls and animate the robot arm
 RR.plot_controls(Traj);
-RR.animateArm(q_act(1:2,:),s(1:2,:));
+RR.animateArm(q_obs(1:2,:),s(1:2,:));

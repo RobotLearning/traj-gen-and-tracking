@@ -31,7 +31,7 @@ classdef Trajectory < handle
         
         % fun_cost is a cost function, not necessarily quadratic
         % controller is generally a particular ILC implementation
-        function addPerformance(obj,u,x,fun_cost,controller)
+        function addPerformance(obj,u,x,costfun,controller)
             
             if ischar(controller)
                 name = controller;
@@ -45,7 +45,7 @@ classdef Trajectory < handle
             obj.PERF(i+1).u = u;
             obj.PERF(i+1).x = x;
             obj.PERF(i+1).err = x - obj.s;
-            obj.PERF(i+1).cost = fun_cost.fnc(x,obj.s);
+            obj.PERF(i+1).cost = costfun.fnc(x,obj.s);
 
             % display SSE error
             sse = sum(obj.PERF(i+1).cost);

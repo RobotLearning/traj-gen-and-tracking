@@ -79,6 +79,7 @@ classdef RRplanar < Robot
             obj.SIM.dimu = 2;
             obj.SIM.h = sim.h;
             obj.SIM.eps = sim.eps;
+            obj.SIM.eps_d = sim.eps_d;
             assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
                    'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;
@@ -208,7 +209,7 @@ classdef RRplanar < Robot
         end
         
         % get lifted model constraints
-        function [umin,umax,L,q] = lift_constraints(obj,trj)
+        function [umin,umax,L,q] = lift_constraints(obj,trj,ilc)
             
             h = obj.SIM.h;
             N = trj.N - 1; 

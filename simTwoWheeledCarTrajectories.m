@@ -30,8 +30,6 @@ CON.state.x.max = 5;
 CON.state.x.min = -5;
 CON.state.y.max = 5;
 CON.state.y.min = -5;
-CON.state.theta.max = 2*pi;
-CON.state.theta.min = -2*pi;
 CON.wheel1.u.max = 200;
 CON.wheel1.u.min = -200;
 CON.wheel2.u.max = 200;
@@ -66,7 +64,7 @@ TW = TwoWheeledCar(PAR,CON,COST,SIM);
 dim_u = SIM.dimu;
 dim_x = SIM.dimx;
 h = SIM.h;
-tfin = 0.1;
+tfin = 1;
 t = h:h:tfin;
 N = length(t);
 Nu = N - 1;
@@ -92,34 +90,23 @@ Traj.addPerformance(Traj.unom,xact,TW.COST,'Nominal');
 
 %% Iterative Learning Control
 
-num_trials = 5;
-
-% initialize ILC
+num_trials = 10;
 ilc = aILC(TW,Traj);
-
-r = rng;
-
-[y,dev] = TW.observe(t,x0,Traj.unom);
-
-t = Traj.t;
-s = Traj.s;
-u_trj = Traj.unom(:,1:end-1);
-% covariances
-Omega = ilc.filter.Omega; % process noise covariance
-M = ilc.filter.M; % covariance matrices to be passed for calc. error
-
-rng(r);
-[x_iter, y_dev] = robotTwoWheelsError(t, u_trj, s, PAR, Omega, M, CON);
+% observe output
+y = TW.observe(t,x0,Traj.unom);
+dev = y - s;
 
 for i = 1:num_trials
     
-    u = ilc.feedforward(Traj,TW,y_dev);
-    
+    u = ilc.feedforward(Traj,TW,dev);    
     % get error (observed trajectory deviation)
-    [x_iter, y_dev] = robotTwoWheelsError(t, u, s, PAR, Omega, M, CON);
-    Traj.addPerformance(u,x_iter,TW.COST,ilc);
+    xact = TW.evolve(t,x0,u);
+    y = TW.observe(t,x0,u);
+    dev = y - s;
+    Traj.addPerformance(u,xact,TW.COST,ilc);
     
 end
 
 % Plot the controls and animate the robot arm
-TW.animate(x_iter,s(1:2,:));
+TW.plot_controls(Traj);
+TW.animate(xact,s(1:2,:));

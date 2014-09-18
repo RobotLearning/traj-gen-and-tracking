@@ -40,8 +40,6 @@ classdef TwoWheeledCar < Model
             obj.CON.state.x.min = 0;
             obj.CON.state.y.max = 0;
             obj.CON.state.y.min = 0;
-            obj.CON.state.theta.max = 0;
-            obj.CON.state.theta.min = 0;
             obj.CON.wheel1.u.max = 0;
             obj.CON.wheel1.u.min = 0;
             obj.CON.wheel2.u.max = 0;
@@ -166,13 +164,16 @@ classdef TwoWheeledCar < Model
         end
         
         % get lifted model constraints
-        function [umin,umax,L,q] = lift_constraints(obj,trj)
+        function [umin,umax,L,q] = lift_constraints(obj,trj,ilc)
             
             h = obj.SIM.h;
             N = trj.N - 1; 
+            s = trj.s;
             u_trj = trj.unom(:,1:N);
             %dimx = obj.SIM.dimx;
             dimu = obj.SIM.dimu;
+            
+            % input constraints
             umin(1,:) = obj.CON.wheel1.u.min - u_trj(1,:);
             umin(2,:) = obj.CON.wheel2.u.min - u_trj(2,:);
             umax(1,:) = obj.CON.wheel1.u.max - u_trj(1,:);
@@ -192,9 +193,40 @@ classdef TwoWheeledCar < Model
             U_dot_min = repmat(u_dot_min,N-1,1);
             u_star = u_trj(:);
 
-            L = [D; -D];
-            q = [U_dot_max - D*u_star;
+            L1 = [D; -D];
+            q1 = [U_dot_max - D*u_star;
                  -U_dot_min + D*u_star];
+             
+            % state constraints
+            % form the constraint matrix C
+            C = cell(1,N);
+            m = [1 0 0; 0 1 0];
+            [C{:}] = deal(m);
+            C = blkdiag(C{:});
+            C = [C; -C];
+            
+            x_min = obj.CON.state.x.min - s(1,2:end);
+            x_max = obj.CON.state.x.max - s(1,2:end);
+            y_min = obj.CON.state.y.min - s(2,2:end);
+            y_max = obj.CON.state.y.max - s(2,2:end);
+
+            x_con_max = [x_max(:), y_max(:)];
+            x_con_max = x_con_max';
+            x_con_max = x_con_max(:);
+            x_con_min = [x_min(:), y_min(:)];
+            x_con_min = x_con_min';
+            x_con_min = x_con_min(:);
+            x_con = [x_con_max; -x_con_min];
+            
+            F = ilc.F;
+            d = ilc.filter.x;
+            L2 = C*F;
+            q2 = x_con - C*d; 
+            
+            % combine input and state constraints
+            L = [L1; L2];
+            q = [q1; q2];
+            
             
         end
         

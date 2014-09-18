@@ -94,7 +94,7 @@ classdef (Abstract) Model < handle
         
         % add observation noise to state evolution
         % lifted vector representation
-        function [y,dev] = observe(obj,t,x0,us)
+        function y = observe(obj,t,x0,us)
             
             N = length(t);
             dimx = obj.SIM.dimx;
@@ -108,7 +108,6 @@ classdef (Abstract) Model < handle
             y = x_vec + chol(M)*randn(length(x_vec),1);
             % arrange back to normal form
             y = reshape(y,dimx,N);
-            dev = y - xact;
             
         end
         
