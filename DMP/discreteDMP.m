@@ -58,7 +58,6 @@ classdef discreteDMP < DMP
             
             Y_roll = zeros(2,obj.can.N);
             x_roll = obj.can.evolve();
-            obj.can.reset();
             for i = 1:obj.can.N
                 Y_roll(:,i) = obj.Y;
                 obj.step(1);
@@ -104,14 +103,6 @@ classdef discreteDMP < DMP
         end
 
         f = f/scale;
-        end
-        
-        % learn weights using this function
-        % basis functions are fixed
-        function learnWeightsFixed(obj)
-           
-            % TODO:
-            error('Not Implemented');
         end
         
     end

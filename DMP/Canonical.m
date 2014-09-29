@@ -57,11 +57,14 @@ classdef Canonical < handle
         % TODO: apply bsxfun or arrayfun
         function x_tr = evolve(obj)
             
+            % make sure phase is reset
+            obj.reset();
             x_tr = zeros(1,obj.N);
             for i = 1:obj.N
                 x_tr(1,i) = obj.x;
                 obj.step(1);
-            end            
+            end  
+            obj.reset();
         end
         
     end

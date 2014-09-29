@@ -27,7 +27,7 @@ classdef rhythmicDMP < DMP
     
     methods
         
-        function obj = discreteDMP(canonicalSystem,alpha,beta,goal,...
+        function obj = rhythmicDMP(canonicalSystem,alpha,beta,goal,...
                                    amplitude,yin,force)
             
             assert(strcmp(canonicalSystem.pattern, 'r'),...
@@ -106,14 +106,6 @@ classdef rhythmicDMP < DMP
         end
 
         f = f/scale;
-        end
-        
-        % learn weights using this function
-        % basis functions are fixed
-        function learnWeightsFixed(obj)
-           
-            % TODO:
-            error('Not Implemented');
         end
         
     end

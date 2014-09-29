@@ -31,10 +31,6 @@ classdef (Abstract) DMP < handle
         % feedforward simulation of DMPs
         evolve(obj)
         
-        % learn weights using this function
-        % basis functions are fixed
-        learnWeightsFixed(obj)
-        
         % phase of the canonical system is set to 0
         % as well as clearing Y values
         resetStates(obj)
