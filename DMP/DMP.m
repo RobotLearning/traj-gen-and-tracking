@@ -5,38 +5,39 @@ classdef (Abstract) DMP < handle
     
     properties (Abstract)
         
+        % canonical system
+        can
         % time constants
         alpha_g, beta_g
         % goal state
-        g
-        % temporal scaling factor
-        tau
-        % time evolution as a [t0,tf] vector
-        tspan
-        % initial y, yd (or z) values
-        y0, yd0
+        goal
+        % y, yd (or z), ydd values
+        Y
+        % forcing structure has weights w, widths h, and centers c
+        FOR
     end
     
     methods (Abstract)
-        
-        % canonical system - differs for rhytmic and discrete DMP
-        canonical()        
-        
+
         % discrete and rhythmic subclasses define their own basis fnc
         basis(phi,h,c)
         
+        % forcing function
+        forcing(obj)
+        
         % make a step - both for feedback/feedforward simulation
-        step()
+        step(obj)
+        
+        % feedforward simulation of DMPs
+        evolve(obj)
         
         % learn weights using this function
         % basis functions are fixed
-        learnWeightsFixed()
+        learnWeightsFixed(obj)
         
         % phase of the canonical system is set to 0
-        resetPhase()
-        
-        % subclasses must implement a -simple- test scenario
-        test()
+        % as well as clearing Y values
+        resetStates(obj)
         
     end    
     
