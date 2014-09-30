@@ -1,6 +1,6 @@
-% Two-wheeled 2D car or robot kinematical model 
+% Two dimensional linear dynamics model
 
-classdef TwoWheeledCar < Model
+classdef Linear2DDynamics < Model
 
     properties   
         % parameters structure
@@ -20,44 +20,22 @@ classdef TwoWheeledCar < Model
         % copies the parameter values inside the structure
         function set.PAR(obj, STR)  
             
-            % initialize everything to zero
-            obj.PAR.wheel1.radius = 0;
-            obj.PAR.wheel2.radius = 0;
-            obj.PAR.length = 0;
-                         
-            % check that the input has all the fields
-            % TODO: is there a better way?
-            assert(all(strcmp(fieldnames(obj.PAR), fieldnames(STR))));
-            obj.PAR = STR;
+            % TODO:
+            error('Not Implemented');
         end
         
         % copies the constraint values inside the structure
         function set.CON(obj, STR)
             
-            % initialize all fields to zero
-            obj.CON.state.x.max = 0;
-            obj.CON.state.x.min = 0;
-            obj.CON.state.y.max = 0;
-            obj.CON.state.y.min = 0;
-            obj.CON.wheel1.u.max = 0;
-            obj.CON.wheel1.u.min = 0;
-            obj.CON.wheel2.u.max = 0;
-            obj.CON.wheel2.u.min = 0;
-            obj.CON.wheel1.udot.max = 0;
-            obj.CON.wheel1.udot.min = 0;
-            obj.CON.wheel2.udot.max = 0;
-            obj.CON.wheel2.udot.min = 0;
-            
-            % check that the input has all the fields
-            assert(all(strcmp(fieldnames(obj.CON), fieldnames(STR))));
-            obj.CON = STR;
+            % TODO:
+            error('Not Implemented');
             
         end 
         
         % set the simulation parameters
         function set.SIM(obj, sim)
-            obj.SIM.dimx = 3;
-            obj.SIM.dimu = 2;
+            obj.SIM.dimx = 4;
+            obj.SIM.dimu = 4;
             obj.SIM.h = sim.h;
             obj.SIM.eps = sim.eps;
             obj.SIM.eps_d = sim.eps_d;
@@ -79,7 +57,7 @@ classdef TwoWheeledCar < Model
         
         % constructor for convenience
         % TODO: divide into several methods?
-        function obj = TwoWheeledCar(par,con,cost,sim)
+        function obj = Linear2DDynamics(par,con,cost,sim)
             
             obj.SIM = sim;
             % set object parameter
@@ -107,13 +85,11 @@ classdef TwoWheeledCar < Model
         function x_dot = actual(obj,t,x,u)
             
             % change parameters
-            par.wheel1.radius = 1.1 * obj.PAR.wheel1.radius;
-            par.wheel2.radius = 0.9 * obj.PAR.wheel2.radius;
-            par.length = obj.PAR.length;
+            error('Not Implemented');
             
             % differential equation of the inverse dynamics
             % x_dot = B(x)u
-            x_dot = robotTwoWheelsKinematics(t,x,u,par,false);
+            x_dot = obj.diff(t,x,u,par,false);
             
         end
                            
