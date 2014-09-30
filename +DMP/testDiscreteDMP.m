@@ -57,15 +57,15 @@ dmp2 = discreteDMP(can,alpha,beta,goal,yin,force);
 [~,y2] = dmp2.evolve();
 
 % plotting each dmp trajectory
-yd = y1(1,:);
-y = y1(2,:);
+y = y1(1,:);
+yd = y1(2,:);
 figure(1);
 plot(t,yd,'-',t,y,'-.',t,x,t,dmp1.goal*ones(1,length(t)),'r.');
 legend('state velocity ydot','state y','phase','goal state');
 title('Unforced trajectory for DMP1');
 
-yd = y2(1,:);
-y = y2(2,:);
+y = y2(1,:);
+yd = y2(2,:);
 figure(2);
 plot(t,yd,'-',t,y,'-.',t,x,t,dmp2.goal*ones(1,length(t)),'r.');
 legend('state velocity ydot','state y','phase','goal state');
