@@ -98,7 +98,7 @@ SIM.eps_d = 3e-10;
 SIM.int = 'Euler'; % or RK4
 
 % initialize model
-RR = RRplanar(PAR,CON,COST,SIM);
+rr = RR(PAR,CON,COST,SIM);
 
 %% Generate a desired trajectory
 
@@ -113,44 +113,44 @@ x_des = 0.6 * ones(1,length(y_des));
 xd_des = [0, diff(x_des)];
 t = h * 1:length(y_des);
 s = [x_des; y_des; xd_des; yd_des]; % desired trajectory 
-Traj = RR.trajectory(t,s);
+Traj = rr.trajectory(t,s);
 
 %% Evolve system dynamics and animate the robot arm
 
 % TODO: add a nonzero friction matrix B
 
-q0 = [RR.q(:,1); RR.qd(:,1)];
+q0 = [rr.q(:,1); rr.qd(:,1)];
 % observe output
-q_obs = RR.observe(t,q0,Traj.unom);
+q_obs = rr.observe(t,q0,Traj.unom);
 
 % Plot the controls and animate the robot arm
-RR.plot_controls(Traj);
-RR.animateArm(q_obs(1:2,:),s(1:2,:));
+rr.plot_controls(Traj);
+rr.animateArm(q_obs(1:2,:),s(1:2,:));
 
 %% Start learning with ILC
 
-num_trials = 50;
+num_trials = 10;
 
 % get the deviations
 % TODO: xd should also be returned
-[~,y] = RR.kinematics(q_obs(1:2,:));
+[~,y] = rr.kinematics(q_obs(1:2,:));
 yd = [zeros(2,1), diff(y')'];
 % add performance to trajectory
-Traj.addPerformance(Traj.unom,[y;yd],RR.COST,'Nominal');
+Traj.addPerformance(Traj.unom,[y;yd],rr.COST,'Nominal');
 % get deviation
 dev = Traj.PERF(end).err;
-ilc = bILC(RR,Traj);
+ilc = aILC(rr,Traj);
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforward(Traj,RR,dev);
+    u = ilc.feedforward(Traj,rr,dev);
     % evolve system
-    q_obs = RR.observe(t,q0,u);
+    q_obs = rr.observe(t,q0,u);
     % get the cartesian coordinates
-    [~,y] = RR.kinematics(q_obs(1:2,:));
+    [~,y] = rr.kinematics(q_obs(1:2,:));
     yd = [zeros(2,1), diff(y')'];
     % add performance to trajectory
-    Traj.addPerformance(u,[y;yd],RR.COST,ilc);
+    Traj.addPerformance(u,[y;yd],rr.COST,ilc);
     dev = Traj.PERF(end).err;
     % Plot the controls and animate the robot arm
     %RR.plot_controls(Traj);
@@ -158,5 +158,5 @@ for i = 1:num_trials
 end
 
 % Plot the controls and animate the robot arm
-RR.plot_controls(Traj);
-RR.animateArm(q_obs(1:2,:),s(1:2,:));
+rr.plot_controls(Traj);
+rr.animateArm(q_obs(1:2,:),s(1:2,:));

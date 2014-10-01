@@ -35,7 +35,7 @@ classdef Linear2DDynamics < Model
         % set the simulation parameters
         function set.SIM(obj, sim)
             obj.SIM.dimx = 4;
-            obj.SIM.dimu = 4;
+            obj.SIM.dimu = 2;
             obj.SIM.h = sim.h;
             obj.SIM.eps = sim.eps;
             obj.SIM.eps_d = sim.eps_d;
@@ -69,45 +69,25 @@ classdef Linear2DDynamics < Model
         end
         
         % provides nominal model
-        function [x_dot,varargout] = nominal(obj,t,x,u,flg)
-            % differential equation of the inverse dynamics
-            % x_dot = B(x)u
-            [x_dot,dfdx,dfdu] = obj.differentialKinematics(t,x,u,true);
+        function x_dot = nominal(obj,t,x,u)
             
-            % return jacobian matrices
-            if flg
-                varargout{1} = dfdx;
-                varargout{2} = dfdu;
-            end
+            A = obj.PAR.A;
+            B = obj.PAR.B;
+            
+            x_dot = A*x + B*u;        
+            
         end
         
         % provides actual model
         function x_dot = actual(obj,t,x,u)
             
-            % change parameters
+            % TODO
             error('Not Implemented');
+            A = obj.PAR.A;
+            B = obj.PAR.B;
             
-            % differential equation of the inverse dynamics
-            % x_dot = B(x)u
-            x_dot = obj.diff(t,x,u,par,false);
+            x_dot = A*x + B*u;
             
-        end
-                           
-        % dynamics to get xdot
-        function [x_dot,varargout] = differentialKinematics(obj,t,x,u,flag)
-            if flag
-                [x_dot,dfdx,dfdu] = robotTwoWheelsKinematics(t,x,u,obj.PAR,true);
-                varargout{1} = dfdx;
-                varargout{2} = dfdu;
-            else
-                x_dot = robotTwoWheelsKinematics(t,x,u,obj.PAR,false);
-            end
-        end
-        
-        % make an animation of the robot manipulator
-        function animate(obj,x,s)
-            
-            animateCar(x,s,obj.PAR);
         end
 
         % using a simple inverse kinematics method
@@ -118,22 +98,14 @@ classdef Linear2DDynamics < Model
             dimu = obj.SIM.dimu;
             h = obj.SIM.h;
             unom = zeros(dimu,N);
-            R1 = obj.PAR.wheel1.radius;
-            R2 = obj.PAR.wheel2.radius;
-            d = obj.PAR.length;
-
-            for i = 1:N-1
-                % discretize B(phi) around phi0
-                B = h * [R1/2 * cos(x_des(3,i)), R2/2 * cos(x_des(3,i));
-                         R1/2 * sin(x_des(3,i)), R2/2 * sin(x_des(3,i));
-                         R1/d,                   -R2/d];
-                % deviation along desired trajectory
-                delta = x_des(2:3,i+1) - x_des(2:3,i);
-                % solve for u
-                unom(:,i) = B(2:3,:)\delta;
-            end
-
-            unom(:,end) = unom(:,end-1);
+            
+            % make sure the system is controllable/reachable
+            % otherwise give an error
+            
+            % make a DMP that smoothens x_des
+            error('Not Implemented');
+            
+            % calculate the nominal inputs
             
             Traj = Trajectory(t,[],x_des,unom);
         end
@@ -149,10 +121,10 @@ classdef Linear2DDynamics < Model
             dimu = obj.SIM.dimu;
             
             % input constraints
-            umin(1,:) = obj.CON.wheel1.u.min - u_trj(1,:);
-            umin(2,:) = obj.CON.wheel2.u.min - u_trj(2,:);
-            umax(1,:) = obj.CON.wheel1.u.max - u_trj(1,:);
-            umax(2,:) = obj.CON.wheel2.u.max - u_trj(2,:);
+            umin(1,:) = obj.CON.u1.min - u_trj(1,:);
+            umin(2,:) = obj.CON.u2.min - u_trj(2,:);
+            umax(1,:) = obj.CON.u1.max - u_trj(1,:);
+            umax(2,:) = obj.CON.u2.max - u_trj(2,:);
 
             % arrange them in a format suitable for optimization
             umin = umin(:);
@@ -162,8 +134,8 @@ classdef Linear2DDynamics < Model
             D = (diag(ones(1,dimu*(N-1)),dimu) - eye(dimu*N))/h;
             D = D(1:end-dimu,:);
             
-            u_dot_max = [obj.CON.wheel1.udot.max; obj.CON.wheel2.udot.max];
-            u_dot_min = [obj.CON.wheel1.udot.min; obj.CON.wheel2.udot.min];
+            u_dot_max = [obj.CON.u1.dot.max; obj.CON.u2.dot.max];
+            u_dot_min = [obj.CON.u1.dot.min; obj.CON.u2.dot.min];
             U_dot_max = repmat(u_dot_max,N-1,1);
             U_dot_min = repmat(u_dot_min,N-1,1);
             u_star = u_trj(:);

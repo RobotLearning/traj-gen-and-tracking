@@ -1,6 +1,6 @@
 % Two-link planar revolute robot manipulator (RR)
 
-classdef RRplanar < Robot
+classdef RR < Robot
 
     properties   
         % parameters structure
@@ -98,7 +98,7 @@ classdef RRplanar < Robot
         
         % constructor for convenience
         % TODO: divide into several methods?
-        function obj = RRplanar(par,con,cost,sim)
+        function obj = RR(par,con,cost,sim)
             
             obj.SIM = sim;            
             % set object parameter
@@ -144,35 +144,35 @@ classdef RRplanar < Robot
             
             % differential equation of the inverse dynamics
             % x_dot = Ax + B(x)u + C
-            x_dot = RRplanarInverseDynamics(x,u,par,false);
+            x_dot = RRInverseDynamics(x,u,par,false);
             
         end
         
         % run kinematics using an external function
         function [x1,x2] = kinematics(obj,q)
             
-            [x1,x2] = RRplanarKinematics(q,obj.PAR);
+            [x1,x2] = RRKinematics(q,obj.PAR);
         end
         
         % call inverse kinematics from outside
         function q = inverseKinematics(obj,x)
             
-            q = RRplanarInverseKinematics(x,obj.PAR);
+            q = RRInverseKinematics(x,obj.PAR);
         end
                    
         % dynamics to get u
         function u = dynamics(obj,q,qd,qdd)
-            u = RRplanarDynamics(q,qd,qdd,obj.PAR);
+            u = RRDynamics(q,qd,qdd,obj.PAR);
         end
         
         % inverse dynamics to qet Qd = [qd,qdd]
         function [Qd, varargout] = inverseDynamics(obj,Q,u,flag)
             if flag
-                [Qd, dfdx, dfdu] = RRplanarInverseDynamics(Q,u,obj.PAR,flag);
+                [Qd, dfdx, dfdu] = RRInverseDynamics(Q,u,obj.PAR,flag);
                 varargout{1} = dfdx;
                 varargout{2} = dfdu;
             else
-                Qd = RRplanarInverseDynamics(Q,u,obj.PAR,flag);
+                Qd = RRInverseDynamics(Q,u,obj.PAR,flag);
             end
         end
         
@@ -187,9 +187,9 @@ classdef RRplanar < Robot
         function Traj = trajectory(obj,t,x_des)
 
             h = obj.SIM.h;
-            obj.q = RRplanarInverseKinematics(x_des,obj.PAR);
+            obj.q = RRInverseKinematics(x_des,obj.PAR);
             % check for correctness
-            %[x1,x2] = RRplanarKinematics(q,PAR);
+            %[x1,x2] = RRKinematics(q,PAR);
             obj.qd = diff(obj.q')' / h; 
             obj.qdd = diff(obj.qd')' / h; 
 
@@ -201,7 +201,7 @@ classdef RRplanar < Robot
             % get the desired inputs
             ud = zeros(size(obj.q));
             for i = 1:size(obj.q,2)
-                ud(:,i) = RRplanarDynamics(obj.q(:,i),obj.qd(:,i),...
+                ud(:,i) = RRDynamics(obj.q(:,i),obj.qd(:,i),...
                                            obj.qdd(:,i),obj.PAR);
             end
             

@@ -4,7 +4,7 @@
 % Hutchingson, Vidyasagar
 % pg. 260-262 and 290
 
-function q = RRplanarInverseKinematics(x,PAR)
+function q = RRInverseKinematics(x,PAR)
 
 % x is the cartesian coordinate of the endeffector
 l1 = PAR.link1.length;

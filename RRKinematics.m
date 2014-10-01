@@ -4,7 +4,7 @@
 % Hutchingson, Vidyasagar
 % pg. 260-262 and 290
 
-function [x1,x2] = RRplanarKinematics(q,PAR)
+function [x1,x2] = RRKinematics(q,PAR)
 
 theta1 = q(1,:);
 theta2 = q(2,:);

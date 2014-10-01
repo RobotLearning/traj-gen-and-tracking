@@ -161,5 +161,21 @@ classdef (Abstract) Model < handle
             
         end
         
+        % plot the system states
+        function plot_states(obj,xact,x_des)
+ 
+            num_out = size(xact,1);
+            figure;
+            for i = 1:num_out
+                subplot(num_out,1,i);
+                plot(t,xact(i,:),t,x_des(i,:),'LineWidth',2);
+                legend('Actual state','Desired state');
+                title(strcat(num2str(i),'. state'));
+                xlabel('Time (s)');
+                ylabel(strcat('State x',num2str(i)));
+            end
+            
+        end
+        
     end
 end
