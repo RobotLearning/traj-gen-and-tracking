@@ -64,7 +64,6 @@ classdef Canonical < handle
                 x_tr(1,i) = obj.x;
                 obj.step(1);
             end  
-            obj.reset();
         end
         
     end

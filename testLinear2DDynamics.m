@@ -21,10 +21,15 @@ delete('tmp.mat')
 
 % parameter values of the experimental setup
 
-% TODO
-PAR.A = rand(4);
-PAR.B = rand(4);
-PAR.state.init = rand(4,1);
+% Uncoupled springs
+PAR.m1 = 0.5;
+PAR.k1 = 10;
+PAR.b1 = 0.1;
+PAR.m2 = 1.5;
+PAR.k2 = 10;
+PAR.b2 = 0.2;
+        
+PAR.state.init = zeros(4,1);
 
 % constraints on the system dynamics
 CON.state.x.max = 5; 
@@ -76,7 +81,7 @@ s(2,:) = sin(2*pi*t);
 
 Traj = lin.trajectory(t,s);
 
-%% Evolve system dynamics and animate the robot arm
+%% Evolve system dynamics
 
 x0 = PAR.state.init;
 xact = lin.evolve(t,x0,Traj.unom);
@@ -109,4 +114,4 @@ end
 
 % Plot the controls and animate the robot arm
 lin.plot_controls(Traj);
-lin.plot_states(xact([1,3],s);
+lin.plot_states(xact([1,3]),s);

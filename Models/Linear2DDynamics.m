@@ -1,4 +1,5 @@
 % Two dimensional linear dynamics model
+% TODO: can be extended for Linear ND Dynamics
 
 classdef Linear2DDynamics < Model
 
@@ -13,6 +14,8 @@ classdef Linear2DDynamics < Model
         SIM
         % cartesian coordinates of the nominal trajectory
         x, xd, xdd
+        % A and B matrices
+        A, B
     end
     
     methods
@@ -20,15 +23,27 @@ classdef Linear2DDynamics < Model
         % copies the parameter values inside the structure
         function set.PAR(obj, STR)  
             
-            % TODO:
-            error('Not Implemented');
+            obj.PAR = STR;
+            m1 = obj.PAR.m1;
+            k1 = obj.PAR.k1;
+            b1 = obj.PAR.b1;
+            m2 = obj.PAR.m2;
+            k2 = obj.PAR.k2;
+            b2 = obj.PAR.b2;
+            % create A and B matrices
+            obj.A = [0, 1, 0, 0;
+                     -k1/m1, -b1/m1, 0, 0;
+                     0, 0, 0, 1;
+                     0, 0, -k2/m2, -b2/m2];
+            obj.B = [0; 1/m1; 0; 1/m2];
+                     
         end
         
         % copies the constraint values inside the structure
         function set.CON(obj, STR)
             
             % TODO:
-            error('Not Implemented');
+            obj.CON = STR;
             
         end 
         
@@ -70,23 +85,16 @@ classdef Linear2DDynamics < Model
         
         % provides nominal model
         function x_dot = nominal(obj,t,x,u)
-            
-            A = obj.PAR.A;
-            B = obj.PAR.B;
-            
-            x_dot = A*x + B*u;        
+
+            x_dot = obj.A*x + obj.B*u;        
             
         end
         
         % provides actual model
         function x_dot = actual(obj,t,x,u)
             
-            % TODO
-            error('Not Implemented');
-            A = obj.PAR.A;
-            B = obj.PAR.B;
-            
-            x_dot = A*x + B*u;
+            % TODO                       
+            x_dot = obj.A*x + obj.B*u;
             
         end
 
@@ -102,12 +110,45 @@ classdef Linear2DDynamics < Model
             % make sure the system is controllable/reachable
             % otherwise give an error
             
+            % construct controllability Kalman matrix
+            A = obj.A;
+            B = obj.B;
+            K = [B, A*B, A^2 * B, A^3 * B];
+            assert(rank(K) == obj.SIM.dimx, 'System is not controllable!');
+            
             % make a DMP that smoothens x_des
-            error('Not Implemented');
+            pat = 'd';
+            ax = 1;
+            tau = 1;
+            can = Canonical(h,ax,tau,N,pat);
+            
+            % create two paths
+            path1 = x_des(1,:);
+            goal1 = path1(end);
+            path2 = x_des(2,:);
+            goal2 = path2(end);
+
+            alpha = 25;
+            beta = 25/4;
+
+            % learn the weights with locally weighted regression
+            force.h = ones(100,1); % * 100^(1.5);
+            force.c = linspace(0,1,100);
+            force1 = LWR(path1,can,alpha,beta,force);
+            force2 = LWR(path2,can,alpha,beta,force);
+
+            % create two different DMPs
+            yin1 = obj.PAR.state.init(1:2);
+            dmp1 = discreteDMP(can,alpha,beta,goal1,yin1,force1);
+            yin2 = obj.PAR.state.init(3:4);
+            dmp2 = discreteDMP(can,alpha,beta,goal2,yin2,force2);
+
+            [x,s1] = dmp1.evolve();
+            [~,s2] = dmp2.evolve();           
             
             % calculate the nominal inputs
             
-            Traj = Trajectory(t,[],x_des,unom);
+            Traj = Trajectory(t,[],s,unom);
         end
         
         % get lifted model constraints
