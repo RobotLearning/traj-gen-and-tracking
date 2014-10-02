@@ -12,19 +12,13 @@
 %
 % force - appends a weight field to force structure
 
-function force = LWR(path,can,alpha,beta,y0,force)
+function dmp = LWR(path,dmp,force)
 
-dt = can.dt;
-pat = can.pattern;
-if strcmp(pat,'r')
-    % take average to find goal
-    goal = min(path) + max(path) /2;
-    scale = 1;
-else
-    goal = path(end);
-    % spatial scaling
-    scale = goal - y0;
-end
+dt = dmp.can.dt;
+pat = dmp.can.pattern;
+[goal,scale] = dmp.setGoal(path);
+alpha = dmp.alpha_g;
+beta = dmp.beta_g;
 
 % TODO: interpolate over trajectory
 y_des = path;
@@ -37,7 +31,7 @@ h = force.h;
 c = force.c;
 % number of weights to regress 
 lenw = length(force.c);
-x = can.evolve();
+x = dmp.can.evolve();
 
 % make sure x is column vector
 x = x(:);
@@ -57,6 +51,9 @@ for i = 1:lenw
 end
 
 force.w = w;
+% update dmps
+dmp.setForcing(force);
+
 end
 
 % basis functions are unscaled gaussians

@@ -48,6 +48,28 @@ classdef rhythmicDMP < DMP
             obj.can.reset();
         end
         
+        function [g,scale] = setGoal(obj,path)
+            
+            % goal state is the center
+            obj.goal(1) = min(path) + max(path) / 2;
+            % amplitude is the difference
+            obj.goal(2) = max(path) - obj.goal(1);
+            
+            g = obj.goal(1);
+            scale = obj.goal(2);
+        end
+        
+        function setForcing(obj,FORCE)
+            
+            assert(isfield(FORCE,'w'),'Please perform LWR first');
+            obj.FOR= FORCE;            
+        end
+        
+        function setInitState(obj,y0)
+            
+            obj.Y0 = y0;
+        end
+        
         % basis functions are unscaled gaussians
         function out = basis(obj,phi,h,c)
             out = exp(h * (cos(phi - c) - 1));

@@ -35,6 +35,15 @@ classdef (Abstract) DMP < handle
         % as well as clearing Y values
         resetStates(obj)
         
+        % set the initial state of the DMP
+        setInitState(obj,Y0)
+        
+        % set the goal state from observational data
+        setGoal(obj,path)
+        
+        % set the forcing function after regression for instance
+        setForcing(obj,force)
+        
     end    
     
 end

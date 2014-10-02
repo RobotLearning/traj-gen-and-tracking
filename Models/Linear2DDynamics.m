@@ -122,31 +122,33 @@ classdef Linear2DDynamics < Model
             tau = 1;
             can = Canonical(h,ax,tau,N,pat);
             
-            % create two paths
-            path1 = x_des(1,:);
-            goal1 = path1(end);
-            path2 = x_des(2,:);
-            goal2 = path2(end);
-
+            % create two different DMPs
             alpha = 25;
             beta = 25/4;
-
-            % learn the weights with locally weighted regression
-            force.h = ones(100,1); % * 100^(1.5);
-            force.c = linspace(0,1,100);
-            force1 = LWR(path1,can,alpha,beta,force);
-            force2 = LWR(path2,can,alpha,beta,force);
-
-            % create two different DMPs
+            % number of basis functions
+            numbf = 100;
+            force.h = ones(numbf,1) * numbf^(1.5);
+            force.c = linspace(t(1),t(end),numbf);
+            % goal and amplitude are initialized here
+            goal = 1;
+            % initial states of DMPs
             yin1 = obj.PAR.state.init(1:2);
-            dmp1 = discreteDMP(can,alpha,beta,goal1,yin1,force1);
             yin2 = obj.PAR.state.init(3:4);
-            dmp2 = discreteDMP(can,alpha,beta,goal2,yin2,force2);
-
+            dmp1 = discreteDMP(can,alpha,beta,goal,yin1,force);
+            dmp2 = discreteDMP(can,alpha,beta,goal,yin2,force);
+            
+            % create two paths
+            path1 = x_des(1,:);
+            path2 = x_des(2,:);
+            % learn the weights with locally weighted regression
+            dmp1 = LWR(path1,dmp1,force);
+            dmp2 = LWR(path2,dmp2,force);
             [x,s1] = dmp1.evolve();
-            [~,s2] = dmp2.evolve();           
+            [~,s2] = dmp2.evolve(); 
+            s = [s1;s2];
             
             % calculate the nominal inputs
+            
             
             Traj = Trajectory(t,[],s,unom);
         end

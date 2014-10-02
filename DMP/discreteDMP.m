@@ -42,9 +42,28 @@ classdef discreteDMP < DMP
         
         function resetStates(obj)
            
-            N = obj.can.N;
+            %N = obj.can.N;
             obj.Y = obj.Y0;
             obj.can.reset();
+        end
+        
+        function [g,scale] = setGoal(obj,path)
+            
+            obj.goal = path(end);
+            
+            g = obj.goal;
+            scale = g - obj.Y0(1);
+        end
+        
+        function setForcing(obj,FORCE)
+            
+            assert(isfield(FORCE,'w'),'Please perform LWR first');
+            obj.FOR= FORCE;            
+        end
+        
+        function setInitState(obj,y0)
+            
+            obj.Y0 = y0;
         end
         
         % basis functions are unscaled gaussians
@@ -58,6 +77,7 @@ classdef discreteDMP < DMP
             
             Y_roll = zeros(2,obj.can.N);
             x_roll = obj.can.evolve();
+            obj.can.reset();
             for i = 1:obj.can.N
                 Y_roll(:,i) = obj.Y;
                 obj.step(1);

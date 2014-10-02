@@ -1,5 +1,6 @@
 % Class for holding inputs and states on trajectories.
 % Class is used instead of a structure to enforce certain fields.
+% TODO: do we need this class?
 
 classdef Trajectory < handle
     
