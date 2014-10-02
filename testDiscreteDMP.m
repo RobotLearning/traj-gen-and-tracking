@@ -26,57 +26,62 @@ ax = 1;
 % temporal scaling factor
 tau = 1;
 % time evolution
-tspan = [0 1];
+tf = 1;
+tspan = [0 tf];
 % number of points
-nst = tspan(2)/h + 1;
+N = tspan(2)/h + 1;
 t = tspan(1):h:tspan(2);
 % type of pattern to be generated
 pat = 'd';
-can = Canonical(h,ax,tau,nst,pat);
-
-%% test unforced discrete DMP
+can = Canonical(h,ax,tau,N,pat);
 
 % get x at tf
 can.evolve();
 xf = can.x;
+first = exp(-ax*tf);
 can.reset();
-
-% create two different DMPs
-alpha = 25;
-beta = 25/4;
-goal = 1;
-yin = [0;0];
-force.w = zeros(10,1);
-force.h = ones(10,1);
-force.c = linspace(0,1,10);
-dmp1 = discreteDMP(can,alpha,beta,goal,yin,force);
-
-goal = 5;
-yin = [1;0];
+% number of basis functions
 bfs = 10;
-force.w = zeros(bfs,1);
-force.h = ones(bfs,1);
-% exponential scaling in x
-force.c = -log(linspace(xf,1,bfs));
-dmp2 = discreteDMP(can,alpha,beta,goal,yin,force);
 
-[x,y1] = dmp1.evolve();
-[~,y2] = dmp2.evolve();
-
-% plotting each dmp trajectory
-y = y1(1,:);
-yd = y1(2,:);
-figure(1);
-plot(t,y,'-.',t,x,t,dmp1.goal*ones(1,length(t)),'r.');
-legend('state y','phase','goal state');
-title('Unforced trajectory for DMP1');
-
-y = y2(1,:);
-yd = y2(2,:);
-figure(2);
-plot(t,y,'-.',t,x,t,dmp2.goal*ones(1,length(t)),'r.');
-legend('state y','phase','goal state');
-title('Unforced trajectory for DMP2');
+%% test unforced discrete DMP
+% 
+% 
+% % create two different DMPs
+% alpha = 25;
+% beta = 25/4;
+% goal = 1;
+% yin = [0;0];
+% bfs = 100;
+% force.w = zeros(bfs,1);
+% force.h = ones(bfs,1);
+% force.c = -log(linspace(t1,1.05-first,bfs));
+% dmp1 = discreteDMP(can,alpha,beta,goal,yin,force);
+% 
+% goal = 5;
+% yin = [1;0];
+% force.w = zeros(bfs,1);
+% force.h = ones(bfs,1);
+% % exponential scaling in x
+% force.c = -log(linspace(first,1.05-first,bfs));
+% dmp2 = discreteDMP(can,alpha,beta,goal,yin,force);
+% 
+% [x,y1] = dmp1.evolve();
+% [~,y2] = dmp2.evolve();
+% 
+% % plotting each dmp trajectory
+% y = y1(1,:);
+% yd = y1(2,:);
+% figure(1);
+% plot(t,y,'-.',t,x,t,dmp1.goal*ones(1,length(t)),'r.');
+% legend('state y','phase','goal state');
+% title('Unforced trajectory for DMP1');
+% 
+% y = y2(1,:);
+% yd = y2(2,:);
+% figure(2);
+% plot(t,y,'-.',t,x,t,dmp2.goal*ones(1,length(t)),'r.');
+% legend('state y','phase','goal state');
+% title('Unforced trajectory for DMP2');
 
 %% test forced discrete DMP
 
@@ -86,21 +91,22 @@ goal1 = path1(end);
 jump2 = floor(length(t)/2);
 path2 = [zeros(1,jump2), ones(1,length(t)-jump2)];
 goal2 = path2(end);
+yin1 = [path1(1);0];
+yin2 = [path2(1);0];
 
 alpha = 25;
 beta = 25/4;
 
 % learn the weights with locally weighted regression
-force.h = ones(10,1) * 10^(1.5);
+force.h = ones(bfs,1) * bfs^(1.5);
 % exponential scaling in x
-force.c = logspace(0,1,10);
-force1 = LWR(path1,can,alpha,beta,force);
-force2 = LWR(path2,can,alpha,beta,force);
+force.c = linspace(0,1,bfs);
+%force.c = -log(linspace(first,1.05-first,bfs));
+force1 = LWR(path1,can,alpha,beta,yin1(1),force);
+force2 = LWR(path2,can,alpha,beta,yin2(1),force);
 
 % create two different DMPs
-yin1 = [path1(1);0];
 dmp1 = discreteDMP(can,alpha,beta,goal1,yin1,force1);
-yin2 = [path2(1);0];
 dmp2 = discreteDMP(can,alpha,beta,goal2,yin2,force2);
 
 [x,y1] = dmp1.evolve();

@@ -12,18 +12,18 @@
 %
 % force - appends a weight field to force structure
 
-function force = LWR(path,can,alpha,beta,force)
+function force = LWR(path,can,alpha,beta,y0,force)
 
 dt = can.dt;
 pat = can.pattern;
 if strcmp(pat,'r')
     % take average to find goal
-    goal = sum(path)/length(path);
+    goal = min(path) + max(path) /2;
     scale = 1;
 else
     goal = path(end);
     % spatial scaling
-    scale = goal - path(1);
+    scale = goal - y0;
 end
 
 % TODO: interpolate over trajectory
