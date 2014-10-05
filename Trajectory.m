@@ -11,8 +11,9 @@ classdef Trajectory < handle
         % number of discretizations
         N
         % discrete set of states on (cts) trajectory
-        s
+        s      
         % nominal u values calculated during trajectory generation
+        % (optional)
         unom
         % via points used for spline-based trajectory generation
         sp

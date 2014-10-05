@@ -73,6 +73,27 @@ classdef (Abstract) Model < handle
             end            
         end
         
+        % useful to propagate feedback law
+        function [x,traj] = evolveWithFeedback(obj,traj,x0,K)
+            fun = @(t,x,u) obj.actual(t,x,u);
+            t = traj.t;
+            s = traj.s;
+            N = length(t)-1;
+            h = t(2)-t(1);
+            x = zeros(length(x0),N+1);
+            u = zeros(size(K,1),N);
+            x(:,1) = x0;
+            for i = 1:N
+                % error 
+                e = x(:,i) - s(:,i);
+                ehat = [e; 1];
+                u(:,i) = K(:,:,i)*ehat;
+                x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
+                % no constraint checking
+            end
+            traj.unom = u;
+        end
+        
         % useful to propagate one full iteration of
         % ILC input sequence
         function x_next = evolve(obj,t,x0,us)
@@ -162,7 +183,7 @@ classdef (Abstract) Model < handle
         end
         
         % plot the system states
-        function plot_states(obj,xact,x_des)
+        function plot_states(obj,t,x_des,xact)
  
             num_out = size(xact,1);
             figure;

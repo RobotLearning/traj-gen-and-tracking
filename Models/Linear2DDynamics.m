@@ -35,7 +35,10 @@ classdef Linear2DDynamics < Model
                      -k1/m1, -b1/m1, 0, 0;
                      0, 0, 0, 1;
                      0, 0, -k2/m2, -b2/m2];
-            obj.B = [0; 1/m1; 0; 1/m2];
+            obj.B = [0, 0; 
+                     1/m1, 0; 
+                     0, 0; 
+                     0, 1/m2];
                      
         end
         
@@ -60,10 +63,11 @@ classdef Linear2DDynamics < Model
         end
         
         % change the cost function
-        function set.COST(obj, Q)
-            obj.COST.Q = Q;
-            obj.COST.fnc = @(x1,x2) diag((x1-x2)'*Q*(x1-x2));
-            assert(length(Q) == obj.SIM.dimx);
+        function set.COST(obj, STR)
+            obj.COST.Q = STR.Q;
+            obj.COST.R = STR.R;
+            obj.COST.fnc = @(x1,x2) diag((x1-x2)'*STR.Q*(x1-x2));
+            assert(length(STR.Q) == obj.SIM.dimx);
         end
         
     end
@@ -80,7 +84,7 @@ classdef Linear2DDynamics < Model
             % set object constraints
             obj.CON = con;    
             % cost function handle
-            obj.COST = cost.Q;
+            obj.COST = cost;
         end
         
         % provides nominal model
@@ -97,15 +101,8 @@ classdef Linear2DDynamics < Model
             x_dot = obj.A*x + obj.B*u;
             
         end
-
-        % using a simple inverse kinematics method
-        % TODO: extend using planning to incorporate constraints
-        function Traj = trajectory(obj,t,x_des)
-
-            N = length(t);
-            dimu = obj.SIM.dimu;
-            h = obj.SIM.h;
-            unom = zeros(dimu,N);
+        
+        function assertControllability(obj)
             
             % make sure the system is controllable/reachable
             % otherwise give an error
@@ -115,7 +112,12 @@ classdef Linear2DDynamics < Model
             B = obj.B;
             K = [B, A*B, A^2 * B, A^3 * B];
             assert(rank(K) == obj.SIM.dimx, 'System is not controllable!');
+        end
+        
+        function s = dmpTrajectory(obj,t,x_des)
             
+            h = obj.SIM.h;
+            N = length(t);
             % make a DMP that smoothens x_des
             pat = 'd';
             ax = 1;
@@ -145,12 +147,45 @@ classdef Linear2DDynamics < Model
             dmp2 = LWR(path2,dmp2,force);
             [x,s1] = dmp1.evolve();
             [~,s2] = dmp2.evolve(); 
-            s = [s1;s2];
+            s = [s1;s2]; 
+        end
+
+        % TODO: extend using planning to incorporate constraints
+        function [Traj,K] = trajectory(obj,t,x_des)
+
+            N = length(t);
+            Nu = N-1;
+            dimx = obj.SIM.dimx;
+            dimu = obj.SIM.dimu;
             
-            % calculate the nominal inputs
+            % check controllability
+            obj.assertControllability();
             
+            % optional: make a DMP that smoothens x_des
+            s = obj.dmpTrajectory(t,x_des);            
             
-            Traj = Trajectory(t,[],s,unom);
+            % calculate the optimal feedback law
+            % velocity is differences in the discrete case
+            v = diff(s')';
+
+            % form the time varying matrices Abar and Bbar
+            Abar = zeros(dimx+1,dimx+1,Nu);
+            Bbar = zeros(dimx+1,dimu,Nu);
+            for i = 1:Nu
+                Abar(:,:,i) = [obj.A, (obj.A-eye(dimx))*s(:,i) - v(:,i); ...
+                               zeros(1,dimx), 0];
+                Bbar(:,:,i) = [obj.B; zeros(1,dimu)];
+            end
+
+            MODE.N = N;
+            MODE.LTI = false;
+            % fifth dimension is for pseudovariable 1
+            Q = [obj.COST.Q, zeros(dimx,1); zeros(1,dimx), 0];
+            R = obj.COST.R;
+
+            K = LQR(Q,R,Abar,Bbar,MODE);
+            
+            Traj = Trajectory(t,[],s,[]);
         end
         
         % get lifted model constraints

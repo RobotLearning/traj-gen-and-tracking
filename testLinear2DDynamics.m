@@ -60,7 +60,8 @@ SIM.int = 'Euler';
 
 % cost structure
 % only penalize positions
-COST.Q = diag([1,0,1,0]);
+COST.Q = diag([10,10,10,10]);
+COST.R = diag([1,1]);
 
 % initialize model
 lin = Linear2DDynamics(PAR,CON,COST,SIM);
@@ -79,39 +80,39 @@ Nu = N - 1;
 s(1,:) = cos(2*pi*t);
 s(2,:) = sin(2*pi*t);
 
-Traj = lin.trajectory(t,s);
+[Traj,K] = lin.trajectory(t,s);
 
 %% Evolve system dynamics
 
 x0 = PAR.state.init;
-xact = lin.evolve(t,x0,Traj.unom);
-
-% Plot the controls and animate the robot arm
-lin.plot_controls(Traj);
-lin.plot_states(xact([1,3],:),s);
+[xact,Traj] = lin.evolveWithFeedback(Traj,x0,K);
 
 % add performance to trajectory
-Traj.addPerformance(Traj.unom,xact,lin.COST,'Nominal');
-
-%% Iterative Learning Control
-
-num_trials = 10;
-ilc = bILC(lin,Traj);
-% observe output
-y = lin.observe(t,x0,Traj.unom);
-dev = y - s;
-
-for i = 1:num_trials
-    
-    u = ilc.feedforward(Traj,lin,dev);    
-    % get error (observed trajectory deviation)
-    xact = lin.evolve(t,x0,u);
-    y = lin.observe(t,x0,u);
-    dev = y - s;
-    Traj.addPerformance(u,xact,lin.COST,ilc);
-    
-end
+Traj.addPerformance(Traj.unom,xact,lin.COST,'LQR');
 
 % Plot the controls and animate the robot arm
 lin.plot_controls(Traj);
-lin.plot_states(xact([1,3]),s);
+lin.plot_states(t,xact([1,3],:),s);
+
+% %% Iterative Learning Control
+% 
+% num_trials = 10;
+% ilc = bILC(lin,Traj);
+% % observe output
+% y = lin.observe(t,x0,Traj.unom);
+% dev = y - s;
+% 
+% for i = 1:num_trials
+%     
+%     u = ilc.feedforward(Traj,lin,dev);    
+%     % get error (observed trajectory deviation)
+%     xact = lin.evolve(t,x0,u);
+%     y = lin.observe(t,x0,u);
+%     dev = y - s;
+%     Traj.addPerformance(u,xact,lin.COST,ilc);
+%     
+% end
+% 
+% % Plot the controls and animate the robot arm
+% lin.plot_controls(Traj);
+% lin.plot_states(xact([1,3]),s);
