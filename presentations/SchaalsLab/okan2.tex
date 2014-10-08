@@ -1,6 +1,6 @@
-%\documentclass{beamer}
-\documentclass[handout]{beamer}
-\usetheme{Madrid} 
+\documentclass{beamer}
+%\documentclass[handout]{beamer}
+\usetheme{boxes} 
 %\usetheme{default}
 
 %math fonts
@@ -8,6 +8,9 @@
 
 %page numbers
 \setbeamertemplate{footline}[page number]
+\setbeamertemplate{section in head/foot}{\hfill\insertsectionheadnumber.~\insertsectionhead}
+\setbeamertemplate{section in head/foot shaded}{\color{structure!50}\hfill\insertsectionheadnumber.~\insertsectionhead}
+\setbeamertemplate{section in toc}{\inserttocsectionnumber.~\inserttocsection}
 
 \setbeamercovered{invisible}
 \setbeamertemplate{navigation symbols}{} 
@@ -71,15 +74,23 @@ Robot Learning Lab \\
 \begin{frame}{Motivation}
 \begin{itemize}
 \item Approximation and control errors in table tennis make the application of DMPs less useful in practice. Small changes to DMPs can often make them more useful.
-\item \todo: Picture
 \end{itemize}
+\begin{figure}
+\center
+\includegraphics[scale=0.05, angle= 180]{ballgun.jpg}			
+\caption{Ballgun throwing balls to the robot}
+\end{figure}
 \end{frame}
 %
 \begin{frame}{Motivation}
 \begin{itemize}
 \item Gait patterns often cause upper body oscillations, which break gait tracking. Can we adapt gait DMPs to facilitate the execution?
-\item \todo: Picture
 \end{itemize}
+\begin{figure}
+\center
+\includegraphics[scale=0.5]{robotwalking1.jpg}			
+\caption{Robot walking}
+\end{figure}
 \end{frame}
 %
 \begin{frame}{Research Question}
@@ -99,9 +110,9 @@ Robot Learning Lab \\
 \begin{aligned}
 \ddot{\joint} = M^{-1}(\joint)\{ \tau - C(\joint,\dot{\joint})\dot{\joint} - G(\joint) \}\\
 \end{aligned}
-\end{equation*}
+\end{equation*} \pause
 \begin{itemize}
-\item Goal: Track a reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$. \pause
+\item Goal: Track a reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$.
 \end{itemize}
 \end{frame}
 %
@@ -153,27 +164,51 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
 %
 \begin{frame}{Iterative Learning Control (ILC)}
 \begin{itemize}
-\item A very simple update rule is to use the error and its derivatives \cite{Arimoto}. For example:
-\end{itemize}
+\item A very simple update rule is to use the error and its derivatives \cite{Arimoto}. For example: \pause
 \begin{equation*}
 \begin{aligned}
 \sysInput_{k+1} = \sysInput_{k} + K_{p}(\state_{k} - \traj) + K_{d}(\dot{\state}_{k} - \dot{\traj})
 \end{aligned}
 \end{equation*}
+\pause
+\item There are also more complicated methods, as in \cite{ILC_Angela}.
+\pause
+\begin{itemize}
+ \item Kalman filtering to estimate disturbances, \pause
+ \item Convex optimization over the control inputs to adjust for them.
+\end{itemize}
+\end{itemize}
+\end{frame}
+%
+\begin{frame}{Example}
+\begin{itemize}
+\item Schoellig et al. \cite{ILC_Angela} applied ILC to trajectory tracking with quadrocopters: \pause
+\end{itemize}
+\begin{figure}[!htb]
+\minipage{0.5\textwidth}
+  \includegraphics[width=\linewidth]{ilc.png}
+  \caption{Learning an S-shaped trajectory}
+\endminipage\hfill
+\minipage{0.5\textwidth}
+  \includegraphics[width=\linewidth]{ilc_error.png}
+  \caption{Errors vs. iterations}
+\endminipage
+\end{figure}
 \end{frame}
 %
 \begin{frame}{Iterative Learning Control (ILC)}
 \begin{itemize}
-\item Equivalently we can update the kinematic policy! \cite{Survey}
-\item We can update the DMP weights using the same PD update law: 
+\item Equivalently we can update the kinematic policy! \cite{Survey} \pause
+\item We can update the DMP weights using the same PD update law: \pause
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
 \weights_{k+1} = \weights_{k} + \alpha(\basis^{\mathrm{T}}\basis + \lambda\mathbf{I})^{-1}\basis^{\mathrm{T}}(\state_{k}-\traj)
 \end{aligned}
 \end{equation*}
+\pause
 \begin{itemize}
-\item Or we can update using the forcing term errors:
+\item Or we can update using the forcing term errors: \pause
 \begin{equation*}
 \begin{aligned}
 \weights_{k+1} &= \weights_{k} + \alpha(\basis^{\mathrm{T}}\basis + \lambda\mathbf{I})^{-1}\basis^{\mathrm{T}}(\force_x - \force_r) \\
@@ -193,7 +228,7 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
 %
 \begin{frame}{Optimal Control}
 \begin{itemize}
-\item For a linear system under a given linear feedback law $\sysInput = -K(\state - \dmp)$ we can write the dynamics as:
+\item For a linear system under a given linear feedback law $\sysInput = -K_u(\state - \dmp)$ we can write the dynamics as: \pause
 \begin{equation*}
 \begin{aligned}
  \dot{\fullvec} := \dot{
@@ -204,7 +239,7 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
   g
  \end{bmatrix}} = 
  \begin{bmatrix}
-  A_x - B_xK & 0 & BK & 0 \\
+  A_x - B_xK_u & 0 & B_xK_u & 0 \\
   0 & 0 & 0 & \nu(t) \\
   0  & 0  & A_s & A_g  \\
   0 & 0 & 0 & 0
@@ -223,10 +258,11 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
    \end{bmatrix} \weights
 \end{aligned}
 \end{equation*}
-\item We can use LQR to minimize the cost functional:
+\pause
+\item We can use LQR to minimize the cost functional: \pause
 \begin{equation*}
 \begin{aligned}
-J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R\weights + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) \\
+J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R\weights + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) \\ \pause
 \weights_{LQR} &= -K_{\weights}(\state - \traj)
 \end{aligned}
 \end{equation*}
@@ -235,21 +271,24 @@ J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \we
 %
 \begin{frame}{Optimal Control}
 \begin{itemize}
-\item This way we end up with dynamic weights for the DMP!
+\item This way we end up with dynamic weights for the DMP! \pause
 \item We can also introduce the constraint $\dot{\weights} = 0$ to LQR.
-\item \todo: Toy example 
 \end{itemize}
 \end{frame}	
 %
 \begin{frame}{Connection to ILC}
 \begin{itemize}
-\item Since we don't know the system matrices $A_x$ and $B_x$, we cannot track the trajectory $\traj(t)$ with this weight-feedback law. \item We can update our weight-feedback law with ILC:
+\item Since we don't know the system dynamics perfectly, we cannot track the trajectory $\traj(t)$ with this weight-feedback law. \pause
+\begin{itemize}
+	\item However we can initialize a DMP with the weights calculated using linearizations $A_x$ and $B_x$ of the inverse robot dynamics. \pause
+\end{itemize}
+\item We can update our weight-feedback law with ILC: \pause
 \begin{equation*}
 \begin{aligned}
 \weights_{new} = \weights_{old} - \alpha(\basis^{\mathrm{T}}\basis + \lambda\mathbf{I})^{-1}\basis^{\mathrm{T}}(\state_{obs} - \traj)
 \end{aligned}
-\end{equation*}
-\item \todo: Show that this is gradient ascent of the cost functional!
+\end{equation*} \pause
+\item \todo: Can this be related to a gradient descent of the cost functional?
 \end{itemize}
 \end{frame}	
 %

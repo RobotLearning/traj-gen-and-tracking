@@ -1,12 +1,12 @@
 %% Test script for ILC (Arimoto-style)
 
-clc; clear; close all;
+clc; close all; clear classes; 
 dimx = 3;
 dimu = 1;
 
 % simulation variables
 t0 = 0;
-tf = 1;
+tf = 0.1;
 h = 0.02;
 t = t0:h:tf;
 N = length(t)-1;
@@ -34,10 +34,11 @@ s = [sin(2*pi*t);t.^2;t];
 x0 = zeros(dimx,1);
 
 % execute LQR
-[x,unom] = model.lqr(t,x0,s);
+[x,unom,K] = model.lqr(t,x0,s);
 
 % Update the trajectory class
 trj = Trajectory(t,[],s,unom);
+[x2,trj2] = model.evolveWithFeedback(trj,x0,K);
 trj.addPerformance(unom,x,model.COST,'LQR');
 
 model.plot_controls(trj);
@@ -48,7 +49,9 @@ ilc = bILC(trj);
 for i = 1:5
     % Update the controls
     u = ilc.feedforward(trj,x);
+    % TODO: test the evolution here!
     x = model.evolve(t,x0,u);
+    
     trj.addPerformance(u,x,model.COST,ilc);
 
     model.plot_controls(trj);

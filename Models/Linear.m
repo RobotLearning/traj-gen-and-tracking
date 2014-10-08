@@ -122,7 +122,7 @@ classdef Linear < Model
         
         %TODO: call nominal or actual evolution functions
         %debug testLQR first
-        function [x,u] = lqr(obj,t,x0,s)
+        function [x,u,K] = lqr(obj,t,x0,s)
             
             dimx = obj.SIM.dimx;
             dimu = obj.SIM.dimu;
