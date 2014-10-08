@@ -183,8 +183,15 @@ classdef (Abstract) Model < handle
         end
         
         % plot the system states
-        function plot_states(obj,t,x_des,xact)
+        function plot_states(obj,trj)
  
+            t = trj.t;
+            x_des = trj.s;
+            if ~isempty(trj.PERF)
+                xact = trj.PERF(end).x;                
+            else
+                error('Performance not added!');
+            end
             num_out = size(xact,1);
             figure;
             for i = 1:num_out

@@ -31,6 +31,7 @@ Robot Learning Lab \\
 
 % Custom commands
 \newcommand{\todo}{\color{red}{TODO}} % TODO!
+\newcommand{\force}{\mathbf{f}} % forcing term of the dmps
 \newcommand{\fullvec}{\boldsymbol{\psi}} % full vector for state-ref-dmp-goal
 \newcommand{\basis}{\mathbf{\Phi}} % basis functions of the dmp as a matrix
 \newcommand{\kin}{\mathcal{T}} % used to denote inverse kinematics
@@ -67,13 +68,6 @@ Robot Learning Lab \\
 %
 \section{Motivation}
 %
-\begin{frame}{Research Question}
-\begin{itemize}
-\item How can we generate optimally hitting Dynamic Movement Primitives (DMPs)?
-\item More generally: How can we create a DMP $\dmp(t)$ that reproduces a reference trajectory $\traj(t)$ as closely as possible?
-\end{itemize}
-\end{frame}
-%
 \begin{frame}{Motivation}
 \begin{itemize}
 \item Approximation and control errors in table tennis make the application of DMPs less useful in practice. Small changes to DMPs can often make them more useful.
@@ -88,6 +82,13 @@ Robot Learning Lab \\
 \end{itemize}
 \end{frame}
 %
+\begin{frame}{Research Question}
+\begin{itemize}
+\item How can we generate optimally hitting Dynamic Movement Primitives (DMPs)? \pause
+\item When we have modelling inaccuracies, how can we create a DMP $\dmp(t)$ such that the robot executes the desired hitting motion?
+\end{itemize}
+\end{frame}
+%
 \section{Methodology}
 %
 \begin{frame}{Problem Setting}
@@ -96,7 +97,7 @@ Robot Learning Lab \\
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
-\dot{\state}(t) &= \mathbf{f}(\state(t),\sysInput(t)) \\
+\ddot{\joint} = M^{-1}(\joint)\{ \tau - C(\joint,\dot{\joint})\dot{\joint} - G(\joint) \}\\
 \end{aligned}
 \end{equation*}
 \begin{itemize}
@@ -111,12 +112,11 @@ Robot Learning Lab \\
 \begin{equation*}
 \begin{aligned}
 M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \\
-\sysInput_{IDM} = F(\joint_{des},\dot{\joint_{des}},\ddot{\joint_{des}})
+\sysInput_{IDM} = F(\joint_{des},\dot{\joint}_{des},\ddot{\joint}_{des})
 \end{aligned}
 \end{equation*}
 \pause 
 \begin{itemize}
-\item An accurate inverse kinematics model $\joint_{des} = \invKin(\traj)$ \pause
 \item And a finely-tuned compliant feedback law: \pause
 \end{itemize}
 \begin{equation*}
@@ -153,8 +153,19 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
 %
 \begin{frame}{Iterative Learning Control (ILC)}
 \begin{itemize}
+\item A very simple update rule is to use the error and its derivatives \cite{Arimoto}. For example:
+\end{itemize}
+\begin{equation*}
+\begin{aligned}
+\sysInput_{k+1} = \sysInput_{k} + K_{p}(\state_{k} - \traj) + K_{d}(\dot{\state}_{k} - \dot{\traj})
+\end{aligned}
+\end{equation*}
+\end{frame}
+%
+\begin{frame}{Iterative Learning Control (ILC)}
+\begin{itemize}
 \item Equivalently we can update the kinematic policy! \cite{Survey}
-\item We can update the DMP weights using a simple (Arimoto-style) PD update law: 
+\item We can update the DMP weights using the same PD update law: 
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
@@ -162,7 +173,21 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
 \end{aligned}
 \end{equation*}
 \begin{itemize}
-\item How can we motivate this using control theory?
+\item Or we can update using the forcing term errors:
+\begin{equation*}
+\begin{aligned}
+\weights_{k+1} &= \weights_{k} + \alpha(\basis^{\mathrm{T}}\basis + \lambda\mathbf{I})^{-1}\basis^{\mathrm{T}}(\force_x - \force_r) \\
+\force_x &= \ddot{\state} - \alpha_g(\beta_g(g-\state) - \dot{\state}) \\
+\force_r &= \ddot{\traj} - \alpha_g(\beta_g(g-\traj) - \dot{\traj})
+\end{aligned}
+\end{equation*}
+\end{itemize}
+\end{frame}
+%
+\begin{frame}{ILC: Pros and Cons}
+\begin{itemize}
+\item ILC can be more efficient than standard RL approaches: each time step has its own cost $e(t)$, as opposed to using the squared sum of all errors. \pause
+\item But ILC is for when you \emph{really} want to track the reference trajectory $\traj(t)$. It assumes that $\traj(t)$ is optimal.
 \end{itemize}
 \end{frame}
 %

@@ -1,7 +1,16 @@
-function K = LQR(Q,R,A,B,MODE)
-
 % Discrete time finite horizon linear quadratic regulator
 % lqr function gives the optimal linear feedback law
+%
+% Inputs:
+% Q,R - Weight matrices
+% A,B - Matrices of the differential equation
+% Mode - Infinite horizon or finite horizon, as well as time
+% varying/invariant
+%
+% Outputs:
+% K - Feedback gain
+
+function K = LQR(Q,R,A,B,MODE)
 
 dimx = size(Q,1);
 dimu = size(R,1);

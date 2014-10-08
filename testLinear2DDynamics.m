@@ -94,25 +94,25 @@ Traj.addPerformance(Traj.unom,xact,lin.COST,'LQR');
 lin.plot_controls(Traj);
 lin.plot_states(t,xact([1,3],:),s);
 
-% %% Iterative Learning Control
-% 
-% num_trials = 10;
-% ilc = bILC(lin,Traj);
-% % observe output
-% y = lin.observe(t,x0,Traj.unom);
-% dev = y - s;
-% 
-% for i = 1:num_trials
-%     
-%     u = ilc.feedforward(Traj,lin,dev);    
-%     % get error (observed trajectory deviation)
-%     xact = lin.evolve(t,x0,u);
-%     y = lin.observe(t,x0,u);
-%     dev = y - s;
-%     Traj.addPerformance(u,xact,lin.COST,ilc);
-%     
-% end
-% 
-% % Plot the controls and animate the robot arm
-% lin.plot_controls(Traj);
-% lin.plot_states(xact([1,3]),s);
+%% Iterative Learning Control
+
+num_trials = 10;
+ilc = bILC(lin,Traj);
+% observe output
+y = lin.observe(t,x0,Traj.unom);
+dev = y - s;
+
+for i = 1:num_trials
+    
+    u = ilc.feedforward(Traj,lin,dev);    
+    % get error (observed trajectory deviation)
+    xact = lin.evolve(t,x0,u);
+    y = lin.observe(t,x0,u);
+    dev = y - s;
+    Traj.addPerformance(u,xact,lin.COST,ilc);
+    
+end
+
+% Plot the controls and animate the robot arm
+lin.plot_controls(Traj);
+lin.plot_states(xact([1,3]),s);

@@ -110,19 +110,19 @@ classdef discreteDMP < DMP
         % forcing function to drive nonlinear system dynamics
         function f = forcing(obj)
 
-        w = obj.FOR.w;
-        h = obj.FOR.h;
-        c = obj.FOR.c;
-        x = obj.can.x;
-        N = length(w);
-        f = 0;
-        scale = 0;
-        for i = 1:N
-            f = f + obj.basis(x,h(i),c(i))*w(i)*x;
-            scale = scale + obj.basis(x,h(i),c(i));
-        end
+            w = obj.FOR.w;
+            h = obj.FOR.h;
+            c = obj.FOR.c;
+            x = obj.can.x;
+            N = length(w);
+            f = 0;
+            scale = 0;
+            for i = 1:N
+                f = f + obj.basis(x,h(i),c(i))*w(i)*x;
+                scale = scale + obj.basis(x,h(i),c(i));
+            end
 
-        f = f/scale;
+            f = f/scale;
         end
         
     end

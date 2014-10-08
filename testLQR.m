@@ -10,7 +10,7 @@ dimu = 1;
 
 % simulation variables
 t0 = 0;
-tf = 10;
+tf = 1;
 h = 0.02;
 t = t0:h:tf;
 N = length(t)-1;
@@ -24,13 +24,13 @@ B = [0;0;1];
 % trick to get discrete time versions
 Mat = [A, B; zeros(dimu, dimx + dimu)];
 MD = expm(h * Mat);
-A = MD(1:dimx,1:dimx);
-B = MD(1:dimx,dimx+1:end);
+Ad = MD(1:dimx,1:dimx);
+Bd = MD(1:dimx,dimx+1:end);
 
 % optimal feedback matrix
 MODE.N = Inf;
 MODE.LTI = true;
-K = LQR(Q,R,A,B,MODE);
+K = LQR(Q,R,Ad,Bd,MODE);
 
 % simulate system
 x = zeros(dimx,N+1);
@@ -45,7 +45,7 @@ for i = 1:N
         u(:,i) = K*x(:,i);
     end
         
-    x(:,i+1) = A*x(:,i) + B*u(:,i);
+    x(:,i+1) = Ad*x(:,i) + Bd*u(:,i);
 end
 
 x1 = x(1,:);
@@ -69,49 +69,49 @@ legend('control input');
 
 close all;
 % track the ramp trajectory
-s1 = t;
+s1 = sin(2*pi*t);
 s2 = t;
 s3 = t;
 s = [s1;s2;s3];
 s0 = s(:,1);
 
-% velocity is zero in this case
-v = zeros(dimx,N);
-
 % form the time varying matrices Abar and Bbar
 Abar = zeros(dimx+1,dimx+1,N);
 Bbar = zeros(dimx+1,dimu,N);
 for i = 1:N
-    Abar(:,:,i) = [A, (A-eye(dimx))*s(:,i) - v(:,i); ...
+    Abar(:,:,i) = [Ad, Ad*s(:,i) - s(:,i+1); ...
                    zeros(1,dimx), 0];
-    Bbar(:,:,i) = [B; 0];
+    Bbar(:,:,i) = [Bd; 0];
 end
             
 MODE.N = N;
 MODE.LTI = false;
-Q = diag([1,1,1,0]);
+Q = 100*diag([1,0,0,0]);
 R = eye(dimu);
 
 K = LQR(Q,R,Abar,Bbar,MODE);
 
 % simulate system
 u = zeros(dimu,N);
-x0 = ones(dimx,1);
+x0 = zeros(dimx,1);
 e0 = x0 - s0;
-e(:,1) = [e0; 1];
+ebar(:,1) = [e0; 1];
+xtest = zeros(dimx,length(t));
+xtest(:,1) = x0;
 
 for i = 1:N
     if length(size(K)) == 3 % finite horizon
-        u(:,i) = K(:,:,i)*e(:,i);
+        u(:,i) = K(:,:,i)*ebar(:,i);
     else % infinite horizon
-        u(:,i) = K*e(:,i);
+        u(:,i) = K*ebar(:,i);
     end
-        
-    e(:,i+1) = Abar(:,:,i)*e(:,i) + Bbar(:,:,i)*u(:,i);
+    
+    %xtest(:,i+1) = Ad * xtest(:,i) + Bd * u(:,i);
+    ebar(:,i+1) = Abar(:,:,i)*ebar(:,i) + Bbar(:,:,i)*u(:,i);
 end
 
 % extract the signals from error
-x = e(1:3,:) + s;
+x = ebar(1:3,:) + s;
 x1 = x(1,:);
 x2 = x(2,:);
 x3 = x(3,:);

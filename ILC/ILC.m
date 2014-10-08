@@ -17,15 +17,6 @@ classdef (Abstract) ILC < handle
         
         % ILC's Last input sequence
         u_last
-        % Lifted state matrix F
-        F
-        % Lifted state matrix G
-        G
-        % Lifted state matrix H
-        H
-        % Lifted state inequalities
-        umin
-        umax
         
     end
     
