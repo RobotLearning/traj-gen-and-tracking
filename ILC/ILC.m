@@ -33,7 +33,7 @@ classdef (Abstract) ILC < handle
         function record(obj,u_applied,cost)            
             obj.episode = obj.episode + 1;
             obj.u_last = u_applied;
-            obj.error = cost;            
+            obj.error(obj.episode) = cost;            
         end
         
     end
