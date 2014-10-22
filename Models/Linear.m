@@ -1,4 +1,5 @@
 % A simple linear dynamics model
+% TODO: put A,B,... into PAR structure?
 
 classdef Linear < Model
 
@@ -11,12 +12,20 @@ classdef Linear < Model
         COST
         % fields necessary for simulation and plotting, noise etc.
         SIM
-        % cartesian coordinates of the trajectory
-        x, xd, xdd
+    end
+    
+    % Fields pertaining to state evolution and measurements
+    properties
+        % cartesian coordinates of the state
+        x
+        % observation of the state (output)
+        y
         % A and B matrices
         A, B
         % discrete A and B matrices
         Ad, Bd
+        % observation matrix
+        C
     end
     
     methods
@@ -25,8 +34,14 @@ classdef Linear < Model
         function set.PAR(obj, STR)  
             
             % create A and B matrices
-            obj.A = STR.A;
-            obj.B = STR.B;
+            if STR.CTS
+                obj.A = STR.A;
+                obj.B = STR.B;
+            else
+                obj.Ad = STR.Ad;
+                obj.Bd = STR.Bd;
+            end
+            obj.C = STR.C;
                      
         end
         
@@ -42,18 +57,20 @@ classdef Linear < Model
         function set.SIM(obj, sim)
             obj.SIM.dimx = sim.dimx;
             obj.SIM.dimu = sim.dimu;
+            obj.SIM.dimy = sim.dimy;
             obj.SIM.h = sim.h;
+            obj.SIM.eps = sim.eps;
             assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
                    'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;
         end
         
         % change the cost function
+        % TODO: assert Q and R matrices are of correct size
         function set.COST(obj, STR)
             obj.COST.Q = STR.Q;
             obj.COST.R = STR.R;
             obj.COST.fnc = @(x1,x2) diag((x1-x2)'*STR.Q*(x1-x2));
-            assert(length(STR.Q) == obj.SIM.dimx);
         end
         
     end
@@ -73,7 +90,9 @@ classdef Linear < Model
             obj.COST = cost;
             
             % create discrete matrices
-            obj.discretizeMatrices();
+            if (par.CTS)
+                obj.discretizeMatrices();
+            end
         end
         
         function obj = discretizeMatrices(obj)
@@ -89,35 +108,37 @@ classdef Linear < Model
         end
         
         % provides nominal model
-        function x_dot = nominal(obj,t,x,u)
+        function x_next = nominal(obj,t,x,u)
 
-            x_dot = obj.A*x + obj.B*u;        
+            x_next = obj.Ad*x + obj.Bd*u;        
             
         end
         
         % provides actual model
-        function x_dot = actual(obj,t,x,u)
+        function x_next = actual(obj,t,x,u)
             
             % TODO          
             %error('Not Implemented');
-            x_dot = obj.A*x + obj.B*u;
+            x_next = obj.Ad*x + obj.Bd*u;        
             
         end
         
+        % TODO: isn't output controllability enough?
         function assertControllability(obj)
             
             % make sure the system is controllable/reachable
             % otherwise give an error
             
             % construct controllability Kalman matrix
-            A = obj.A;
-            B = obj.B;
-            dim = obj.SIM.dimx;
+            Ad = obj.Ad;
+            Bd = obj.Bd;
+            dimx = obj.SIM.dimx;
+            dimu = obj.SIM.dimu;
             K = zeros(dimx,dimx*dimu);
-            for i = 0:dim-1
-                K(:,dimx*i:dimx*i+dimu) = A^(i)*B;
+            for i = 0:dimx-1
+                K(:,(dimx*i+1):(dimx*i+dimu)) = (Ad^i)*Bd;
             end
-            assert(rank(K) == dim, 'System is not controllable!');
+            assert(rank(K) == dimx, 'System is not controllable!');
         end
         
         %TODO: call nominal or actual evolution functions
@@ -198,8 +219,8 @@ classdef Linear < Model
 
         end
 
-        % TODO: extend using planning to incorporate constraints
-        function [Traj,K] = trajectory(obj,t,x_des)
+        % TODO: test this function!
+        function Traj = trajectory(obj,t,s)
 
             N = length(t);
             Nu = N-1;
@@ -210,7 +231,7 @@ classdef Linear < Model
             obj.assertControllability();
             
             % optional: make a DMP that smoothens x_des
-            s = obj.dmpTrajectory(t,x_des);            
+            s = obj.dmpTrajectory(t,s);            
             
             % calculate the optimal feedback law
             % velocity is differences in the discrete case

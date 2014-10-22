@@ -2,7 +2,8 @@
 
 clc; close all; clear classes; 
 
-%% Example taken from the ILC survey by Bristow et al.
+%% Nonmonotonic ILC Example 
+% taken from the ILC survey by Bristow et al.
 
 dimx = 2;
 dimu = 1;
@@ -33,17 +34,23 @@ x(:,1) = x0;
 y(:,1) = C*x0;
 u0 = zeros(dimu,1);
 u = zeros(dimu,N);
-u(:,1) = u0;
+u1 = u; u2 = u;
+u1(:,1) = u0;
+u2(:,1) = u0;
+
 % evolve model
 for j = 1:N
     x(:,j+1) = A*x(:,j) + B*u(:,j);
     y(:,j+1) = C*x(:,j+1);
 end
+x1 = x; x2 = x;
+y1 = y; y2 = y;
+
 % form a trajectory
 trj = Trajectory(t,[],s,u);
 
-% Create an ilc controller
-ilc = bILC(trj);
+% Create two ilc controllers
+bilc = bILC(trj);
 
 % Create the 2-norm cost function
 cost.fnc = @(y,s) diag((y-s)'*Q*(y-s));
@@ -51,24 +58,25 @@ cost.fnc = @(y,s) diag((y-s)'*Q*(y-s));
 % Perform ILC updates
 for i = 1:numIt
     % Update the controls
-    u = ilc.feedforward(trj,y);
-    % Evolve model
+    u1 = bilc.feedforward(trj,y1);
+    % Evolve system with both ILC inputs
     for j = 1:N
-        x(:,j+1) = A*x(:,j) + B*u(:,j);
-        y(:,j+1) = C*x(:,j+1);
+        x1(:,j+1) = A*x1(:,j) + B*u1(:,j);
+        y1(:,j+1) = C*x1(:,j+1);
     end
-    % Add performance
-    trj.addPerformance(u,y,cost,ilc);
+    % Add performances
+    trj.addPerformance(u1,y1,cost,bilc);
 
 end
 
 figure(1);
-plot(1:numIt,ilc.error);
+plot(1:numIt,bilc.error);
 title('Squared-2-Norm of ILC error');
+legend('Basic PD-type ILC');
 figure(2);
-plot(t,y,'.-',t,s,'-');
+plot(t,y1,'.-',t,s,'-');
 title('Last iteration result');
-legend('ILC trajectory','Reference');
+legend('bILC trajectory','Reference');
 
 %% More complicated example
 

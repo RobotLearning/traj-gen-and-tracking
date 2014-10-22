@@ -78,7 +78,6 @@ classdef aILC < ILC
         
         % get the lifted vector representation 
         % around the trajectory
-        % TODO: better way to construct F?
         function obj = lift(obj,model,trj)
             
             N = trj.N - 1;

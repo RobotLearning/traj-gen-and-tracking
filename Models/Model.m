@@ -119,16 +119,24 @@ classdef (Abstract) Model < handle
             
             N = length(t);
             dimx = obj.SIM.dimx;
+            dimy = size(obj.C,1);
             eps = obj.SIM.eps; % covariance of process x measurement noise
             M = eps * eye(N*dimx);
+            Cs = cell(1,N);
+            [Cs{:}] = deal(obj.C);
+            C = blkdiag(Cs{:});
             
             xact = evolve(obj,t,x0,us);
             % vectorize x_iter into N*dim dimensions
             x_vec = xact(:);
             % add observation noise with covariance M
-            y = x_vec + chol(M)*randn(length(x_vec),1);
+            if eps ~= 0
+                x_vec = x_vec + chol(M)*randn(length(x_vec),1);
+            end
+            % measure only some of the states
+            y_vec = C*x_vec;
             % arrange back to normal form
-            y = reshape(y,dimx,N);
+            y = reshape(y_vec,dimy,N);
             
         end
         
@@ -160,7 +168,7 @@ classdef (Abstract) Model < handle
         end
         
         % plot the control inputs
-        function plot_controls(obj,trj)
+        function plot_inputs(obj,trj)
             
             if ~isempty(trj.PERF)
                 u = trj.PERF(end).u;
@@ -174,7 +182,7 @@ classdef (Abstract) Model < handle
             figure;
             for i = 1:num_inp
                 subplot(num_inp,1,i);
-                plot(t,u(i,:),'LineWidth',2);
+                plot(t,u(i,:));
                 title(strcat(num2str(i),'. control input'));
                 xlabel('Time (s)');
                 ylabel(strcat('Control input u',num2str(i)));
@@ -182,22 +190,23 @@ classdef (Abstract) Model < handle
             
         end
         
-        % plot the system states
-        function plot_states(obj,trj)
+        % plot the desired system states and outputs
+        function plot_outputs(obj,trj)
  
             t = trj.t;
-            x_des = trj.s;
+            y_des = trj.s;
             if ~isempty(trj.PERF)
-                xact = trj.PERF(end).x;                
+                y = trj.PERF(end).y;                
+                name = trj.PERF(end).name;
             else
                 error('Performance not added!');
             end
-            num_out = size(xact,1);
+            num_out = size(y,1);
             figure;
             for i = 1:num_out
                 subplot(num_out,1,i);
-                plot(t,xact(i,:),t,x_des(i,:),'LineWidth',2);
-                legend('Actual state','Desired state');
+                plot(t,y(i,:),'.-',t,y_des(i,:),'-');
+                legend(name,'Reference');
                 title(strcat(num2str(i),'. state'));
                 xlabel('Time (s)');
                 ylabel(strcat('State x',num2str(i)));

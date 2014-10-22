@@ -43,8 +43,8 @@ classdef bILC < ILC
     
             % set learning rate
             a_p = 0.5;
-            a_d = 0.0;
-            u_next = obj.u_last - a_p * dev + a_d * ddev;
+            a_d = 0.2;
+            u_next = obj.u_last - a_p * dev - a_d * ddev;
             
         end
         

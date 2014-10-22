@@ -1,6 +1,7 @@
 % Class for holding inputs and states on trajectories.
 % Class is used instead of a structure to enforce certain fields.
-% TODO: do we need this class?
+%
+% TODO: linear feedback law calculated during trajectory generation
 
 classdef Trajectory < handle
     
@@ -15,7 +16,11 @@ classdef Trajectory < handle
         % nominal u values calculated during trajectory generation
         % (optional)
         unom
+        % linear feedback law calculated during trajectory generation
+        % (optional)
+        % K
         % via points used for spline-based trajectory generation
+        % (optional)
         sp
         % particular algorithm's performance as array of structures
         PERF
@@ -33,7 +38,7 @@ classdef Trajectory < handle
         
         % fun_cost is a cost function, not necessarily quadratic
         % controller is generally a particular ILC implementation
-        function addPerformance(obj,u,x,costfun,controller)
+        function addPerformance(obj,u,y,costfun,controller)
             
             if ischar(controller)
                 name = controller;
@@ -45,15 +50,14 @@ classdef Trajectory < handle
             i = length(obj.PERF);
             obj.PERF(i+1).name = name;
             obj.PERF(i+1).u = u;
-            obj.PERF(i+1).x = x;
-            obj.PERF(i+1).err = x - obj.s;
-            obj.PERF(i+1).cost = costfun.fnc(x,obj.s);
+            obj.PERF(i+1).y = y;
+            obj.PERF(i+1).err = y - obj.s;
+            obj.PERF(i+1).cost = costfun.fnc(y,obj.s);
 
             % display SSE error
             sse = sum(obj.PERF(i+1).cost);
-            fprintf('Q-SSE for %s is %f \n', name, sse);
+            fprintf('%d. trial: Q-SSE for %s is %f \n', i+1, name, sse);
             
-            % TODO: this is VERY problematic!
             % add to controller
             if ~ischar(controller)
                 controller.record(u,sse);
