@@ -56,6 +56,7 @@ classdef TwoWheeledCar < Model
         
         % set the simulation parameters
         function set.SIM(obj, sim)
+            obj.SIM.discrete = sim.discrete;
             obj.SIM.dimx = 3;
             obj.SIM.dimu = 2;
             obj.SIM.h = sim.h;
@@ -138,7 +139,7 @@ classdef TwoWheeledCar < Model
         % TODO: extend using planning to incorporate constraints
         function Traj = trajectory(obj,t,x_des)
 
-            N = length(t);
+            N = length(t)-1;
             dimu = obj.SIM.dimu;
             h = obj.SIM.h;
             unom = zeros(dimu,N);
@@ -146,7 +147,7 @@ classdef TwoWheeledCar < Model
             R2 = obj.PAR.wheel2.radius;
             d = obj.PAR.length;
 
-            for i = 1:N-1
+            for i = 1:N
                 % discretize B(phi) around phi0
                 B = h * [R1/2 * cos(x_des(3,i)), R2/2 * cos(x_des(3,i));
                          R1/2 * sin(x_des(3,i)), R2/2 * sin(x_des(3,i));
@@ -156,10 +157,8 @@ classdef TwoWheeledCar < Model
                 % solve for u
                 unom(:,i) = B(2:3,:)\delta;
             end
-
-            unom(:,end) = unom(:,end-1);
             
-            Traj = Trajectory(t,[],x_des,unom);
+            Traj = Trajectory(t,x_des,unom,[]);
         end
         
         % get lifted model constraints

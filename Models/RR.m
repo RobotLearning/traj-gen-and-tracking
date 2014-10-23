@@ -75,6 +75,7 @@ classdef RR < Robot
         
         % set the simulation parameters
         function set.SIM(obj, sim)
+            obj.SIM.discrete = sim.discrete;
             obj.SIM.dimx = 4;
             obj.SIM.dimu = 2;
             obj.SIM.h = sim.h;
@@ -204,8 +205,10 @@ classdef RR < Robot
                 ud(:,i) = RRDynamics(obj.q(:,i),obj.qd(:,i),...
                                            obj.qdd(:,i),obj.PAR);
             end
+            % throw away last point
+            ud = ud(:,1:end-1);
             
-            Traj = Trajectory(t,[],x_des,ud);
+            Traj = Trajectory(t,x_des,ud,[]);
         end
         
         % get lifted model constraints

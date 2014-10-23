@@ -109,13 +109,13 @@ dmp2 = LWR(path2,dmp2,force);
 y = y1(1,:);
 figure(3);
 plot(t,path1,'-',t,y,'-.',t,x);
-legend('desired trajectory','state y','sin of phase');
+legend('desired trajectory','state y','phase');
 title('Followed trajectory for DMP1');
 
 y = y2(1,:);
 figure(4);
 plot(t,path2,'-',t,y,'-.',t,x);
-legend('desired trajectory','state y','sin of phase');
+legend('desired trajectory','state y','phase');
 title('Followed trajectory for DMP2');
 
 %% test circular path
@@ -143,13 +143,13 @@ dmp2.resetStates();
 y11 = y1(1,:);
 figure(5);
 plot(t,path1,'-',t,y11,'-.',t,x);
-legend('desired trajectory','state y','sin of phase');
+legend('desired trajectory','state y','phase');
 title('Followed trajectory for DMP1');
 
 y12 = y2(1,:);
 figure(6);
 plot(t,path2,'-',t,y12,'-.',t,x);
-legend('desired trajectory','state y','sin of phase');
+legend('desired trajectory','state y','phase');
 title('Followed trajectory for DMP2');
 
 % plot the x-y trajectory tracked

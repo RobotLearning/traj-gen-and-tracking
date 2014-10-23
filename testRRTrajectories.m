@@ -92,6 +92,7 @@ CON.link2.udot.min = -100;
 COST.Q = diag([1,1,0,0]);
 
 % simulation parameters
+SIM.discrete = false;
 SIM.h = 0.02;
 SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
@@ -121,31 +122,34 @@ Traj = rr.trajectory(t,s);
 
 q0 = [rr.q(:,1); rr.qd(:,1)];
 % observe output
-q_obs = rr.observe(t,q0,Traj.unom);
-
-% Plot the controls and animate the robot arm
-rr.plot_controls(Traj);
-rr.animateArm(q_obs(1:2,:),s(1:2,:));
-
-%% Start learning with ILC
-
-num_trials = 10;
+q_obs = rr.evolve(t,q0,Traj.unom);
 
 % get the deviations
 % TODO: xd should also be returned
 [~,y] = rr.kinematics(q_obs(1:2,:));
 yd = [zeros(2,1), diff(y')'];
 % add performance to trajectory
-Traj.addPerformance(Traj.unom,[y;yd],rr.COST,'Nominal');
+Traj.addPerformance(Traj.unom,[y;yd],rr.COST,'Nominal model inversion');
+
+% Plot the controls and animate the robot arm
+rr.plot_inputs(Traj);
+rr.plot_outputs(Traj);
+rr.animateArm(q_obs(1:2,:),s(1:2,:));
+
+%% Start learning with ILC
+
+num_trials = 10;
+
 % get deviation
 dev = Traj.PERF(end).err;
 ilc = aILC(rr,Traj);
+%ilc = bILC(Traj);
 
 for i = 1:num_trials
     % get next inputs
     u = ilc.feedforward(Traj,rr,dev);
     % evolve system
-    q_obs = rr.observe(t,q0,u);
+    q_obs = rr.evolve(t,q0,u);
     % get the cartesian coordinates
     [~,y] = rr.kinematics(q_obs(1:2,:));
     yd = [zeros(2,1), diff(y')'];
@@ -158,5 +162,6 @@ for i = 1:num_trials
 end
 
 % Plot the controls and animate the robot arm
-rr.plot_controls(Traj);
+rr.plot_inputs(Traj);
+rr.plot_outputs(Traj);
 rr.animateArm(q_obs(1:2,:),s(1:2,:));

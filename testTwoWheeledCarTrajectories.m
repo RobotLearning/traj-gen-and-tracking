@@ -40,6 +40,8 @@ CON.wheel2.udot.max = 100;
 CON.wheel2.udot.min = -100;
 
 % Simulation Values 
+% system is continous
+SIM.discrete = false;
 % dimension of the x vector
 SIM.dimx = 3;
 % dimension of the control input
@@ -81,32 +83,34 @@ Traj = TW.trajectory(t,s);
 x0 = s(:,1);
 xact = TW.evolve(t,x0,Traj.unom);
 
-% Plot the controls and animate the robot arm
-TW.plot_controls(Traj);
-TW.animate(xact,s(1:2,:));
-
 % add performance to trajectory
-Traj.addPerformance(Traj.unom,xact,TW.COST,'Nominal');
+Traj.addPerformance(Traj.unom,xact,TW.COST,'Nominal model inversion');
+
+% Plot the controls and animate the robot arm
+TW.plot_inputs(Traj);
+TW.plot_outputs(Traj);
+TW.animate(xact,s(1:2,:));
 
 %% Iterative Learning Control
 
 num_trials = 10;
 ilc = aILC(TW,Traj);
-% observe output
-y = TW.observe(t,x0,Traj.unom);
+% TODO: add C matrix and observe output with observe function
+y = TW.evolve(t,x0,Traj.unom);
 dev = y - s;
 
 for i = 1:num_trials
     
     u = ilc.feedforward(Traj,TW,dev);    
     % get error (observed trajectory deviation)
-    xact = TW.evolve(t,x0,u);
-    y = TW.observe(t,x0,u);
+    y = TW.evolve(t,x0,u);
+    %y = TW.observe(t,x0,u);
     dev = y - s;
-    Traj.addPerformance(u,xact,TW.COST,ilc);
+    Traj.addPerformance(u,y,TW.COST,ilc);
     
 end
 
 % Plot the controls and animate the robot arm
-TW.plot_controls(Traj);
-TW.animate(xact,s(1:2,:));
+TW.plot_inputs(Traj);
+TW.plot_outputs(Traj);
+TW.animate(y,s(1:2,:));

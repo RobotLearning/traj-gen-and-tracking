@@ -152,7 +152,7 @@ lin.trajectory(t,y0,s);
 trj.addPerformance(us,y,lin.COST,'LQR');
 
 lin.plot_inputs(trj);
-lin.plot_states(trj);
+lin.plot_outputs(trj);
 
 % Create an ilc controller
 ilc = bILC(trj);
@@ -167,6 +167,6 @@ for i = 1:num_trials
     y = lin.observe(t,x0,us);
     traj.addPerformance(us,y,lin.COST,ilc);
 
-    lin.plot_controls(trj);
-    lin.plot_states(trj);
+    lin.plot_inputs(trj);
+    lin.plot_outputs(trj);
 end
