@@ -1,7 +1,7 @@
 % Class for holding inputs and states on trajectories.
 % Class is used instead of a structure to enforce certain fields.
 %
-% TODO: linear feedback law calculated during trajectory generation
+% TODO: is this class necessary?
 
 classdef Trajectory < handle
     
@@ -18,22 +18,22 @@ classdef Trajectory < handle
         unom
         % linear feedback law calculated during trajectory generation
         % (optional)
-        % K
+        K
         % via points used for spline-based trajectory generation
         % (optional)
-        sp
+        % sp
         % particular algorithm's performance as array of structures
         PERF
     end
     
     methods (Access = public)
          
-        function obj = Trajectory(t,sp,s,unom)            
+        function obj = Trajectory(t,s,unom,K)            
             obj.t = t;
             obj.N = length(t);
-            obj.sp = sp;
             obj.s = s;
             obj.unom = unom;
+            obj.K = K;
         end
         
         % fun_cost is a cost function, not necessarily quadratic

@@ -24,7 +24,6 @@ classdef (Abstract) Model < handle
         [xdot,A,B] = nominal(obj,t,x,u)
         % add a disturbance model to the nominal model
         xdot = actual(obj,t,x,u)
-        % lifted vector constraints
         
     end
     
@@ -32,12 +31,14 @@ classdef (Abstract) Model < handle
     methods (Access = public)
         
         % one step simulation along the trajectory
-        % TODO: is it correct to assume u constant?
+        % TODO: assumes continous dynamics
         function next = step(obj,t,prev,u,fun)
             
             h = obj.SIM.h;
             
-            if strcmpi(obj.SIM.int,'Euler')
+            if obj.SIM.discrete
+                next = fun(t,prev,u);            
+            elseif strcmpi(obj.SIM.int,'Euler')
                 delta = h * fun(t,prev,u);
                 next = prev + delta;                
             elseif strcmpi(obj.SIM.int,'RK4')
@@ -59,22 +60,23 @@ classdef (Abstract) Model < handle
         
         % predict one step using nominal model
         function x_pre = predict(obj,t,x,u)         
-            x_pre = step(obj,t,x,u,obj.nominal);
+            x_pre = step(obj,t,x,u,@obj.nominal);
         end
         
         % predict next states using function
         % useful to calculate nominal model prediction error
-        function x_pre = predict_full(obj,t,x,us,fun)
+        function x_pre = predict_full(obj,t,x,us)
             N = length(t)-1;
             x_pre = zeros(size(x,1),N+1);
             x_pre(:,1) = x(:,1);
             for i = 1:N
-                x_pre(:,i+1) = step(obj,t(i),x(:,i),us(:,i),fun);
+                x_pre(:,i+1) = step(obj,t(i),x(:,i),us(:,i),...
+                                    @obj.nominal);
             end            
         end
         
         % useful to propagate feedback law
-        function [x,traj] = evolveWithFeedback(obj,traj,x0,K)
+        function [y,u] = observeWithFeedback(obj,traj,x0,K)
             fun = @(t,x,u) obj.actual(t,x,u);
             t = traj.t;
             s = traj.s;
@@ -83,15 +85,16 @@ classdef (Abstract) Model < handle
             x = zeros(length(x0),N+1);
             u = zeros(size(K,1),N);
             x(:,1) = x0;
+            y(:,1) = obj.C * x(:,1);
             for i = 1:N
                 % error 
                 e = x(:,i) - s(:,i);
                 ehat = [e; 1];
                 u(:,i) = K(:,:,i)*ehat;
                 x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
+                y(:,i+1) = obj.C * x(:,i+1);
                 % no constraint checking
             end
-            traj.unom = u;
         end
         
         % useful to propagate one full iteration of

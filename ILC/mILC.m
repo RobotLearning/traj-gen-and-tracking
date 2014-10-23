@@ -5,7 +5,7 @@
 %
 % where F is the lifted matrix of the plant dynamics
 % and L is the learning matrix of the ILC update i.e.
-% unext = ulast + L*error;
+% unext = ulast - L*error;
 %
 % Ideally we would need L = inv(F), a model-based ILC update rule
 
@@ -69,7 +69,7 @@ classdef mILC < ILC
             obj.G = blkdiag(obj.G{:});
             
             if isa(model,'Linear')
-                
+            
                 Ad = model.Ad;
                 Bd = model.Bd;
                 % construct lifted domain matrix F

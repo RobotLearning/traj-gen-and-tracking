@@ -1,5 +1,5 @@
 % A simple linear dynamics model
-% TODO: put A,B,... into PAR structure?
+% continous model always discretized
 
 classdef Linear < Model
 
@@ -34,9 +34,9 @@ classdef Linear < Model
         function set.PAR(obj, STR)  
             
             % create A and B matrices
-            if STR.CTS
+            if ~obj.SIM.discrete
                 obj.A = STR.A;
-                obj.B = STR.B;
+                obj.B = STR.B;                
             else
                 obj.Ad = STR.Ad;
                 obj.Bd = STR.Bd;
@@ -55,6 +55,8 @@ classdef Linear < Model
         
         % set the simulation parameters
         function set.SIM(obj, sim)
+            
+            obj.SIM.discrete = sim.discrete;
             obj.SIM.dimx = sim.dimx;
             obj.SIM.dimu = sim.dimu;
             obj.SIM.dimy = sim.dimy;
@@ -90,13 +92,15 @@ classdef Linear < Model
             obj.COST = cost;
             
             % create discrete matrices
-            if (par.CTS)
+            if ~obj.SIM.discrete
                 obj.discretizeMatrices();
             end
         end
         
         function obj = discretizeMatrices(obj)
             
+            % we will be using discrete matrices for linear models
+            obj.SIM.discrete = true;
             dimu = obj.SIM.dimu;
             dimx = obj.SIM.dimx;
             h = obj.SIM.h;
@@ -141,9 +145,9 @@ classdef Linear < Model
             assert(rank(K) == dimx, 'System is not controllable!');
         end
         
-        %TODO: call nominal or actual evolution functions
-        %debug testLQR first
-        function [x,u,K] = lqr(obj,t,x0,s)
+        % Wrapper for the LQR function
+        % constructs the matrices of the model required for LQR
+        function K = lqr(obj,t,s)
             
             dimx = obj.SIM.dimx;
             dimu = obj.SIM.dimu;
@@ -164,32 +168,13 @@ classdef Linear < Model
             R = obj.COST.R;
 
             K = LQR(Q,R,Abar,Bbar,MODE);
-
-            % simulate system
-            u = zeros(dimu,N);
-            e0 = x0 - s(:,1);
-            ebar(:,1) = [e0; 1];
-
-            for i = 1:N
-                if length(size(K)) == 3 % finite horizon
-                    u(:,i) = K(:,:,i)*ebar(:,i);
-                else % infinite horizon
-                    u(:,i) = K*ebar(:,i);
-                end
-
-                %xtest(:,i+1) = Ad * xtest(:,i) + Bd * u(:,i);
-                ebar(:,i+1) = Abar(:,:,i)*ebar(:,i) + Bbar(:,:,i)*u(:,i);
-            end
-
-            % extract the signals from error
-            x = ebar(1:3,:) + s;
             
         end
         
-        function s = dmpTrajectory(obj,t,numbf,goal,x_des)
+        function s = dmpTrajectory(obj,t,numbf,goal,yin,ydes)
             
             h = obj.SIM.h;
-            dim = obj.SIM.dimx;
+            dimy = obj.SIM.dimy;
             N = length(t);
             % make a DMP that smoothens x_des
             pat = 'd';
@@ -206,55 +191,32 @@ classdef Linear < Model
             force.c = linspace(t(1),t(end),numbf);
 
             % initialize the dmp trajectory
-            s = zeros(dimx,N);
-            for i = 1:dim
-                % initial states of DMPs
-                yin = obj.PAR.state.init(i);
-                dmp(i) = discreteDMP(can,alpha,beta,goal,yin,force);
+            s = zeros(dimy,N);
+            for i = 1:dimy
+                dmp(i) = discreteDMP(can,alpha,beta,goal,yin(i),force);
                 % learn the weights with locally weighted regression
-                dmp(i) = LWR(x_des(i,:),dmp,force);
+                dmp(i) = LWR(ydes(i,:),dmp(i),force);
                 % evolve the DMP
-                [x,s(i,:)] = dmp(i).evolve();
+                [y,s(i,:)] = dmp(i).evolve();
             end
 
         end
 
-        % TODO: test this function!
-        function Traj = trajectory(obj,t,s)
-
-            N = length(t);
-            Nu = N-1;
-            dimx = obj.SIM.dimx;
-            dimu = obj.SIM.dimu;
+        % create a dmp trajectory and inputs using feedback law
+        function Traj = trajectory(obj,t,y0,ydes)
             
             % check controllability
             obj.assertControllability();
             
             % optional: make a DMP that smoothens x_des
-            s = obj.dmpTrajectory(t,s);            
+            goal = ydes(:,end);
+            numbf = 20;
+            s = obj.dmpTrajectory(t,numbf,goal,y0,ydes);            
             
             % calculate the optimal feedback law
-            % velocity is differences in the discrete case
-            v = diff(s')';
-
-            % form the time varying matrices Abar and Bbar
-            Abar = zeros(dimx+1,dimx+1,Nu);
-            Bbar = zeros(dimx+1,dimu,Nu);
-            for i = 1:Nu
-                Abar(:,:,i) = [obj.A, (obj.A-eye(dimx))*s(:,i) - v(:,i); ...
-                               zeros(1,dimx), 0];
-                Bbar(:,:,i) = [obj.B; zeros(1,dimu)];
-            end
-
-            MODE.N = N;
-            MODE.LTI = false;
-            % fifth dimension is for pseudovariable 1
-            Q = [obj.COST.Q, zeros(dimx,1); zeros(1,dimx), 0];
-            R = obj.COST.R;
-
-            K = LQR(Q,R,Abar,Bbar,MODE);
+            K = obj.lqr(obj,t,s);
             
-            Traj = Trajectory(t,[],s,[]);
+            Traj = Trajectory(t,s,[],K);
         end
         
     end

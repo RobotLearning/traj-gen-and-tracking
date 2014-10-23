@@ -10,7 +10,7 @@ dimu = 1;
 
 % simulation variables
 t0 = 0;
-tf = 1;
+tf = 4;
 h = 0.02;
 t = t0:h:tf;
 N = length(t)-1;
