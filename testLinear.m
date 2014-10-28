@@ -104,25 +104,27 @@ legend('Monotonic ILC');
 
 %% More complicated example
 
-clc; close all; clear classes; 
+close all;
 dimx = 3;
 dimu = 1;
 dimy = 1;
 
 % simulation variables
 t0 = 0;
-tf = 50;
-h = 1;
+tf = 1;
+h = 0.02;
 t = t0:h:tf;
 N = length(t)-1;
 
 % system and weighting matrices
-Q = 1;
+Q = [1 0 0; 0 0 0; 0 0 0];
 R = 1;
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
-C = [1 0 0];
+% assume full observation model
+% TODO: extend to partial observation models
+C = eye(dimx);
 
 % create the structures
 SIM.discrete = false;
@@ -131,31 +133,33 @@ SIM.dimu = dimu;
 SIM.dimy = dimy;
 SIM.h = h;
 SIM.eps = 0;
-SIM.int = 'Euler';
+SIM.int = 'RK4';
 PAR.A = A;
 PAR.B = B;
 PAR.C = C;
 CON = [];
-COST.Q = Q;
+COST.Q = C'*Q*C;
 COST.R = R;
 lin = Linear(PAR,CON,COST,SIM);
 
 % track sin for the measured variable y = x1
 s = sin(2*pi*t);
+% create yin with zero velocity
 x0 = zeros(dimx,1);
 y0 = C * x0;
+y0 = y0(1:2);
 
 % create trajectory and execute LQR
-lin.trajectory(t,y0,s);
+trj = lin.trajectory(t,y0,s);
 
-[y,us] = lin.observeWithFeedback(trj,x0,K);
+[y,us] = lin.observeWithFeedback(trj,x0);
 trj.addPerformance(us,y,lin.COST,'LQR');
 
 lin.plot_inputs(trj);
 lin.plot_outputs(trj);
 
 % Create an ilc controller
-ilc = bILC(trj);
+ilc = mILC(lin,trj);
 num_trials = 5;
 
 for i = 1:num_trials

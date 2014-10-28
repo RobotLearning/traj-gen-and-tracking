@@ -171,10 +171,11 @@ classdef Linear < Model
             
         end
         
+        % Creates a dmp trajectory
+        % TODO: extend for multiple outputs
         function s = dmpTrajectory(obj,t,numbf,goal,yin,ydes)
             
             h = obj.SIM.h;
-            dimy = obj.SIM.dimy;
             N = length(t);
             % make a DMP that smoothens x_des
             pat = 'd';
@@ -190,15 +191,19 @@ classdef Linear < Model
             force.h = ones(numbf,1) * numbf^(1.5);
             force.c = linspace(t(1),t(end),numbf);
 
-            % initialize the dmp trajectory
-            s = zeros(dimy,N);
-            for i = 1:dimy
-                dmp(i) = discreteDMP(can,alpha,beta,goal,yin(i),force);
-                % learn the weights with locally weighted regression
-                dmp(i) = LWR(ydes(i,:),dmp(i),force);
-                % evolve the DMP
-                [y,s(i,:)] = dmp(i).evolve();
-            end
+            % create the dmp trajectory
+            dmp = discreteDMP(can,alpha,beta,goal,yin,force);
+            % learn the weights with locally weighted regression
+            dmp = LWR(ydes,dmp,force);
+            % evolve the DMP
+            [x,s] = dmp.evolve();         
+            % add accelerations
+            s = [s; 0, diff(s(2,:))/h];
+            
+            figure;
+            plot(t,ydes,'-',t,s(1,:),'-.',t,x);
+            legend('desired trajectory','state y','phase');
+            title('Followed trajectory for DMP');
 
         end
 
@@ -208,13 +213,14 @@ classdef Linear < Model
             % check controllability
             obj.assertControllability();
             
-            % optional: make a DMP that smoothens x_des
+            % optional: make DMPs that smoothens x_des
+            % one for each output
             goal = ydes(:,end);
-            numbf = 20;
-            s = obj.dmpTrajectory(t,numbf,goal,y0,ydes);            
-            
+            numbf = 50;
+            s = obj.dmpTrajectory(t,numbf,goal,y0,ydes);
+
             % calculate the optimal feedback law
-            K = obj.lqr(obj,t,s);
+            K = obj.lqr(t,s);
             
             Traj = Trajectory(t,s,[],K);
         end

@@ -76,10 +76,11 @@ classdef (Abstract) Model < handle
         end
         
         % useful to propagate feedback law
-        function [y,u] = observeWithFeedback(obj,traj,x0,K)
+        function [y,u] = observeWithFeedback(obj,traj,x0)
             fun = @(t,x,u) obj.actual(t,x,u);
             t = traj.t;
             s = traj.s;
+            K = traj.K;
             N = length(t)-1;
             h = t(2)-t(1);
             x = zeros(length(x0),N+1);

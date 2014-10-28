@@ -1,7 +1,7 @@
 TODO List:
 
-- Check to see if things have broken after changing some classes
-- Test ILC learning with aILC and bILC
+- Implement DMP Weight update with ILC
+- Test (nonlinear) ILC learning with aILC, mILC and bILC
 - Test the model classes RR and TwoWheeledCar trajectories
 - Include RRR arm dynamics for testing
 - HInf like controller for linear models

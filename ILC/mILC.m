@@ -44,7 +44,12 @@ classdef mILC < ILC
             dim_y = model.SIM.dimy;
             
             N = trj.N - 1;
-            obj.u_last = trj.unom(:,1:N);
+            if ~isempty(trj.unom)
+                obj.u_last = trj.unom(:,1:N);
+            else
+                warning('Using last performance results');
+                obj.u_last = trj.PERF(end).u;
+            end
             
             obj.F = zeros(N*dim_x, N*dim_u);
             obj.G = zeros(N*dim_y, N*dim_x);
