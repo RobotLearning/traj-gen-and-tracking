@@ -123,7 +123,7 @@ classdef mILC < ILC
             % get rid of x0 in dev
             % ddev = diff(dev')'/h;
             % ddev = ddev(1,:);
-            dev = dev(1,2:end);                        
+            dev = dev(:,2:end);                        
     
             % set learning rate
             % a_p = 0.5;

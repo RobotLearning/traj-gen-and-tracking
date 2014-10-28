@@ -107,7 +107,7 @@ legend('Monotonic ILC');
 close all;
 dimx = 3;
 dimu = 1;
-dimy = 1;
+dimy = 3;
 
 % simulation variables
 t0 = 0;
@@ -117,7 +117,7 @@ t = t0:h:tf;
 N = length(t)-1;
 
 % system and weighting matrices
-Q = [1 0 0; 0 0 0; 0 0 0];
+Q = 100;
 R = 1;
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
@@ -133,7 +133,7 @@ SIM.dimu = dimu;
 SIM.dimy = dimy;
 SIM.h = h;
 SIM.eps = 0;
-SIM.int = 'RK4';
+SIM.int = 'Euler';
 PAR.A = A;
 PAR.B = B;
 PAR.C = C;
@@ -142,25 +142,31 @@ COST.Q = C'*Q*C;
 COST.R = R;
 lin = Linear(PAR,CON,COST,SIM);
 
-% track sin for the measured variable y = x1
-s = sin(2*pi*t);
+% track the sin trajectory
+%s = sin(pi/6*t);
+s = t.^2;
+
 % create yin with zero velocity
 x0 = zeros(dimx,1);
 y0 = C * x0;
 y0 = y0(1:2);
 
 % create trajectory and execute LQR
-trj = lin.trajectory(t,y0,s);
+traj = lin.trajectory(t,y0,s);
 
-[y,us] = lin.observeWithFeedback(trj,x0);
-trj.addPerformance(us,y,lin.COST,'LQR');
+[y,us] = lin.observeWithFeedback(traj,x0);
+traj.addPerformance(us,y,lin.COST,'LQR');
+% us = zeros(dimu,N); 
+% y = lin.observe(t,x0,us);
+% traj.addPerformance(us,y,lin.COST,'zeros');
 
-lin.plot_inputs(trj);
-lin.plot_outputs(trj);
+lin.plot_inputs(traj);
+lin.plot_outputs(traj);
 
 % Create an ilc controller
-ilc = mILC(lin,trj);
-num_trials = 5;
+%ilc = bILC(traj);
+ilc = mILC(lin,traj);
+num_trials = 1;
 
 for i = 1:num_trials
     
@@ -171,6 +177,12 @@ for i = 1:num_trials
     y = lin.observe(t,x0,us);
     traj.addPerformance(us,y,lin.COST,ilc);
 
-    lin.plot_inputs(trj);
-    lin.plot_outputs(trj);
 end
+
+lin.plot_inputs(traj);
+lin.plot_outputs(traj);
+
+figure;
+plot(1:num_trials,ilc.error);
+title('Squared-2-Norm of ILC error');
+legend('Monotonic ILC');

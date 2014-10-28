@@ -10,13 +10,13 @@ dimu = 1;
 
 % simulation variables
 t0 = 0;
-tf = 4;
+tf = 10;
 h = 0.02;
 t = t0:h:tf;
 N = length(t)-1;
 
 % system and weighting matrices
-Q = eye(dimx);
+Q = 100*eye(dimx);
 R = eye(dimu);
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
@@ -28,7 +28,7 @@ Ad = MD(1:dimx,1:dimx);
 Bd = MD(1:dimx,dimx+1:end);
 
 % optimal feedback matrix
-MODE.N = Inf;
+MODE.N = N;
 MODE.LTI = true;
 K = LQR(Q,R,Ad,Bd,MODE);
 
@@ -69,7 +69,7 @@ legend('control input');
 
 close all;
 % track the ramp trajectory
-s1 = sin(2*pi*t);
+s1 = sin(pi/6*t);
 s2 = t;
 s3 = t;
 s = [s1;s2;s3];
@@ -80,20 +80,20 @@ Abar = zeros(dimx+1,dimx+1,N);
 Bbar = zeros(dimx+1,dimu,N);
 for i = 1:N
     Abar(:,:,i) = [Ad, Ad*s(:,i) - s(:,i+1); ...
-                   zeros(1,dimx), 0];
+                   zeros(1,dimx), 1];
     Bbar(:,:,i) = [Bd; 0];
 end
             
 MODE.N = N;
 MODE.LTI = false;
 Q = 100*diag([1,0,0,0]);
-R = eye(dimu);
+R = 1*eye(dimu);
 
 K = LQR(Q,R,Abar,Bbar,MODE);
 
 % simulate system
 u = zeros(dimu,N);
-x0 = zeros(dimx,1);
+x0 = ones(dimx,1);
 e0 = x0 - s0;
 ebar(:,1) = [e0; 1];
 xtest = zeros(dimx,length(t));
@@ -111,10 +111,10 @@ for i = 1:N
 end
 
 % extract the signals from error
-x = ebar(1:3,:) + s;
-x1 = x(1,:);
-x2 = x(2,:);
-x3 = x(3,:);
+xx = ebar(1:3,:) + s;
+x1 = xx(1,:);
+x2 = xx(2,:);
+x3 = xx(3,:);
 % plotting outcome
 figure;
 plot(t,x1,'-',t,s1,'-.');

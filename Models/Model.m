@@ -209,7 +209,7 @@ classdef (Abstract) Model < handle
             figure;
             for i = 1:num_out
                 subplot(num_out,1,i);
-                plot(t,y(i,:),'.-',t,y_des(i,:),'-');
+                plot(t,y(i,:),'--',t,y_des(i,:),'-');
                 legend(name,'Reference');
                 title(strcat(num2str(i),'. state'));
                 xlabel('Time (s)');

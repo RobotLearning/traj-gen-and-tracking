@@ -9,6 +9,9 @@
 %
 % Outputs:
 % K - Feedback gain
+%
+% TODO: extend to include feedforward term
+%       Qf can be also input 
 
 function K = LQR(Q,R,A,B,MODE)
 

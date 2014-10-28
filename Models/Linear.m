@@ -93,14 +93,13 @@ classdef Linear < Model
             
             % create discrete matrices
             if ~obj.SIM.discrete
+                obj.SIM.discrete = true;
                 obj.discretizeMatrices();
             end
         end
         
         function obj = discretizeMatrices(obj)
             
-            % we will be using discrete matrices for linear models
-            obj.SIM.discrete = true;
             dimu = obj.SIM.dimu;
             dimx = obj.SIM.dimx;
             h = obj.SIM.h;
@@ -158,7 +157,7 @@ classdef Linear < Model
             Bbar = zeros(dimx+1,dimu,N);
             for i = 1:N
                 Abar(:,:,i) = [obj.Ad, obj.Ad*s(:,i) - s(:,i+1); ...
-                               zeros(1,dimx), 0];
+                               zeros(1,dimx), 1];
                 Bbar(:,:,i) = [obj.Bd; 0];
             end
 
@@ -179,17 +178,23 @@ classdef Linear < Model
             N = length(t);
             % make a DMP that smoothens x_des
             pat = 'd';
-            ax = 1;
+            % scaling
             tau = 1;
+            % ensure that phase decays
+            exponent = 2;
+            ax = exponent/(tau*t(end));            
             can = Canonical(h,ax,tau,N,pat);
             
             % create different DMPs, one for each dimension
             alpha = 25;
             beta = 25/4;
 
+            % final phase point
+            xf = exp(-tau*ax*t(end));
+            
             % initialize the forcing functions
             force.h = ones(numbf,1) * numbf^(1.5);
-            force.c = linspace(t(1),t(end),numbf);
+            force.c = linspace(xf,1,numbf);
 
             % create the dmp trajectory
             dmp = discreteDMP(can,alpha,beta,goal,yin,force);

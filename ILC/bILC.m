@@ -28,7 +28,12 @@ classdef bILC < ILC
             obj.error = 0;
             
             N = trj.N - 1;
-            obj.u_last = trj.unom(:,1:N);
+            if ~isempty(trj.unom)
+                obj.u_last = trj.unom(:,1:N);
+            else
+                warning('Using last performance results');
+                obj.u_last = trj.PERF(end).u;
+            end
             
         end
         

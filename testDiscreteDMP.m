@@ -83,8 +83,10 @@ alpha = 25;
 beta = 25/4;
 % number of basis functions
 numbf = 100;
+% final phase
+xf = exp(-ax*tau*t(end));
 force.h = ones(numbf,1) * numbf^(1.5);
-force.c = linspace(tin,tf,numbf);
+force.c = linspace(xf,1,numbf);
 % goal and amplitude are initialized here
 goal = 1;
 % initial states of DMPs
