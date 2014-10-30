@@ -1,0 +1,242 @@
+% Temporarily as a seperate document
+% Will be placed inside the IROS root latex file (problemstatement)
+
+\documentclass[10pt,a4paper]{article}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{color}
+
+% custom commands
+\newcommand\at[2]{\left.#1\right|_{#2}} % the at differential sign
+\newcommand\scalemath[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}} % scaling matrices
+
+%% custom macros
+\newcommand{\todo}{\textcolor{red}{TODO}} % TODO!
+\newcommand{\kin}{\mathcal{T}} % used to denote inverse kinematics
+\newcommand{\invKin}{\mathcal{T}^{-1}} % used to denote inverse kinematics
+
+\newcommand{\joint}{q} % used to denote robot state in joint space
+\newcommand{\state}{\bar{\joint}} % denotes the generalized coordinates - joint space and velocity coordinates
+\newcommand{\dmp}{s} % used to denote the dmp trajectory states
+\newcommand{\error}{e} % difference between state and reference
+\newcommand{\traj}{r} % used to denote the points on the trajectory to be tracked
+
+\newcommand{\dist}{\epsilon} % denotes the disturbances acting on the rigid body dynamics
+\newcommand{\linDist}{d} % denotes the disturbances on the LTV model
+
+\newcommand{\sysInput}{u} % used to denote the system inputs
+\newcommand{\linInput}{\tilde{u}} % denotes the LTV inputs
+\newcommand{\trjInput}{\nu} % denotes the inputs on the trajectory
+
+\newcommand{\fullvec}{\psi} % full vector for state-ref-dmp-goal
+\newcommand{\force}{f} % forcing term of the dmps
+\newcommand{\phase}{\phi} % phase of the dmp
+\newcommand{\weights}{w} % weights of the dmp
+\newcommand{\basis}{\Phi} % basis functions of the dmp as a matrix
+
+\newcommand{\observations}{\mathbf{y}} % used for the observed output
+\newcommand{\dynamics}{f}
+\newcommand{\dynamicsNominal}{f_{\mathrm{nom}}}
+\newcommand{\policy}{\mathbf{\pi}}
+\newcommand{\ValueFunction}{J}
+\newcommand{\episode}{k} % used for episode number
+
+\newcommand{\totalTime}{T} % total time duration 
+\newcommand{\numSteps}{N} % total number of time steps
+\newcommand{\numepisode}{K} % total number of episodes
+
+\newcommand{\threshold}{\epsilon_s}
+\newcommand{\alg}{\emph{wILC}}
+\newcommand{\dataset}{E}
+
+\author{Okan Ko\c c}
+\title{Optimal Striking Movement Generation \& Representation}
+\begin{document}
+\maketitle
+
+\section{Problem Statement}
+
+\subsection{ILC Review}
+
+In this section we will first review some of the results from the Iterative Learning Control (ILC) literature \cite{Bristow06}. Consider the nonlinear robot dynamics of the form:
+
+\begin{equation}
+\begin{aligned}
+\ddot{\joint} &= \dynamics(\joint,\dot{\joint},\sysInput) + \dist(\joint,\dot{\joint})\\
+\ddot{\joint} &= M^{-1}(\joint)\{ \tau(\sysInput) - C(\joint,\dot{\joint})\dot{\joint} - G(\joint)\} + \dist(\joint,\dot{\joint})\\
+\end{aligned}
+\label{dynamics}
+\end{equation}
+
+where $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$ to obtain the following linear time varying (LTV) representation:
+
+\begin{equation}
+\begin{aligned}
+\dot{\error} = A(t)\error(t) + B(t)\linInput(t) + \linDist(\sysInput)
+\end{aligned}
+\label{LTV}
+\end{equation}
+
+where $\error(t) = \state(t) - \traj(t)$, $\state = [\joint,\dot{\joint}]^{\mathrm{T}}$, $\linInput(t) = \sysInput(t) - \trjInput(t)$ and the time varying matrices are:
+
+\begin{equation}
+\begin{aligned}
+A(t) &= \at{\frac{\partial{\dynamics}}{\partial{\state}}}{(\traj(t),\trjInput(t))} \\
+B(t) &= \at{\frac{\partial{\dynamics}}{\partial{\sysInput}}}{(\traj(t),\trjInput(t))}
+\end{aligned}
+\label{LTVmatrices}
+\end{equation}
+
+Here the additional term $\linDist(\sysInput)$ are due to the disturbances and the effects of the linearization. We can discretize (\ref{LTV}-\ref{LTVmatrices}) and stack the matrices together in time to get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}:
+
+\begin{equation}
+\begin{aligned}
+\error_L &= F\sysInput_L + \linDist_L \\
+\end{aligned}
+\label{liftedLTV}
+\end{equation}
+
+where the submatrices of $F$ are:
+
+\begin{equation*}
+\begin{aligned}
+F_{(i,j)} &= \left \{
+\begin{array}{cc}
+A_{D}(i-1)\ldots A_{D}(j)B_{D}(j-1), & j < i \\ 
+B_{D}(j-1), & j = i \\
+0, & j > i 
+\end{array} \right.
+\end{aligned}
+\end{equation*}
+
+This way we can analyze the effects of the ILC's feedforward input $\sysInput_L = [\sysInput(1), \sysInput(2), \ldots, \sysInput(\numSteps)]^{\mathrm{T}}$ on the errors $\error_L = [\error(1), \error(2),\ldots,\error(\numSteps)]^{\mathrm{T}}$ using ILC terminology.
+
+The cost functional as the optimality criterion:
+
+\begin{equation}
+\begin{aligned}
+\ValueFunction(\policy) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \linInput^{\mathrm{T}}R\linInput + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T)
+\end{aligned}
+\end{equation}
+
+can be equally discretized and stacked in lifted vector form:
+
+\begin{equation}
+\begin{aligned}
+\ValueFunction_L &= \error_L^{\mathrm{T}}Q_L\error_L + \sysInput_L^{\mathrm{T}}R_L\sysInput_L
+\end{aligned}
+\label{costFunctional}
+\end{equation}
+
+where $Q_L$ and $R_L$ are of the following form:
+
+\begin{equation*}
+\begin{aligned}
+ Q_L = 
+ \begin{bmatrix}
+  Q & 0 & \cdots & 0 \\
+  0 & Q & \cdots & 0 \\
+  \vdots  & \vdots  & \ddots & \vdots  \\
+  0 & 0 & \cdots & Q_T
+ \end{bmatrix} \\
+  R = 
+  \begin{bmatrix}
+   R & 0 & \cdots & 0 \\
+   0 & R & \cdots & 0 \\
+   \vdots  & \vdots  & \ddots & \vdots  \\
+   0 & 0 & \cdots & R
+  \end{bmatrix}
+\end{aligned}
+\end{equation*}
+
+Most ILC update laws can be put in the following form:
+
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} = Q_{ILC}(\sysInput_{k} - L\error_{k})
+\end{aligned}
+\label{ILCupdateForm}
+\end{equation}
+
+Gradient descent of \eqref{costFunctional} can also be put in this form:
+
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} &= \sysInput_k - \frac{\beta_k}{2} \at{\frac{\partial{\ValueFunction_L}}{\partial{\sysInput_L}}}{\sysInput_k} \\
+\frac{1}{2}\frac{\partial{\ValueFunction_L}}{\partial{\sysInput_L}} &= \frac{\partial{\error_L}}{\partial{\sysInput_L}}Q_L\error_L + R_L\sysInput_L \\
+\sysInput_{k+1} &= (I - \beta_kR_L)\sysInput_k - \beta_k\frac{\partial{\error_L}}{\partial{\sysInput_L}}Q_L\error_k
+\end{aligned}
+\label{ILCgradientDescentEq1}
+\end{equation}
+
+If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, using \eqref{liftedLTV}, we can rewrite \eqref{ILCgradientDescentEq1} as:
+
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} = (I - \beta_kR_L)\sysInput_k - \beta_kF^\mathrm{T}Q_L\error_k
+\end{aligned}
+\label{ILCgradientDescentEq2}
+\end{equation}
+
+where $Q_{ILC} = I - \beta_kR_L$ and $L = (I - \beta_kR_L)^{-1}\beta_kF^\mathrm{T}Q_L$. In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, and taking $\beta_1 = 1$, $R_L = 0$, this model-based ILC will converge in one step, independent of the previous applied input \cite{Bristow06}, \cite{Longman2000}.
+
+%\todo Stability and monotonic convergence.\\
+%\todo Estimate $F_{est}(\error_1, \error_2, \ldots, \error_k) \neq F$.\\
+%\todo Line search for $\beta_k$.\\
+%\todo Noncausal ILC.
+
+\subsection{Learning the Motor Primitive Parameters}
+
+Sometimes for safety reasons the feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
+
+In this work we focus on modifying the parameters or the weights of the dynamic motor primitives (DMP), which acts as a \emph{kinematic policy}. For a linear system under a given linear feedback law $\sysInput = -K_u(\state - \dmp)$ we consider the following transition dynamics:
+
+\begin{equation*}
+\begin{aligned}
+ \dot{\fullvec} := 
+ \begin{bmatrix}
+  \dot{\state} \\
+  \dot{\traj} \\
+  \dot{\dmp} \\
+  \dot{g}
+ \end{bmatrix} = 
+ \begin{bmatrix}
+  A_q - B_qK_u & 0 & B_qK_u & 0 \\
+  0 & 0 & 0 & \nu(t) \\
+  0  & 0  & A_s & A_g  \\
+  0 & 0 & 0 & 0
+ \end{bmatrix}
+ \begin{bmatrix}
+   \state \\
+   \traj \\
+   \dmp \\
+   g
+  \end{bmatrix} +
+  \begin{bmatrix}
+    0 \\
+    0 \\
+    \basis \\
+    0
+   \end{bmatrix} \weights
+\end{aligned}
+\end{equation*}
+
+and the following cost functional:
+
+\begin{equation*}
+\begin{aligned}
+J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R\weights + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
+\end{aligned}
+\end{equation*}
+
+\bibliographystyle{plain}
+%\bibliographystyle{./IEEEtran}
+%\bibliography{./IEEEabrv,./iros2015Ref}
+\bibliography{./iros2015Ref}
+
+\end{document}
