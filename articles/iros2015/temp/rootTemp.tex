@@ -1,5 +1,5 @@
 % Temporarily as a seperate document
-% Will be placed inside the IROS root latex file (problemstatement)
+% Will be placed inside the IROS root latex file
 
 \documentclass[10pt,a4paper]{article}
 \usepackage[latin1]{inputenc}
@@ -33,11 +33,17 @@
 \newcommand{\linInput}{\tilde{u}} % denotes the LTV inputs
 \newcommand{\trjInput}{\nu} % denotes the inputs on the trajectory
 
+
+% % % % DMP terminology % % % %
 \newcommand{\fullvec}{\psi} % full vector for state-ref-dmp-goal
 \newcommand{\force}{f} % forcing term of the dmps
-\newcommand{\phase}{\phi} % phase of the dmp
+\newcommand{\phase}{x} % phase of the dmp
 \newcommand{\weights}{w} % weights of the dmp
 \newcommand{\basis}{\Phi} % basis functions of the dmp as a matrix
+
+% % % % ILC terminology % % % %
+\newcommand{\qmatrix}{\Gamma} % denotes the filtering qmatrix term of Bristow et al.
+\newcommand{\lmatrix}{L} % denotes the learning matrix of Bristow et al.
 
 \newcommand{\observations}{\mathbf{y}} % used for the observed output
 \newcommand{\dynamics}{f}
@@ -59,6 +65,10 @@
 \begin{document}
 \maketitle
 
+\section{Introduction}
+
+\section{Related Work}
+
 \section{Problem Statement}
 
 \subsection{ILC Review}
@@ -73,11 +83,11 @@ In this section we will first review some of the results from the Iterative Lear
 \label{dynamics}
 \end{equation}
 
-where $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$ to obtain the following linear time varying (LTV) representation:
+where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$ to obtain the following linear time varying (LTV) representation:
 
 \begin{equation}
 \begin{aligned}
-\dot{\error} = A(t)\error(t) + B(t)\linInput(t) + \linDist(\sysInput)
+\dot{\error} = A(t)\error(t) + B(t)\linInput(t) + \linDist(t,\sysInput)
 \end{aligned}
 \label{LTV}
 \end{equation}
@@ -92,7 +102,37 @@ B(t) &= \at{\frac{\partial{\dynamics}}{\partial{\sysInput}}}{(\traj(t),\trjInput
 \label{LTVmatrices}
 \end{equation}
 
-Here the additional term $\linDist(\sysInput)$ are due to the disturbances and the effects of the linearization. We can discretize (\ref{LTV}-\ref{LTVmatrices}) and stack the matrices together in time to get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}:
+Here the additional term $\linDist(t,\sysInput)$ are due to the disturbances and the effects of the linearization. We can discretize (\ref{LTV}-\ref{LTVmatrices}) with step size $\Delta t$, $N = T/\Delta$ and step index $j = 1, \ldots, N$ to get the following discrete linear system:
+
+\begin{equation}
+\begin{aligned}
+\error(j+1) = A^{D}(j)\error(j) + B^{D}(j)\linInput(j) + \linDist(j, \sysInput(1), \ldots, \sysInput(j))
+\end{aligned}
+\label{discreteLTV}
+\end{equation}
+
+Here $A^D$ and $B^D$ are the discretizations of \eqref{LTVmatrices} can be calculated using the trick \cite{Schoellig12}:
+
+\begin{equation}
+\begin{aligned}
+\exp^{h
+\left[
+\scalemath{0.5}{
+\begin{array}{c|c}
+A(j) & B(j) \\ \hline
+0 & 0
+\end{array}}\right]}
+&= 
+\left[
+\begin{array}{c|c}
+A^{D}(j) & B^{D}(j) \\ \hline
+0 & I
+\end{array}\right] 
+\end{aligned}
+\label{discreteMatrices}
+\end{equation}
+
+We can stack these matrices together to get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}:
 
 \begin{equation}
 \begin{aligned}
@@ -107,14 +147,14 @@ where the submatrices of $F$ are:
 \begin{aligned}
 F_{(i,j)} &= \left \{
 \begin{array}{cc}
-A_{D}(i-1)\ldots A_{D}(j)B_{D}(j-1), & j < i \\ 
-B_{D}(j-1), & j = i \\
+A^{D}(i-1)\ldots A^{D}(j)B^{D}(j-1), & j < i \\ 
+B^{D}(j-1), & j = i \\
 0, & j > i 
 \end{array} \right.
 \end{aligned}
 \end{equation*}
 
-This way we can analyze the effects of the ILC's feedforward input $\sysInput_L = [\sysInput(1), \sysInput(2), \ldots, \sysInput(\numSteps)]^{\mathrm{T}}$ on the errors $\error_L = [\error(1), \error(2),\ldots,\error(\numSteps)]^{\mathrm{T}}$ using ILC terminology.
+Using this \emph{input-to-output matrix} $F$ we can analyze the effects of the ILC's feedforward input $\sysInput_L = [\linInput(1), \sysInput(2), \ldots, \linInput(\numSteps)]^{\mathrm{T}}$ on the errors $\error_L = [\error(1), \error(2),\ldots,\error(\numSteps)]^{\mathrm{T}}$ using ILC terminology.
 
 The cost functional as the optimality criterion:
 
@@ -122,6 +162,7 @@ The cost functional as the optimality criterion:
 \begin{aligned}
 \ValueFunction(\policy) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \linInput^{\mathrm{T}}R\linInput + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T)
 \end{aligned}
+\label{cost}
 \end{equation}
 
 can be equally discretized and stacked in lifted vector form:
@@ -133,18 +174,18 @@ can be equally discretized and stacked in lifted vector form:
 \label{costFunctional}
 \end{equation}
 
-where $Q_L$ and $R_L$ are of the following form:
+where $Q_L, R_L \in \mathbb{R}^{N \times N}$ are of the following form:
 
 \begin{equation*}
 \begin{aligned}
- Q_L = 
+ Q_L &= 
  \begin{bmatrix}
   Q & 0 & \cdots & 0 \\
   0 & Q & \cdots & 0 \\
   \vdots  & \vdots  & \ddots & \vdots  \\
   0 & 0 & \cdots & Q_T
  \end{bmatrix} \\
-  R = 
+ R_L &= 
   \begin{bmatrix}
    R & 0 & \cdots & 0 \\
    0 & R & \cdots & 0 \\
@@ -158,7 +199,7 @@ Most ILC update laws can be put in the following form:
 
 \begin{equation}
 \begin{aligned}
-\sysInput_{k+1} = Q_{ILC}(\sysInput_{k} - L\error_{k})
+\sysInput_{k+1} = \qmatrix(\sysInput_{k} - \lmatrix\error_{k})
 \end{aligned}
 \label{ILCupdateForm}
 \end{equation}
@@ -183,12 +224,14 @@ If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist
 \label{ILCgradientDescentEq2}
 \end{equation}
 
-where $Q_{ILC} = I - \beta_kR_L$ and $L = (I - \beta_kR_L)^{-1}\beta_kF^\mathrm{T}Q_L$. In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, and taking $\beta_1 = 1$, $R_L = 0$, this model-based ILC will converge in one step, independent of the previous applied input \cite{Bristow06}, \cite{Longman2000}.
+where $\qmatrix = I - \beta_kR_L$ and $\lmatrix = (I - \beta_kR_L)^{-1}\beta_kF^\mathrm{T}Q_L$. In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, and taking $\beta_1 = 1$, $R_L = 0$, this model-based ILC will converge in one step, independent of the previously applied input \cite{Bristow06}, \cite{Longman2000}.
 
+%\todo I don't like the qbar notation
 %\todo Stability and monotonic convergence.\\
 %\todo Estimate $F_{est}(\error_1, \error_2, \ldots, \error_k) \neq F$.\\
 %\todo Line search for $\beta_k$.\\
-%\todo Noncausal ILC.
+%\todo Noncausal ILC. 
+%\todo Newton's method like update?
 
 \subsection{Learning the Motor Primitive Parameters}
 
@@ -205,34 +248,121 @@ In this work we focus on modifying the parameters or the weights of the dynamic 
   \dot{\dmp} \\
   \dot{g}
  \end{bmatrix} = 
- \begin{bmatrix}
+ \underbrace{\begin{bmatrix}
   A_q - B_qK_u & 0 & B_qK_u & 0 \\
   0 & 0 & 0 & \nu(t) \\
   0  & 0  & A_s & A_g  \\
   0 & 0 & 0 & 0
- \end{bmatrix}
+ \end{bmatrix}}_{A_{\fullvec}}
  \begin{bmatrix}
    \state \\
    \traj \\
    \dmp \\
    g
   \end{bmatrix} +
-  \begin{bmatrix}
+  \underbrace{\begin{bmatrix}
     0 \\
     0 \\
-    \basis \\
+    \basis(\phase) \\
     0
-   \end{bmatrix} \weights
+   \end{bmatrix}}_{B_{\fullvec}} \weights + \linDist(t,\weights)
 \end{aligned}
 \end{equation*}
 
-and the following cost functional:
+where the phase $\phase$ evolves according to:
 
-\begin{equation*}
+\begin{equation}
+\dot{\phase} = -\tau\alpha\phase
+\end{equation}
+
+The constants $\tau$ and $\alpha$ determine the scaling and settling time respectively. 
+% this needs to be rephrased perhaps.
+
+If we introduce for this enlarged vector $\fullvec$ the following cost functional:
+
+\begin{equation}
 \begin{aligned}
-J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R\weights + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
+J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R_w\weights + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
 \end{aligned}
-\end{equation*}
+\label{cost2}
+\end{equation}
+
+we can apply a weight-update form of the ILC update law \eqref{ILCupdateForm}:
+
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} = \qmatrix(\weights_{k} - \lmatrix\error_{k})
+\end{aligned}
+\label{ILCupdateFormWeights}
+\end{equation}
+
+To do this, we discretize \eqref{cost2} as in \eqref{costFunctional}:
+
+\begin{equation}
+\begin{aligned}
+\ValueFunction_L &= \error_L^{\mathrm{T}}Q_L\error_L + \weights^{\mathrm{T}}R_w\weights
+\end{aligned}
+\label{costFunctionalWeights}
+\end{equation}
+
+Notice that now the weighting matrix $R_w \in \mathbb{R}^{m \times m}$ where $m$ is the number of basis functions used in the controls matrix $B_{\fullvec}$ or equivalently $m = \text{rank}(B_{\fullvec})$.
+
+Gradient descent of \eqref{costFunctionalWeights} can also be put in this form:
+
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \frac{\beta_k}{2} \at{\frac{\partial{\ValueFunction_L}}{\partial{\weights}}}{\weights_k} \\
+\frac{1}{2}\frac{\partial{\ValueFunction_L}}{\partial{\weights}} &= \frac{\partial{\error_L}}{\partial{\weights}}Q_L\error_L + R_{\weights}\weights \\
+\weights_{k+1} &= (I - \beta_kR_{\weights})\weights_k - \beta_k\frac{\partial{\error_L}}{\partial{\fullvec_L}}\at{\frac{\partial{\fullvec_L}}{\partial{\weights}}}{\fullvec_k}Q_L\error_k
+\end{aligned}
+\label{ILCgradientDescentWeights}
+\end{equation}
+
+If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist_L}}{\partial{\weights}} = 0$, using \eqref{liftedLTV}, we can rewrite \eqref{ILCgradientDescentWeights} as:
+
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} = (I - \beta_kR_L)\weights_k - \beta_k\frac{\partial{\error_L}}{\partial{\fullvec_L}}F_{\weights}^\mathrm{T}Q_L\error_k
+\end{aligned}
+\label{ILCgradientDescentWeights2}
+\end{equation}
+
+where the \emph{weight-to-output matrix} $F_{\weights}$ can be written as
+
+\begin{equation}
+\begin{aligned}
+\fullvec_L &= F_{\weights}\weights + \linDist_L \\
+\frac{\partial{\fullvec_L}}{\partial{\weights}} &= F_{\weights}^{\mathrm{T}} \\
+F_{\weights} &= \left \{
+\begin{array}{cc}
+A^{D}_{\fullvec}(i-1)\ldots A^{D}_{\fullvec}(j)B^{D}_{\fullvec}(j-1), & j < i \\ 
+B^{D}_{\fullvec}(j-1), & j = i \\
+0, & j > i 
+\end{array} \right.
+\end{aligned}
+\label{weightToOutputMatrix}
+\end{equation}
+
+and
+
+\begin{equation}
+\begin{aligned}
+\frac{\partial{\error_L}}{\partial{\fullvec_L}} =
+\begin{bmatrix}
+  I_{2n} & -I_{2n} & 0 & 0
+ \end{bmatrix}
+\end{aligned}
+\end{equation}
+
+\subsubsection{Slow learning}
+
+\section{Results}
+
+\subsection{Putting}
+
+\subsection{Table Tennis}
+
+\section{Conclusion}
 
 \bibliographystyle{plain}
 %\bibliographystyle{./IEEEtran}
