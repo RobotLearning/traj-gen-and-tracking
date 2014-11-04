@@ -11,6 +11,13 @@
 \usepackage{graphicx}
 \usepackage{color}
 
+% theorem environment
+\newtheorem{prop}{Proposition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{prop2}{Proposition}
+\newtheorem{lem}{Lemma}
+\newtheorem{ex}{Example}
+
 % custom commands
 \newcommand\at[2]{\left.#1\right|_{#2}} % the at differential sign
 \newcommand\scalemath[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}} % scaling matrices
@@ -83,7 +90,7 @@ In this section we will first review some of the results from the Iterative Lear
 \label{dynamics}
 \end{equation}
 
-where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$ to obtain the following linear time varying (LTV) representation:
+where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$~\footnote{Nominal inputs $\sysInput_{\text{IDM}} = \nu(t)$ can be calculated using the inverse dynamics model.} to obtain the following linear time varying (LTV) representation:
 
 \begin{equation}
 \begin{aligned}
@@ -204,7 +211,7 @@ Most ILC update laws can be put in the following form:
 \label{ILCupdateForm}
 \end{equation}
 
-Gradient descent of \eqref{costFunctional} can also be put in this form:
+\emph{Gradient descent} of \eqref{costFunctional} is also in this form:
 
 \begin{equation}
 \begin{aligned}
@@ -224,22 +231,42 @@ If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist
 \label{ILCgradientDescentEq2}
 \end{equation}
 
-where $\qmatrix = I - \beta_kR_L$ and $\lmatrix = (I - \beta_kR_L)^{-1}\beta_kF^\mathrm{T}Q_L$. In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, and taking $\beta_1 = 1$, $R_L = 0$, this model-based ILC will converge in one step, independent of the previously applied input \cite{Bristow06}, \cite{Longman2000}.
+where $\qmatrix = I - \beta_kR_L$ and $\lmatrix = (I - \beta_kR_L)^{-1}\beta_kF^\mathrm{T}Q_L$. This gradient-descent ILC converges linearly to $\error_L = 0$ as $k \to \infty$, if $\beta_k$ is kept sufficiently small \cite{Nocedal99}.
+% check the citation and the assumptions
+
+In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, keeping $\beta_k$ small and taking $R_L = 0$, the following \emph{Newton's method} based ILC:
+
+%\todo Maybe show that it is the Newton-Raphson method
+
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} = \sysInput_k - \beta_kF^\mathrm{-1}\error_k
+\end{aligned}
+\label{ILCnewtonsMethod}
+\end{equation}
+
+is guaranteed to converge in one step if $\beta_k = 1$, independent of the previously applied input. However it suffers from numerical stability due to the inversion of $F$, and will be prone to diverge in practical applications \cite{Bristow06}. Keeping $R_L \neq 0$ turns \eqref{ILCnewtonsMethod} into a \emph{Levenberg-Marquardt} type ILC algorithm for \eqref{cost} with $R = 0$, giving additional stability. 
+% is it really LM?
+% check the citation and the assumptions
+% is the pseudo-inverse more stable? more robust?
 
 %\todo I don't like the qbar notation
 %\todo Stability and monotonic convergence.\\
 %\todo Estimate $F_{est}(\error_1, \error_2, \ldots, \error_k) \neq F$.\\
 %\todo Line search for $\beta_k$.\\
+%\todo Guarantee decrease by using 'descent direction'
 %\todo Noncausal ILC. 
-%\todo Newton's method like update?
+%\todo Monotonic convergence and stability
+%\todo Is Angela's method a Newton-Raphson based approach?
+%\todo Is an iteration-based update law possible?
 
 \subsection{Learning the Motor Primitive Parameters}
 
-Sometimes for safety reasons the feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
+Sometimes for safety reasons~\footnote{For instance, when interacting with external objects or under unforeseen perturbations \cite{Schaal07}} a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
 
 In this work we focus on modifying the parameters or the weights of the dynamic motor primitives (DMP), which acts as a \emph{kinematic policy}. For a linear system under a given linear feedback law $\sysInput = -K_u(\state - \dmp)$ we consider the following transition dynamics:
 
-\begin{equation*}
+\begin{equation}
 \begin{aligned}
  \dot{\fullvec} := 
  \begin{bmatrix}
@@ -267,15 +294,17 @@ In this work we focus on modifying the parameters or the weights of the dynamic 
     0
    \end{bmatrix}}_{B_{\fullvec}} \weights + \linDist(t,\weights)
 \end{aligned}
-\end{equation*}
+\label{fullTransition}
+\end{equation}
 
 where the phase $\phase$ evolves according to:
 
 \begin{equation}
 \dot{\phase} = -\tau\alpha\phase
+\label{phase}
 \end{equation}
 
-The constants $\tau$ and $\alpha$ determine the scaling and settling time respectively. 
+The constants $\tau$ and $\alpha$ determine the scaling and settling time respectively. $A_s$ and $A_g$ matrices include the spring constants that drive the DMP to the goal state $g$.
 % this needs to be rephrased perhaps.
 
 If we introduce for this enlarged vector $\fullvec$ the following cost functional:
@@ -307,7 +336,7 @@ To do this, we discretize \eqref{cost2} as in \eqref{costFunctional}:
 
 Notice that now the weighting matrix $R_w \in \mathbb{R}^{m \times m}$ where $m$ is the number of basis functions used in the controls matrix $B_{\fullvec}$ or equivalently $m = \text{rank}(B_{\fullvec})$.
 
-Gradient descent of \eqref{costFunctionalWeights} can also be put in this form:
+Gradient descent of \eqref{costFunctionalWeights} can be put in this form \eqref{ILCupdateFormWeights}:
 
 \begin{equation}
 \begin{aligned}
@@ -333,7 +362,7 @@ where the \emph{weight-to-output matrix} $F_{\weights}$ can be written as
 \begin{aligned}
 \fullvec_L &= F_{\weights}\weights + \linDist_L \\
 \frac{\partial{\fullvec_L}}{\partial{\weights}} &= F_{\weights}^{\mathrm{T}} \\
-F_{\weights} &= \left \{
+(F_{\weights})_{(i,j)} &= \left \{
 \begin{array}{cc}
 A^{D}_{\fullvec}(i-1)\ldots A^{D}_{\fullvec}(j)B^{D}_{\fullvec}(j-1), & j < i \\ 
 B^{D}_{\fullvec}(j-1), & j = i \\
@@ -354,7 +383,16 @@ and
 \end{aligned}
 \end{equation}
 
-\subsubsection{Slow learning}
+%\subsubsection{Slow-down learning}
+%
+%It is possible to incorporate one of the advantages of the DMP framework, the \emph{slowing-down} effect with the help of the error coupling term \cite{Schaal07}, \cite{Ijspeert13}:
+%
+%\begin{equation}
+%\dot{\phase} = \frac{-\tau\alpha\phase}{(\state - \traj)^2}
+%\label{phaseWithErrorCoupling}
+%\end{equation}
+%
+%in the transition dynamics \eqref{fullTransition} by extending it to include feedback on the time constant $\alpha$:
 
 \section{Results}
 
