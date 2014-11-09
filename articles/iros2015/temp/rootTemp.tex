@@ -46,7 +46,7 @@
 \newcommand{\force}{f} % forcing term of the dmps
 \newcommand{\phase}{x} % phase of the dmp
 \newcommand{\weights}{w} % weights of the dmp
-\newcommand{\basis}{\Phi} % basis functions of the dmp as a matrix
+\newcommand{\basis}{\phi} % basis functions of the dmp as a matrix
 
 % % % % ILC terminology % % % %
 \newcommand{\qmatrix}{\Gamma} % denotes the filtering qmatrix term of Bristow et al.
@@ -82,7 +82,9 @@
 \begin{document}
 \maketitle
 
-\section{Introduction}
+\section{Introduction}\label{introduction}
+
+% These are exciting times for robotics research!
 
 % fill missing citations
 
@@ -91,31 +93,47 @@ Most reaching tasks in control and robotics can be phrased as \emph{tracking} pr
 Robotic table tennis in particular consists of planning, generating and executing a series of such (episodic) single stroke trajectories. These trajectories need to be followed very closely with motor commands in practice, in order to return the ball to the desired positions. 
 
 % maybe cite Jens' review paper
-There have been many attempts in the reinforcement learning \cite{Sutton98} and control literature to learn to track these trajectories directly. Value function based methods take advantage of duality to solve the Bellman's equation but suffer from the initial bias or representation in estimating the value function. Policy search methods directly solve the Bellman's equation in a parameterized policy space and can be much more effective in practice (in robotics). 
+There have been many attempts in the reinforcement learning (RL) \cite{Sutton98} and control literature to learn robotic tasks directly. Value function based methods take advantage of duality to solve the Bellman's equation but suffer from the initial bias or representation in estimating the value function and do not scale well to high dimensions. Policy search methods directly solve the Bellman's equation in a parameterized policy space and can be much more effective in practice (in robotics). 
+% maybe missing citation
 
-Episodic policy search methods 
+% missing citations
+Dynamic Motor Primitives (DMP) are a kind of kinematic policy representation that leverages the dynamical systems approach to modify the spring dynamics with a forcing term that enables it to mimic an executed trajectory. They include an internal phase or clock that ensures the convergence of the motor primitive to a goal state \cite{Ijspeert13}, \cite{Schaal07}. DMPs do not suffer from the curse of dimensionality as the number of parameters (weights) grow linearly with dimension. However, approximation and control errors in robotic platforms make the application of DMPs less useful in practice. Small changes to DMPs can often make them more useful.
+% robotic platforms such as table tennis?
 
-Approximation and control errors in table tennis make the application of DMPs less useful in practice. Small changes to DMPs can often make them more useful.
+% Taken from the bimanual article
+%They can be used to imitate or generate discrete and periodic trajectories, which can be modulated in various ways.
 
-Gait patterns often cause upper body oscillations, which break gait tracking. Can we adapt gait DMPs to facilitate the execution?
+Motor primitives can work well with episodic policy search methods, such as POWER \cite{Kober08}, or REPS \cite{Peter10} that modify the weights based on the rewards in every episode. By adapting the DMP that was initialized with imitation learning, e.g. with kinesthetic teach-in, these model-free methods are able to achieve complex robotic tasks.
+% complex tasks, such as?
+% Katharina's papers come here maybe
+% citation needed - also tone it down a notch?
+% talk about PI2?
 
 The research question that we tackle in this article consists of the following:
 
 \begin{itemize}
-\item How can we generate optimally hitting Dynamic Movement Primitives (DMPs)?
+\item How can we generate optimally hitting movement primitives either in table tennis or a similar reaching task, e.g. putting in golf.
 
-\item When we have modelling inaccuracies, how can we create a DMP $\dmp(t)$ such that the robot executes the desired hitting motion?
+\item More generally, when we have modelling inaccuracies, how should we modify a DMP $\dmp(t)$ such that the robot executes a desired hitting motion?
 \end{itemize}
+
+Iterative Learning Control (ILC) is a fundamental approach in control theory developed to track (time-varying) reference trajectories. It has been used successfully to follow trajectories under unknown repeating disturbances and model mismatch \cite{Bristow06}. In ILC, control inputs are adjusted at each episode in a feedforward fashion. The goal is to drive the deviations from the trajectory to zero. 
+
+In this article, we combine Iterative Learning Control (ILC) with movement primitives by using ILC as a learning method to adapt the weights of the DMPs. This way we ensure a safe, reliant and robust way to track reference trajectories, with important applications in optimally hitting and striking motions. We validate the performance of the approach in two hitting tasks, and compare with existing episodic-RL approaches.
 
 Finally our contributions can be summarized as follows:
 
 \begin{itemize}
-\item We form a link between the Iterative Learning Control literature and policy gradient based policy search approaches in Reinforcement Learning and develop a new algorithm that feeds on the strengths of both domains.
+\item We form a link between the ILC literature and policy gradient based policy search approaches in Reinforcement Learning and develop a new algorithm that feeds on the strengths of both domains.
+% really? does it feed on both?
 
 \item We form the first coherent framework where some of the biggest advantages of using Dynamic Movement Primitives are leveraged in the feedforward update rule.
 
-\item On the theoretical side, we come up with a new ILC algorithm that is shown to be stable and monotonically convergent.
+\item On the theoretical side, we come up with a new ILC algorithm \emph{wILC} that is shown to be stable and monotonically convergent.
+
 \end{itemize}
+
+In section~\ref{relatedWork} we mention related work especially the state-of-the-art approaches in hitting and reaching tasks. In section~\ref{problemStatement} we briefly review ILC and introduce our method in \ref{learningMPs}. In section~\ref{results} we evaluate our method in two robotic reaching tasks: putting motion in golf and the hitting motions in table tennis. We show that the method outperforms the state-of-the-art RL-based approaches REPS and PI2. Finally in section~\ref{conclusion} we discuss the strengths and weaknesses of our method and conclude with brief mentions of promising future research directions.
 
 % Optimal Striking
 % Talk about reinforcement learning
@@ -128,13 +146,7 @@ Finally our contributions can be summarized as follows:
 % Gait tracking
 % Advantages of ILC Framework over Policy search 
 
-\section{Related Work}
-
-% missing citations
-Dynamic Motor Primitives are a kind of kinematic policy representation that leverages the dynamical systems approach to modify the spring dynamics with a forcing term that enables it to mimic an executed trajectory. They include an internal phase or clock that ensures the convergence of the motor primitive to a desired goal state \cite{Ijspeert13}, \cite{Schaal07}. 
-
-% Taken from the bimanual article
-%They can be used to imitate or generate discrete and periodic trajectories, which can be modulated in various ways.
+\section{Related Work}\label{relatedWork}
 
 % Policy search methods
 Policy search methods that modify the parameters of a DMP appeared first with the \emph{POWER} algorithm \cite{Kober08}.
@@ -144,19 +156,20 @@ Iterative Learning Control started out in the 1980s with the work of Arimoto et 
 % check these refs
 
 % ILC work - mention Angela's work
-As an example of a more sophisticated method than the PD-type update laws, Schoellig et al. \cite{Schoellig12} applied a Kalman-filter based convex optimization rule in the framework of ILC and showed its performance in quadrocopter flight.
+As an example of a more sophisticated method than the PD-type update laws, Schoellig et al. \cite{Schoellig12} applied a Kalman-filter based convex optimization rule in the framework of ILC and showed its performance in quadrocopter flight. 
+% This work however lacks any guarantees of monotonic convergence
 
 % DMPs using Iterative Learning Control
-DMPs have been also combined in a bimanual robotics task with ILC \cite{Gams13} where force feedback is used to enable compliant interaction with objects in an unknown enviornment. ILC is here used to learn a coupling term between the two arm trajectories. 
+DMPs have been also combined in a bimanual robotics task with ILC \cite{Gams13} where force feedback is used to enable compliant interaction with objects in an unknown enviornment. ILC is here used to learn a coupling term between the two arm trajectories. ILC has not been used so far, as far as we know, to modify the weights of the motor primitives.
 % used to modulate the DMP and learn ...
 
 
-\section{Problem Statement}
+\section{Problem Statement}\label{problemStatement}
 
-Goal: Track a reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$.
+As we stated in the introduction our goal in this work is to track a given reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$. We briefly review ILC in the next sections and show how learning can be represented within the movement primitives framework.
 
 % this section probably belongs to a journal
-\subsection{ILC Review}
+\subsection{ILC Review}\label{ilcReview}
 
 In this section we will first review some of the results from the Iterative Learning Control (ILC) literature \cite{Bristow06}. Consider the nonlinear robot dynamics of the form:
 
@@ -196,7 +209,7 @@ Here the additional term $\linDist(t,\sysInput)$ are due to the disturbances and
 \label{discreteLTV}
 \end{equation}
 
-Here $A^D$ and $B^D$ are the discretizations of \eqref{LTVmatrices} can be calculated using the trick \cite{Schoellig12}:
+Here $A^D$ and $B^D$ are the discretizations of \eqref{LTVmatrices} and can be calculated using the following trick \cite{Schoellig12}:
 
 \begin{equation}
 \begin{aligned}
@@ -245,7 +258,7 @@ The cost functional as the optimality criterion:
 
 \begin{equation}
 \begin{aligned}
-\ValueFunction(\policy) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \linInput^{\mathrm{T}}R\linInput + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T)
+\ValueFunction(\policy) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \linInput^{\mathrm{T}}R\linInput \ \mathrm{d}t + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T)
 \end{aligned}
 \label{cost}
 \end{equation}
@@ -312,21 +325,28 @@ If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist
 where $\qmatrix = I - \beta_kR_L$ and $\lmatrix = (I - \beta_kR_L)^{-1}\beta_kF^\mathrm{T}Q_L$. This gradient-descent ILC converges linearly to $\error_L = 0$ as $k \to \infty$, if $\beta_k$ is kept sufficiently small \cite{Nocedal99}.
 % check the citation and the assumptions
 
-In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, keeping $\beta_k$ small and taking $R_L = 0$, the following \emph{Newton's method} based ILC:
-
-%\todo Maybe show that it is the Newton-Raphson method
+In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, taking $R_L = 0$, the following \emph{Newton's method} based ILC~\footnote{Here we are using the column-vector version of matrix calculus where the chain rule for vectors is written as: $\frac{\partial\mathbf{y}}{\partial\mathbf{x}} = \frac{\partial\mathbf{z}}{\partial\mathbf{x}}\frac{\partial\mathbf{y}}{\partial\mathbf{z}}$.}
 
 \begin{equation}
 \begin{aligned}
-\sysInput_{k+1} = \sysInput_k - \beta_kF^\mathrm{-1}\error_k
+\sysInput_{k+1} &= \sysInput_k - \beta_k\Big(\frac{\partial^{2}\ValueFunction_L}{\partial\sysInput^{2}_L}\Big)^{-1}\at{\frac{\partial{\ValueFunction_L}}{\partial{\sysInput_L}}}{\sysInput_k} \\
+\frac{\partial^{2}\ValueFunction_L}{\partial\sysInput^{2}_L} &= \frac{\partial}{\partial\sysInput_L}\{F^{\mathrm{T}}Q_L\error_L\} = F^{\mathrm{T}}Q_LF \\
+\sysInput_{k+1} &= \sysInput_k - \beta_kF^{\dagger}\error_k
 \end{aligned}
 \label{ILCnewtonsMethod}
 \end{equation}
 
-is guaranteed to converge in one step if $\beta_k = 1$, independent of the previously applied input. However it suffers from numerical stability due to the inversion of $F$, and will be prone to diverge in practical applications \cite{Bristow06}. Keeping $R_L \neq 0$ turns \eqref{ILCnewtonsMethod} into a \emph{Levenberg-Marquardt} type ILC algorithm for \eqref{cost} with $R = 0$, giving additional stability. 
-% is it really LM?
+is guaranteed to converge in one step if $\beta_k = 1$, independent of the previously applied input. However it suffers from numerical stability due to the inversion of $F$, and will be prone to diverge in practical applications \cite{Bristow06}. Keeping $R_L \neq 0$ turns \eqref{ILCnewtonsMethod} into a \emph{Levenberg-Marquardt} \cite{Nocedal99} type ILC algorithm for \eqref{cost} with $R = 0$, giving additional stability:
+
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} &= \sysInput_k - \beta_k(F^{\mathrm{T}}Q_LF + R_L)^{-1}F^{\mathrm{T}}Q_L\error_k
+\end{aligned}
+\label{ILClevenbergMarquardt}
+\end{equation}
+
+assuming $\beta_k(F^{\mathrm{T}}Q_LF + R_L)^{-1}R_L \approx 0$.
 % check the citation and the assumptions
-% is the pseudo-inverse more stable? more robust?
 
 %\todo I don't like the qbar notation
 %\todo Stability and monotonic convergence.\\
@@ -338,11 +358,11 @@ is guaranteed to converge in one step if $\beta_k = 1$, independent of the previ
 %\todo Is Angela's method a Newton-Raphson based approach?
 %\todo Is an iteration-based update law possible?
 
-\subsection{Learning the Motor Primitive Parameters}
+\subsection{Learning the Motor Primitive Parameters}\label{learningMPs}
 
 Sometimes for safety reasons~\footnote{For instance, when interacting with external objects or under unforeseen perturbations \cite{Schaal07}} a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
 
-In this work we focus on modifying the parameters or the weights of the dynamic motor primitives (DMP), which acts as a \emph{kinematic policy}. For a linear system under a given linear feedback law $\sysInput = -K_u(\state - \dmp)$ we consider the following transition dynamics:
+In this work we focus on modifying the parameters or the weights of the dynamic motor primitives (DMP), which acts as a \emph{kinematic policy} $\dmp(t) = [\joint_{\text{des}},\dot{\joint}_{\text{des}}]^{\mathrm{T}}$. For a linear time-varying system under a given linear feedback law $\linInput = -K_u(\state - \dmp)$ we consider the following transition dynamics:
 
 \begin{equation}
 \begin{aligned}
@@ -354,7 +374,7 @@ In this work we focus on modifying the parameters or the weights of the dynamic 
   \dot{g}
  \end{bmatrix} = 
  \underbrace{\begin{bmatrix}
-  A_q - B_qK_u & 0 & B_qK_u & 0 \\
+  A_q(t) - B_q(t)K_u & 0 & B_q(t)K_u & 0 \\
   0 & 0 & 0 & \nu(t) \\
   0  & 0  & A_s & A_g  \\
   0 & 0 & 0 & 0
@@ -389,7 +409,7 @@ If we introduce for this enlarged vector $\fullvec$ the following cost functiona
 
 \begin{equation}
 \begin{aligned}
-J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R_w\weights + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
+J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R_w\weights \ \mathrm{d}t +  (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
 \end{aligned}
 \label{cost2}
 \end{equation}
@@ -412,6 +432,25 @@ To do this, we discretize \eqref{cost2} as in \eqref{costFunctional}:
 \label{costFunctionalWeights}
 \end{equation}
 
+where the lifted output $\error_L$ can be written as the lifted output matrix $C_L$ times the lifted state vector $\fullvec_L$:
+
+\begin{equation}
+\begin{aligned}
+\error_L &= C_L \fullvec_L \\
+C_L &= 
+  \begin{bmatrix}
+   C & 0 & \cdots & 0 \\
+   0 & C & \cdots & 0 \\
+   \vdots  & \vdots  & \ddots & \vdots  \\
+   0 & 0 & \cdots & C
+  \end{bmatrix} \\
+C &= \begin{bmatrix}
+  I_{2n} & -I_{2n} & 0_{2n} & 0
+ \end{bmatrix}
+\end{aligned}
+\label{outputWeights}
+\end{equation}
+
 Notice that now the weighting matrix $R_w \in \mathbb{R}^{m \times m}$ where $m$ is the number of basis functions used in the controls matrix $B_{\fullvec}$ or equivalently $m = \text{rank}(B_{\fullvec})$.
 
 Gradient descent of \eqref{costFunctionalWeights} can be put in this form \eqref{ILCupdateFormWeights}:
@@ -420,7 +459,7 @@ Gradient descent of \eqref{costFunctionalWeights} can be put in this form \eqref
 \begin{aligned}
 \weights_{k+1} &= \weights_k - \frac{\beta_k}{2} \at{\frac{\partial{\ValueFunction_L}}{\partial{\weights}}}{\weights_k} \\
 \frac{1}{2}\frac{\partial{\ValueFunction_L}}{\partial{\weights}} &= \frac{\partial{\error_L}}{\partial{\weights}}Q_L\error_L + R_{\weights}\weights \\
-\weights_{k+1} &= (I - \beta_kR_{\weights})\weights_k - \beta_k\frac{\partial{\error_L}}{\partial{\fullvec_L}}\at{\frac{\partial{\fullvec_L}}{\partial{\weights}}}{\fullvec_k}Q_L\error_k
+\weights_{k+1} &= (I - \beta_kR_{\weights})\weights_k - \beta_k\frac{\partial{\fullvec_L}}{\partial{\weights}}\at{\frac{\partial{\error_L}}{\partial{\fullvec_L}}}{\fullvec_k}Q_L\error_k
 \end{aligned}
 \label{ILCgradientDescentWeights}
 \end{equation}
@@ -429,36 +468,62 @@ If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist
 
 \begin{equation}
 \begin{aligned}
-\weights_{k+1} = (I - \beta_kR_L)\weights_k - \beta_k\frac{\partial{\error_L}}{\partial{\fullvec_L}}F_{\weights}^\mathrm{T}Q_L\error_k
+\weights_{k+1} = (I - \beta_kR_{\weights})\weights_k - \beta_kF_{\weights}^\mathrm{T}Q_L\error_k
 \end{aligned}
 \label{ILCgradientDescentWeights2}
 \end{equation}
 
-where the \emph{weight-to-output matrix} $F_{\weights}$ can be written as
+where the \emph{weight-to-output matrix} $F_{\weights}$ is defined as:
 
 \begin{equation}
 \begin{aligned}
-\fullvec_L &= F_{\weights}\weights + \linDist_L \\
-\frac{\partial{\fullvec_L}}{\partial{\weights}} &= F_{\weights}^{\mathrm{T}} \\
-(F_{\weights})_{(i,j)} &= \left \{
+\error_L &= F_{\weights}\weights + \linDist_L \\
+\frac{\partial{\error_L}}{\partial{\weights}} &= F_{\weights}^{\mathrm{T}} = \frac{\partial{\fullvec_L}}{\partial{\weights}}C_L^{\mathrm{T}} = 1_{m\times Nm}\tilde{F}_{\weights}^{\mathrm{T}}C_L^{\mathrm{T}} \\
+(\tilde{F}_{\weights})_{(i,j)} &= \left \{
 \begin{array}{cc}
 A^{D}_{\fullvec}(i-1)\ldots A^{D}_{\fullvec}(j)B^{D}_{\fullvec}(j-1), & j < i \\ 
 B^{D}_{\fullvec}(j-1), & j = i \\
 0, & j > i 
-\end{array} \right.
+\end{array} \right. \\
+1_{m\times Nm} &= \begin{bmatrix}
+  I_{m} & I_{m} & \ldots & I_{m}
+ \end{bmatrix}
 \end{aligned}
 \label{weightToOutputMatrix}
 \end{equation}
 
-and
+The matrix $1_{m\times Nm}$ appears in \eqref{weightToOutputMatrix} because the weight vector $\weights$ is not dynamic, as opposed to the feedback inputs $\linInput$.
+
+The following \emph{Levenberg-Marquardt} type ILC law updates the weights:
 
 \begin{equation}
 \begin{aligned}
-\frac{\partial{\error_L}}{\partial{\fullvec_L}} =
-\begin{bmatrix}
-  I_{2n} & -I_{2n} & 0 & 0
- \end{bmatrix}
+\weights_{k+1} &= \weights_k - \beta_k\Big(\frac{\partial^{2}\ValueFunction_L}{\partial\weights^{2}}\Big)^{-1}\at{\frac{\partial{\ValueFunction_L}}{\partial{\weights}}}{\weights_k} \\
+\frac{\partial^{2}\ValueFunction_L}{\partial\weights^{2}} &= \frac{\partial}{\partial\weights}\{F_{\weights}^{\mathrm{T}}Q_L\error_L + R_{\weights}\weights\} = F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights} \\
+\weights_{k+1} &= \weights_k - \beta_k(F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights})^{-1}F_{\weights}^{\mathrm{T}}Q_L\error_k
 \end{aligned}
+\label{ILCWeightsNewtonsMethod}
+\end{equation}
+
+assuming again that $\beta_k(F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights})^{-1}R_{\weights} \approx 0$. Expanding the terms in the weight-to-output matrix $F_{\weights}$:
+
+\begin{equation}
+\begin{aligned}
+F_{\weights} &= \begin{bmatrix}
+  0_{2n \times m} & B_{\joint}(2)K_{\sysInput}\basis_{1} & \ldots
+ \end{bmatrix}^{\mathrm{T}}
+\end{aligned}
+\label{weightToOutputMatrixExpanded}
+\end{equation}
+
+we can form the connection with the (time-varying) weighted ridge-regression:
+
+% show this properly!
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \beta_k(\Phi^{\mathrm{T}}W(t)\Phi + R_{\weights})^{-1}\Phi^{\mathrm{T}}W(t)\error_k
+\end{aligned}
+\label{ILCWeightedRidgeRegression}
 \end{equation}
 
 \subsubsection{Slow-down learning}
@@ -484,14 +549,14 @@ This can be motivated again using gradient descent on the cost functional with t
 
 \begin{equation}
 \begin{aligned}
-J(\weights,T(\alpha)) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R_w\weights + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
+J(\weights,T(\alpha)) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(k)(\state - \traj) + \weights^{\mathrm{T}}R_w(k)\weights \ \mathrm{d}t + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
 \end{aligned}
 \label{costTimeVarying}
 \end{equation}
 
-The gradient of which can be resolved using the calculus of variations. This gives us a discretization-free representation. The cost is the additional mathematical machinery.
+The gradient of which can be resolved using the calculus of variations. This gives us a discretization-free representation for ILC. The cost is the additional mathematical machinery. The iteration dependency of the weighting matrices $Q$ and $R_{\weights}$ can be used to relax the dependency on the reference trajectory $\traj(t)$. As $Q$ and $R_{\weights}$ decrease in iteration-domain, the final desired state $\traj_{T}$ becomes more and more important.
 
-\section{Results}
+\section{Results}\label{results}
 
 % In this section, we demonstrate the effectiveness of the algorithm presented in Section 2.3 in the context of motor primitive learning for robotics.
 % underactuated swing-up belongs to putting-like dynamics problems?
@@ -506,7 +571,7 @@ The gradient of which can be resolved using the calculus of variations. This giv
 \caption{Robotic table tennis setup with the ballgun throwing balls to the robot}
 \end{figure}
 
-\section{Conclusion}
+\section{Conclusion}\label{conclusion}
 
 \bibliographystyle{plain}
 %\bibliographystyle{./IEEEtran}
