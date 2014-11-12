@@ -10,6 +10,7 @@
 \usepackage{mathtools}
 \usepackage{graphicx}
 \usepackage{color}
+\usepackage{hyperref}
 
 % theorem environment
 \newtheorem{prop}{Proposition}[section]
@@ -17,6 +18,10 @@
 \newtheorem{prop2}{Proposition}
 \newtheorem{lem}{Lemma}
 \newtheorem{ex}{Example}
+
+% For algorithms
+\usepackage{algorithm}
+\usepackage{algorithmic}
 
 % custom commands
 \newcommand\at[2]{\left.#1\right|_{#2}} % the at differential sign
@@ -63,7 +68,7 @@
 \newcommand{\numSteps}{N} % total number of time steps
 \newcommand{\numepisode}{K} % total number of episodes
 
-\newcommand{\threshold}{\epsilon_s}
+\newcommand{\threshold}{\epsilon}
 \newcommand{\alg}{\emph{wILC}}
 \newcommand{\dataset}{E}
 
@@ -77,7 +82,7 @@
  \input{#1.pdf_tex}%
 }
 
-\author{Okan Ko\c c}
+\author{Okan Ko\c c, Guilherme Maeda, Gerhard Neumann and Jan Peters}
 \title{Optimal Striking Movement Representation \& Execution}
 \begin{document}
 \maketitle
@@ -119,7 +124,7 @@ The research question that we tackle in this article consists of the following:
 
 Iterative Learning Control (ILC) is a fundamental approach in control theory developed to track (time-varying) reference trajectories. It has been used successfully to follow trajectories under unknown repeating disturbances and model mismatch \cite{Bristow06}. In ILC, control inputs are adjusted at each episode in a feedforward fashion. The goal is to drive the deviations from the trajectory to zero. 
 
-In this article, we combine Iterative Learning Control (ILC) with movement primitives by using ILC as a learning method to adapt the weights of the DMPs. This way we ensure a safe, reliant and robust way to track reference trajectories, with important applications in optimally hitting and striking motions. We validate the performance of the approach in two hitting tasks, and compare with existing episodic-RL approaches.
+In this article, we combine Iterative Learning Control (ILC) with movement primitives by using ILC as a learning method to adapt the weights of the DMPs. This way we ensure a safe, reliant and robust way to track reference trajectories, with important applications in optimally hitting and striking motions. As opposed to model-free policy search approaches, we make full use of the known robot dynamics and inverse dynamics models, which helps us to quickly achieve the desired performance requirements. We validate the performance of the approach in two hitting tasks, and compare with existing episodic-RL approaches.
 
 Finally our contributions can be summarized as follows:
 
@@ -166,7 +171,7 @@ DMPs have been also combined in a bimanual robotics task with ILC \cite{Gams13} 
 
 \section{Problem Statement}\label{problemStatement}
 
-As we stated in the introduction our goal in this work is to track a given reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$. We briefly review ILC in the next sections and show how learning can be represented within the movement primitives framework.
+As stated in the introduction, our goal in this work is to track a given reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$. We briefly review ILC in the next sections and show how learning can be represented within the movement primitives framework.
 
 % this section probably belongs to a journal
 \subsection{ILC Review}\label{ilcReview}
@@ -181,7 +186,7 @@ In this section we will first review some of the results from the Iterative Lear
 \label{dynamics}
 \end{equation}
 
-where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$~\footnote{Nominal inputs $\sysInput_{\text{IDM}} = \nu(t)$ can be calculated using the inverse dynamics model.} to obtain the following linear time varying (LTV) representation:
+where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$~\footnote{Nominal inputs $\sysInput_{\mathrm{IDM}} = \nu(t)$ can be calculated using the inverse dynamics model.} to obtain the following linear time varying (LTV) representation:
 
 \begin{equation}
 \begin{aligned}
@@ -358,7 +363,11 @@ assuming $\beta_k(F^{\mathrm{T}}Q_LF + R_L)^{-1}R_L \approx 0$.
 %\todo Is Angela's method a Newton-Raphson based approach?
 %\todo Is an iteration-based update law possible?
 
+\subsubsection{Stability analysis}
+
 \subsection{Learning the Motor Primitive Parameters}\label{learningMPs}
+
+% what to do with PD-type feedback?
 
 Sometimes for safety reasons~\footnote{For instance, when interacting with external objects or under unforeseen perturbations \cite{Schaal07}} a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
 
@@ -494,7 +503,7 @@ B^{D}_{\fullvec}(j-1), & j = i \\
 
 The matrix $1_{m\times Nm}$ appears in \eqref{weightToOutputMatrix} because the weight vector $\weights$ is not dynamic, as opposed to the feedback inputs $\linInput$.
 
-The following \emph{Levenberg-Marquardt} type ILC law updates the weights:
+The following \emph{Levenberg-Marquardt} (LM) type ILC law updates the weights:
 
 \begin{equation}
 \begin{aligned}
@@ -516,17 +525,45 @@ F_{\weights} &= \begin{bmatrix}
 \label{weightToOutputMatrixExpanded}
 \end{equation}
 
-we can form the connection with the (time-varying) weighted ridge-regression:
+we can rewrite \eqref{ILCWeightsNewtonsMethod} as:
 
 % show this properly!
 \begin{equation}
 \begin{aligned}
-\weights_{k+1} &= \weights_k - \beta_k(\Phi^{\mathrm{T}}W(t)\Phi + R_{\weights})^{-1}\Phi^{\mathrm{T}}W(t)\error_k
+\weights_{k+1} &= \weights_k - \beta_k(\Phi^{\mathrm{T}}W(t)\Phi + R_{\weights})^{-1}\Phi^{\mathrm{T}}W(t)\error_k \\
+\Phi &= \begin{bmatrix}
+  \basis_1 & \basis_2 & \ldots & \basis_N
+ \end{bmatrix}
 \end{aligned}
 \label{ILCWeightedRidgeRegression}
 \end{equation}
 
-\subsubsection{Slow-down learning}
+and form the connection with (time-varying) weighted ridge-regression.
+
+\subsubsection{Algorithm}
+
+We use the weighted ridge regression update law given in \eqref{ILCWeightedRidgeRegression} in our algorithm which is given in Algorithm~\ref{alg1}. We initialize the algorithm $\alg$ with the necessary weighting matrices and the transition matrix $A_{\fullvec}$ which is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs $\nu$ are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using weighted regression on the reference trajectory.
+
+\begin{algorithm}[tb]
+   \caption{\alg}
+   \label{alg1}
+\begin{algorithmic}
+   \STATE {\bfseries Input:} $\threshold > 0$, $\beta > 0$, $Q_L, R_{\weights} \succeq 0$, $A_{\fullvec}$, $\ \traj = \{\traj_0, \traj_1, \ldots, \traj_N \}$, $\ \nu = \sysInput_{\mathrm{IDM}} = \{\nu_0, \nu_1, \ldots, \nu_N \}$
+   \STATE Initialize $k = 1$, $\dmp(\weights) = \dmp(\weights_0)$, $\beta_k = \beta$
+   \REPEAT 
+ 	   \STATE Apply $\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights))$
+ 	   \STATE Observe $\error = \state - \traj$
+ 	   \STATE Compute $\ValueFunction_k$ = $\error_L^{\mathrm{T}}Q_L\error_L + \weights^{\mathrm{T}}R_w\weights$
+ 	   \STATE Form $W(t)$ from $A_{\fullvec}$, $Q_L$
+ 	   \STATE Update weights $\weights \leftarrow \weights - \beta_k(\Phi^{\mathrm{T}}W(t)\Phi + R_{\weights})^{-1}\Phi^{\mathrm{T}}W(t)\error_L$
+ 	   \STATE $k \leftarrow k + 1$
+   \UNTIL{$\ValueFunction_k < \threshold$}
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Stability analysis}
+
+\subsubsection{Metronome-based learning}
 
 It is possible to incorporate one of the advantages of the DMP framework, the \emph{slowing-down} effect with the help of the error coupling term \cite{Schaal07}, \cite{Ijspeert13}:
 
@@ -558,20 +595,33 @@ The gradient of which can be resolved using the calculus of variations. This giv
 
 \section{Results}\label{results}
 
-% In this section, we demonstrate the effectiveness of the algorithm presented in Section 2.3 in the context of motor primitive learning for robotics.
+In this section, we demonstrate the effectiveness of the algorithm presented in Section 2.3 in the context of movement primitive learning for optimally striking motions. We consider two hitting tasks: putting in golf and returning the ball with the racket in table tennis. In each task trajectories and the movement primitives are assigned in joint space. 
 % underactuated swing-up belongs to putting-like dynamics problems?
 
 \subsection{Putting}
 
+Putting is a simple and natural domain for ILC algorithms, because it allows a robot to apply ILC to control few degrees of freedom (typically the end joint) while having the dynamics of the other joints act as disturbances. This kind of learning can act as a scalable interface to more complex hitting tasks in the full-joint space.
+
 \subsection{Table Tennis}
+
+As a second and more complex task, we consider table tennis where we are interested in generating and executing accurate ball-hitting motions. The racket is mounted on the end-effector of the 7 degree of freedom (DoF) WAM Barrett arm as can be seen in Figure~\ref{barrettArm}. A fixed ball-thrower is available to throw balls accurately to a fixed position in cartesian space, using which 7 joint-space reference trajectories are calculated. These trajectories guide the robot to the desired racket position and orientation so that the incoming ball will be hit precisely at the desired time and position with the desired velocity. 
 
 \begin{figure}
 \center
 \includegraphics[scale=0.05, angle= 180]{ballgun.jpg}			
 \caption{Robotic table tennis setup with the ballgun throwing balls to the robot}
+\label{barrettArm}
 \end{figure}
 
+The attached video shows the improvement achieved after using $\alg$. The convergence of the algorithm can be seen in Figure 2 and some examples of the generated trajectories in the joint are given in Figure 3. Comparisons to episodic-RL algorithms REPS and PI2 show the advantages, especially the speed and accuracy of the proposed method over them.
+
 \section{Conclusion}\label{conclusion}
+
+In this paper we presented a novel Iterative Learning Control algorithm that tracks trajectories by adapting the weights of dynamic movement primitives. Weights are adapted after each episode by using a Levenberg-Marquardt type update rule on the deviations from the reference trajectories. These reference trajectories are generated in the joint space of the robot and enable the robot to execute optimally striking motions. We show two example experiments where we evaluate the performance of the approach in putting in golf and in ball-hitting with a racket in robotic table tennis. 
+
+Reference trajectories are used in our approach only as a way to end up at the desired hitting states within the desired time frame. We are currently evaluating new ways within the optimal control perspective where the dependence on this sometimes arbitrary reference trajectory diminishes over the iteration domain, as the robot gets more confident in the hitting motion.
+
+Finally a natural extension of the DMP representation is the generalization ability of these differential equations to different hitting motions and trajectories. We think that with our method, a stochastic approach to guide exploration is missing, and it is this that restricts the generalization ability of the proposed algorithm. By extending our framework to include the Probabilistic Movement Primitives~\cite{Paraschos13} we hope to increase the generalization ability and leverage the probabilistic logic of these movement primitives.
 
 \bibliographystyle{plain}
 %\bibliographystyle{./IEEEtran}
