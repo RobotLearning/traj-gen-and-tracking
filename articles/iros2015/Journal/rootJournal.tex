@@ -33,7 +33,7 @@
 \newcommand{\invKin}{\mathcal{T}^{-1}} % used to denote inverse kinematics
 
 \newcommand{\joint}{q} % used to denote robot state in joint space
-\newcommand{\state}{\bar{\joint}} % denotes the generalized coordinates - joint space and velocity coordinates
+\newcommand{\state}{y} % denotes the generalized coordinates - joint space and velocity coordinates
 \newcommand{\dmp}{s} % used to denote the dmp trajectory states
 \newcommand{\error}{e} % difference between state and reference
 \newcommand{\traj}{r} % used to denote the points on the trajectory to be tracked
@@ -89,8 +89,6 @@
 
 \section{Introduction}\label{introduction}
 
-% These are exciting times for robotics research!
-
 % fill missing citations
 
 Most reaching tasks in control and robotics can be phrased as \emph{tracking} problems, where the dynamical system needs to follow a certain predefined trajectory in order to reach the goal state. 
@@ -117,14 +115,15 @@ Motor primitives can work well with episodic policy search methods, such as POWE
 The research question that we tackle in this article consists of the following:
 
 \begin{itemize}
-\item How can we generate optimally hitting movement primitives either in table tennis or a similar reaching task, e.g. putting in golf.
+\item How can we execute optimally hitting movement primitives either in table tennis or a similar reaching task, e.g. putting in golf.
 
 \item More generally, when we have modelling inaccuracies, how should we modify a DMP $\dmp(t)$ such that the robot executes a desired hitting motion?
 \end{itemize}
 
 Iterative Learning Control (ILC) is a fundamental approach in control theory developed to track (time-varying) reference trajectories. It has been used successfully to follow trajectories under unknown repeating disturbances and model mismatch \cite{Bristow06}. In ILC, control inputs are adjusted at each episode in a feedforward fashion. The goal is to drive the deviations from the trajectory to zero. 
 
-In this article, we combine Iterative Learning Control (ILC) with movement primitives by using ILC as a learning method to adapt the weights of the DMPs. This way we ensure a safe, reliant and robust way to track reference trajectories, with important applications in optimally hitting and striking motions. As opposed to model-free policy search approaches, we make full use of the known robot dynamics and inverse dynamics models, which helps us to quickly achieve the desired performance requirements. We validate the performance of the approach in two hitting tasks, and compare with existing episodic-RL approaches.
+In this article, we combine Iterative Learning Control (ILC) with movement primitives by using ILC as a learning method to adapt the weights of the DMPs. This way we ensure a safe, reliant and robust way to track reference trajectories, with important applications in optimally hitting and striking motions. As opposed to model-free policy search approaches, we make full use of the known, albeit inexact, robot dynamics and inverse dynamics models, which helps us to quickly achieve the desired performance requirements. We validate the performance of the approach in two hitting tasks, and compare with existing episodic-RL approaches.
+% nominal model instead of known, albeit inexact?
 
 Finally our contributions can be summarized as follows:
 
@@ -176,17 +175,17 @@ As stated in the introduction, our goal in this work is to track a given referen
 % this section probably belongs to a journal
 \subsection{ILC Review}\label{ilcReview}
 
-In this section we will first review some of the results from the Iterative Learning Control (ILC) literature \cite{Bristow06}. Consider the nonlinear robot dynamics of the form:
+In this section we will first review some of the results from the Iterative Learning Control (ILC) literature \cite{Bristow06}. Consider the nonlinear robot dynamics of the form
 
 \begin{equation}
 \begin{aligned}
-\ddot{\joint} &= \dynamics(\joint,\dot{\joint},\sysInput) + \dist(\joint,\dot{\joint})\\
+\ddot{\joint} &= \dynamics(\joint,\dot{\joint},\sysInput) \\
 \ddot{\joint} &= M^{-1}(\joint)\{ \tau(\sysInput) - C(\joint,\dot{\joint})\dot{\joint} - G(\joint)\} + \dist(\joint,\dot{\joint})\\
 \end{aligned}
 \label{dynamics}
 \end{equation}
 
-where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$~\footnote{Nominal inputs $\sysInput_{\mathrm{IDM}} = \nu(t)$ can be calculated using the inverse dynamics model.} to obtain the following linear time varying (LTV) representation:
+\noindent where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$~\footnote{Nominal inputs $\sysInput_{\mathrm{IDM}} = \nu(t)$ can be calculated using the inverse dynamics model.} to obtain the following linear time varying (LTV) representation
 
 \begin{equation}
 \begin{aligned}
@@ -195,7 +194,7 @@ where on the right hand side are the terms due to the rigid body dynamics model 
 \label{LTV}
 \end{equation}
 
-where $\error(t) = \state(t) - \traj(t)$, $\state = [\joint,\dot{\joint}]^{\mathrm{T}}$, $\linInput(t) = \sysInput(t) - \trjInput(t)$ and the time varying matrices are:
+\noindent where $\error(t) = \state(t) - \traj(t)$, $\state = [\joint,\dot{\joint}]^{\mathrm{T}}$, $\linInput(t) = \sysInput(t) - \trjInput(t)$ and the time varying matrices are
 
 \begin{equation}
 \begin{aligned}
@@ -205,7 +204,7 @@ B(t) &= \at{\frac{\partial{\dynamics}}{\partial{\sysInput}}}{(\traj(t),\trjInput
 \label{LTVmatrices}
 \end{equation}
 
-Here the additional term $\linDist(t,\sysInput)$ are due to the disturbances and the effects of the linearization. We can discretize (\ref{LTV}-\ref{LTVmatrices}) with step size $\Delta t$, $N = T/\Delta$ and step index $j = 1, \ldots, N$ to get the following discrete linear system:
+\noindent In \eqref{LTV} the additional term $\linDist(t,\sysInput)$ are due to the disturbances and the effects of the linearization. We can discretize (\ref{LTV}-\ref{LTVmatrices}) with step size $\Delta t$, $N = T/\Delta$ and step index $j = 1, \ldots, N$ to get the following discrete linear system
 
 \begin{equation}
 \begin{aligned}
@@ -214,7 +213,7 @@ Here the additional term $\linDist(t,\sysInput)$ are due to the disturbances and
 \label{discreteLTV}
 \end{equation}
 
-Here $A^D$ and $B^D$ are the discretizations of \eqref{LTVmatrices} and can be calculated using the following trick \cite{Schoellig12}:
+\noindent Here $A^D$ and $B^D$ are the discretizations of \eqref{LTVmatrices} and can be calculated using the following trick \cite{Schoellig12}
 
 \begin{equation}
 \begin{aligned}
@@ -235,7 +234,7 @@ A^{D}(j) & B^{D}(j) \\ \hline
 \label{discreteMatrices}
 \end{equation}
 
-We can stack these matrices together to get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}:
+\noindent We can stack these matrices together to get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}
 
 \begin{equation}
 \begin{aligned}
@@ -244,7 +243,7 @@ We can stack these matrices together to get the following lifted-vector represen
 \label{liftedLTV}
 \end{equation}
 
-where the submatrices of $F$ are:
+\noindent where the submatrices of $F$ are
 
 \begin{equation*}
 \begin{aligned}
@@ -257,9 +256,9 @@ B^{D}(j-1), & j = i \\
 \end{aligned}
 \end{equation*}
 
-Using this \emph{input-to-output matrix} $F$ we can analyze the effects of the ILC's feedforward input $\sysInput_L = [\linInput(1), \sysInput(2), \ldots, \linInput(\numSteps)]^{\mathrm{T}}$ on the errors $\error_L = [\error(1), \error(2),\ldots,\error(\numSteps)]^{\mathrm{T}}$ using ILC terminology.
+\noindent Using this \emph{input-to-output matrix} $F$ we can analyze the effects of the ILC's feedforward input $\sysInput_L = [\linInput(1), \sysInput(2), \ldots, \linInput(\numSteps)]^{\mathrm{T}}$ on the errors $\error_L = [\error(1), \error(2),\ldots,\error(\numSteps)]^{\mathrm{T}}$ using ILC terminology.
 
-The cost functional as the optimality criterion:
+The cost functional as the optimality criterion
 
 \begin{equation}
 \begin{aligned}
@@ -268,7 +267,7 @@ The cost functional as the optimality criterion:
 \label{cost}
 \end{equation}
 
-can be equally discretized and stacked in lifted vector form:
+\noindent can be equally discretized and stacked in lifted vector form
 
 \begin{equation}
 \begin{aligned}
@@ -277,7 +276,7 @@ can be equally discretized and stacked in lifted vector form:
 \label{costFunctional}
 \end{equation}
 
-where $Q_L, R_L \in \mathbb{R}^{N \times N}$ are of the following form:
+\noindent where $Q_L, R_L \in \mathbb{R}^{N \times N}$ are of the following form
 
 \begin{equation*}
 \begin{aligned}
@@ -298,7 +297,7 @@ where $Q_L, R_L \in \mathbb{R}^{N \times N}$ are of the following form:
 \end{aligned}
 \end{equation*}
 
-Most ILC update laws can be put in the following form:
+\noindent Most ILC update laws can be put in the following form
 
 \begin{equation}
 \begin{aligned}
@@ -307,7 +306,7 @@ Most ILC update laws can be put in the following form:
 \label{ILCupdateForm}
 \end{equation}
 
-\emph{Gradient descent} of \eqref{costFunctional} is also in this form:
+\noindent \emph{Gradient descent} of \eqref{costFunctional} is also in this form
 
 \begin{equation}
 \begin{aligned}
@@ -318,7 +317,7 @@ Most ILC update laws can be put in the following form:
 \label{ILCgradientDescentEq1}
 \end{equation}
 
-If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, using \eqref{liftedLTV}, we can rewrite \eqref{ILCgradientDescentEq1} as:
+\noindent If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, using \eqref{liftedLTV}, we can rewrite \eqref{ILCgradientDescentEq1} as
 
 \begin{equation}
 \begin{aligned}
@@ -327,10 +326,10 @@ If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist
 \label{ILCgradientDescentEq2}
 \end{equation}
 
-where $\qmatrix = I - \beta_kR_L$ and $\lmatrix = (I - \beta_kR_L)^{-1}\beta_kF^\mathrm{T}Q_L$. This gradient-descent ILC converges linearly to $\error_L = 0$ as $k \to \infty$, if $\beta_k$ is kept sufficiently small \cite{Nocedal99}.
+\noindent where $\qmatrix = I - \beta_kR_L$ and $\lmatrix = (I - \beta_kR_L)^{-1}\beta_kF^\mathrm{T}Q_L$. This gradient-descent ILC converges linearly to $\error_L = 0$ as $k \to \infty$, if $\beta_k$ is kept sufficiently small \cite{Nocedal99}.
 % check the citation and the assumptions
 
-In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, taking $R_L = 0$, the following \emph{Newton's method} based ILC~\footnote{Here we are using the column-vector version of matrix calculus where the chain rule for vectors is written as: $\frac{\partial\mathbf{y}}{\partial\mathbf{x}} = \frac{\partial\mathbf{z}}{\partial\mathbf{x}}\frac{\partial\mathbf{y}}{\partial\mathbf{z}}$.}
+In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, taking $R_L = 0$, the following \emph{Newton's method} based ILC~\footnote{Here we are using the column-vector version of matrix calculus where the chain rule for vectors is written as $\frac{\partial\mathbf{y}}{\partial\mathbf{x}} = \frac{\partial\mathbf{z}}{\partial\mathbf{x}}\frac{\partial\mathbf{y}}{\partial\mathbf{z}}$.}
 
 \begin{equation}
 \begin{aligned}
@@ -341,7 +340,7 @@ In the ideal case, if $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, 
 \label{ILCnewtonsMethod}
 \end{equation}
 
-is guaranteed to converge in one step if $\beta_k = 1$, independent of the previously applied input. However it suffers from numerical stability due to the inversion of $F$, and will be prone to diverge in practical applications \cite{Bristow06}. Keeping $R_L \neq 0$ turns \eqref{ILCnewtonsMethod} into a \emph{Levenberg-Marquardt} \cite{Nocedal99} type ILC algorithm for \eqref{cost} with $R = 0$, giving additional stability:
+\noindent is guaranteed to converge in one step if $\beta_k = 1$, independent of the previously applied input. However it suffers from numerical stability due to the inversion of $F$, and will be prone to diverge in practical applications \cite{Bristow06}. Keeping $R_L \neq 0$ turns \eqref{ILCnewtonsMethod} into a \emph{Levenberg-Marquardt} \cite{Nocedal99} type ILC algorithm for \eqref{cost} with $R = 0$, giving additional stability
 
 \begin{equation}
 \begin{aligned}
@@ -350,7 +349,7 @@ is guaranteed to converge in one step if $\beta_k = 1$, independent of the previ
 \label{ILClevenbergMarquardt}
 \end{equation}
 
-assuming $\beta_k(F^{\mathrm{T}}Q_LF + R_L)^{-1}R_L \approx 0$.
+\noindent assuming $\beta_k(F^{\mathrm{T}}Q_LF + R_L)^{-1}R_L \approx 0$.
 % check the citation and the assumptions
 
 %\todo I don't like the qbar notation
@@ -367,15 +366,13 @@ assuming $\beta_k(F^{\mathrm{T}}Q_LF + R_L)^{-1}R_L \approx 0$.
 
 \subsection{Learning the Motor Primitive Parameters}\label{learningMPs}
 
-% what to do with PD-type feedback?
+Sometimes for safety reasons~\footnote{For instance, when interacting with external objects or under unforeseen perturbations \cite{Schaal07}} a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases, it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
 
-Sometimes for safety reasons~\footnote{For instance, when interacting with external objects or under unforeseen perturbations \cite{Schaal07}} a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
-
-In this work we focus on modifying the parameters or the weights of the dynamic motor primitives (DMP), which acts as a \emph{kinematic policy} $\dmp(t) = [\joint_{\text{des}},\dot{\joint}_{\text{des}}]^{\mathrm{T}}$. For a linear time-varying system under a given linear feedback law $\linInput = -K_u(\state - \dmp)$ we consider the following transition dynamics:
+In this work we focus on modifying the parameters or the weights of the dynamic motor primitives (DMP), which acts as a \emph{kinematic policy} $\dmp(t) = [\joint_{\text{des}},\dot{\joint}_{\text{des}}]^{\mathrm{T}}$. For a linear time-varying system under a given linear feedback law $\linInput = -K_u(\state - \dmp)$ we consider the following transition dynamics
 
 \begin{equation}
 \begin{aligned}
- \dot{\fullvec} := 
+ \dot{\fullvec} = 
  \begin{bmatrix}
   \dot{\state} \\
   \dot{\traj} \\
@@ -404,7 +401,7 @@ In this work we focus on modifying the parameters or the weights of the dynamic 
 \label{fullTransition}
 \end{equation}
 
-where the phase $\phase$ evolves according to:
+where the phase $\phase$ evolves according to
 
 \begin{equation}
 \dot{\phase} = -\tau\alpha\phase
@@ -414,7 +411,7 @@ where the phase $\phase$ evolves according to:
 The constants $\tau$ and $\alpha$ determine the scaling and settling time respectively. $A_s$ and $A_g$ matrices include the spring constants that drive the DMP to the goal state $g$.
 % this needs to be rephrased perhaps.
 
-If we introduce for this enlarged vector $\fullvec$ the following cost functional:
+If we introduce for this enlarged vector $\fullvec$ the following cost functional
 
 \begin{equation}
 \begin{aligned}
@@ -423,7 +420,7 @@ J(\weights) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \we
 \label{cost2}
 \end{equation}
 
-we can apply a weight-update form of the ILC update law \eqref{ILCupdateForm}:
+we can apply a weight-update form of the ILC update law \eqref{ILCupdateForm}
 
 \begin{equation}
 \begin{aligned}
@@ -432,7 +429,7 @@ we can apply a weight-update form of the ILC update law \eqref{ILCupdateForm}:
 \label{ILCupdateFormWeights}
 \end{equation}
 
-To do this, we discretize \eqref{cost2} as in \eqref{costFunctional}:
+To do this, we discretize \eqref{cost2} as in \eqref{costFunctional}
 
 \begin{equation}
 \begin{aligned}
@@ -441,7 +438,7 @@ To do this, we discretize \eqref{cost2} as in \eqref{costFunctional}:
 \label{costFunctionalWeights}
 \end{equation}
 
-where the lifted output $\error_L$ can be written as the lifted output matrix $C_L$ times the lifted state vector $\fullvec_L$:
+where the lifted output $\error_L$ can be written as the lifted output matrix $C_L$ times the lifted state vector $\fullvec_L$
 
 \begin{equation}
 \begin{aligned}
@@ -462,7 +459,7 @@ C &= \begin{bmatrix}
 
 Notice that now the weighting matrix $R_w \in \mathbb{R}^{m \times m}$ where $m$ is the number of basis functions used in the controls matrix $B_{\fullvec}$ or equivalently $m = \text{rank}(B_{\fullvec})$.
 
-Gradient descent of \eqref{costFunctionalWeights} can be put in this form \eqref{ILCupdateFormWeights}:
+Gradient descent of \eqref{costFunctionalWeights} can be put in this form \eqref{ILCupdateFormWeights}
 
 \begin{equation}
 \begin{aligned}
@@ -473,7 +470,7 @@ Gradient descent of \eqref{costFunctionalWeights} can be put in this form \eqref
 \label{ILCgradientDescentWeights}
 \end{equation}
 
-If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist_L}}{\partial{\weights}} = 0$, using \eqref{liftedLTV}, we can rewrite \eqref{ILCgradientDescentWeights} as:
+If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist_L}}{\partial{\weights}} = 0$, using \eqref{liftedLTV}, we can rewrite \eqref{ILCgradientDescentWeights} as
 
 \begin{equation}
 \begin{aligned}
@@ -482,7 +479,7 @@ If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist
 \label{ILCgradientDescentWeights2}
 \end{equation}
 
-where the \emph{weight-to-output matrix} $F_{\weights}$ is defined as:
+where the \emph{weight-to-output matrix} $F_{\weights}$ is defined as
 
 \begin{equation}
 \begin{aligned}
@@ -503,7 +500,7 @@ B^{D}_{\fullvec}(j-1), & j = i \\
 
 The matrix $1_{m\times Nm}$ appears in \eqref{weightToOutputMatrix} because the weight vector $\weights$ is not dynamic, as opposed to the feedback inputs $\linInput$.
 
-The following \emph{Levenberg-Marquardt} (LM) type ILC law updates the weights:
+The following \emph{Levenberg-Marquardt} (LM) type ILC law updates the weights
 
 \begin{equation}
 \begin{aligned}
@@ -514,7 +511,7 @@ The following \emph{Levenberg-Marquardt} (LM) type ILC law updates the weights:
 \label{ILCWeightsNewtonsMethod}
 \end{equation}
 
-assuming again that $\beta_k(F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights})^{-1}R_{\weights} \approx 0$. Expanding the terms in the weight-to-output matrix $F_{\weights}$:
+assuming again that $\beta_k(F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights})^{-1}R_{\weights} \approx 0$. Expanding the terms in the weight-to-output matrix $F_{\weights}$
 
 \begin{equation}
 \begin{aligned}
@@ -525,7 +522,7 @@ F_{\weights} &= \begin{bmatrix}
 \label{weightToOutputMatrixExpanded}
 \end{equation}
 
-we can rewrite \eqref{ILCWeightsNewtonsMethod} as:
+we can rewrite \eqref{ILCWeightsNewtonsMethod} as
 
 % show this properly!
 \begin{equation}
@@ -538,11 +535,15 @@ we can rewrite \eqref{ILCWeightsNewtonsMethod} as:
 \label{ILCWeightedRidgeRegression}
 \end{equation}
 
-and form the connection with (time-varying) weighted ridge-regression.
+% definitely reference needed for regression based weight update
+Notice the connection of \eqref{ILCWeightedRidgeRegression} with the weight update law based on ridge regression where the weighting matrix is the identity matrix. In this case the model-based assumptions of our approach appear in the form of a nondiagonal weighting matrix, i.e. we perform the regression update using a different metric.
+% model based update-law
 
 \subsubsection{Algorithm}
 
-We use the weighted ridge regression update law given in \eqref{ILCWeightedRidgeRegression} in our algorithm which is given in Algorithm~\ref{alg1}. We initialize the algorithm $\alg$ with the necessary weighting matrices and the transition matrix $A_{\fullvec}$ which is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs $\nu$ are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using weighted regression on the reference trajectory.
+We use the update law derived in \eqref{ILCWeightedRidgeRegression} in our algorithm, given in Algorithm~\ref{alg1}. We initialize the algorithm $\alg$ with the necessary weighting and transition matrices. The transition matrix $A_{\fullvec}$ is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs $\nu$ are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using weighted regression on the reference trajectory.
+
+% notice the stability of the approach compared to iLQR methods where the reference trajectory and the nominal inputs are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative linear optimal control approaches.
 
 \begin{algorithm}[tb]
    \caption{\alg}
@@ -551,7 +552,7 @@ We use the weighted ridge regression update law given in \eqref{ILCWeightedRidge
    \STATE {\bfseries Input:} $\threshold > 0$, $\beta > 0$, $Q_L, R_{\weights} \succeq 0$, $A_{\fullvec}$, $\ \traj = \{\traj_0, \traj_1, \ldots, \traj_N \}$, $\ \nu = \sysInput_{\mathrm{IDM}} = \{\nu_0, \nu_1, \ldots, \nu_N \}$
    \STATE Initialize $k = 1$, $\dmp(\weights) = \dmp(\weights_0)$, $\beta_k = \beta$
    \REPEAT 
- 	   \STATE Apply $\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights))$
+ 	   \STATE Run controller $\ddot{\joint} \leftarrow \dynamics(\joint,\dot{\joint},\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
  	   \STATE Observe $\error = \state - \traj$
  	   \STATE Compute $\ValueFunction_k$ = $\error_L^{\mathrm{T}}Q_L\error_L + \weights^{\mathrm{T}}R_w\weights$
  	   \STATE Form $W(t)$ from $A_{\fullvec}$, $Q_L$
@@ -562,36 +563,6 @@ We use the weighted ridge regression update law given in \eqref{ILCWeightedRidge
 \end{algorithm}
 
 \subsubsection{Stability analysis}
-
-\subsubsection{Metronome-based learning}
-
-It is possible to incorporate one of the advantages of the DMP framework, the \emph{slowing-down} effect with the help of the error coupling term \cite{Schaal07}, \cite{Ijspeert13}:
-
-\begin{equation}
-\dot{\phase} = \frac{-\tau\alpha\phase}{(\state - \traj)^2}
-\label{phaseWithErrorCoupling}
-\end{equation}
-
-in the ILC framework by including feedforward adjustment on the time constant $\alpha$:
-
-\begin{equation}
-\begin{aligned}
-\phase_{\log} &:= \log(\phase) \\
-\dot{\phase}_{log} &= -\tau\alpha
-\label{logPhase}
-\end{aligned}
-\end{equation}
-
-This can be motivated again using gradient descent on the cost functional with the variable end-point:
-
-\begin{equation}
-\begin{aligned}
-J(\weights,T(\alpha)) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(k)(\state - \traj) + \weights^{\mathrm{T}}R_w(k)\weights \ \mathrm{d}t + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
-\end{aligned}
-\label{costTimeVarying}
-\end{equation}
-
-The gradient of which can be resolved using the calculus of variations. This gives us a discretization-free representation for ILC. The cost is the additional mathematical machinery. The iteration dependency of the weighting matrices $Q$ and $R_{\weights}$ can be used to relax the dependency on the reference trajectory $\traj(t)$. As $Q$ and $R_{\weights}$ decrease in iteration-domain, the final desired state $\traj_{T}$ becomes more and more important.
 
 \section{Results}\label{results}
 
