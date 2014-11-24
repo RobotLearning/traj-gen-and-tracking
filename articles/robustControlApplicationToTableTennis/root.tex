@@ -16,7 +16,7 @@
 \newtheorem{prop}{Proposition}[section]
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{prop2}{Proposition}
-\newtheorem{lem}{Lemma} 
+\newtheorem{lem}{Lemma}
 \newtheorem{ex}{Example}
 
 % For algorithms
@@ -88,45 +88,41 @@
 \maketitle
 
 
-\section{Metronome learning}
+\section{Robust Control Applications to Table Tennis}
 
-% These are exciting times for robotics research!
+\subsection{Game Theoretic Analysis}
 
-It is possible to incorporate one of the advantages of the DMP framework, the \emph{slowing-down} effect with the help of the error coupling term \cite{Schaal07}, \cite{Ijspeert13}
+What actions are available to players? Position and body orientation with racket position and body orientation
+(initial gesture) and hitting motions (trajectories) as dynamic movement primitives.
 
-% maybe represent r as a dmp
-\begin{equation}
-\dot{\phase} = \frac{-\tau\alpha\phase}{(\state - \traj)^2}
-\label{phaseWithErrorCoupling}
-\end{equation}
+Timing of the interactions - sequential model. But not always at the same time
 
-in the ILC framework by including feedforward adjustment on the time constant $\alpha$:
+What information do different players have when they take actions? 
+They see the opponent's posture always and also their hitting motion. They will also see the incoming ball trajectory - but maybe not everything if it's coming too fast. They may or may not know the spin of the ball.
+Sometimes you have to choose, or take action, before seeing the opponent hit the ball.
 
-% Geri's comment: active learning and particularly artificial curiosity can be relevant here
-\begin{equation}
-\begin{aligned}
-\phase_{\log} &:= \log(\phase) \\
-\dot{\phase}_{log} &= -\tau\alpha
-\label{logPhase}
-\end{aligned}
-\end{equation}
+What are the payoffs to the various players as a result of the interaction?
+For the players there are no payoffs unless the ball does not touch the table on the other side. In that case, one gets 1 and the other gets 0.
 
-which can be motivated again using gradient descent on the cost functional with the variable end-point
+Sensitivity analysis - am I acting strategically enough?
 
-\begin{equation}
-\begin{aligned}
-J(\weights,T(\alpha)) &= \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(k)(\state - \traj) + \weights^{\mathrm{T}}R_w(k)\weights \ \mathrm{d}t + (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
-\end{aligned}
-\label{costTimeVarying}
-\end{equation}
+Pure strategies over actions vs. mixed strategies
 
-The gradient of \eqref{costTimeVarying} can be resolved using the calculus of variations. This gives us a discretization-free representation for ILC. The cost is the additional mathematical machinery. The iteration dependency of the weighting matrices $Q$ and $R_{\weights}$ can be used to relax the dependency on the reference trajectory $\traj(t)$. As $Q$ and $R_{\weights}$ decrease in iteration-domain, the final desired state $\traj_{T}$ becomes more and more important.
+Dominant strategy - an individual does not have to make any predictions about what other players
+might do, and still has a well-defined best strategy. This adds robustness.
 
-% I should be able to estimate the gradient with much higher probability as I slow down. 
-% so a dependence of gradient estimators with time T is needed as in
-% Pr(update is descent direction) > 1 - exp(-\alpha T)
+A pure strategy Nash equilibrium only requires that the
+action taken by each agent be best against the actual equilibrium actions taken by the other
+players, and not necessarily against all possible actions of the other players.
+"we have to look for a pair of actions such that neither firm wants
+to change its action given what the other firm has chosen"
 
-% Can we do projection analysis? Projection operator could do scalable learning by adapting T. Does this work with lifted vector representation?
+A profile of dominant strategies is a Nash equilibrium but not vice versa.
+
+randomized strategies, or what are called mixed strategies, when no pair of pure strategies forms an equilibrium.
+maximize entropy - do not reveal info to the opponent, he shouldn't be able to predict your future behaviour given past samples.
+
+is table tennis an extensive form game? Game tree? backwards induction 
 
 \bibliographystyle{plain}
 %\bibliographystyle{./IEEEtran}

@@ -1,4 +1,4 @@
-% Monotonic Iterative Learning Control 
+% Model based Iterative Learning Control 
 % that tries to satisfy the monotonic update rule:
 %
 % max. singular value s(I - LF) < 1
@@ -28,6 +28,9 @@ classdef mILC < ILC
         % Lifted state matrix F (input-state) and G (state-output)
         F
         G
+        % Lifted penalty matrices Q and R
+        Ql
+        Rl
     end
     
     methods
@@ -36,7 +39,7 @@ classdef mILC < ILC
                         
             obj.episode = 0;
             obj.color = 'm';
-            obj.name = 'Monotonic ILC';
+            obj.name = 'Model-based ILC';
             obj.error = 0;
             
             dim_x = model.SIM.dimx;
@@ -53,6 +56,8 @@ classdef mILC < ILC
             
             obj.F = zeros(N*dim_x, N*dim_u);
             obj.G = zeros(N*dim_y, N*dim_x);
+            obj.Ql = zeros(N*dim_y, N*dim_y);
+            obj.Rl = zeros(N*dim_u, N*dim_u);
             
             % fill the F matrix
             obj = obj.lift(model,trj);
@@ -69,9 +74,15 @@ classdef mILC < ILC
             
             % deal C matrix to G
             obj.G = cell(1,N);
+            obj.Ql = cell(1,N);
+            obj.Rl = cell(1,N);
             % TODO: this could also be time varying!
             [obj.G{:}] = deal(model.C);
+            [obj.Ql{:}] = deal(model.COST.Q);
+            [obj.Rl{:}] = deal(model.COST.R);
             obj.G = blkdiag(obj.G{:});
+            obj.Ql = blkdiag(obj.Ql{:});
+            obj.Rl = blkdiag(obj.Rl{:});
             
             if isa(model,'Linear')
             
@@ -126,11 +137,11 @@ classdef mILC < ILC
             dev = dev(:,2:end);                        
     
             % set learning rate
-            % a_p = 0.5;
-            % a_d = 0.2;
-            % u_next = obj.u_last - a_p * dev - a_d * ddev;
+            beta = 0.1;
             
-            % model based update
+            % gradient descent
+            %u_next = obj.u_last(:) - beta * obj.F' * obj.Ql * dev(:);
+            % model inversion based update
             u_next = obj.u_last(:) - obj.F \ dev(:);
             u_next = u_next';
             

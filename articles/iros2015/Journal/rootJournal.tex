@@ -500,6 +500,8 @@ B^{D}_{\fullvec}(j-1), & j = i \\
 
 The matrix $1_{m\times Nm}$ appears in \eqref{weightToOutputMatrix} because the weight vector $\weights$ is not dynamic, as opposed to the feedback inputs $\linInput$.
 
+% check numerical optimization book - is this really LM?
+
 The following \emph{Levenberg-Marquardt} (LM) type ILC law updates the weights
 
 \begin{equation}
@@ -552,7 +554,7 @@ We use the update law derived in \eqref{ILCWeightedRidgeRegression} in our algor
    \STATE {\bfseries Input:} $\threshold > 0$, $\beta > 0$, $Q_L, R_{\weights} \succeq 0$, $A_{\fullvec}$, $\ \traj = \{\traj_0, \traj_1, \ldots, \traj_N \}$, $\ \nu = \sysInput_{\mathrm{IDM}} = \{\nu_0, \nu_1, \ldots, \nu_N \}$
    \STATE Initialize $k = 1$, $\dmp(\weights) = \dmp(\weights_0)$, $\beta_k = \beta$
    \REPEAT 
- 	   \STATE Run controller $\ddot{\joint} \leftarrow \dynamics(\joint,\dot{\joint},\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
+ 	   \STATE Run controller $\ddot{\joint} \leftarrow \dynamics(\joint,\dot{\joint},\sysInput)$ %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
  	   \STATE Observe $\error = \state - \traj$
  	   \STATE Compute $\ValueFunction_k$ = $\error_L^{\mathrm{T}}Q_L\error_L + \weights^{\mathrm{T}}R_w\weights$
  	   \STATE Form $W(t)$ from $A_{\fullvec}$, $Q_L$

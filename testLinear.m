@@ -185,4 +185,4 @@ lin.plot_outputs(traj);
 figure;
 plot(1:num_trials,ilc.error);
 title('Squared-2-Norm of ILC error');
-legend('Monotonic ILC');
+legend(ilc.name);
