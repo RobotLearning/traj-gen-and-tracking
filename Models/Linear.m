@@ -217,7 +217,7 @@ classdef Linear < Model
             
             % check controllability
             obj.assertControllability();
-            
+             
             % optional: make DMPs that smoothens x_des
             % one for each output
             goal = ydes(:,end);

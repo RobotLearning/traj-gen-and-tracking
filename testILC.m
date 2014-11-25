@@ -37,11 +37,9 @@ x(:,1) = x0;
 y(:,1) = C*x0;
 u0 = zeros(dimu,1);
 u = zeros(dimu,N);
-u = u; u2 = u;
 u(:,1) = u0;
-u2(:,1) = u0;
 
-% evolve model
+% evolve model with zero input
 for j = 1:N
     x(:,j+1) = A*x(:,j) + B*u(:,j);
     y(:,j+1) = C*x(:,j+1);
@@ -75,3 +73,92 @@ figure(2);
 plot(t,y,'.-',t,s,'-');
 title('Last iteration result');
 legend('ILC trajectory','Reference');
+
+%% More complicated example
+% Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf
+
+close all;
+dimx = 3;
+dimu = 1;
+dimy = 3;
+
+% simulation variables
+t0 = 0;
+tf = 1;
+h = 0.02;
+t = t0:h:tf;
+N = length(t)-1;
+
+% system and weighting matrices
+Q = 100;
+R = 1;
+% continuous time matrices
+A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
+B = [0;0;1];
+% assume full observation model
+% TODO: extend to partial observation models
+C = eye(3);
+
+% create the structures
+SIM.discrete = false;
+SIM.dimx = dimx;
+SIM.dimu = dimu;
+SIM.dimy = dimy;
+SIM.h = h;
+SIM.eps = 0;
+SIM.int = 'Euler';
+PAR.A = A;
+PAR.B = B;
+PAR.C = C;
+CON = [];
+COST.Q = C'*Q*C;
+COST.R = R;
+lin = Linear(PAR,CON,COST,SIM);
+
+% track the sin trajectory
+%s = sin(pi/6*t);
+s = t.^2;
+s = [s; 0, diff(s)/h];
+s = [s; 0, diff(s(2,:))/h];
+
+% create yin with zero velocity
+x0 = zeros(dimx,1);
+y0 = C * x0;
+
+% create trajectory and execute LQR
+% traj = lin.trajectory(t,y0,s);
+% [y,us] = lin.observeWithFeedback(traj,x0);
+% traj.addPerformance(us,y,lin.COST,'LQR');
+
+% or instead create zero input and observe outcome
+us = zeros(dimu,N); 
+y = lin.observe(t,x0,us);
+traj = Trajectory(t,s,us,[]);
+traj.addPerformance(us,y,lin.COST,'zeros');
+
+lin.plot_inputs(traj);
+lin.plot_outputs(traj);
+
+% Create an ilc controller
+%ilc = bILC(traj);
+ilc = mILC(lin,traj);
+num_trials = 1;
+
+for i = 1:num_trials
+    
+    us = ilc.feedforward(traj,y);     
+    % observe the actual states
+    xact = lin.evolve(t,x0,us);
+    % get the measurements
+    y = lin.observe(t,x0,us);
+    traj.addPerformance(us,y,lin.COST,ilc);
+
+end
+
+lin.plot_inputs(traj);
+lin.plot_outputs(traj);
+
+figure;
+plot(1:num_trials,ilc.error);
+title('Squared-2-Norm of ILC error');
+legend(ilc.name);

@@ -37,14 +37,14 @@ classdef bILC < ILC
             
         end
         
-        function u_next = feedforward(obj,trj,x)
+        function u_next = feedforward(obj,trj,y)
             
-            dev = x - trj.s;
+            dev = y - trj.s;
             h = trj.t(2) - trj.t(1);
             % get rid of x0 in dev
             ddev = diff(dev')'/h;
             ddev = ddev(1,:);
-            dev = dev(1,2:end);                        
+            dev = dev(:,2:end);                        
     
             % set learning rate
             a_p = 0.5;

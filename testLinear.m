@@ -80,6 +80,7 @@ traj.addPerformance(us,y,lin.COST,'zeros');
 %% Iterative Learning Control
 
 num_trials = 1;
+%ilc = bILC(traj);
 ilc = mILC(lin,traj);
 
 for i = 1:num_trials
@@ -103,6 +104,7 @@ title('Squared-2-Norm of ILC error');
 legend('Monotonic ILC');
 
 %% More complicated example
+% Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf
 
 close all;
 dimx = 3;
@@ -124,7 +126,7 @@ A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
 % assume full observation model
 % TODO: extend to partial observation models
-C = eye(dimx);
+C = eye(3);
 
 % create the structures
 SIM.discrete = false;
@@ -164,9 +166,9 @@ lin.plot_inputs(traj);
 lin.plot_outputs(traj);
 
 % Create an ilc controller
-%ilc = bILC(traj);
-ilc = mILC(lin,traj);
-num_trials = 1;
+ilc = bILC(traj);
+%ilc = mILC(lin,traj);
+num_trials = 50;
 
 for i = 1:num_trials
     
