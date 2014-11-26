@@ -1,6 +1,21 @@
 %% Test script for ILC (Arimoto-style and Model-based ILC tests)
 
-clc; close all; clear classes; 
+%# store breakpoints
+tmp = dbstatus;
+save('tmp.mat','tmp')
+
+%# clear all
+close all
+clear classes %# clears even more than clear all
+clc
+
+%# reload breakpoints
+load('tmp.mat')
+dbstop(tmp)
+
+%# clean up
+clear tmp
+delete('tmp.mat')
 
 %% ILC Example 
 % taken from the ILC survey by Bristow et al.
@@ -77,10 +92,10 @@ legend('ILC trajectory','Reference');
 %% More complicated example
 % Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf
 
-close all;
+close all; clear; clc;
 dimx = 3;
 dimu = 1;
-dimy = 3;
+dimy = 2;
 
 % simulation variables
 t0 = 0;
@@ -90,14 +105,12 @@ t = t0:h:tf;
 N = length(t)-1;
 
 % system and weighting matrices
-Q = 100;
-R = 1;
+Q = 100*eye(dimy);
+R = 0.01*eye(dimu);
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
-% assume full observation model
-% TODO: extend to partial observation models
-C = eye(3);
+C = [1 0 0; 0 1 0];
 
 % create the structures
 SIM.discrete = false;
@@ -111,30 +124,30 @@ PAR.A = A;
 PAR.B = B;
 PAR.C = C;
 CON = [];
-COST.Q = C'*Q*C;
+COST.Q = Q;
 COST.R = R;
 lin = Linear(PAR,CON,COST,SIM);
 
 % track the sin trajectory
 %s = sin(pi/6*t);
 s = t.^2;
-s = [s; 0, diff(s)/h];
-s = [s; 0, diff(s(2,:))/h];
+%s = [s; 2*t];
+s = [s; 2*t];
 
 % create yin with zero velocity
 x0 = zeros(dimx,1);
 y0 = C * x0;
 
 % create trajectory and execute LQR
-% traj = lin.trajectory(t,y0,s);
-% [y,us] = lin.observeWithFeedback(traj,x0);
-% traj.addPerformance(us,y,lin.COST,'LQR');
+traj = lin.trajectory(t,y0,s);
+[y,us] = lin.observeWithFeedback(traj,x0);
+traj.addPerformance(us,y,lin.COST,'LQR');
 
 % or instead create zero input and observe outcome
-us = zeros(dimu,N); 
-y = lin.observe(t,x0,us);
-traj = Trajectory(t,s,us,[]);
-traj.addPerformance(us,y,lin.COST,'zeros');
+% us = zeros(dimu,N); 
+% y = lin.observe(t,x0,us);
+% traj = Trajectory(t,s,us,[]);
+% traj.addPerformance(us,y,lin.COST,'zeros');
 
 lin.plot_inputs(traj);
 lin.plot_outputs(traj);
@@ -142,6 +155,7 @@ lin.plot_outputs(traj);
 % Create an ilc controller
 %ilc = bILC(traj);
 ilc = mILC(lin,traj);
+ilc.u_last = us;
 num_trials = 1;
 
 for i = 1:num_trials

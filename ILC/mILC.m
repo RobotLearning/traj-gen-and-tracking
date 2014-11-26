@@ -1,13 +1,10 @@
 % Model based Iterative Learning Control 
-% that tries to satisfy the monotonic update rule:
-%
-% max. singular value s(I - LF) < 1
 %
 % where F is the lifted matrix of the plant dynamics
 % and L is the learning matrix of the ILC update i.e.
 % unext = ulast - L*error;
 %
-% Ideally we would need L = inv(F), a model-based ILC update rule
+% Ideally we need L = inv(F), a model-based ILC update rule
 
 classdef mILC < ILC
     
@@ -137,7 +134,7 @@ classdef mILC < ILC
             dev = dev(:,2:end);                        
     
             % set learning rate
-            %beta = 0.25;
+            beta = 0.25;
             
             % gradient descent
             %u_next = obj.u_last(:) - beta * obj.F' * obj.Ql * dev(:);

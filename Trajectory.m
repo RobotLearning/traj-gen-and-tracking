@@ -58,7 +58,6 @@ classdef Trajectory < handle
             sse = sum(obj.PERF(i+1).cost);
             fprintf('%d. trial: Q-SSE for %s is %f \n', i+1, name, sse);
             
-            % add to controller
             if ~ischar(controller)
                 controller.record(u,sse);
             end

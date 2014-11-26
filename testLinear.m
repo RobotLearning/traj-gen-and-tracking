@@ -109,7 +109,7 @@ legend('Monotonic ILC');
 close all;
 dimx = 3;
 dimu = 1;
-dimy = 3;
+dimy = 1;
 
 % simulation variables
 t0 = 0;
@@ -119,14 +119,14 @@ t = t0:h:tf;
 N = length(t)-1;
 
 % system and weighting matrices
-Q = 100;
-R = 1;
+Q = 100*eye(dimy);
+R = 1*eye(dimu);
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
-% assume full observation model
-% TODO: extend to partial observation models
-C = eye(3);
+% partial observation model
+%C = [1 0 0; 0 1 0];
+C = [1 0 0];
 
 % create the structures
 SIM.discrete = false;
@@ -140,22 +140,23 @@ PAR.A = A;
 PAR.B = B;
 PAR.C = C;
 CON = [];
-COST.Q = C'*Q*C;
+COST.Q = Q;
 COST.R = R;
 lin = Linear(PAR,CON,COST,SIM);
 
 % track the sin trajectory
 %s = sin(pi/6*t);
 s = t.^2;
+%s = [s; pi/6*cos(pi/6*t)];
+%s = [s; 2*t];
 
 % create yin with zero velocity
 x0 = zeros(dimx,1);
 y0 = C * x0;
-y0 = y0(1:2);
+% y0 = y0(1:2);
 
 % create trajectory and execute LQR
 traj = lin.trajectory(t,y0,s);
-
 [y,us] = lin.observeWithFeedback(traj,x0);
 traj.addPerformance(us,y,lin.COST,'LQR');
 % us = zeros(dimu,N); 
@@ -168,7 +169,8 @@ lin.plot_outputs(traj);
 % Create an ilc controller
 ilc = bILC(traj);
 %ilc = mILC(lin,traj);
-num_trials = 50;
+ilc.u_last = us;
+num_trials = 500;
 
 for i = 1:num_trials
     

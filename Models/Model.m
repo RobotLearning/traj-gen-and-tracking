@@ -81,6 +81,7 @@ classdef (Abstract) Model < handle
             t = traj.t;
             s = traj.s;
             K = traj.K;
+            uff = traj.unom;
             N = length(t)-1;
             h = t(2)-t(1);
             x = zeros(length(x0),N+1);
@@ -88,10 +89,7 @@ classdef (Abstract) Model < handle
             x(:,1) = x0;
             y(:,1) = obj.C * x(:,1);
             for i = 1:N
-                % error 
-                e = x(:,i) - s(:,i);
-                ehat = [e; 1];
-                u(:,i) = K(:,:,i)*ehat;
+                u(:,i) = K(:,:,i)*x(:,i) + uff(:,i);
                 x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
                 y(:,i+1) = obj.C * x(:,i+1);
                 % no constraint checking

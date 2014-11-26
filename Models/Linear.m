@@ -144,9 +144,12 @@ classdef Linear < Model
             assert(rank(K) == dimx, 'System is not controllable!');
         end
         
+        % @obsolete
         % Wrapper for the LQR function
         % constructs the matrices of the model required for LQR
         function K = lqr(obj,t,s)
+            
+            warning('This should not be used!');
             
             dimx = obj.SIM.dimx;
             dimu = obj.SIM.dimu;
@@ -220,14 +223,25 @@ classdef Linear < Model
              
             % optional: make DMPs that smoothens x_des
             % one for each output
-            goal = ydes(:,end);
-            numbf = 50;
-            s = obj.dmpTrajectory(t,numbf,goal,y0,ydes);
+            %goal = ydes(:,end);
+            %numbf = 50;
+            %s = obj.dmpTrajectory(t,numbf,goal,y0,ydes);
 
             % calculate the optimal feedback law
-            K = obj.lqr(t,s);
+            s = ydes;
+            Q = obj.COST.Q;
+            R = obj.COST.R;
+            A = obj.A;
+            B = obj.B;
+            C = obj.C;
+            N = length(t)-1;
+            h = t(2) - t(1);
+            lqr = LQR(Q,R,Q,A,B,C,N,h);
+            % form sbar 
+            sbar = C'*((C*C')\s);
+            [K,uff] = lqr.computeFinHorizonTracking(sbar);
             
-            Traj = Trajectory(t,s,[],K);
+            Traj = Trajectory(t,s,uff,K);
         end
         
     end
