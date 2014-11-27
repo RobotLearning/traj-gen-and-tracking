@@ -43,10 +43,10 @@ C = [0 1];
 cost.fnc = @(y,s) diag((y-s)'*Q*(y-s));
 
 % track smoothed step
-s = 1./(1+exp(-(2*t-20)/10));
+r = 1./(1+exp(-(2*t-20)/10));
 
 % initialize states and inputs
-x0 = [0;s(1)];
+x0 = [0;r(1)];
 x = zeros(dimx,N+1);
 x(:,1) = x0;
 y(:,1) = C*x0;
@@ -61,7 +61,7 @@ for j = 1:N
 end
 
 % form a trajectory
-trj = Trajectory(t,s,u,[]);
+trj = Trajectory(t,r,u,[]);
 trj.addPerformance(u,y,cost,'zeros');
 
 % create the simpler ilc
@@ -85,7 +85,7 @@ figure(1);
 plot(1:numIt,ilc.error);
 title('Squared-2-Norm of ILC error');
 figure(2);
-plot(t,y,'.-',t,s,'-');
+plot(t,y,'.-',t,r,'-');
 title('Last iteration result');
 legend('ILC trajectory','Reference');
 
@@ -95,7 +95,7 @@ legend('ILC trajectory','Reference');
 close all; clear; clc;
 dimx = 3;
 dimu = 1;
-dimy = 2;
+dimy = 1;
 
 % simulation variables
 t0 = 0;
@@ -110,69 +110,60 @@ R = 0.01*eye(dimu);
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
-C = [1 0 0; 0 1 0];
+C = [1 0 0];
 
-% create the structures
-SIM.discrete = false;
-SIM.dimx = dimx;
-SIM.dimu = dimu;
-SIM.dimy = dimy;
-SIM.h = h;
-SIM.eps = 0;
-SIM.int = 'Euler';
-PAR.A = A;
-PAR.B = B;
-PAR.C = C;
-CON = [];
-COST.Q = Q;
-COST.R = R;
-lin = Linear(PAR,CON,COST,SIM);
+% Create the 2-norm cost function
+cost.fnc = @(y,s) diag((y-s)'*Q*(y-s));
 
-% track the sin trajectory
-%s = sin(pi/6*t);
-s = t.^2;
-%s = [s; 2*t];
-s = [s; 2*t];
+% track the reference trajectory
+%r = sin(pi/6*t);
+r = t.^2;
+%r = [r; 2*t];
 
-% create yin with zero velocity
-x0 = zeros(dimx,1);
-y0 = C * x0;
+% initialize states and inputs
+x0 = [r(:,1);0;0];
+x = zeros(dimx,N+1);
+x(:,1) = x0;
+y(:,1) = C*x0;
+u0 = zeros(dimu,1);
+u = zeros(dimu,N);
+u(:,1) = u0;
 
-% create trajectory and execute LQR
-traj = lin.trajectory(t,y0,s);
-[y,us] = lin.observeWithFeedback(traj,x0);
-traj.addPerformance(us,y,lin.COST,'LQR');
+% evolve model with zero input
+for j = 1:N
+    x(:,j+1) = A*x(:,j) + B*u(:,j);
+    y(:,j+1) = C*x(:,j+1);
+end
 
-% or instead create zero input and observe outcome
-% us = zeros(dimu,N); 
-% y = lin.observe(t,x0,us);
-% traj = Trajectory(t,s,us,[]);
-% traj.addPerformance(us,y,lin.COST,'zeros');
+% form a trajectory
+trj = Trajectory(t,r,u,[]);
+trj.addPerformance(u,y,cost,'zeros');
 
-lin.plot_inputs(traj);
-lin.plot_outputs(traj);
+% create the simpler ilc
+ilc = bILC(trj);
+% create the model based ilc
+%ilc = mILC(lin,trj);
+ilc.u_last = u;
+num_trials = 500;
 
-% Create an ilc controller
-%ilc = bILC(traj);
-ilc = mILC(lin,traj);
-ilc.u_last = us;
-num_trials = 1;
-
+% Perform ILC updates
 for i = 1:num_trials
-    
-    us = ilc.feedforward(traj,y);     
-    % observe the actual states
-    xact = lin.evolve(t,x0,us);
-    % get the measurements
-    y = lin.observe(t,x0,us);
-    traj.addPerformance(us,y,lin.COST,ilc);
+    % Update the controls
+    u = ilc.feedforward(trj,y);
+    % Evolve system with both ILC inputs
+    for j = 1:N
+        x(:,j+1) = A*x(:,j) + B*u(:,j);
+        y(:,j+1) = C*x(:,j+1);
+    end
+    % Add performances
+    trj.addPerformance(u,y,cost,ilc);
 
 end
 
-lin.plot_inputs(traj);
-lin.plot_outputs(traj);
-
-figure;
+figure(1);
 plot(1:num_trials,ilc.error);
 title('Squared-2-Norm of ILC error');
-legend(ilc.name);
+figure(2);
+plot(t,y,'.-',t,r,'-');
+title('Last iteration result');
+legend('ILC trajectory','Reference');

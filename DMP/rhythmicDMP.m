@@ -22,22 +22,26 @@ classdef rhythmicDMP < DMP
         % initial y,yd values
         Y0
         % forcing structure has weights w, widths h, and centers c
-        FOR
+        FORCE
     end
     
     methods
         
-        function obj = rhythmicDMP(canonicalSystem,alpha,beta,goal,...
-                                   amplitude,yin,force)
+        function obj = rhythmicDMP(canonical,alpha,beta,goal,amplitude,yin,bfs)
             
-            assert(strcmp(canonicalSystem.pattern, 'r'),...
+            assert(strcmp(canonical.pattern, 'r'),...
                    'Please provide a rhythmic canonical system');
-            obj.can = canonicalSystem;
+            obj.can = canonical;
             obj.alpha_g = alpha;
             obj.beta_g = beta;
             obj.goal = [goal; amplitude];
             obj.Y0 = yin;
-            obj.FOR = force;
+            % get the last phase value
+            xtr = obj.can.evolve();
+            % initialize forcing function here
+            obj.FORCE.w = zeros(bfs,1);
+            obj.FORCE.h = ones(bfs,1) * bfs^(1.5);
+            obj.FORCE.c = linspace(xtr(end),1,bfs);
             obj.resetStates();
         end
         
@@ -59,10 +63,10 @@ classdef rhythmicDMP < DMP
             scale = obj.goal(2);
         end
         
-        function setForcing(obj,FORCE)
+        function setForcing(obj,FOR)
             
-            assert(isfield(FORCE,'w'),'Please perform LWR first');
-            obj.FOR= FORCE;            
+            assert(isfield(FOR,'w'),'Please perform LWR first');
+            obj.FORCE = FOR;            
         end
         
         function setInitState(obj,y0)
@@ -81,7 +85,7 @@ classdef rhythmicDMP < DMP
             
             Y_roll = zeros(2,obj.can.N);
             x_roll = obj.can.evolve();
-            obj.can.reset();
+            obj.resetStates();
             for i = 1:obj.can.N
                 Y_roll(:,i) = obj.Y;
                 obj.step(1);
@@ -102,7 +106,7 @@ classdef rhythmicDMP < DMP
             A = [0, tauStep;
                 -alpha*beta*tauStep, -alpha*tauStep];
 
-            f = obj.forcing() * amp;
+            f = obj.forcing();
             % forcing function acts on the accelerations
             B = [0; alpha*beta*g*tauStep + f*tauStep];
 
@@ -115,9 +119,9 @@ classdef rhythmicDMP < DMP
         % forcing function to drive nonlinear system dynamics
         function f = forcing(obj)
 
-        w = obj.FOR.w;
-        h = obj.FOR.h;
-        c = obj.FOR.c;
+        w = obj.FORCE.w;
+        h = obj.FORCE.h;
+        c = obj.FORCE.c;
         x = obj.can.x;
         N = length(w);
         f = 0;

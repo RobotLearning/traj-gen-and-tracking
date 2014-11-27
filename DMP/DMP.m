@@ -14,7 +14,7 @@ classdef (Abstract) DMP < handle
         % y, yd (or z), ydd values
         Y
         % forcing structure has weights w, widths h, and centers c
-        FOR
+        FORCE
     end
     
     methods (Abstract)

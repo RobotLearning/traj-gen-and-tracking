@@ -122,7 +122,8 @@ classdef Linear < Model
             
             % TODO          
             %error('Not Implemented');
-            x_next = obj.Ad*x + obj.Bd*u;        
+            a = 0.1;
+            x_next = obj.Ad*x + obj.Bd*u + a*sin(2*pi*t);        
             
         end
         
@@ -175,7 +176,7 @@ classdef Linear < Model
         
         % Creates a dmp trajectory
         % TODO: extend for multiple outputs
-        function s = dmpTrajectory(obj,t,numbf,goal,yin,ydes)
+        function s = dmpTrajectory(obj,t,numbf,goal,yin,ref)
             
             h = obj.SIM.h;
             N = length(t);
@@ -192,43 +193,39 @@ classdef Linear < Model
             alpha = 25;
             beta = 25/4;
 
-            % final phase point
-            xf = exp(-tau*ax*t(end));
-            
-            % initialize the forcing functions
-            force.h = ones(numbf,1) * numbf^(1.5);
-            force.c = linspace(xf,1,numbf);
-
             % create the dmp trajectory
-            dmp = discreteDMP(can,alpha,beta,goal,yin,force);
+            dmp = discreteDMP(can,alpha,beta,goal,yin,numbf);
             % learn the weights with locally weighted regression
-            dmp = LWR(ydes,dmp,force);
+            dmp = LWR(ref,dmp);
+            % or with linear regression
+            %dmp = Regr(ref,dmp);
             % evolve the DMP
             [x,s] = dmp.evolve();         
             % add accelerations
-            s = [s; 0, diff(s(2,:))/h];
+            %s = [s; 0, diff(s(2,:))/h];
             
             figure;
-            plot(t,ydes,'-',t,s(1,:),'-.',t,x);
-            legend('desired trajectory','state y','phase');
+            plot(t,ref,'-',t,s(1,:),'-.',t,x);
+            legend('reference trajectory','state y','phase');
             title('Followed trajectory for DMP');
 
         end
 
         % create a dmp trajectory and inputs using feedback law
-        function Traj = trajectory(obj,t,y0,ydes)
+        % ref is the reference trajectory
+        function Traj = trajectory(obj,t,y0,ref)
             
             % check controllability
             obj.assertControllability();
              
             % optional: make DMPs that smoothens x_des
             % one for each output
-            %goal = ydes(:,end);
-            %numbf = 50;
-            %s = obj.dmpTrajectory(t,numbf,goal,y0,ydes);
+            goal = ref(:,end);
+            numbf = 50;
+            s = obj.dmpTrajectory(t,numbf,goal,y0,ref);
 
             % calculate the optimal feedback law
-            s = ydes;
+            %s = ref;
             Q = obj.COST.Q;
             R = obj.COST.R;
             A = obj.A;

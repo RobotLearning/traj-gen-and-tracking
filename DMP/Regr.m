@@ -1,4 +1,4 @@
-% Locally weighted regression
+% Basic regression
 % To learn the weights of DMPs
 % Assuming fixed centers and covariances
 %
@@ -14,7 +14,7 @@
 %
 % dmp with the forcing weights learned
 
-function dmp = LWR(path,dmp)
+function dmp = Regr(path,dmp)
 
 dt = dmp.can.dt;
 pat = dmp.can.pattern;
@@ -39,19 +39,21 @@ x = dmp.can.evolve();
 % make sure x is column vector
 x = x(:);
 
-% construct weights
-w = zeros(1,lenw);
+% regress on the weights
+lent = length(fd);
+Psi = zeros(lent,lenw);
 for i = 1:lenw
-    psi = basis(x,h(i),c(i),pat);
-    if strcmp(pat,'d')
-        num = x' * diag(psi) * fd(:);
-        denom = x' * diag(psi) * x;
-    else
-        num = psi' * fd(:);
-        denom = sum(psi) + 1e-10;
-    end
-    w(i) = num / denom;
+    Psi(:,i) = basis(x,h(i),c(i),pat);
 end
+% scale the psi matrices
+if strcmp(pat,'d')
+    scale = x ./ sum(Psi,2); 
+else
+    scale = 1 ./ (sum(Psi,2) + 1e-10);
+end
+scale = repmat(scale,1,lenw);
+Psi = Psi .* scale;
+w = Psi \ fd(:);
 
 force.w = w;
 % update dmps

@@ -42,16 +42,14 @@ alpha = 25;
 beta = 25/4;
 % number of basis functions
 numbf = 50;
-force.h = ones(numbf,1) * numbf^(1.5);
-force.c = linspace(0,2*pi,numbf);
 % goal and amplitude are initialized here
 goal = 1;
 amp = 1;
 % initial states of DMPs
 yin1 = [0;0];
 yin2 = [0;0];
-dmp1 = rhythmicDMP(can,alpha,beta,goal,amp,yin1,force);
-dmp2 = rhythmicDMP(can,alpha,beta,goal,amp,yin2,force);
+dmp1 = rhythmicDMP(can,alpha,beta,goal,amp,yin1,numbf);
+dmp2 = rhythmicDMP(can,alpha,beta,goal,amp,yin2,numbf);
 
 % create two paths
 ctr1 = 5; % center 
@@ -62,8 +60,12 @@ amp2 = 2;
 path2 = ctr2 + amp2 * cos(pi*t);
 
 % learn the weights with locally weighted regression
-dmp1 = LWR(path1,dmp1,force);
-dmp2 = LWR(path2,dmp2,force);
+% dmp1 = LWR(path1,dmp1);
+% dmp2 = LWR(path2,dmp2);
+
+% learn the weights with the usual linear regression
+dmp1 = Regr(path1,dmp1);
+dmp2 = Regr(path2,dmp2);
 
 [x,y1] = dmp1.evolve();
 [~,y2] = dmp2.evolve();
