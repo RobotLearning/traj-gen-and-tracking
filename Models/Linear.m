@@ -196,9 +196,9 @@ classdef Linear < Model
             % create the dmp trajectory
             dmp = discreteDMP(can,alpha,beta,goal,yin,numbf);
             % learn the weights with locally weighted regression
-            dmp = LWR(ref,dmp);
+            %dmp = LWR(ref,dmp);
             % or with linear regression
-            %dmp = Regr(ref,dmp);
+            dmp = Regr(ref,dmp);
             % evolve the DMP
             [x,s] = dmp.evolve();         
             % add accelerations
@@ -222,10 +222,10 @@ classdef Linear < Model
             % one for each output
             goal = ref(:,end);
             numbf = 50;
-            s = obj.dmpTrajectory(t,numbf,goal,y0,ref);
+            %s = obj.dmpTrajectory(t,numbf,goal,y0,ref);
 
             % calculate the optimal feedback law
-            %s = ref;
+            s = ref;
             Q = obj.COST.Q;
             R = obj.COST.R;
             A = obj.A;
