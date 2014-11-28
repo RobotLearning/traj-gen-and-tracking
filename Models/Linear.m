@@ -121,10 +121,11 @@ classdef Linear < Model
         function x_next = actual(obj,t,x,u)
             
             % TODO          
-            %error('Not Implemented');
-            a = 0.1;
-            x_next = obj.Ad*x + obj.Bd*u + a*sin(2*pi*t);        
-            
+            a = [0.1;0.1;0.1];
+            % time varying drift
+            %x_next = obj.Ad*x + obj.Bd*u + a*sin(2*pi*t);        
+            % constant drift
+            x_next = obj.Ad*x + obj.Bd*u + a;        
         end
         
         % TODO: isn't output controllability enough?
@@ -222,6 +223,7 @@ classdef Linear < Model
             % one for each output
             goal = ref(:,end);
             numbf = 50;
+            %ref = ref(1,:);
             %s = obj.dmpTrajectory(t,numbf,goal,y0,ref);
 
             % calculate the optimal feedback law

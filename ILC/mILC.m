@@ -134,7 +134,7 @@ classdef mILC < ILC
             dev = dev(:,2:end);                        
     
             % set learning rate
-            beta = 0.25;
+            beta = 0.5;
             
             % gradient descent
             %u_next = obj.u_last(:) - beta * obj.F' * obj.Ql * dev(:);

@@ -109,7 +109,7 @@ legend('Monotonic ILC');
 close all;
 dimx = 3;
 dimu = 1;
-dimy = 2;
+dimy = 3;
 
 % simulation variables
 t0 = 0;
@@ -120,12 +120,14 @@ N = length(t)-1;
 
 % system and weighting matrices
 Q = 100*eye(dimy);
+Q = diag([100,0,0]);
 R = 1*eye(dimu);
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
 % partial observation model
-C = [1 0 0; 0 1 0];
+C = eye(dimy);
+%C = [1 0 0; 0 1 0];
 %C = [1 0 0];
 
 % create the structures
@@ -145,10 +147,9 @@ COST.R = R;
 lin = Linear(PAR,CON,COST,SIM);
 
 % track the sin trajectory
-%s = sin(pi/6*t);
 ref = t.^2;
-%ref = [ref; pi/6*cos(pi/6*t)];
 ref = [ref; 2*t];
+ref = [ref; 0, 2*ones(1,length(t)-1)];
 
 % create yin with zero velocity
 x0 = zeros(dimx,1);
@@ -156,13 +157,13 @@ y0 = C * x0;
 % y0 = y0(1:2);
 
 % create trajectory and execute LQR
-% traj = lin.trajectory(t,y0,ref);
-% [y,us] = lin.observeWithFeedback(traj,x0);
-% traj.addPerformance(us,y,lin.COST,'LQR');
-us = zeros(dimu,N); 
-y = lin.observe(t,x0,us);
-traj = Trajectory(t,ref,us,[]);
-traj.addPerformance(us,y,lin.COST,'zeros');
+traj = lin.trajectory(t,y0,ref);
+[y,us] = lin.observeWithFeedback(traj,x0);
+traj.addPerformance(us,y,lin.COST,'LQR');
+% us = zeros(dimu,N); 
+% y = lin.observe(t,x0,us);
+% traj = Trajectory(t,ref,us,[]);
+% traj.addPerformance(us,y,lin.COST,'zeros');
 
 lin.plot_inputs(traj);
 lin.plot_outputs(traj);
