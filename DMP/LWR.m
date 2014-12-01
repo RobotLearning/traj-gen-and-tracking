@@ -14,7 +14,7 @@
 %
 % dmp with the forcing weights learned
 
-function dmp = LWR(path,dmp)
+function w = LWR(path,dmp)
 
 dt = dmp.can.dt;
 pat = dmp.can.pattern;
@@ -52,10 +52,6 @@ for i = 1:lenw
     end
     w(i) = num / denom;
 end
-
-force.w = w;
-% update dmps
-dmp.setForcing(force);
 
 end
 

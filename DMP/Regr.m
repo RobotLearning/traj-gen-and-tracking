@@ -12,9 +12,9 @@
 % 
 % OUTPUTS:
 %
-% dmp with the forcing weights learned
+% forcing structure with the forcing weights learned
 
-function dmp = Regr(path,dmp)
+function force = Regr(path,dmp)
 
 dt = dmp.can.dt;
 pat = dmp.can.pattern;
@@ -54,10 +54,7 @@ end
 scale = repmat(scale,1,lenw);
 Psi = Psi .* scale;
 w = Psi \ fd(:);
-
 force.w = w;
-% update dmps
-dmp.setForcing(force);
 
 end
 

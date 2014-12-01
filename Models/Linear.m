@@ -119,13 +119,13 @@ classdef Linear < Model
         
         % provides actual model
         function x_next = actual(obj,t,x,u)
-            
-            % TODO          
-            a = [0.1;0.1;0.1];
+                                  
+            %a = 0;
+            a = 0.01*ones(size(x,1),1);
             % time varying drift
-            %x_next = obj.Ad*x + obj.Bd*u + a*sin(2*pi*t);        
+            x_next = obj.Ad*x + obj.Bd*u + a*sin(2*pi*t);        
             % constant drift
-            x_next = obj.Ad*x + obj.Bd*u + a;        
+            %x_next = obj.Ad*x + obj.Bd*u + a;        
         end
         
         % TODO: isn't output controllability enough?
@@ -176,8 +176,9 @@ classdef Linear < Model
         end
         
         % Creates a dmp trajectory
+        % numbf: number of basis functions to use
         % TODO: extend for multiple outputs
-        function s = dmpTrajectory(obj,t,numbf,goal,yin,ref)
+        function [dmp,s] = dmpTrajectory(obj,t,numbf,goal,yin,ref)
             
             h = obj.SIM.h;
             N = length(t);
@@ -196,10 +197,8 @@ classdef Linear < Model
 
             % create the dmp trajectory
             dmp = discreteDMP(can,alpha,beta,goal,yin,numbf);
-            % learn the weights with locally weighted regression
-            %dmp = LWR(ref,dmp);
-            % or with linear regression
-            dmp = Regr(ref,dmp);
+            % learn the weights using regression
+            dmp.setWeights(ref);
             % evolve the DMP
             [x,s] = dmp.evolve();         
             % add accelerations
@@ -214,7 +213,7 @@ classdef Linear < Model
 
         % create a dmp trajectory and inputs using feedback law
         % ref is the reference trajectory
-        function Traj = trajectory(obj,t,y0,ref)
+        function [Traj,dmp] = trajectory(obj,t,y0,ref)
             
             % check controllability
             obj.assertControllability();
@@ -222,12 +221,14 @@ classdef Linear < Model
             % optional: make DMPs that smoothens x_des
             % one for each output
             goal = ref(:,end);
-            numbf = 50;
-            %ref = ref(1,:);
-            %s = obj.dmpTrajectory(t,numbf,goal,y0,ref);
+            numbf = 40;
+            % create yin with zero velocity
+            yin = [y0;0];            
+            [dmp,s] = obj.dmpTrajectory(t,numbf,goal,yin,ref);
+            s = s(1,:);
 
             % calculate the optimal feedback law
-            s = ref;
+            %s = ref;
             Q = obj.COST.Q;
             R = obj.COST.R;
             A = obj.A;
@@ -240,7 +241,7 @@ classdef Linear < Model
             sbar = C'*((C*C')\s);
             [K,uff] = lqr.computeFinHorizonTracking(sbar);
             
-            Traj = Trajectory(t,s,uff,K);
+            Traj = Trajectory(t,ref,uff,K);
         end
         
     end

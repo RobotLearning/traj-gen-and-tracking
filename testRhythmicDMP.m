@@ -59,13 +59,9 @@ ctr2 = 1;
 amp2 = 2;
 path2 = ctr2 + amp2 * cos(pi*t);
 
-% learn the weights with locally weighted regression
-% dmp1 = LWR(path1,dmp1);
-% dmp2 = LWR(path2,dmp2);
-
 % learn the weights with the usual linear regression
-dmp1 = Regr(path1,dmp1);
-dmp2 = Regr(path2,dmp2);
+dmp1.setWeights(path1);
+dmp2.setWeights(path2);
 
 [x,y1] = dmp1.evolve();
 [~,y2] = dmp2.evolve();

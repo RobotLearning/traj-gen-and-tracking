@@ -96,6 +96,28 @@ classdef (Abstract) Model < handle
             end
         end
         
+        % useful to propagate feedback law
+        % LQR-calculated K has to be in error-feedback form!
+        function [y,u] = observeWithDMPFeedback(obj,dmp,traj,x0)
+            fun = @(t,x,u) obj.actual(t,x,u);
+            t = traj.t;
+            s = dmp.s(1,:);
+            K = traj.K;
+            uff = traj.unom;
+            N = length(t)-1;
+            h = t(2)-t(1);
+            x = zeros(length(x0),N+1);
+            u = zeros(size(K,1),N);
+            x(:,1) = x0;
+            y(:,1) = obj.C * x(:,1);
+            for i = 1:N
+                u(:,i) = K(:,:,i)*x(:,i) + uff(:,i);
+                x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
+                y(:,i+1) = obj.C * x(:,i+1);
+                % no constraint checking
+            end
+        end
+        
         % useful to propagate one full iteration of
         % ILC input sequence
         function x_next = evolve(obj,t,x0,us)

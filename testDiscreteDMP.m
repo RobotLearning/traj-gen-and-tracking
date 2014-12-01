@@ -86,40 +86,22 @@ path1 = 5*t.*sin(5*pi/2 * t);
 jump2 = floor(length(t)/2);
 path2 = [zeros(1,jump2), ones(1,length(t)-jump2)];
 
-% learn the weights with locally weighted regression
-dmp11 = LWR(path1,dmp1);
-dmp21 = LWR(path2,dmp2);
-
 % learn the weights with the usual linear regression
-dmp12 = Regr(path1,dmp1);
-dmp22 = Regr(path2,dmp2);
+dmp1.setWeights(path1);
+dmp2.setWeights(path2);
 
-[x,y11] = dmp11.evolve();
-[~,y21] = dmp21.evolve();
-[x,y12] = dmp12.evolve();
-[~,y22] = dmp22.evolve();
+[x,y1] = dmp1.evolve();
+[~,y2] = dmp2.evolve();
 
 % plotting each dmp trajectory
-y = y11(1,:);
+y = y1(1,:);
 figure(3);
 plot(t,path1,'-',t,y,'-.',t,x);
 legend('desired trajectory','state y','phase');
 title('Followed trajectory for DMP1');
 
-y = y21(1,:);
+y = y2(1,:);
 figure(4);
-plot(t,path2,'-',t,y,'-.',t,x);
-legend('desired trajectory','state y','phase');
-title('Followed trajectory for DMP2');
-
-y = y12(1,:);
-figure(5);
-plot(t,path1,'-',t,y,'-.',t,x);
-legend('desired trajectory','state y','phase');
-title('Followed trajectory for DMP1');
-
-y = y22(1,:);
-figure(6);
 plot(t,path2,'-',t,y,'-.',t,x);
 legend('desired trajectory','state y','phase');
 title('Followed trajectory for DMP2');
@@ -130,13 +112,9 @@ title('Followed trajectory for DMP2');
 path1 = cos(2*pi*t);
 path2 = sin(2*pi*t);
 
-% learn the weights with locally weighted regression
-%dmp1 = LWR(path1,dmp1);
-%dmp2 = LWR(path2,dmp2);
-
 % learn the weights with the usual linear regression
-dmp1 = Regr(path1,dmp1);
-dmp2 = Regr(path2,dmp2);
+dmp1.setWeights(path1);
+dmp2.setWeights(path2);
 
 % initial states of DMPs
 %yin1 = [1;0];

@@ -74,7 +74,7 @@ classdef discreteDMP < DMP
         
         % basis functions are unscaled gaussians
         function out = basis(obj,x,h,c)
-        out = exp(-h * (x - c)^2);
+        out = exp(-h * (x - c).^2);
         end
         
         % evolve is the feedforward rollout function

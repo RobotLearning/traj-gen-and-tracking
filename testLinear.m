@@ -109,7 +109,7 @@ legend('Monotonic ILC');
 close all;
 dimx = 3;
 dimu = 1;
-dimy = 3;
+dimy = 1;
 
 % simulation variables
 t0 = 0;
@@ -120,15 +120,15 @@ N = length(t)-1;
 
 % system and weighting matrices
 Q = 100*eye(dimy);
-Q = diag([100,0,0]);
+%Q = diag([100,0,0]);
 R = 1*eye(dimu);
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
 % partial observation model
-C = eye(dimy);
+%C = eye(dimy);
 %C = [1 0 0; 0 1 0];
-%C = [1 0 0];
+C = [1 0 0];
 
 % create the structures
 SIM.discrete = false;
@@ -148,8 +148,8 @@ lin = Linear(PAR,CON,COST,SIM);
 
 % track the sin trajectory
 ref = t.^2;
-ref = [ref; 2*t];
-ref = [ref; 0, 2*ones(1,length(t)-1)];
+%ref = [ref; 2*t];
+%ref = [ref; 0, 2*ones(1,length(t)-1)];
 
 % create yin with zero velocity
 x0 = zeros(dimx,1);

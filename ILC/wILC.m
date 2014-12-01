@@ -1,12 +1,13 @@
-% Model based Iterative Learning Control 
+% Motor Primitive based Iterative Learning Control 
 %
-% where F is the lifted matrix of the plant dynamics
+% updates the weights of the DMP
+% where Fw is the lifted weight-to-output matrix
 % and L is the learning matrix of the ILC update i.e.
-% unext = ulast - L*error;
+% wnext = wlast - L*error;
 %
-% Ideally we need L = inv(F), a model-based ILC update rule
+%
 
-classdef mILC < ILC
+classdef wILC < ILC
     
     % fields common to all ILCs (defined in abstract ILC class)
     properties
@@ -20,10 +21,10 @@ classdef mILC < ILC
         % costs incurred (Q-SSE)
         error
         
-        % ILC's Last input sequence
+        % control inputs are not updated for wILC
         u_last
-        % Lifted state matrix F (input-state) and G (state-output)
-        F
+        % Lifted state matrix F (weight-state) and G (state-output)
+        Fw
         G
         % Lifted penalty matrices Q and R
         Ql
@@ -32,11 +33,11 @@ classdef mILC < ILC
     
     methods
         
-        function obj = mILC(model,trj)
+        function obj = wILC(model,trj)
                         
             obj.episode = 0;
             obj.color = 'm';
-            obj.name = 'Model-based ILC';
+            obj.name = 'weight-based ILC';
             obj.error = 0;
             
             dim_x = model.SIM.dimx;
@@ -51,7 +52,7 @@ classdef mILC < ILC
                 obj.u_last = trj.PERF(end).u;
             end
             
-            obj.F = zeros(N*dim_x, N*dim_u);
+            obj.Fw = zeros(N*dim_x, N*dim_u);
             obj.G = zeros(N*dim_y, N*dim_x);
             obj.Ql = zeros(N*dim_y, N*dim_y);
             obj.Rl = zeros(N*dim_u, N*dim_u);
@@ -96,7 +97,7 @@ classdef mILC < ILC
                         for k = j+1:i
                             mat = Ad * mat;
                         end
-                        obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                        obj.Fw(vec_x,vec_u) = mat; % on diagonals only B(:,m)
                     end
                 end
 
@@ -114,39 +115,32 @@ classdef mILC < ILC
                         for k = j+1:i
                             mat = Ad(:,:,k) * mat;
                         end
-                        obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                        obj.Fw(vec_x,vec_u) = mat; % on diagonals only B(:,m)
                     end
                 end
                 
             end
             
-            obj.F = obj.G * obj.F;
+            obj.Fw = obj.G * obj.Fw;
             
         end
         
-        function u_next = feedforward(obj,trj,y)
+        function feedforward(obj,dmp,y)
             
-            dev = y - trj.s;
-            h = trj.t(2) - trj.t(1);
-            % get rid of x0 in dev
-            % ddev = diff(dev')'/h;
-            % ddev = ddev(1,:);
-            dev = dev(:,2:end);                        
+            [~,s] = dmp.evolve();
+            s = s(1,:);
+            dev = y - s;
+            dev = dev(:,2:end);  
+            force = dmp.regression(dev);
+            w_change = force.w;
     
             % set learning rate
-            %beta = 0.5;
+            beta = 0.5;
             
-            % gradient descent
-            %u_next = obj.u_last(:) - beta * obj.F' * obj.Ql * dev(:);
-            % model inversion based Newton-Raphson update
-            %u_next = obj.u_last(:) - obj.F \ dev(:);
-            % more stable inverse based Newton-Raphson update
-            % computes very high inverses though
-            u_next = obj.u_last(:) - pinv(obj.F) * dev(:);
-            % LM-type update
-            %Mat = (obj.F' * obj.Ql * obj.F + obj.Rl) \ (obj.F' * obj.Ql);
-            %u_next = obj.u_last(:) - Mat * dev(:);
-            u_next = u_next';
+            w_last = dmp.FORCE.w;
+            w_next = w_last + beta * w_change;
+            force.w = w_next;
+            dmp.setForcing(force);
             
         end
         

@@ -44,6 +44,137 @@ classdef (Abstract) DMP < handle
         % set the forcing function after regression for instance
         setForcing(obj,force)
         
-    end    
+    end
+    
+    % methods that can be implemented here in abstract class
+    methods (Access = public)
+        
+        % set the weights using regression methods
+        function setWeights(obj,path)
+            
+            obj.setGoal(path);
+            % learn the weights with locally weighted regression
+            %force = obj.LWR(path);
+            % or with linear regression
+            force = obj.regression(path);
+            
+            % update dmps
+            obj.setForcing(force);
+        end
+        
+        % Basic regression
+        % To learn the weights of DMPs
+        % Assuming fixed centers and covariances
+        %
+        % INPUTS:
+        %
+        % path - desired trajectory
+        % dmp  - includes the canonical system class whose phase 
+        %        weights the regression
+        %        includes the forcing term
+        %        forcing term is a structure which has fixed centers and covariances
+        % 
+        % OUTPUTS:
+        %
+        % forcing structure with the forcing weights learned
+        function force = regression(obj,path)
+
+            dt = obj.can.dt;
+            pat = obj.can.pattern;
+            force = obj.FORCE;
+            alpha = obj.alpha_g;
+            beta = obj.beta_g;
+
+            % TODO: interpolate over trajectory
+            y_des = path;
+            yd_des = [0,diff(path)]/dt;
+            ydd_des = [0,diff(yd_des)]/dt;
+            % calculate fd
+            fd = ydd_des - alpha * (beta * (obj.goal(1) - y_des) - yd_des);
+
+            h = force.h;
+            c = force.c;
+            % number of weights to regress 
+            lenw = length(force.c);
+            x = obj.can.evolve();
+
+            % make sure x is column vector
+            x = x(:);
+
+            % regress on the weights
+            lent = length(fd);
+            Psi = zeros(lent,lenw);
+            for i = 1:lenw
+                Psi(:,i) = obj.basis(x,h(i),c(i));
+            end
+            % scale the psi matrices
+            if strcmp(pat,'d')
+                scale = x ./ sum(Psi,2); 
+            else
+                scale = 1 ./ (sum(Psi,2) + 1e-10);
+            end
+            scale = repmat(scale,1,lenw);
+            Psi = Psi .* scale;
+            w = Psi \ fd(:);
+            force.w = w;
+
+        end
+        
+        % Locally weighted regression
+        % To learn the weights of DMPs
+        % Assuming fixed centers and covariances
+        %
+        % INPUTS:
+        %
+        % path - desired trajectory
+        % dmp  - includes the canonical system class whose phase 
+        %        weights the regression
+        %        includes the forcing term
+        %        forcing term is a structure which has fixed centers and covariances
+        % 
+        % OUTPUTS:
+        %
+        % dmp with the forcing weights learned
+        function force = LWR(obj,path)
+
+            dt = obj.can.dt;
+            pat = obj.can.pattern;
+            force = obj.FORCE;
+            alpha = obj.alpha_g;
+            beta = obj.beta_g;
+
+            % TODO: interpolate over trajectory
+            y_des = path;
+            yd_des = [0,diff(path)]/dt;
+            ydd_des = [0,diff(yd_des)]/dt;
+            % calculate fd
+            fd = ydd_des - alpha * (beta * (obj.goal - y_des) - yd_des);
+
+            h = force.h;
+            c = force.c;
+            % number of weights to regress 
+            lenw = length(force.c);
+            x = dmp.can.evolve();
+
+            % make sure x is column vector
+            x = x(:);
+
+            % construct weights
+            w = zeros(1,lenw);
+            for i = 1:lenw
+                psi = basis(x,h(i),c(i),pat);
+                if strcmp(pat,'d')
+                    num = x' * diag(psi) * fd(:);
+                    denom = x' * diag(psi) * x;
+                else
+                    num = psi' * fd(:);
+                    denom = sum(psi) + 1e-10;
+                end
+                w(i) = num / denom;
+            end
+
+            force.w = w;
+        end
+    end
     
 end

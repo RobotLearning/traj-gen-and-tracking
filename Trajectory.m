@@ -56,7 +56,7 @@ classdef Trajectory < handle
 
             % display SSE error
             sse = sum(obj.PERF(i+1).cost);
-            fprintf('%d. trial: Q-SSE for %s is %f \n', i+1, name, sse);
+            fprintf('%d. trial: SSE for %s is %f \n', i+1, name, sse);
             
             if ~ischar(controller)
                 controller.record(u,sse);
