@@ -1,5 +1,4 @@
 %% Example to test DMP-learning wILC algorithm on linear systems with drift
-% Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf
 
 %# store breakpoints
 tmp = dbstatus;
@@ -18,7 +17,7 @@ dbstop(tmp)
 clear tmp
 delete('tmp.mat')
 
-%% 
+% Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf
 dimx = 3;
 dimu = 1;
 dimy = 1;
@@ -33,7 +32,7 @@ N = length(t)-1;
 % system and weighting matrices
 Q = 100*eye(dimy);
 %Q = diag([100,0,0]);
-R = 0.1*eye(dimu);
+R = 10*eye(dimu);
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
@@ -64,10 +63,12 @@ ref = t.^2;
 %ref = [ref; 0, 2*ones(1,length(t)-1)];
 x0 = zeros(dimx,1);
 y0 = C * x0;
+% create yin with zero velocity
+yin = [y0;0];      
 
 % create trajectory and execute LQR
-[traj,dmp] = lin.trajectory(t,y0,ref);
-[y,us] = lin.observeWithFeedback(traj,x0);
+[traj,dmp] = lin.generateDMP(t,yin,ref);
+[y,us] = lin.observeWithDMPFeedback(dmp,traj,x0);
 traj.addPerformance(us,y,lin.COST,'LQR'); 
 % us = zeros(dimu,N); 
 % y = lin.observe(t,x0,us);
@@ -79,11 +80,11 @@ lin.plot_outputs(traj);
 
 % Create an ilc controller
 ilc = wILC(lin,traj);
-num_trials = 100;
+num_trials = 50;
 
 for i = 1:num_trials
     % update the weights of the dmp
-    ilc.feedforward(dmp,y);     
+    ilc.feedforward(dmp,traj,y);     
     % get the measurements
     [y,us] = lin.observeWithDMPFeedback(dmp,traj,x0);
     traj.addPerformance(us,y,lin.COST,ilc);

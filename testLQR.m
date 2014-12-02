@@ -1,6 +1,6 @@
 %% Test script for LQR
 
-clc; clear; close all;
+clc; close all; clear classes; 
 
 % 3D Linear Time Invariant test for LQR
 % Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf
@@ -85,7 +85,7 @@ for i = 1:N
 end
             
 Q = 100*eye(dimy);
-R = 1*eye(dimu);
+R = 0.01*eye(dimu);
 
 % optimal feedback matrix
 lqr = LQR(Q,R,Q,A,B,C,N,h);
@@ -136,3 +136,26 @@ legend('system state x11', 'desired trajectory s');
 figure;
 plot(t(1:end-1),u);
 legend('control input');
+
+%% Test error form of LQR
+
+% optimal feedback matrix
+lqr = LQR(Q,R,Q,A,B,C,N,h);
+[K,uff] = lqr.computeErrorForm(sbar);
+
+% simulate system
+x0 = ones(dimx,1);
+x = zeros(dimx,N);
+x(:,1) = x0;
+u = zeros(dimu,N);
+for i = 1:N
+    u(:,i) = K(:,:,i)*(x(:,i)-sbar(:,i)) + uff(:,i);
+    x(:,i+1) = Ad*x(:,i) + Bd*u(:,i);
+end
+
+x1e = x(1,:);
+% plotting outcome
+figure;
+plot(t,x1e,'-',t,s,'-.');
+legend('system state x1e', 'desired trajectory s');
+title('Error form of LQR');

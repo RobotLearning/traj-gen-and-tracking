@@ -157,7 +157,7 @@ y0 = C * x0;
 % y0 = y0(1:2);
 
 % create trajectory and execute LQR
-traj = lin.trajectory(t,y0,ref);
+traj = lin.generateInputs(t,ref);
 [y,us] = lin.observeWithFeedback(traj,x0);
 traj.addPerformance(us,y,lin.COST,'LQR');
 % us = zeros(dimu,N); 

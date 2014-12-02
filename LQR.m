@@ -40,9 +40,11 @@ classdef LQR
     methods
         
         % constructor for convenience
-        % TODO: put asserts
-        function obj = LQR(Q,R,Qf,A,B,C,N,h)
+        % varargin is a flag for discrete input
+        function obj = LQR(Q,R,Qf,A,B,C,N,h,varargin)
             
+            obj.N = N;
+            obj.h = h;
             % construct Q2 - matrix of nonoutput states
             dimy = size(Q,1);
             dimx = size(B,1);
@@ -53,15 +55,22 @@ classdef LQR
             obj.Q = Cbar'*Q2*Cbar + C'*Q*C;
             obj.R = R;
             obj.Qf = Cbar'*Q2*Cbar + C'*Qf*C;
-            obj.A = A;
-            obj.B = B;
+            
+            % get the model matrices
+            if nargin == 8
+                obj.A = A;
+                obj.B = B;
+                % get Ad, Bd matrices
+                obj = obj.discretizeMatrices();
+            else
+                % discrete matrices provided
+                obj.Ad = A;
+                obj.Bd = B;
+            end
             obj.C = C;
-            obj.N = N;
-            obj.h = h;
+
             
-            % get Ad, Bd matrices
-            obj = obj.discretizeMatrices();
-            
+
         end
         
         function obj = discretizeMatrices(obj)
@@ -174,8 +183,10 @@ classdef LQR
             end
         end
         
+        % TODO: is this correct? Dependence on R may be wrong!
         % discrete-time finite-horizon trajectory tracking
         % The state-form of LQR tracking is used
+        % 
         % 
         % Outputs:
         % K and uff calculated using the error form
@@ -197,8 +208,8 @@ classdef LQR
             K = zeros(dimu,dimx,N);
             uff = zeros(dimu,N);
             nu = zeros(dimx,N);
-            uff(:,end) = 0;
-            nu(:,end) = 0;
+            nu(:,end) = -Qf*s(:,end);
+            uff(:,end) = -(R + B'*Qf*B)\(B'*nu(:,end));
             K(:,:,end) = -(R + B'*Qf*B)\(B'*Qf*A);
             for i = N-1:-1:1
                 P(:,:,i) = dynamicRiccati(P(:,:,i+1),Q,R,A,B);
@@ -209,17 +220,29 @@ classdef LQR
             
         end
         
-        % TODO: is this equivalent to error form?
+        % Get the error form of the finite horizon LQR law, i.e.
+        %
+        % u = -K(x-s) + uff
+        %
+        function [K,uff] = computeErrorForm(obj,s)
+            
+            [K,uffOld] = obj.computeFinHorizonTracking(s);
+            N = obj.N;
+            
+            uff = zeros(size(uffOld));
+            for i = 1:N
+                uff(:,i) = uffOld(:,i) + K(:,:,i)*s(:,i);
+            end
+            
+        end
+        
         % discrete-time finite-horizon trajectory tracking
-        % The error-form of LQR tracking is used
         % 
         % Outputs:
         % Kbar is K and uff combined in a n+1 x n+1 feedback/feedforward
         % matrix
         function Kbar = computeFinHorizonTrackingStateFeedback(obj,s)
-            
-            warning('Deprecated function!');
-            
+                        
             dimu = size(obj.B,2);
             dimx = size(obj.B,1);
             A = obj.Ad;

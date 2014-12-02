@@ -18,8 +18,8 @@ classdef (Abstract) Model < handle
     % methods to be implemented
     methods (Abstract)
         
-        % generate trajectories
-        trajectory(t,sp,s,unom)
+        % generate inputs with Trajectory class as output
+        Traj = generateInputs(obj,t,ref)
         % set a nominal model
         [xdot,A,B] = nominal(obj,t,x,u)
         % add a disturbance model to the nominal model
@@ -76,6 +76,7 @@ classdef (Abstract) Model < handle
         end
         
         % useful to propagate feedback law
+        % Feedback has to be in state-feedback form!
         function [y,u] = observeWithFeedback(obj,traj,x0)
             fun = @(t,x,u) obj.actual(t,x,u);
             t = traj.t;
@@ -101,7 +102,8 @@ classdef (Abstract) Model < handle
         function [y,u] = observeWithDMPFeedback(obj,dmp,traj,x0)
             fun = @(t,x,u) obj.actual(t,x,u);
             t = traj.t;
-            s = dmp.s(1,:);
+            [~,s] = dmp.evolve();
+            s = s(1,:);
             K = traj.K;
             uff = traj.unom;
             N = length(t)-1;
@@ -111,7 +113,7 @@ classdef (Abstract) Model < handle
             x(:,1) = x0;
             y(:,1) = obj.C * x(:,1);
             for i = 1:N
-                u(:,i) = K(:,:,i)*x(:,i) + uff(:,i);
+                u(:,i) = K(:,:,i)*(x(:,i)-s(:,i)) + uff(:,i);
                 x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
                 y(:,i+1) = obj.C * x(:,i+1);
                 % no constraint checking

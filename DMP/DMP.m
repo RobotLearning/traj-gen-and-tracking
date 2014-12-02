@@ -115,6 +115,8 @@ classdef (Abstract) DMP < handle
             end
             scale = repmat(scale,1,lenw);
             Psi = Psi .* scale;
+            
+            % TODO: use pinv or add lambda to smoothen inverse
             w = Psi \ fd(:);
             force.w = w;
 
@@ -154,15 +156,15 @@ classdef (Abstract) DMP < handle
             c = force.c;
             % number of weights to regress 
             lenw = length(force.c);
-            x = dmp.can.evolve();
+            x = obj.can.evolve();
 
             % make sure x is column vector
             x = x(:);
 
             % construct weights
-            w = zeros(1,lenw);
+            w = zeros(lenw,1);
             for i = 1:lenw
-                psi = basis(x,h(i),c(i),pat);
+                psi = obj.basis(x,h(i),c(i));
                 if strcmp(pat,'d')
                     num = x' * diag(psi) * fd(:);
                     denom = x' * diag(psi) * x;

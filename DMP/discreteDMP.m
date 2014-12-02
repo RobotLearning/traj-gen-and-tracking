@@ -63,7 +63,7 @@ classdef discreteDMP < DMP
         
         function setForcing(obj,FOR)
             
-            assert(isfield(FOR,'w'),'Please perform LWR first');
+            assert(isfield(FOR,'w'),'Please perform regression first');
             obj.FORCE = FOR;            
         end
         

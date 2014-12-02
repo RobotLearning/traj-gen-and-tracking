@@ -120,8 +120,8 @@ classdef Linear < Model
         % provides actual model
         function x_next = actual(obj,t,x,u)
                                   
-            %a = 0;
-            a = 0.01*ones(size(x,1),1);
+            a = 0;
+            %a = 0.01*ones(size(x,1),1);
             % time varying drift
             x_next = obj.Ad*x + obj.Bd*u + a*sin(2*pi*t);        
             % constant drift
@@ -144,35 +144,6 @@ classdef Linear < Model
                 K(:,(dimx*i+1):(dimx*i+dimu)) = (Ad^i)*Bd;
             end
             assert(rank(K) == dimx, 'System is not controllable!');
-        end
-        
-        % @obsolete
-        % Wrapper for the LQR function
-        % constructs the matrices of the model required for LQR
-        function K = lqr(obj,t,s)
-            
-            warning('This should not be used!');
-            
-            dimx = obj.SIM.dimx;
-            dimu = obj.SIM.dimu;
-            N = length(t) - 1;            
-                        
-            % form the time varying matrices Abar and Bbar
-            Abar = zeros(dimx+1,dimx+1,N);
-            Bbar = zeros(dimx+1,dimu,N);
-            for i = 1:N
-                Abar(:,:,i) = [obj.Ad, obj.Ad*s(:,i) - s(:,i+1); ...
-                               zeros(1,dimx), 1];
-                Bbar(:,:,i) = [obj.Bd; 0];
-            end
-
-            MODE.N = N;
-            MODE.LTI = false;
-            Q = [obj.COST.Q, zeros(dimx,1); zeros(1,dimx), 0];
-            R = obj.COST.R;
-
-            K = LQR(Q,R,Abar,Bbar,MODE);
-            
         end
         
         % Creates a dmp trajectory
@@ -207,28 +178,19 @@ classdef Linear < Model
             figure;
             plot(t,ref,'-',t,s(1,:),'-.',t,x);
             legend('reference trajectory','state y','phase');
-            title('Followed trajectory for DMP');
+            title('DMP trajectory');
 
         end
 
-        % create a dmp trajectory and inputs using feedback law
+        % create inputs using feedback law
         % ref is the reference trajectory
-        function [Traj,dmp] = trajectory(obj,t,y0,ref)
+        function Traj = generateInputs(obj,t,ref)
             
             % check controllability
             obj.assertControllability();
-             
-            % optional: make DMPs that smoothens x_des
-            % one for each output
-            goal = ref(:,end);
-            numbf = 40;
-            % create yin with zero velocity
-            yin = [y0;0];            
-            [dmp,s] = obj.dmpTrajectory(t,numbf,goal,yin,ref);
-            s = s(1,:);
 
             % calculate the optimal feedback law
-            %s = ref;
+            s = ref;
             Q = obj.COST.Q;
             R = obj.COST.R;
             A = obj.A;
@@ -240,6 +202,43 @@ classdef Linear < Model
             % form sbar 
             sbar = C'*((C*C')\s);
             [K,uff] = lqr.computeFinHorizonTracking(sbar);
+            
+            Traj = Trajectory(t,s,uff,K);
+        end
+        
+        % create a dmp trajectory and inputs using feedback law
+        % ref is the reference trajectory
+        function [Traj,dmp] = generateDMP(obj,t,yin,ref)
+            
+            % check controllability
+            obj.assertControllability();
+             
+            % optional: make DMPs that smoothens x_des
+            % one for each output
+            goal = ref(:,end);
+            numbf = 40;      
+            [dmp,s] = obj.dmpTrajectory(t,numbf,goal,yin,ref);
+            s = s(1,:);
+
+            % calculate the optimal feedback law
+            %s = ref;
+            Q = obj.COST.Q;
+            R = obj.COST.R;
+            C = obj.C;
+            N = length(t)-1;
+            h = t(2) - t(1);
+            if obj.SIM.discrete
+                Ad = obj.Ad;
+                Bd = obj.Bd;
+                lqr = LQR(Q,R,Q,Ad,Bd,C,N,h,true);
+            else
+                A = obj.A;
+                B = obj.B;
+                lqr = LQR(Q,R,Q,A,B,C,N,h);
+            end
+            % form sbar 
+            sbar = C'*((C*C')\s);
+            [K,uff] = lqr.computeErrorForm(sbar);
             
             Traj = Trajectory(t,ref,uff,K);
         end

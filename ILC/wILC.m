@@ -125,20 +125,19 @@ classdef wILC < ILC
             
         end
         
-        function feedforward(obj,dmp,y)
+        function feedforward(obj,dmp,traj,y)
             
-            [~,s] = dmp.evolve();
-            s = s(1,:);
-            dev = y - s;
-            dev = dev(:,2:end);  
+            r = traj.s;
+            dev = y - r;            
             force = dmp.regression(dev);
+            %force = dmp.LWR(dev);
             w_change = force.w;
     
             % set learning rate
-            beta = 0.5;
+            beta = 1;
             
             w_last = dmp.FORCE.w;
-            w_next = w_last + beta * w_change;
+            w_next = w_last - beta * w_change;
             force.w = w_next;
             dmp.setForcing(force);
             
