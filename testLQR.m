@@ -93,7 +93,7 @@ lqr = LQR(Q,R,Q,A,B,C,N,h);
 Kbar = lqr.computeFinHorizonTrackingStateFeedback(sbar);
 
 % simulate system
-x0 = ones(dimx,1);
+x0 = zeros(dimx,1);
 x = zeros(dimx,N);
 x(:,1) = x0;
 u = zeros(dimu,N);
@@ -106,7 +106,7 @@ x1 = x(1,:);
 
 %simulate system
 u = zeros(dimu,N);
-x0 = ones(dimx,1);
+x0 = zeros(dimx,1);
 e0 = x0 - s0;
 ebar(:,1) = [e0; 1];
 xtest = zeros(dimx,length(t));
@@ -159,3 +159,89 @@ figure;
 plot(t,x1e,'-',t,s,'-.');
 legend('system state x1e', 'desired trajectory s');
 title('Error form of LQR');
+
+%% Test LQR with DMP for discrete system
+
+clc; clear; close all;
+dimx = 2;
+dimu = 1;
+dimy = 1;
+
+% simulation variables
+t0 = 0;
+tf = 1;
+h = 0.02;
+t = t0:h:tf;
+N = length(t)-1;
+numIt = 100;
+
+% system and weighting matrices
+Q = 100;
+R = 1 * eye(dimu);
+% discrete time matrices
+A = [0 1; 1.8 -0.81];
+B = [0;1];
+%C = [0 1; -1/h 1/h];
+C = [0 1];
+
+% create the structures
+SIM.discrete = true;
+SIM.dimx = dimx;
+SIM.dimu = dimu;
+SIM.dimy = dimy;
+SIM.h = h;
+SIM.eps = 0;
+SIM.int = 'Euler';
+PAR.Ad = A;
+PAR.Bd = B;
+PAR.C = C;
+CON = [];
+COST.Q = Q;
+COST.R = R;
+lin = Linear(PAR,CON,COST,SIM);
+
+% track smoothed step
+ref = 1./(1+exp(-(100*t-20)/10));
+
+% initialize states and inputs
+x0 = [ref(1);ref(1)];
+y0 = C * x0;
+% create yin with zero velocity
+yin = [ref(1);0];   
+
+% create DMP trajectory and execute LQR
+goal = ref(:,end);
+numbf = 40;
+[dmp,s] = lin.dmpTrajectory(t,numbf,goal,yin,ref);
+s = s(1,:);
+% form sbar 
+sbar = C'*((C*C')\s);
+% optimal feedback matrix
+lqr = LQR(Q,R,Q,A,B,C,N,h,true);
+[K,uff] = lqr.computeErrorForm(sbar);
+
+% simulate system
+x0 = [ref(1);ref(1)];
+x = zeros(dimx,N);
+x(:,1) = x0;
+y0 = C * x0;
+y = zeros(dimy,N);
+u = zeros(dimu,N);
+for i = 1:N
+    u(:,i) = K(:,:,i)*(x(:,i)-sbar(:,i)) + uff(:,i);
+    x(:,i+1) = A*x(:,i) + B*u(:,i);
+    y(:,i) = C*x(:,i);
+end
+y(:,i+1) = C*x(:,i+1);
+
+% plotting outcome
+figure;
+plot(t,y(1,:),'-',t,s(1,:),'-.');
+legend('system state', 'desired trajectory s');
+title('Error form of LQR');
+
+% [y,us] = lin.observeWithDMPFeedback(dmp,traj,x0);
+% traj.addPerformance(us,y,lin.COST,'LQR'); 
+% 
+% lin.plot_inputs(traj);
+% lin.plot_outputs(traj);

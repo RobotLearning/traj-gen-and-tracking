@@ -89,8 +89,8 @@ classdef LQR
         % otherwise give an error
         function assertControllability(obj)
             
-            dimu = size(obj.B,2);
-            dimx = size(obj.B,1);
+            dimu = size(obj.Bd,2);
+            dimx = size(obj.Bd,1);
             % construct controllability Kalman matrix
             K = zeros(dimx,dimx*dimu);
             for i = 0:dimx-1
@@ -108,8 +108,8 @@ classdef LQR
         function K = computeInfHorizonLTI(obj)
             
             % inf horizon
-            dimu = size(obj.B,2);
-            dimx = size(obj.B,1);
+            dimu = size(obj.Bd,2);
+            dimx = size(obj.Bd,1);
             Q = obj.Q;
             R = obj.R;
             A = obj.Ad;
@@ -135,8 +135,8 @@ classdef LQR
         function K = computeFinHorizonLTI(obj)
             
             % finite horizon
-            dimu = size(obj.B,2);
-            dimx = size(obj.B,1);
+            dimu = size(obj.Bd,2);
+            dimx = size(obj.Bd,1);
             Q = obj.Q;
             R = obj.R;
             A = obj.Ad;
@@ -192,8 +192,8 @@ classdef LQR
         % K and uff calculated using the error form
         function [K,uff] = computeFinHorizonTracking(obj,s)
             
-            dimu = size(obj.B,2);
-            dimx = size(obj.B,1);
+            dimu = size(obj.Bd,2);
+            dimx = size(obj.Bd,1);
             Q = obj.Q;
             R = obj.R;
             Qf = obj.Qf;
@@ -243,8 +243,8 @@ classdef LQR
         % matrix
         function Kbar = computeFinHorizonTrackingStateFeedback(obj,s)
                         
-            dimu = size(obj.B,2);
-            dimx = size(obj.B,1);
+            dimu = size(obj.Bd,2);
+            dimx = size(obj.Bd,1);
             A = obj.Ad;
             B = obj.Bd;
             N = obj.N;

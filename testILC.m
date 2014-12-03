@@ -46,7 +46,7 @@ cost.fnc = @(y,s) diag((y-s)'*Q*(y-s));
 r = 1./(1+exp(-(2*t-20)/10));
 
 % initialize states and inputs
-x0 = [0;r(1)];
+x0 = [r(1);r(1)];
 x = zeros(dimx,N+1);
 x(:,1) = x0;
 y(:,1) = C*x0;
@@ -89,7 +89,7 @@ plot(t,y,'.-',t,r,'-');
 title('Last iteration result');
 legend('ILC trajectory','Reference');
 
-%% Do the same with WILC
+%% Does the same blowup phenomenon occur also for model-free regression WILC?
 
 dimx = 2;
 dimu = 1;
@@ -104,8 +104,8 @@ N = length(t)-1;
 numIt = 100;
 
 % system and weighting matrices
-Q = 1;
-R = 0.1 * eye(dimu);
+Q = 100;
+R = 1 * eye(dimu);
 % discrete time matrices
 A = [0 1; 1.8 -0.81];
 B = [0;1];
@@ -131,40 +131,51 @@ lin = Linear(PAR,CON,COST,SIM);
 ref = 1./(1+exp(-(100*t-20)/10));
 
 % initialize states and inputs
-x0 = [0;ref(1)];
+x0 = [ref(1);ref(1)];
 y0 = C * x0;
 % create yin with zero velocity
 yin = [ref(1);0];   
 
 % create trajectory and execute LQR
+%traj = lin.generateInputs(t,ref);
+%[y,us] = lin.observeWithFeedback(traj,x0);
+
+% create DMP trajectory and execute LQR
 [traj,dmp] = lin.generateDMP(t,yin,ref);
 [y,us] = lin.observeWithDMPFeedback(dmp,traj,x0);
 traj.addPerformance(us,y,lin.COST,'LQR'); 
 
-% create the simpler ilc
-ilc = bILC(trj);
+% or create zero input
+% us = zeros(dimu,N);
+% traj = Trajectory(t,ref,us,[]);
+% y = lin.observe(t,x0,us);
+% traj.addPerformance(us,y,lin.COST,'zeros'); 
 
-% Perform ILC updates
-for i = 1:numIt
-    % Update the controls
-    u = ilc.feedforward(trj,y);
-    % Evolve system with both ILC inputs
-    for j = 1:N
-        x(:,j+1) = A*x(:,j) + B*u(:,j);
-        y(:,j+1) = C*x(:,j+1);
-    end
-    % Add performances
-    trj.addPerformance(u,y,cost,ilc);
+% Create an ilc controller
+% create the simpler ilc
+%ilc = bILC(traj);
+ilc = wILC(lin,traj);
+num_trials = 10;
+
+for i = 1:num_trials
+    % update the weights of the dmp
+    %us = ilc.feedforward(traj,y);
+    ilc.feedforward(dmp,traj,y);
+    % get the measurements
+    %y = lin.observe(t,x0,us);
+    % get the measurements
+    [y,us] = lin.observeWithDMPFeedback(dmp,traj,x0);
+    traj.addPerformance(us,y,lin.COST,ilc);
 
 end
 
-figure(1);
-plot(1:numIt,ilc.error);
+lin.plot_inputs(traj);
+lin.plot_outputs(traj);
+
+figure;
+plot(1:num_trials,ilc.error);
 title('Squared-2-Norm of ILC error');
-figure(2);
-plot(t,y,'.-',t,r,'-');
-title('Last iteration result');
-legend('ILC trajectory','Reference');
+legend(ilc.name);
 
 %% More complicated example
 % % Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf

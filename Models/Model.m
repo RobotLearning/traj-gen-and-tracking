@@ -104,6 +104,8 @@ classdef (Abstract) Model < handle
             t = traj.t;
             [~,s] = dmp.evolve();
             s = s(1,:);
+            C = obj.C;
+            sbar = C'*((C*C')\s);
             K = traj.K;
             uff = traj.unom;
             N = length(t)-1;
@@ -113,7 +115,7 @@ classdef (Abstract) Model < handle
             x(:,1) = x0;
             y(:,1) = obj.C * x(:,1);
             for i = 1:N
-                u(:,i) = K(:,:,i)*(x(:,i)-s(:,i)) + uff(:,i);
+                u(:,i) = K(:,:,i)*(x(:,i)-sbar(:,i)) + uff(:,i);
                 x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
                 y(:,i+1) = obj.C * x(:,i+1);
                 % no constraint checking
@@ -231,7 +233,7 @@ classdef (Abstract) Model < handle
             figure;
             for i = 1:num_out
                 subplot(num_out,1,i);
-                plot(t,y(i,:),'--',t,y_des(i,:),'-');
+                plot(t,y(i,:),'.-',t,y_des(i,:),'-');
                 legend(name,'Reference');
                 title(strcat(num2str(i),'. state'));
                 xlabel('Time (s)');

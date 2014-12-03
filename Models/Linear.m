@@ -193,12 +193,18 @@ classdef Linear < Model
             s = ref;
             Q = obj.COST.Q;
             R = obj.COST.R;
-            A = obj.A;
-            B = obj.B;
             C = obj.C;
             N = length(t)-1;
             h = t(2) - t(1);
-            lqr = LQR(Q,R,Q,A,B,C,N,h);
+            if obj.SIM.discrete
+                Ad = obj.Ad;
+                Bd = obj.Bd;
+                lqr = LQR(Q,R,Q,Ad,Bd,C,N,h,true);
+            else
+                A = obj.A;
+                B = obj.B;
+                lqr = LQR(Q,R,Q,A,B,C,N,h);
+            end
             % form sbar 
             sbar = C'*((C*C')\s);
             [K,uff] = lqr.computeFinHorizonTracking(sbar);
@@ -216,12 +222,11 @@ classdef Linear < Model
             % optional: make DMPs that smoothens x_des
             % one for each output
             goal = ref(:,end);
-            numbf = 40;      
+            numbf = 100;      
             [dmp,s] = obj.dmpTrajectory(t,numbf,goal,yin,ref);
             s = s(1,:);
 
             % calculate the optimal feedback law
-            %s = ref;
             Q = obj.COST.Q;
             R = obj.COST.R;
             C = obj.C;

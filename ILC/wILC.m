@@ -134,7 +134,7 @@ classdef wILC < ILC
             w_change = force.w;
     
             % set learning rate
-            beta = 1;
+            beta = 0.01;
             
             w_last = dmp.FORCE.w;
             w_next = w_last - beta * w_change;

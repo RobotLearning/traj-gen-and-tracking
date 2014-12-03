@@ -117,7 +117,8 @@ classdef (Abstract) DMP < handle
             Psi = Psi .* scale;
             
             % TODO: use pinv or add lambda to smoothen inverse
-            w = Psi \ fd(:);
+            w = pinv(Psi) * fd(:);
+            %w = Psi \ fd(:);
             force.w = w;
 
         end

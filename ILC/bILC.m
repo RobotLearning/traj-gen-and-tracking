@@ -40,9 +40,9 @@ classdef bILC < ILC
         function u_next = feedforward(obj,trj,y)
             
             dev = y - trj.s;
-            h = trj.t(2) - trj.t(1);
+            %h = trj.t(2) - trj.t(1);
             % get rid of x0 in dev
-            ddev = diff(dev')'/h;
+            ddev = diff(dev')';
             ddev = ddev(1,:);
             dev = dev(:,2:end);                        
     
