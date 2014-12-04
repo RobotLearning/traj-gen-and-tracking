@@ -52,15 +52,35 @@ classdef (Abstract) DMP < handle
         % set the weights using regression methods
         function setWeights(obj,path)
             
-            obj.setGoal(path);
+            [goal,~] = obj.setGoal(path);
             % learn the weights with locally weighted regression
-            %force = obj.LWR(path);
+            %force = obj.LWR(goal,path);
             % or with linear regression
-            force = obj.regression(path);
+            force = obj.regression(goal,path);
             
             % update dmps
             obj.setForcing(force);
         end
+        
+        % update the weights using regression methods
+        function force = updateWeights(obj,path)
+            
+            if strcmp(obj.can.pattern,'d')
+                g = path(end);
+            else
+                g = min(path) + max(path) / 2;
+            end
+                
+            % learn the weights with locally weighted regression
+            force = obj.LWR(g,path);
+            % or with linear regression
+            %force = obj.regression(g,path);
+            
+            % do not update the dmp yet!
+            % obj.setForcing(force);
+            
+        end
+        
         
         % Basic regression
         % To learn the weights of DMPs
@@ -77,7 +97,7 @@ classdef (Abstract) DMP < handle
         % OUTPUTS:
         %
         % forcing structure with the forcing weights learned
-        function force = regression(obj,path)
+        function force = regression(obj,goal,path)
 
             dt = obj.can.dt;
             pat = obj.can.pattern;
@@ -90,7 +110,7 @@ classdef (Abstract) DMP < handle
             yd_des = [0,diff(path)]/dt;
             ydd_des = [0,diff(yd_des)]/dt;
             % calculate fd
-            fd = ydd_des - alpha * (beta * (obj.goal(1) - y_des) - yd_des);
+            fd = ydd_des - alpha * (beta * (goal - y_des) - yd_des);
 
             h = force.h;
             c = force.c;
@@ -114,10 +134,10 @@ classdef (Abstract) DMP < handle
                 scale = 1 ./ (sum(Psi,2) + 1e-10);
             end
             scale = repmat(scale,1,lenw);
-            Psi = Psi .* scale;
+            obj.Psi = Psi .* scale;
             
             % TODO: use pinv or add lambda to smoothen inverse
-            w = pinv(Psi) * fd(:);
+            w = pinv(obj.Psi) * fd(:);
             %w = Psi \ fd(:);
             force.w = w;
 
@@ -138,7 +158,7 @@ classdef (Abstract) DMP < handle
         % OUTPUTS:
         %
         % dmp with the forcing weights learned
-        function force = LWR(obj,path)
+        function force = LWR(obj,goal,path)
 
             dt = obj.can.dt;
             pat = obj.can.pattern;
@@ -151,7 +171,7 @@ classdef (Abstract) DMP < handle
             yd_des = [0,diff(path)]/dt;
             ydd_des = [0,diff(yd_des)]/dt;
             % calculate fd
-            fd = ydd_des - alpha * (beta * (obj.goal - y_des) - yd_des);
+            fd = ydd_des - alpha * (beta * (goal - y_des) - yd_des);
 
             h = force.h;
             c = force.c;

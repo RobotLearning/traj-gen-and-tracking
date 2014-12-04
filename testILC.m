@@ -154,8 +154,8 @@ traj.addPerformance(us,y,lin.COST,'LQR');
 % Create an ilc controller
 % create the simpler ilc
 %ilc = bILC(traj);
-ilc = wILC(lin,traj);
-num_trials = 10;
+ilc = wILC(lin,dmp,traj);
+num_trials = 1;
 
 for i = 1:num_trials
     % update the weights of the dmp

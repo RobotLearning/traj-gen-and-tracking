@@ -32,7 +32,7 @@ N = length(t)-1;
 % system and weighting matrices
 Q = 100*eye(dimy);
 %Q = diag([100,0,0]);
-R = 10*eye(dimu);
+R = 0.01*eye(dimu);
 % continuous time matrices
 A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
 B = [0;0;1];
@@ -79,8 +79,8 @@ lin.plot_inputs(traj);
 lin.plot_outputs(traj);
 
 % Create an ilc controller
-ilc = wILC(lin,traj);
-num_trials = 50;
+ilc = wILC(lin,dmp,traj);
+num_trials = 10;
 
 for i = 1:num_trials
     % update the weights of the dmp

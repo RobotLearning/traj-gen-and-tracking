@@ -222,7 +222,7 @@ classdef Linear < Model
             % optional: make DMPs that smoothens x_des
             % one for each output
             goal = ref(:,end);
-            numbf = 50;      
+            numbf = 5;      
             [dmp,s] = obj.dmpTrajectory(t,numbf,goal,yin,ref);
             s = s(1,:);
 

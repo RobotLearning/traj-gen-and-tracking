@@ -26,14 +26,15 @@ classdef wILC < ILC
         % Lifted state matrix F (weight-state) and G (state-output)
         Fw
         G
-        % Lifted penalty matrices Q and R
+        % Lifted penalty matrix Q
         Ql
-        Rl
+        % Weight penalty matrix R
+        Rw
     end
     
     methods
         
-        function obj = wILC(model,trj)
+        function obj = wILC(model,dmp,trj)
                         
             obj.episode = 0;
             obj.color = 'm';
@@ -52,35 +53,44 @@ classdef wILC < ILC
                 obj.u_last = trj.PERF(end).u;
             end
             
-            obj.Fw = zeros(N*dim_x, N*dim_u);
+            % number of basis functions
+            m = length(dmp.FORCE.c);
+            
+            obj.Fw = zeros(4*N*dim_x, m);
             obj.G = zeros(N*dim_y, N*dim_x);
             obj.Ql = zeros(N*dim_y, N*dim_y);
-            obj.Rl = zeros(N*dim_u, N*dim_u);
+            obj.Rw = zeros(m, m);
             
             % fill the F matrix
-            obj = obj.lift(model,trj);
+            obj = obj.lift(model,dmp,trj);
             
         end
         
         % get the lifted vector representation 
         % around the trajectory
-        function obj = lift(obj,model,trj)
+        function obj = lift(obj,model,dmp,trj)
             
             N = trj.N - 1;
+            m = length(dmp.FORCE.c);
             dim_x = model.SIM.dimx;
             dim_u = model.SIM.dimu;
+            C = [eye(dim_x), -eye(dim_x), zeros(dim_x,2*dim_x)];
             
             % deal C matrix to G
             obj.G = cell(1,N);
             obj.Ql = cell(1,N);
-            obj.Rl = cell(1,N);
+            obj.Rw = cell(1,m);
             % TODO: this could also be time varying!
             [obj.G{:}] = deal(model.C);
             [obj.Ql{:}] = deal(model.COST.Q);
-            [obj.Rl{:}] = deal(model.COST.R);
+            [obj.Rw{:}] = deal(model.COST.R);
             obj.G = blkdiag(obj.G{:});
             obj.Ql = blkdiag(obj.Ql{:});
-            obj.Rl = blkdiag(obj.Rl{:});
+            obj.Rw = blkdiag(obj.Rw{:});
+            
+            % transition matrices
+            obj.Apsi = zeros(4*N*dim_x,4*N*dim_x);
+            obj.Bpsi = zeros(4*N*dim_x,m);
             
             if isa(model,'Linear')
             
@@ -121,16 +131,18 @@ classdef wILC < ILC
                 
             end
             
-            obj.Fw = obj.G * obj.Fw;
+            % appears because of static update of the weights
+            mat = repmat(eye(m),N,1);
+            obj.Fw = obj.G * obj.Fw * mat;
             
         end
         
         function feedforward(obj,dmp,traj,y)
             
             r = traj.s;
-            dev = y - r;            
-            force = dmp.regression(dev);
-            %force = dmp.LWR(dev);
+            dev = y - r;
+            %dev = zeros(1,length(dev));
+            force = dmp.updateWeights(dev);
             w_change = force.w;
     
             % set learning rate
