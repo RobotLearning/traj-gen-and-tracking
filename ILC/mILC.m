@@ -57,13 +57,13 @@ classdef mILC < ILC
             obj.Rl = zeros(N*dim_u, N*dim_u);
             
             % fill the F matrix
-            obj = obj.lift(model,trj);
+            obj.lift(model,trj);
             
         end
         
         % get the lifted vector representation 
         % around the trajectory
-        function obj = lift(obj,model,trj)
+        function lift(obj,model,trj)
             
             N = trj.N - 1;
             dim_x = model.SIM.dimx;
@@ -124,7 +124,10 @@ classdef mILC < ILC
             
         end
         
-        function u_next = feedforward(obj,trj,y)
+        function u = feedforward(obj,trj,y)
+            
+            dimu = size(obj.u_last,1);
+            N = size(obj.u_last,2);
             
             dev = y - trj.s;
             h = trj.t(2) - trj.t(1);
@@ -134,19 +137,21 @@ classdef mILC < ILC
             dev = dev(:,2:end);                        
     
             % set learning rate
-            %beta = 0.5;
+            beta = 1;
             
             % gradient descent
-            %u_next = obj.u_last(:) - beta * obj.F' * obj.Ql * dev(:);
+            %u = obj.u_last(:) - beta * obj.F' * obj.Ql * dev(:);
             % model inversion based Newton-Raphson update
-            %u_next = obj.u_last(:) - obj.F \ dev(:);
+            %u = obj.u_last(:) - obj.F \ dev(:);
             % more stable inverse based Newton-Raphson update
             % computes very high inverses though
-            u_next = obj.u_last(:) - pinv(obj.F) * dev(:);
+            u = obj.u_last(:) - pinv(obj.F) * dev(:);
             % LM-type update
             %Mat = (obj.F' * obj.Ql * obj.F + obj.Rl) \ (obj.F' * obj.Ql);
-            %u_next = obj.u_last(:) - Mat * dev(:);
-            u_next = u_next';
+            %u = obj.u_last(:) - Mat * dev(:);
+            
+            % revert from lifted vector from back to normal form
+            u = reshape(u,dimu,N);
             
         end
         

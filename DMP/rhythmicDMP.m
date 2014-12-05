@@ -21,6 +21,8 @@ classdef rhythmicDMP < DMP
         Y
         % initial y,yd values
         Y0
+        % field containing Psi matrix
+        Psi
         % forcing structure has weights w, widths h, and centers c
         FORCE
     end

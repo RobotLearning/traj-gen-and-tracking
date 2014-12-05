@@ -12,20 +12,16 @@ classdef Linear < Model
         COST
         % fields necessary for simulation and plotting, noise etc.
         SIM
+        % observation matrix
+        C        
     end
     
     % Fields pertaining to state evolution and measurements
     properties
-        % cartesian coordinates of the state
-        x
-        % observation of the state (output)
-        y
         % A and B matrices
         A, B
         % discrete A and B matrices
         Ad, Bd
-        % observation matrix
-        C
     end
     
     methods

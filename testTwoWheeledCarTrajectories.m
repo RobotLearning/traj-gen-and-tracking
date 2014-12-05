@@ -19,11 +19,29 @@ delete('tmp.mat')
 
 %% Set system parameters and constraints
 
+% Simulation Values 
+% system is continous
+SIM.discrete = false;
+% dimension of the x vector
+SIM.dimx = 3;
+% dimension of the output y
+SIM.dimy = 3;
+% dimension of the control input
+SIM.dimu = 2;
+% time step h 
+SIM.h = 0.01;
+% noise and initial error
+SIM.eps = 0.003;
+SIM.eps_d = 0.005;
+% integration method
+SIM.int = 'Euler';
+
 % parameter values of the experimental setup
 % radius of the robot
 PAR.wheel1.radius = 0.2; % meter
 PAR.wheel2.radius = 0.2;
 PAR.length = 0.8;
+PAR.C = eye(SIM.dimy, SIM.dimx);
 
 % constraints on the system dynamics
 CON.state.x.max = 5; 
@@ -39,24 +57,10 @@ CON.wheel1.udot.min = -100;
 CON.wheel2.udot.max = 100;
 CON.wheel2.udot.min = -100;
 
-% Simulation Values 
-% system is continous
-SIM.discrete = false;
-% dimension of the x vector
-SIM.dimx = 3;
-% dimension of the control input
-SIM.dimu = 2;
-% time step h 
-SIM.h = 0.01;
-% noise and initial error
-SIM.eps = 0.003;
-SIM.eps_d = 0.005;
-% integration method
-SIM.int = 'Euler';
-
 % cost structure
 % only penalize positions
 COST.Q = diag([1,1,0]);
+COST.R = 0.1 * eye(SIM.dimu);
 
 % initialize model
 TW = TwoWheeledCar(PAR,CON,COST,SIM);
@@ -76,41 +80,39 @@ s(2,:) = sin(2*pi*t);
 s(3,1:end-1) = atan2(diff(s(2,:)),diff(s(1,:)));
 s(3,end) = s(3,1); % since trajectory is periodical after t = 1
 
-Traj = TW.trajectory(t,s);
+traj = TW.generateInputs(t,s);
 
 %% Evolve system dynamics and animate the robot arm
 
 x0 = s(:,1);
-xact = TW.evolve(t,x0,Traj.unom);
+xact = TW.evolve(t,x0,traj.unom);
 
 % add performance to trajectory
-Traj.addPerformance(Traj.unom,xact,TW.COST,'Nominal model inversion');
+traj.addPerformance(traj.unom,xact,TW.COST,'Inverse Dynamics');
 
 % Plot the controls and animate the robot arm
-TW.plot_inputs(Traj);
-TW.plot_outputs(Traj);
+TW.plot_inputs(traj);
+TW.plot_outputs(traj);
 TW.animate(xact,s(1:2,:));
 
 %% Iterative Learning Control
 
 num_trials = 10;
-ilc = aILC(TW,Traj);
-% TODO: add C matrix and observe output with observe function
-y = TW.evolve(t,x0,Traj.unom);
-dev = y - s;
+%ilc = aILC(TW,Traj);
+ilc = mILC(TW,traj);
+y = TW.evolve(t,x0,traj.unom);
 
 for i = 1:num_trials
     
-    u = ilc.feedforward(Traj,TW,dev);    
+    u = ilc.feedforward(traj,y);
+    % u = ilc.feedforward(traj,TW,y);    
     % get error (observed trajectory deviation)
     y = TW.evolve(t,x0,u);
-    %y = TW.observe(t,x0,u);
-    dev = y - s;
-    Traj.addPerformance(u,y,TW.COST,ilc);
+    traj.addPerformance(u,y,TW.COST,ilc);
     
 end
 
 % Plot the controls and animate the robot arm
-TW.plot_inputs(Traj);
-TW.plot_outputs(Traj);
+TW.plot_inputs(traj);
+TW.plot_outputs(traj);
 TW.animate(y,s(1:2,:));

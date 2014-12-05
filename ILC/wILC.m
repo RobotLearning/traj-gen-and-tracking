@@ -62,13 +62,13 @@ classdef wILC < ILC
             obj.Rw = zeros(m, m);
             
             % fill the F matrix
-            obj = obj.lift(model,dmp,trj);
+            obj.lift(model,dmp,trj);
             
         end
         
         % get the lifted vector representation 
         % around the trajectory
-        function obj = lift(obj,model,dmp,trj)
+        function lift(obj,model,dmp,trj)
             
             N = trj.N - 1;
             m = length(dmp.FORCE.c);

@@ -11,8 +11,8 @@ classdef TwoWheeledCar < Model
         COST
         % fields necessary for simulation and plotting, noise etc.
         SIM
-        % cartesian coordinates of the nominal trajectory
-        x, xd, xdd
+        % observation matrix
+        C
     end
     
     methods
@@ -25,10 +25,11 @@ classdef TwoWheeledCar < Model
             obj.PAR.wheel2.radius = 0;
             obj.PAR.length = 0;
                          
-            % check that the input has all the fields
-            % TODO: is there a better way?
-            assert(all(strcmp(fieldnames(obj.PAR), fieldnames(STR))));
+            % TODO: check that the input has all the fields
             obj.PAR = STR;
+            
+            % set observation matrix
+            obj.C = STR.C;
         end
         
         % copies the constraint values inside the structure
@@ -57,8 +58,9 @@ classdef TwoWheeledCar < Model
         % set the simulation parameters
         function set.SIM(obj, sim)
             obj.SIM.discrete = sim.discrete;
-            obj.SIM.dimx = 3;
-            obj.SIM.dimu = 2;
+            obj.SIM.dimx = sim.dimx;
+            obj.SIM.dimu = sim.dimu;
+            obj.SIM.dimy = sim.dimy;
             obj.SIM.h = sim.h;
             obj.SIM.eps = sim.eps;
             obj.SIM.eps_d = sim.eps_d;
@@ -68,10 +70,11 @@ classdef TwoWheeledCar < Model
         end
         
         % change the cost function
-        function set.COST(obj, Q)
-            obj.COST.Q = Q;
-            obj.COST.fnc = @(x1,x2) diag((x1-x2)'*Q*(x1-x2));
-            assert(length(Q) == obj.SIM.dimx);
+        function set.COST(obj, STR)
+            obj.COST.Q = STR.Q;
+            obj.COST.R = STR.R;
+            obj.COST.fnc = @(x1,x2) diag((x1-x2)'*STR.Q*(x1-x2));
+            %assert(length(Q) == obj.SIM.dimx);
         end
         
     end
@@ -88,7 +91,7 @@ classdef TwoWheeledCar < Model
             % set object constraints
             obj.CON = con;    
             % cost function handle
-            obj.COST = cost.Q;
+            obj.COST = cost;
         end
         
         % provides nominal model
@@ -137,7 +140,7 @@ classdef TwoWheeledCar < Model
 
         % using a simple inverse kinematics method
         % TODO: extend using planning to incorporate constraints
-        function Traj = trajectory(obj,t,x_des)
+        function Traj = generateInputs(obj,t,x_des)
 
             N = length(t)-1;
             dimu = obj.SIM.dimu;

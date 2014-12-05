@@ -13,6 +13,8 @@ classdef (Abstract) DMP < handle
         goal
         % y, yd (or z), ydd values
         Y
+        % field containing Psi matrix
+        Psi
         % forcing structure has weights w, widths h, and centers c
         FORCE
     end

@@ -5,7 +5,7 @@
 % Other models (RRR arm, ...)
 % Other mismatches (parametric, friction, ...)
 % Adding feedback 
-% DMP 
+% slow down with DMP 
 
 %# store breakpoints
 tmp = dbstatus;
@@ -26,9 +26,25 @@ delete('tmp.mat')
 
 %% Define constants and parameters
 
+% Simulation Values 
+% system is continous
+SIM.discrete = false;
+% dimension of the x vector
+SIM.dimx = 4;
+% dimension of the output y
+SIM.dimy = 2;
+% dimension of the control input
+SIM.dimu = 2;
+% time step h 
+SIM.h = 0.01;
+% noise and initial error
+SIM.eps = 3e-10;
+SIM.eps_d = 3e-10;
+% integration method
+SIM.int = 'Euler';
+
 % constants
 g = 9.81;
-
 % joint parameters
 m1 = 1; %mass of first link, kg
 m2 = 0.5; %mass of second link, kg
@@ -38,7 +54,6 @@ l_c1 = 0.25; %distance of first link's center of gravity to prev. joint, m
 l_c2 = 0.20; %dist. of second link's c.oZ.g. to prev. joint, m
 I1 = (1/12)*m1*l1^2; %assume thin rod moment of inertia around c.o.g.
 I2 = (1/12)*m1*l2^2; %kg m^2
-
 % motor parameters
 J_a1 = 0.100; % actuator inertia of link 1
 J_g1 = 0.050; % gear inertia of link1
@@ -65,6 +80,9 @@ PAR.link2.motor.inertia = J_m2;
 PAR.link1.motor.gear_ratio = r_1;
 PAR.link2.motor.gear_ratio = r_2;
 
+% we observe joint angles only
+PAR.C = eye(SIM.dimy,SIM.dimx);
+
 % form constraints
 CON.link1.q.max = Inf;
 CON.link1.q.min = -Inf;
@@ -89,79 +107,72 @@ CON.link2.udot.min = -100;
 
 % cost structure
 % only penalize positions
-COST.Q = diag([1,1,0,0]);
-
-% simulation parameters
-SIM.discrete = false;
-SIM.h = 0.02;
-SIM.eps = 3e-10;
-SIM.eps_d = 3e-10;
-SIM.int = 'Euler'; % or RK4
+COST.Q = ones(SIM.dimy);
+COST.R = 0.1 * eye(SIM.dimu);
 
 % initialize model
 rr = RR(PAR,CON,COST,SIM);
 
-%% Generate a desired trajectory
+%% Generate inputs for a desired trajectory
 
 % TODO: implement Jacobian and inverse computations of
 % q, qd, qdd from x, xd, xdd
 % Put Jacobian in Kinematics
 
 h = SIM.h;
-y_des = 0.4:h:0.6;
-yd_des = [0, diff(y_des)];
-x_des = 0.6 * ones(1,length(y_des));
-xd_des = [0, diff(x_des)];
-t = h * 1:length(y_des);
-s = [x_des; y_des; xd_des; yd_des]; % desired trajectory 
-Traj = rr.trajectory(t,s);
+tin = 0; tfin = 1;
+t = tin:h:tfin;
+y_des = 0.4 + 0.2 * t;
+x_des = 0.6 * ones(1,length(t));
+ref = [x_des; y_des]; % displacement profile 
+vel = [diff(ref')', zeros(2,1)]; % velocity profile
+s = [ref; vel];
+traj = rr.generateInputs(t,s);
 
 %% Evolve system dynamics and animate the robot arm
 
 % TODO: add a nonzero friction matrix B
 
-q0 = [rr.q(:,1); rr.qd(:,1)];
+q0 = rr.invKinematics(s(:,1));
+q1 = rr.invKinematics(s(:,2));
+qd0 = (q1 - q0)/h;
+% zero initial velocities
+q0 = [q0; qd0];
 % observe output
-q_obs = rr.evolve(t,q0,Traj.unom);
+qact = rr.evolve(t,q0,traj.unom);
 
 % get the deviations
-% TODO: xd should also be returned
-[~,y] = rr.kinematics(q_obs(1:2,:));
-yd = [zeros(2,1), diff(y')'];
+[~,y] = rr.kinematics(qact(1:2,:));
 % add performance to trajectory
-Traj.addPerformance(Traj.unom,[y;yd],rr.COST,'Nominal model inversion');
+traj.addPerformance(traj.unom,y,rr.COST,'Inverse Dynamics');
 
 % Plot the controls and animate the robot arm
-rr.plot_inputs(Traj);
-rr.plot_outputs(Traj);
-rr.animateArm(q_obs(1:2,:),s(1:2,:));
+rr.plot_inputs(traj);
+rr.plot_outputs(traj);
+rr.animateArm(qact(1:2,:),s(1:2,:));
 
 %% Start learning with ILC
 
-num_trials = 10;
+num_trials = 100;
 
-% get deviation
-dev = Traj.PERF(end).err;
-ilc = aILC(rr,Traj);
-%ilc = bILC(Traj);
+%ilc = aILC(rr,traj);
+ilc = mILC(rr,traj);
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforward(Traj,rr,dev);
+    u = ilc.feedforward(traj,y);
+    %u = ilc.feedforward(traj,rr,dev);
     % evolve system
-    q_obs = rr.evolve(t,q0,u);
+    qact = rr.evolve(t,q0,u);
     % get the cartesian coordinates
-    [~,y] = rr.kinematics(q_obs(1:2,:));
-    yd = [zeros(2,1), diff(y')'];
+    [~,y] = rr.kinematics(qact(1:2,:));
     % add performance to trajectory
-    Traj.addPerformance(u,[y;yd],rr.COST,ilc);
-    dev = Traj.PERF(end).err;
+    traj.addPerformance(u,y,rr.COST,ilc);
     % Plot the controls and animate the robot arm
-    %RR.plot_controls(Traj);
-    %RR.animateArm(q_act(1:2,:),s(1:2,:));
+    %rr.animateArm(q_act(1:2,:),s(1:2,:));
 end
 
 % Plot the controls and animate the robot arm
-rr.plot_inputs(Traj);
-rr.plot_outputs(Traj);
-rr.animateArm(q_obs(1:2,:),s(1:2,:));
+rr.plot_inputs(traj);
+rr.plot_outputs(traj);
+rr.animateArm(qact(1:2,:),s(1:2,:));

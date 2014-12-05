@@ -43,7 +43,6 @@ classdef bILC < ILC
             %h = trj.t(2) - trj.t(1);
             % get rid of x0 in dev
             ddev = diff(dev')';
-            ddev = ddev(1,:);
             dev = dev(:,2:end);                        
     
             % set learning rate

@@ -56,17 +56,18 @@ classdef aILC < ILC
             N = trj.N - 1;
             dim_x = model.SIM.dimx;
             dim_u = model.SIM.dimu;
+            dim_y = model.SIM.dimy;
 
             obj.F = zeros(N*dim_x, N*dim_u);
-            obj.G = eye(N*dim_x);
-            obj.H = zeros(N*dim_x,N*dim_u); 
+            obj.G = eye(N*dim_y, N*dim_x);
+            obj.H = zeros(N*dim_y,N*dim_u); 
             obj.eps = model.SIM.eps;
             obj.eps_d = model.SIM.eps_d;
             obj.u_last = trj.unom(:,1:N);
             
             obj.lift(model,trj);
             % initialize Kalman filter
-            mats.M = obj.eps * eye(N*dim_x); % covariance of process x measurement noise
+            mats.M = obj.eps * eye(N*dim_y); % covariance of process x measurement noise
             mats.Omega = obj.eps_d * eye(N*dim_x); % initial covariance of d noise
             mats.A = eye(N*dim_x);
             mats.B = zeros(N*dim_x,N*dim_u);
@@ -116,11 +117,11 @@ classdef aILC < ILC
 
         end
         
-        function unext = feedforward(obj,trj,model,ydev)
+        function unext = feedforward(obj,trj,model,y)
                         
+            ydev = y - trj.s;
             % deviation vector starts from x(1)
             dev = ydev(:,2:end);
-            dev = dev(:);
             
             F = obj.F;
             S = obj.S;
@@ -132,7 +133,7 @@ classdef aILC < ILC
             
             % Filter to estimate disturbance
             obj.filter.predict(u(:));
-            obj.filter.update(dev,u(:));
+            obj.filter.update(dev(:),u(:));
             d = obj.filter.x;
 
             % Constraints and penalty matrices
@@ -144,7 +145,7 @@ classdef aILC < ILC
             % call the particular constraints-generating code
             L = obj.L; 
             q = obj.q;
-            umin = obj.umin(:);             
+            umin = obj.umin(:);
             umax = obj.umax(:);
     
             % input deviation penalty matrix D

@@ -1,10 +1,17 @@
-% Two-link planar revolute arm dynamics
+% Two-link planar revolute arm dynamics for evolving (simulating) system
+% trajectories
 
 % Example taken from Robot Modelling and Control book, 2006, Spong,
 % Hutchingson, Vidyasagar
 % pg. 260-262 and 290
 
-function u = RRDynamics(q,qd,qdd,PAR)
+% If flag is set to true, return the jacobians of the dynamics f
+
+function [Qd,varargout] = RRDynamics(Q,u,PAR,flag)
+
+% system states are X = [q(1),q(2),qd(1),qd(2)];
+q = Q(1:2);
+qd = Q(3:4);
 
 g = PAR.const.g;
 m1 = PAR.link1.mass;
@@ -58,10 +65,10 @@ Cpr = [c111, c211;
        c121, c221;
        c112, c212;
        c122, c222] * qd;
-C = [Cpr(1),Cpr(2); Cpr(3),Cpr(4)];
+C = [Cpr(1), Cpr(2); Cpr(3), Cpr(4)];
 
 % friction matrix is assumed to be zero
-B = zeros(2);
+B = 0;
 
 % potential related (conservative) forces
 g1 = (m1*l_c1 + m2*l1)*g*cos(q(1)) + m2*l_c2*g*cos(q(1)+q(2));
@@ -70,4 +77,33 @@ G = [g1; g2];
 
 % control inputs are the scaled voltages sent to the rotors
 % u_k = r_k * K_mk / R_k * V_k
-u = M*qdd + C*qd + B*qd + G;
+
+% construct state-dependent drift term
+Ax = [zeros(2), eye(2);
+      zeros(2), -C];
+
+% construct control matrix
+Bx = [zeros(2); eye(2)];
+
+% state-independent drift term
+Cx = [zeros(2,1); -G];
+
+Mbig = [eye(2), zeros(2); zeros(2), M];
+Qd = Mbig \ (Ax*Q + Bx*u + Cx);
+
+if flag
+    
+    % Take four differences with h small
+    h = 1e-6;
+    Qh = repmat(Q,1,4) + h * eye(4);
+    Qdh = zeros(4,4);
+    for i = 1:4
+        Qdh(:,i) = RRDynamics(Qh(:,i),u,PAR,false);
+    end
+    der = (Qdh - repmat(Qd,1,4)) / h;
+    dfdx = [zeros(2), eye(2); der(3:4,:)];
+    dfdu = Mbig \ Bx;
+    varargout{1} = dfdx;
+    varargout{2} = dfdu;
+    
+end

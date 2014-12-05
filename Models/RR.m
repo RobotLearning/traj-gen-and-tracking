@@ -11,10 +11,8 @@ classdef RR < Robot
         COST
         % fields necessary for simulation and plotting, noise etc.
         SIM
-        % cartesian coordinates of the nominal trajectory
-        x, xd, xdd
-        % joint space coordinates of the nominal trajectory
-        q, qd, qdd
+        % observation matrix
+        C
     end
     
     methods
@@ -39,8 +37,11 @@ classdef RR < Robot
                          
             % check that the input has all the fields
             % TODO: is there a better way?
-            assert(all(strcmp(fieldnames(obj.PAR), fieldnames(STR))));
+            %assert(all(strcmp(fieldnames(obj.PAR), fieldnames(STR))));
             obj.PAR = STR;
+            
+            % set observation matrix
+            obj.C = STR.C;
         end
         
         % copies the constraint values inside the structure
@@ -76,8 +77,9 @@ classdef RR < Robot
         % set the simulation parameters
         function set.SIM(obj, sim)
             obj.SIM.discrete = sim.discrete;
-            obj.SIM.dimx = 4;
-            obj.SIM.dimu = 2;
+            obj.SIM.dimx = sim.dimx;
+            obj.SIM.dimy = sim.dimy;
+            obj.SIM.dimu = sim.dimu;
             obj.SIM.h = sim.h;
             obj.SIM.eps = sim.eps;
             obj.SIM.eps_d = sim.eps_d;
@@ -87,10 +89,11 @@ classdef RR < Robot
         end
         
         % change the cost function
-        function set.COST(obj, Q)
-            obj.COST.Q = Q;
-            obj.COST.fnc = @(x1,x2) diag((x1-x2)'*Q*(x1-x2));
-            assert(length(Q) == obj.SIM.dimx);
+        function set.COST(obj, cost)
+            obj.COST.Q = cost.Q;
+            obj.COST.R = cost.R;
+            obj.COST.fnc = @(x1,x2) diag((x1-x2)'*cost.Q*(x1-x2));
+            %assert(length(Q) == obj.SIM.dimx);
         end
         
     end
@@ -107,14 +110,14 @@ classdef RR < Robot
             % set object constraints
             obj.CON = con;        
             % cost function handle
-            obj.COST = cost.Q;
+            obj.COST = cost;
         end
         
         % provides nominal model
         function [x_dot,varargout] = nominal(obj,~,x,u,flg)
             % differential equation of the inverse dynamics
-            % x_dot = Ax + B(x)u + C
-            [x_dot,dfdx,dfdu] = obj.inverseDynamics(x,u,true);
+            % x_dot = A(x)x + B(x)u + C(x)
+            [x_dot,dfdx,dfdu] = obj.dynamics(x,u,true);
             
             % return jacobian matrices
             if flg
@@ -144,8 +147,8 @@ classdef RR < Robot
             
             
             % differential equation of the inverse dynamics
-            % x_dot = Ax + B(x)u + C
-            x_dot = RRInverseDynamics(x,u,par,false);
+            % x_dot = A(x)x + B(x)u + C(x)
+            x_dot = RRDynamics(x,u,par,false);
             
         end
         
@@ -156,24 +159,24 @@ classdef RR < Robot
         end
         
         % call inverse kinematics from outside
-        function q = inverseKinematics(obj,x)
+        function q = invKinematics(obj,x)
             
-            q = RRInverseKinematics(x,obj.PAR);
+            q = RRInvKinematics(x,obj.PAR);
         end
                    
         % dynamics to get u
-        function u = dynamics(obj,q,qd,qdd)
-            u = RRDynamics(q,qd,qdd,obj.PAR);
+        function u = invDynamics(obj,q,qd,qdd)
+            u = RRInvDynamics(q,qd,qdd,obj.PAR);
         end
         
-        % inverse dynamics to qet Qd = [qd,qdd]
-        function [Qd, varargout] = inverseDynamics(obj,Q,u,flag)
+        % dynamics to qet Qd = [qd,qdd]
+        function [Qd, varargout] = dynamics(obj,Q,u,flag)
             if flag
-                [Qd, dfdx, dfdu] = RRInverseDynamics(Q,u,obj.PAR,flag);
+                [Qd, dfdx, dfdu] = RRDynamics(Q,u,obj.PAR,flag);
                 varargout{1} = dfdx;
                 varargout{2} = dfdu;
             else
-                Qd = RRInverseDynamics(Q,u,obj.PAR,flag);
+                Qd = RRDynamics(Q,u,obj.PAR,flag);
             end
         end
         
@@ -184,31 +187,35 @@ classdef RR < Robot
         end
 
         % using a simple inverse kinematics method
-        % TODO: extend using planning to incorporate constraints
-        function Traj = trajectory(obj,t,x_des)
+        function Traj = generateInputs(obj,t,ref)
 
+            x_des = ref(1:2,:);
             h = obj.SIM.h;
-            obj.q = RRInverseKinematics(x_des,obj.PAR);
+            dim = obj.SIM.dimx / 2;
+            dimu = obj.SIM.dimu;
+            q = RRInvKinematics(x_des,obj.PAR);
             % check for correctness
             %[x1,x2] = RRKinematics(q,PAR);
-            obj.qd = diff(obj.q')' / h; 
-            obj.qdd = diff(obj.qd')' / h; 
-
-            % keep velocity and acceleration vectors the same length as displacements
-            obj.qd(:,end+1) = obj.qd(:,end);
-            obj.qdd(:,end+1) = obj.qdd(:,end);
-            obj.qdd(:,end+1) = obj.qdd(:,end);
+            qd = diff(q')' / h; 
+            qdd = diff(qd')' / h; 
+            
+            % start with zero initial velocity
+            %qd = [zeros(dim,1), qd];
+            %qdd = [zeros(dim,1), qdd];
+            % assume you end with same acceleration as before
+            qdd(:,end+1) = qdd(:,end);
+            % this leads to large decelerations!
+            % add one more acceleration assuming q(end+1) = q(end)
+            %qdd(:,end+1) = (q(:,end-1) - q(:,end))/(h^2);
 
             % get the desired inputs
-            ud = zeros(size(obj.q));
-            for i = 1:size(obj.q,2)
-                ud(:,i) = RRDynamics(obj.q(:,i),obj.qd(:,i),...
-                                           obj.qdd(:,i),obj.PAR);
+            Nu = length(t) - 1;
+            uff = zeros(dimu,Nu);
+            for i = 1:Nu
+                uff(:,i) = RRInvDynamics(q(:,i),qd(:,i),qdd(:,i),obj.PAR);
             end
-            % throw away last point
-            ud = ud(:,1:end-1);
             
-            Traj = Trajectory(t,x_des,ud,[]);
+            Traj = Trajectory(t,ref,uff,[]);
         end
         
         % get lifted model constraints

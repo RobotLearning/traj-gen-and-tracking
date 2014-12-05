@@ -13,6 +13,8 @@ classdef (Abstract) Model < handle
         SIM
         % cost structure, not necessarily quadratic
         COST
+        % observation matrix
+        C
     end
     
     % methods to be implemented
