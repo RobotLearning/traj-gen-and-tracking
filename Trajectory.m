@@ -1,7 +1,6 @@
 % Class for holding inputs and states on trajectories.
 % Class is used instead of a structure to enforce certain fields.
 %
-% TODO: is this class necessary?
 
 classdef Trajectory < handle
     
@@ -11,8 +10,8 @@ classdef Trajectory < handle
         t
         % number of discretizations
         N
-        % discrete set of states on (cts) trajectory
-        s      
+        % reference trajectory (dimension = output)
+        s
         % nominal u values calculated during trajectory generation
         % (optional)
         unom
@@ -28,6 +27,7 @@ classdef Trajectory < handle
     
     methods (Access = public)
          
+        % create a trajectory class useful for simulations
         function obj = Trajectory(t,s,unom,K)            
             obj.t = t;
             obj.N = length(t);

@@ -82,11 +82,9 @@ classdef (Abstract) Model < handle
         function [y,u] = observeWithFeedback(obj,traj,x0)
             fun = @(t,x,u) obj.actual(t,x,u);
             t = traj.t;
-            s = traj.s;
             K = traj.K;
             uff = traj.unom;
             N = length(t)-1;
-            h = t(2)-t(1);
             x = zeros(length(x0),N+1);
             u = zeros(size(K,1),N);
             x(:,1) = x0;
@@ -104,14 +102,15 @@ classdef (Abstract) Model < handle
         function [y,u] = observeWithDMPFeedback(obj,dmp,traj,x0)
             fun = @(t,x,u) obj.actual(t,x,u);
             t = traj.t;
+            K = traj.K;
+            uff = traj.unom;
+            
             [~,s] = dmp.evolve();
             s = s(1,:);
             C = obj.C;
             sbar = C'*((C*C')\s);
-            K = traj.K;
-            uff = traj.unom;
+
             N = length(t)-1;
-            h = t(2)-t(1);
             x = zeros(length(x0),N+1);
             u = zeros(size(K,1),N);
             x(:,1) = x0;

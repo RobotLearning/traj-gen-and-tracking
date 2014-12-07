@@ -80,8 +80,9 @@ PAR.link2.motor.inertia = J_m2;
 PAR.link1.motor.gear_ratio = r_1;
 PAR.link2.motor.gear_ratio = r_2;
 
-% we observe joint angles only
-PAR.C = eye(SIM.dimy,SIM.dimx);
+% TODO: we should observe joint angles only
+PAR.C = eye(SIM.dimx);
+%PAR.C = eye(SIM.dimy,SIM.dimx);
 
 % form constraints
 CON.link1.q.max = Inf;
@@ -107,7 +108,8 @@ CON.link2.udot.min = -100;
 
 % cost structure
 % only penalize positions
-COST.Q = ones(SIM.dimy);
+% TODO: Q should have dimy dimensions
+COST.Q = 100*diag([1,1,0,0]);
 COST.R = 0.1 * eye(SIM.dimu);
 
 % initialize model
@@ -125,7 +127,7 @@ t = tin:h:tfin;
 y_des = 0.4 + 0.2 * t;
 x_des = 0.6 * ones(1,length(t));
 ref = [x_des; y_des]; % displacement profile 
-vel = [diff(ref')', zeros(2,1)]; % velocity profile
+vel = [diff(ref')', zeros(2,1)]; % TODO: velocity profile is not needed!
 s = [ref; vel];
 traj = rr.generateInputs(t,s);
 
@@ -143,6 +145,9 @@ qact = rr.evolve(t,q0,traj.unom);
 
 % get the deviations
 [~,y] = rr.kinematics(qact(1:2,:));
+% add velocity profile
+vely = diff(y')';
+y = [y; vely, zeros(2,1)];
 % add performance to trajectory
 traj.addPerformance(traj.unom,y,rr.COST,'Inverse Dynamics');
 
@@ -153,7 +158,7 @@ rr.animateArm(qact(1:2,:),s(1:2,:));
 
 %% Start learning with ILC
 
-num_trials = 100;
+num_trials = 200;
 
 %ilc = aILC(rr,traj);
 ilc = mILC(rr,traj);
@@ -166,6 +171,9 @@ for i = 1:num_trials
     qact = rr.evolve(t,q0,u);
     % get the cartesian coordinates
     [~,y] = rr.kinematics(qact(1:2,:));
+    % add velocity profile
+    vely = diff(y')';
+    y = [y; vely, zeros(2,1)];
     % add performance to trajectory
     traj.addPerformance(u,y,rr.COST,ilc);
     % Plot the controls and animate the robot arm

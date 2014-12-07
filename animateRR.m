@@ -46,7 +46,7 @@ for j = 2:length(x1)
      h7 = line(traj_x, traj_y, 'color', [.4 .4 .5],'LineWidth',2);
      
      drawnow;
-     pause(0.01);
+     pause(0.005);
 end
 
 hold off;

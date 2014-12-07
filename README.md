@@ -1,7 +1,6 @@
 TODO List:
 
-- Include R arm dynamics for testing
-- Test (nonlinear) ILC learning with aILC, mILC and bILC
-- Test the model classes RR and TwoWheeledCar trajectories
-- Include RRR arm dynamics for testing
-- HInf like controller for linear models
+- Show wILC converges for linear models
+- Fix the output matrix problem (C being nonidentity) for nonlinear models
+- Show mILC convergence for RR model. Why does mILC improve in the opposite direction?
+- Include R, RRR arm dynamics for testing. Putting example
