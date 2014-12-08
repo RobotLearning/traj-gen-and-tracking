@@ -20,26 +20,56 @@ classdef bILC < ILC
     
     methods
         
-        function obj = bILC(trj)
+        function obj = bILC(traj)
                         
             obj.episode = 0;
             obj.color = 'b';
             obj.name = 'Arimoto type ILC';
             obj.error = 0;
             
-            N = trj.N - 1;
-            if ~isempty(trj.unom)
-                obj.u_last = trj.unom(:,1:N);
+            N = traj.N - 1;
+            if ~isempty(traj.unom)
+                obj.u_last = traj.unom(:,1:N);
             else
                 warning('Using last performance results');
-                obj.u_last = trj.PERF(end).u;
+                obj.u_last = traj.PERF(end).u;
             end
             
         end
         
-        function u_next = feedforward(obj,trj,y)
+        % update trajectories 
+        % temporary
+        function traj = updateTraj(obj,traj,model,y)
             
-            dev = y - trj.s;
+            N = traj.N - 1;
+            K = traj.K;
+            dev = y - traj.s;
+            %h = trj.t(2) - trj.t(1);
+            % get rid of x0 in dev
+            ddev = diff(dev')'; 
+            ddev = [ddev, ddev(:,end)];
+    
+            % set learning rate
+            a_p = 0.5;
+            a_d = 0.2;
+            delta = a_p * dev - a_d * ddev;
+            
+            % get sbar
+            C = model.C;
+            s = traj.s;
+            sbar = C'*((C*C')\s);
+            
+            for i = 1:N
+                sbar(:,i) = sbar(:,i) + pinv(K(:,:,i))*delta(:,i);
+            end
+            
+            traj.s = C * sbar;            
+            
+        end
+        
+        function u_next = feedforward(obj,traj,y)
+            
+            dev = y - traj.s;
             %h = trj.t(2) - trj.t(1);
             % get rid of x0 in dev
             ddev = diff(dev')';

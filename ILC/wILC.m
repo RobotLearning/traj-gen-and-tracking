@@ -62,7 +62,7 @@ classdef wILC < ILC
             obj.Rw = zeros(m, m);
             
             % fill the F matrix
-            obj.lift(model,dmp,trj);
+            %obj.lift(model,dmp,trj);
             
         end
         
@@ -149,7 +149,7 @@ classdef wILC < ILC
             beta = 0.01;
             
             w_last = dmp.FORCE.w;
-            w_next = w_last - beta * w_change;
+            w_next = w_last + beta * w_change;
             force.w = w_next;
             dmp.setForcing(force);
             

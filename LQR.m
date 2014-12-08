@@ -69,8 +69,6 @@ classdef LQR
             end
             obj.C = C;
 
-            
-
         end
         
         function obj = discretizeMatrices(obj)
