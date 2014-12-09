@@ -107,8 +107,40 @@ classdef (Abstract) Model < handle
             
             [~,s] = dmp.evolve();
             s = s(1,:);
+            %s = traj.s;
             C = obj.C;
             sbar = C'*((C*C')\s);
+
+            N = length(t)-1;
+            x = zeros(length(x0),N+1);
+            u = zeros(size(K,1),N);
+            x(:,1) = x0;
+            y(:,1) = obj.C * x(:,1);
+            for i = 1:N
+                u(:,i) = K(:,:,i)*(x(:,i)-sbar(:,i)) + uff(:,i);
+                x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
+                y(:,i+1) = obj.C * x(:,i+1);
+                % no constraint checking
+            end
+        end
+        
+        % useful to propagate tILC
+        % LQR-calculated K has to be in error-feedback form!
+        function [y,u] = observeWithFeedbackErrorForm(obj,traj,x0)
+            fun = @(t,x,u) obj.actual(t,x,u);
+            t = traj.t;
+            K = traj.K;
+            uff = traj.unom;
+            
+            %sbar = traj.s;
+            s = traj.s;
+            C = obj.C;
+            dimx = size(x0,1);
+            if size(s,1) ~= dimx
+                sbar = C'*((C*C')\s);
+            else
+                sbar = s;
+            end
 
             N = length(t)-1;
             x = zeros(length(x0),N+1);

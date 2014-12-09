@@ -1,4 +1,4 @@
-%% Example to test DMP-learning wILC algorithm on linear systems with drift
+%% Example to test tILC algorithm on linear systems with drift
 
 %# store breakpoints
 tmp = dbstatus;
@@ -17,7 +17,7 @@ dbstop(tmp)
 clear tmp
 delete('tmp.mat')
 
-%% Does the same blowup phenomenon occur also for model-free regression WILC?
+%% Basic (model-free) ILC with feedback converges faster
 
 dimx = 2;
 dimu = 1;
@@ -65,12 +65,9 @@ y0 = C * x0;
 yin = [ref(1);0];   
 
 % create trajectory and execute LQR
-traj = lin.generateInputs(t,ref);
-[y,us] = lin.observeWithFeedback(traj,x0);
-
-% create DMP trajectory and execute LQR
-%[traj,dmp] = lin.generateDMP(t,yin,ref);
-%[y,us] = lin.observeWithDMPFeedback(dmp,traj,x0);
+% 1 means error feedback form of lqr
+traj = lin.generateInputs(t,ref,1); 
+[y,us] = lin.observeWithFeedbackErrorForm(traj,x0);
 traj.addPerformance(us,y,lin.COST,'LQR'); 
 
 % or create zero input
@@ -82,23 +79,104 @@ traj.addPerformance(us,y,lin.COST,'LQR');
 % Create an ilc controller
 % create the simpler ilc
 ilc = bILC(traj);
+num_trials = 50;
+
+for i = 1:num_trials
+    
+    uff = ilc.feedforward(traj,y);
+    traj.unom = uff;
+    % get the measurements
+    [y,us] = lin.observeWithFeedbackErrorForm(traj,x0);
+    % add performance
+    traj.addPerformance(uff,y,lin.COST,ilc);
+
+end
+
+lin.plot_inputs(traj);
+lin.plot_outputs(traj);
+
+figure;
+plot(1:num_trials,ilc.error);
+title('Squared-2-Norm of ILC error');
+legend(ilc.name);
+
+%% How does TILC compare with bILC + feedback?
+
+dimx = 2;
+dimu = 1;
+dimy = 1;
+
+% simulation variables
+t0 = 0;
+tf = 1;
+h = 0.02;
+t = t0:h:tf;
+N = length(t)-1;
+numIt = 100;
+
+% system and weighting matrices
+Q = 100;
+R = 1 * eye(dimu);
+% discrete time matrices
+A = [0 1; 1.8 -0.81];
+B = [0;1];
+C = [0 1];
+
+% create the structures
+SIM.discrete = true;
+SIM.dimx = dimx;
+SIM.dimu = dimu;
+SIM.dimy = dimy;
+SIM.h = h;
+SIM.eps = 0;
+SIM.int = 'Euler';
+PAR.Ad = A;
+PAR.Bd = B;
+PAR.C = C;
+CON = [];
+COST.Q = Q;
+COST.R = R;
+lin = Linear(PAR,CON,COST,SIM);
+
+% track smoothed step
+ref = 1./(1+exp(-(100*t-20)/10));
+
+% initialize states and inputs
+x0 = [ref(1);ref(1)];
+y0 = C * x0;
+% create yin with zero velocity
+yin = [ref(1);0];   
+
+% create trajectory and execute LQR
+traj = lin.generateInputs(t,ref,1);
+[y,us] = lin.observeWithFeedbackErrorForm(traj,x0);
+
+% create DMP trajectory and execute LQR
+% [traj,dmp] = lin.generateDMP(t,yin,ref);
+% [y,us] = lin.observeWithDMPFeedback(dmp,traj,x0);
+traj.addPerformance(us,y,lin.COST,'LQR'); 
+
+% or create zero input
+% us = zeros(dimu,N);
+% traj = Trajectory(t,ref,us,[]);
+% y = lin.observe(t,x0,us);
+% traj.addPerformance(us,y,lin.COST,'zeros'); 
+
+% Create an ilc controller
+% create the simpler ilc
+ilc = tILC(traj,lin);
 %ilc = wILC(lin,dmp,traj);
 num_trials = 50;
 
 for i = 1:num_trials
     
-    %traj = ilc.updateTraj(traj,lin,y);
-    uff = ilc.feedforward(traj,y);
-    traj.unom = uff;
+    traj2 = ilc.feedforward(traj,y);
     % update the weights of the dmp
     %ilc.feedforward(dmp,traj,y);
     % get the measurements
-    %y = lin.observe(t,x0,us);
-    % get the measurements
-    [y,us] = lin.observeWithFeedback(traj,x0);
+    [y,us] = lin.observeWithFeedbackErrorForm(traj2,x0);
     %[y,us] = lin.observeWithDMPFeedback(dmp,traj,x0);
-    traj.addPerformance(uff,y,lin.COST,ilc);
-    %traj.addPerformance(us,y,lin.COST,ilc);
+    traj.addPerformance(us,y,lin.COST,ilc);
 
 end
 

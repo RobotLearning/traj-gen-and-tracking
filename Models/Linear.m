@@ -180,7 +180,7 @@ classdef Linear < Model
 
         % create inputs using feedback law
         % ref is the reference trajectory
-        function Traj = generateInputs(obj,t,ref)
+        function Traj = generateInputs(obj,t,ref,varargin)
             
             % check controllability
             obj.assertControllability();
@@ -203,7 +203,12 @@ classdef Linear < Model
             end
             % form sbar 
             sbar = C'*((C*C')\s);
-            [K,uff] = lqr.computeFinHorizonTracking(sbar);
+            
+            if nargin <= 3
+                [K,uff] = lqr.computeFinHorizonTracking(sbar);
+            else
+                [K,uff] = lqr.computeErrorForm(sbar);
+            end
             
             Traj = Trajectory(t,s,uff,K);
         end
