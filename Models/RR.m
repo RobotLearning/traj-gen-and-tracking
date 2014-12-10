@@ -69,7 +69,7 @@ classdef RR < Robot
             obj.CON.link2.udot.min = -Inf;
             
             % check that the input has all the fields
-            assert(all(strcmp(fieldnames(obj.CON), fieldnames(STR))));
+            %assert(all(strcmp(fieldnames(obj.CON), fieldnames(STR))));
             obj.CON = STR;
             
         end 
@@ -142,8 +142,8 @@ classdef RR < Robot
             par.link2.inertia = 1.0 * obj.PAR.link2.inertia;
             par.link1.motor.inertia = 1.0 * obj.PAR.link1.motor.inertia;
             par.link2.motor.inertia = 1.0 * obj.PAR.link2.motor.inertia;
-            par.link1.motor.gear_ratio = 2.0 * obj.PAR.link1.motor.gear_ratio;
-            par.link2.motor.gear_ratio = 2.0 * obj.PAR.link2.motor.gear_ratio;
+            par.link1.motor.gear_ratio = 1.0 * obj.PAR.link1.motor.gear_ratio;
+            par.link2.motor.gear_ratio = 1.0 * obj.PAR.link2.motor.gear_ratio;
             
             
             % differential equation of the inverse dynamics

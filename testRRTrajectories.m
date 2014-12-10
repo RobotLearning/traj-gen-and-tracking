@@ -85,32 +85,12 @@ PAR.C = eye(SIM.dimx);
 %PAR.C = eye(SIM.dimy,SIM.dimx);
 
 % form constraints
-CON.link1.q.max = Inf;
-CON.link1.q.min = -Inf;
-CON.link1.qd.max = Inf;
-CON.link1.qd.min = -Inf;
-CON.link1.qdd.max = Inf;
-CON.link1.qdd.min = -Inf;
-CON.link1.u.max = Inf;
-CON.link1.u.min = -Inf;
-CON.link1.udot.max = 100;
-CON.link1.udot.min = -100;
-CON.link2.q.max = Inf;
-CON.link2.q.min = -Inf;
-CON.link2.qd.max = Inf;
-CON.link2.qd.min = -Inf;
-CON.link2.qdd.max = Inf;
-CON.link2.qdd.min = -Inf;
-CON.link2.u.max = Inf;
-CON.link2.u.min = -Inf;
-CON.link2.udot.max = 100;
-CON.link2.udot.min = -100;
+CON = [];
 
 % cost structure
 % only penalize positions
-% TODO: Q should have dimy dimensions
 COST.Q = 100*diag([1,1,0,0]);
-COST.R = 0.1 * eye(SIM.dimu);
+COST.R = 1 * eye(SIM.dimu);
 
 % initialize model
 rr = RR(PAR,CON,COST,SIM);
@@ -127,7 +107,7 @@ t = tin:h:tfin;
 y_des = 0.4 + 0.2 * t;
 x_des = 0.6 * ones(1,length(t));
 ref = [x_des; y_des]; % displacement profile 
-vel = [diff(ref')', zeros(2,1)]; % TODO: velocity profile is not needed!
+vel = [diff(ref')', zeros(2,1)]; 
 s = [ref; vel];
 traj = rr.generateInputs(t,s);
 
@@ -135,9 +115,11 @@ traj = rr.generateInputs(t,s);
 
 % TODO: add a nonzero friction matrix B
 
-q0 = rr.invKinematics(s(:,1));
-q1 = rr.invKinematics(s(:,2));
+x0 = s(:,1); x1 = s(:,2);
+q0 = rr.invKinematics(x0);
+q1 = rr.invKinematics(x1);
 qd0 = (q1 - q0)/h;
+qd0 = qd0 + 0.01 * randn(2,1);
 % zero initial velocities
 q0 = [q0; qd0];
 % observe output
@@ -158,10 +140,10 @@ rr.animateArm(qact(1:2,:),s(1:2,:));
 
 %% Start learning with ILC
 
-num_trials = 200;
+num_trials = 50;
 
 %ilc = aILC(rr,traj);
-ilc = mILC(rr,traj);
+ilc = mILC(rr,traj); 
 
 for i = 1:num_trials
     % get next inputs

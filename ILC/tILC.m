@@ -24,6 +24,8 @@ classdef tILC < ILC
         Psi
         % weights instead of the trajectory
         w
+        % weights of the derivatives
+        wd
     end
     
     methods
@@ -43,8 +45,13 @@ classdef tILC < ILC
             obj.sbar = C'*((C*C')\traj.s);
             
             obj.Psi = obj.formPsi(N,traj.t(1:N));
-            s = traj.s(:,1:N);
-            obj.w = pinv(obj.Psi) * s(:);
+            s = traj.s(:);
+            obj.w = pinv(obj.Psi) * s(1:N);
+            h = traj.t(2) - traj.t(1);
+            D = diag(ones(1,N),1) - eye(traj.N);
+            D = D(1:end-1,:)/h;
+            %D = flipud(D);
+            obj.wd = pinv(obj.Psi) * D * traj.s(:);
             
         end
         
@@ -60,24 +67,50 @@ classdef tILC < ILC
         
         % basis functions are unscaled gaussians
         function out = basis(obj,t,h,c)
-        out = exp(-h * (t - c).^2);
+            out = exp(-h * (t - c).^2);
         end
         
         % update weights for the trajectory instead
         function traj2 = updateWeights(obj,traj,y)
             
+            h = traj.t(2) - traj.t(1);
             N = traj.N - 1;
             K = traj.K;
-            dev = y - obj.trj;
-            dev = dev(:,2:end);
+            dev = y - obj.trj;            
     
             % set learning rate
             a = 0.5;
-            obj.w = obj.w + a*pinv(obj.Psi)*dev(:);
+            dev2 = dev(:,2:end);
+            obj.w = obj.w + a*pinv(obj.Psi)*dev2(:);
             s = obj.Psi * obj.w;
-            s = [s; traj.s(:,end)]';
+            s = [s; traj.s(:,end)];
             
-            traj2 = Trajectory(traj.t, s, traj.unom,K);
+            traj2 = Trajectory(traj.t, s', traj.unom,K);
+            
+        end
+        
+        % TODO: show that doing regression on derivatives is equivalent
+        function traj2 = updateDerivativeWeights(obj,traj,y)
+            
+            h = traj.t(2) - traj.t(1);
+            N = traj.N - 1;
+            K = traj.K;
+            dev = y - obj.trj; 
+            
+            % set learning rate
+            a = 0.5;
+            
+            % get derivatives
+            D = diag(ones(1,N),1) - eye(traj.N);
+            D = D(1:end-1,:)/h;
+            %D = flipud(D);
+            S = h*[zeros(1,N); tril(ones(N))];
+            %S = flipud(S);
+            obj.wd = obj.wd + a*pinv(obj.Psi)*D*dev(:);
+            sd = obj.Psi * obj.wd;
+            s = traj.s(:,1) + S * sd;            
+            
+            traj2 = Trajectory(traj.t, s', traj.unom,K);
             
         end
         
