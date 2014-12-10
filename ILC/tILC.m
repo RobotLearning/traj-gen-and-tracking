@@ -14,10 +14,16 @@ classdef tILC < ILC
         % costs incurred (Q-SSE)
         error
         
-        % ILC's Last input sequence (in this case a trajectory)
+        % TODO: NOT USED!
         u_last
+        % ILC's Last input sequence (in this case a trajectory)
+        trj
         % initial trajectory's dimension increased
         sbar
+        % Psi matrix used for weight updates
+        Psi
+        % weights instead of the trajectory
+        w
     end
     
     methods
@@ -25,17 +31,36 @@ classdef tILC < ILC
         function obj = tILC(traj,model)
                         
             obj.episode = 0;
-            obj.color = 'b';
+            obj.color = 'k';
             obj.name = 'ILC modifying trajectories';
             obj.error = 0;
             
             N = traj.N - 1;
-            obj.u_last = traj.s;
+            obj.trj = traj.s;
             %s = dmp.evolve();
             %s = s(1,:);
             C = model.C;
             obj.sbar = C'*((C*C')\traj.s);
             
+            obj.Psi = obj.formPsi(N,traj.t(1:N));
+            s = traj.s(:,1:N);
+            obj.w = pinv(obj.Psi) * s(:);
+            
+        end
+        
+        function Psi = formPsi(obj,bfs,t)
+            N = length(t);
+            Psi = zeros(N,bfs);
+            h = ones(bfs,1) * bfs^(1.5);
+            c = linspace(t(1),t(end-1),bfs);
+            for i = 1:bfs
+                Psi(:,i) = obj.basis(t,h(i),c(i));
+            end
+        end
+        
+        % basis functions are unscaled gaussians
+        function out = basis(obj,t,h,c)
+        out = exp(-h * (t - c).^2);
         end
         
         % update weights for the trajectory instead
@@ -43,23 +68,16 @@ classdef tILC < ILC
             
             N = traj.N - 1;
             K = traj.K;
-            dev = y - obj.u_last;
-            %dev = dev(2,:);
-            %h = trj.t(2) - trj.t(1);
-            % get rid of x0 in dev
-            ddev = diff(dev')';
+            dev = y - obj.trj;
             dev = dev(:,2:end);
     
             % set learning rate
-            a_p = 0.5;
-            a_d = 0.2;
-            delta = a_p * dev + a_d * ddev;
+            a = 0.5;
+            obj.w = obj.w + a*pinv(obj.Psi)*dev(:);
+            s = obj.Psi * obj.w;
+            s = [s; traj.s(:,end)]';
             
-            for i = 1:N
-                obj.sbar(:,i) = obj.sbar(:,i) + pinv(K(:,:,i)) * delta(:,i);
-            end
-            
-            traj2 = Trajectory(traj.t, obj.sbar,traj.unom,K);
+            traj2 = Trajectory(traj.t, s, traj.unom,K);
             
         end
         
@@ -68,7 +86,7 @@ classdef tILC < ILC
             
             N = traj.N - 1;
             K = traj.K;
-            dev = y - obj.u_last;
+            dev = y - obj.trj;
             %dev = dev(2,:);
             %h = trj.t(2) - trj.t(1);
             % get rid of x0 in dev
@@ -86,13 +104,6 @@ classdef tILC < ILC
             
             traj2 = Trajectory(traj.t, obj.sbar,traj.unom,K);
             
-        end
-        
-        % override ilc's record method
-        function record(obj,u_applied,cost)            
-            obj.episode = obj.episode + 1;
-            obj.u_last = u_applied;
-            obj.error(obj.episode) = cost;            
         end
         
     end
