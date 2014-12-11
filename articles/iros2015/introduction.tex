@@ -2,62 +2,46 @@
 
 % fill missing citations
 
-Most reaching tasks in control and robotics can be phrased as \emph{tracking} problems, where the dynamical system needs to follow a certain predefined trajectory in order to reach the goal state. Robotic table tennis in particular \cite{Muelling_IJRR_2013} consists of planning, generating and executing a series of such (episodic) single stroke trajectories. These trajectories need to be followed very closely with motor commands in practice, in order to return the ball to the goal position. 
+Most reaching tasks in control and robotics can be phrased as \emph{tracking} problems, where the dynamical system needs to follow a certain predefined trajectory in order to reach the goal state. Robotic table tennis in particular \cite{Muelling13} consists of planning, generating and executing a series of such (episodic) single stroke trajectories. These trajectories need to be followed very closely with motor commands in practice, in order to return the ball to the goal position. 
 
 % maybe cite Jens' review paper
-There have been many attempts in the reinforcement learning (RL) \cite{Sutton98} and control literature to learn robotic tasks directly. Value function based methods in RL take advantage of duality to solve the Bellman's equation but suffer from the initial bias or representation in estimating the value function and do not scale well to high dimensions. Policy search based RL methods directly solve the Bellman's equation in a parameterized policy space and can be much more effective in practice, e.g. in robotics \cite{Kober13}. 
-% maybe missing citations : PILCO, POWER, REPS, PI2, and so on
+There have been many attempts in the reinforcement learning (RL) \cite{Sutton98} and control literature to learn robotic tasks directly. Value function based methods take advantage of duality to solve the Bellman's equation but suffer from the initial bias or representation in estimating the value function and do not scale well to high dimensions. Policy search based RL methods (e.g. \cite{Kober08}, \cite{Peter10}, \cite{Theodorou10}, \cite{Deisenroth11}) directly solve the Bellman's equation in a parameterized policy space and can be more effective in practice \cite{Kober13}. 
 
-% missing citations
 Dynamic Motor Primitives (DMP) are a kind of kinematic policy representation that leverages the dynamical systems approach to modify the spring dynamics with a forcing term that enables it to mimic an executed trajectory. They include an internal phase or clock that ensures the convergence of the motor primitive to a goal state \cite{Ijspeert13}, \cite{Schaal07}. DMPs do not suffer from the curse of dimensionality as the number of parameters (weights) grow linearly with dimension. However, approximation and control errors in robotic platforms make the application of DMPs less useful in practice. Small changes to DMPs can often make them more useful.
-% robotic platforms such as table tennis?
 
-% Taken from the bimanual article
-%They can be used to imitate or generate discrete and periodic trajectories, which can be modulated in various ways.
+Motor primitives can be modulated in different ways to adapt to unforeseen events or to ensure the optimal execution of required tasks. They work particularly well with episodic policy search methods that modify the weights of the forcing term based on the rewards received in every episode. By adapting the DMP that was initialized with imitation learning, e.g. with kinesthetic teach-in \cite{Muelling13}, RL approaches are able to achieve complex robotic tasks, such as ball-in-a-cup \cite{Kober09}. However model-free methods (e.g. \cite{Kober08}, \cite{Peter10}) require many iterations to converge, whereas more data-efficient approaches such as \cite{Deisenroth11} suffer from runtime difficulties and cannot be implemented in real-time robotics tasks. Optimality of the converged policy cannot be guaranteed by these methods.
+% model-free ? PILCO claims to be 'model-based', yet it learns from scratch. It only 'learns' a model, but it is unbiased.
 
-Motor primitives can work well with episodic policy search methods, such as POWER \cite{Kober08}, or REPS \cite{Peter10} that modify the weights based on the rewards in every episode. By adapting the DMP that was initialized with imitation learning, e.g. with kinesthetic teach-in, these model-free methods are able to achieve complex robotic tasks.
-% complex tasks, such as?
-% Katharina's papers come here maybe
-% citation needed - also tone it down a notch?
-% talk about PI2?
-
-The research question that we tackle in this article consists of the following:
+% inaccurate ?
+Inspired by the successes (and failures) of these previous approaches, the research question that we tackle in this article consists of the following:
 
 \begin{itemize}
 \item How can we execute optimally hitting movement primitives either in table tennis or a similar reaching task, e.g. putting in golf.
 
-\item More generally, when we have modelling inaccuracies, how should we modify a DMP $\dmp(t)$ such that the robot executes a desired hitting motion?
+\item More specifically, when we have modelling inaccuracies, how should we modify a DMP $\dmp(t)$ such that the robot executes a desired hitting motion?
 \end{itemize}
 
+% maybe include P. Abbeel's work on inaccurate models
+We believe that learning in robotics tasks can be performed more efficiently by taking advantage of existing imperfect models and optimality issues can be alleviated with given reference trajectories. 
+
 Iterative Learning Control (ILC) is a fundamental approach in control theory developed to track (time-varying) reference trajectories. It has been used successfully to follow trajectories under unknown repeating disturbances and model mismatch \cite{Bristow06}. In ILC, control inputs are adjusted at each episode in a feedforward fashion. The goal is to drive the deviations from the trajectory to zero. 
+% or equivalently references
 
 In this article, we combine Iterative Learning Control (ILC) with movement primitives by using ILC as a learning method to adapt the weights of the DMPs. This way we ensure a safe, reliant and robust way to track reference trajectories, with important applications in optimally hitting and striking motions. As opposed to model-free policy search approaches, we make full use of the known, albeit inexact, robot dynamics and inverse dynamics models, which helps us to quickly achieve the desired performance requirements. We validate the performance of the approach in two hitting tasks, and compare with existing episodic-RL approaches.
 % nominal model instead of known, albeit inexact?
 
-Finally our contributions can be summarized as follows:
+Our contributions can be summarized as follows:
 
 \begin{itemize}
-\item We form a link between the ILC literature and the motor primitive literature by systematically formulating an iterative update of the dynamic motor primitives.
+\item We form a link between the ILC literature and the motor primitives by systematically formulating an iterative update of the DMP weights.
 
-\item We form the first coherent framework where some of the biggest advantages of using Dynamic Movement Primitives are leveraged in the feedforward update rule.
+\item We form the first coherent framework where some of the biggest advantages of using DMPs are leveraged in the feedforward update rule.
 
 \item We come up with a new ILC algorithm \emph{wILC} that performs better than existing RL approaches in two hitting tasks, putting and table tennis.
-% rewrite this
 
 \end{itemize}
 
-In section~\ref{relatedWork} we mention related work especially the state-of-the-art approaches in hitting and reaching tasks. In section~\ref{problemStatement} we state the problem and introduce our method, relating it to the Newton's method based ILC approaches. In section~\ref{results} we evaluate our method in two robotic reaching tasks: putting motion in golf and the hitting motions in table tennis. We show that the method outperforms the state-of-the-art RL-based approaches REPS and PI2. Finally in section~\ref{conclusion} we discuss the strengths and weaknesses of our method and conclude with brief mentions of promising future research directions.
-
-% Optimal Striking
-% Talk about reinforcement learning
-% Episodic setup - 'motor task consisting of a single stroke'
-% Policy search methods
-% DMPs
-% Jens says : Dmps are a time-variant policy representation as they have an internal phase which corresponds to a clock with additional flexibility
-% (e.g., for incorporating coupling effects, perceptual influences, etc.)
-% Adapting DMPs
-% Gait tracking
-% Advantages of ILC Framework over Policy search 
+In section~\ref{relatedWork} we mention related work, especially the state of the art approaches in hitting and reaching tasks. In section~\ref{problemStatement} we state the problem and introduce our method, relating it to the existing optimization-based ILC approaches. We formulate the algorithm \emph{wILC} in section~\ref{algorithm} In section~\ref{results} we evaluate our method in two robotic reaching tasks: putting motion in golf and the striking motions in table tennis. We show that the method outperforms the state-of-the-art RL-based approaches REPS and PI2. Finally in section~\ref{conclusion} we discuss the strengths and weaknesses of our method and conclude with brief mentions of promising future research directions.
 
 \section{RELATED WORK}\label{relatedWork}
 

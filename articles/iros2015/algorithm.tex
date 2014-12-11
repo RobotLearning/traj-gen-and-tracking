@@ -1,4 +1,4 @@
-\section{Algorithm}
+\section{Algorithm}\label{algorithm}
 
 We use the update law derived in \eqref{ILCWeightedRidgeRegression} in our algorithm, given in Algorithm~\ref{alg1}. We initialize the algorithm $\alg$ with the necessary weighting and transition matrices. The transition matrix $A_{\fullvec}$ is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs $\nu$ are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using weighted regression on the reference trajectory.
 
