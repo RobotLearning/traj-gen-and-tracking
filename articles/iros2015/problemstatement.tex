@@ -1,10 +1,238 @@
-\section{Problem Statement}
+\section{PROBLEM STATEMENT}\label{problemStatement}
 
-\subsection{Selecting a Template (Heading 2)}
+As stated in the introduction, our goal in this work is to track a given reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$. Consider the nonlinear robot dynamics of the form
 
-First, confirm that you have the correct template for your paper size. This template has been tailored for output on the US-letter paper size. 
-It may be used for A4 paper size if the paper size setting is suitably modified. 
+\begin{equation}
+\begin{aligned}
+\ddot{\joint} &= \dynamics(\joint,\dot{\joint},\sysInput) \\
+\ddot{\joint} &= M^{-1}(\joint)\{ \tau(\sysInput) - C(\joint,\dot{\joint})\dot{\joint} - G(\joint)\} + \dist(\joint,\dot{\joint})\\
+\end{aligned}
+\label{dynamics}
+\end{equation}
 
-\subsection{Maintaining the Integrity of the Specifications}
+\noindent where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$~\footnote{Nominal inputs $\sysInput_{\mathrm{IDM}} = \nu(t)$ can be calculated using the inverse dynamics model.} to obtain the following linear time varying (LTV) representation
 
-The template is used to format your paper and style the text. All margins, column widths, line spaces, and text fonts are prescribed; please do not alter them. You may note peculiarities. For example, the head margin in this template measures proportionately more than is customary. This measurement and others are deliberate, using specifications that anticipate your paper as one part of the entire proceedings, and not as an independent document. Please do not revise any of the current designations.
+\begin{equation}
+\begin{aligned}
+\dot{\error} = A(t)\error(t) + B(t)\linInput(t) + \linDist(t,\sysInput)
+\end{aligned}
+\label{LTV}
+\end{equation}
+
+\noindent where $\error(t) = \state(t) - \traj(t)$, $\state = [\joint,\dot{\joint}]^{\mathrm{T}}$, $\linInput(t) = \sysInput(t) - \trjInput(t)$ and the time varying matrices are
+
+\begin{equation}
+\begin{aligned}
+A(t) &= \at{\frac{\partial{\dynamics}}{\partial{\state}}}{(\traj(t),\trjInput(t))} \\
+B(t) &= \at{\frac{\partial{\dynamics}}{\partial{\sysInput}}}{(\traj(t),\trjInput(t))}
+\end{aligned}
+\label{LTVmatrices}
+\end{equation}
+
+\noindent In \eqref{LTV} the additional term $\linDist(t,\sysInput)$ are due to the disturbances and the effects of the linearization. We can discretize (\ref{LTV}-\ref{LTVmatrices}) with step size $\Delta t$, $N = T/\Delta$ and step index $j = 1, \ldots, N$ to get the following discrete linear system
+
+\begin{equation}
+\begin{aligned}
+\error(j+1) = A^{D}(j)\error(j) + B^{D}(j)\linInput(j) + \linDist(j, \sysInput(1), \ldots, \sysInput(j))
+\end{aligned}
+\label{discreteLTV}
+\end{equation}
+
+Sometimes for safety reasons~\footnote{For instance, when interacting with external objects or under unforeseen perturbations \cite{Schaal07}.} a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases, it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
+
+In this work we focus on modifying the parameters or the weights of the dynamic motor primitives (DMP), which acts as a \emph{kinematic policy} $\dmp(t) = [\joint_{\text{des}},\dot{\joint}_{\text{des}}]^{\mathrm{T}}$. For a linear time-varying system under a given linear feedback law $\linInput = -K_u(\state - \dmp)$ we consider the following transition dynamics
+
+\begin{IEEEeqnarray}{rCl}
+%\footnotesize
+\arraycolsep=3pt
+\medmuskip = 1mu
+\begin{aligned}
+ \dot{\fullvec} = 
+ \begin{bmatrix}
+  \dot{\state} \\
+  \dot{\traj} \\
+  \dot{\dmp} \\
+  \dot{g}
+ \end{bmatrix} = 
+ &\underbrace{\begin{bmatrix}
+  A_q(t) - B_q(t)K_u & 0 & B_q(t)K_u & 0 \\
+  0 & 0 & 0 & \nu(t) \\
+  0  & 0  & A_s & A_g  \\
+  0 & 0 & 0 & 0
+ \end{bmatrix}}_{A_{\fullvec}}
+ \begin{bmatrix}
+   \state \\
+   \traj \\
+   \dmp \\
+   g
+  \end{bmatrix} \\
+  &+ \underbrace{\begin{bmatrix}
+    0 \\
+    0 \\
+    \basis(\phase) \\
+    0
+   \end{bmatrix}}_{B_{\fullvec}} \weights + \linDist(t,\weights)
+\end{aligned}
+\label{fullTransition}
+\end{IEEEeqnarray}
+
+where the phase $\phase$ evolves according to
+
+\begin{equation}
+\dot{\phase} = -\tau\alpha\phase
+\label{phase}
+\end{equation}
+
+The constants $\tau$ and $\alpha$ determine the scaling and settling time respectively. $A_s$ and $A_g$ matrices include the spring constants that drive the DMP to the goal state $g$.
+% this needs to be rephrased perhaps.
+
+If we introduce for this enlarged vector $\fullvec$ the following cost functional as our optimality criterion
+
+\begin{IEEEeqnarray}{rCl}
+\begin{aligned}
+J(\weights) =& \int_{0}^{T} (\state - \traj)^{\mathrm{T}}Q(\state - \traj) + \weights^{\mathrm{T}}R_w\weights \ \mathrm{d}t \ + \\ & \ (\state_T-\traj_T)^{\mathrm{T}}Q_{T}(\state_T-\traj_T) 
+\end{aligned}
+\label{cost2}
+\end{IEEEeqnarray}
+
+we can apply a weight-update form of the ILC update law \cite{Bristow06}
+
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} = \qmatrix(\weights_{k} - \lmatrix\error_{k})
+\end{aligned}
+\label{ILCupdateFormWeights}
+\end{equation}
+
+To do this, we discretize \eqref{cost2} an stack the vectors together to get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}
+
+\begin{equation}
+\begin{aligned}
+\ValueFunction_L &= \error_L^{\mathrm{T}}Q_L\error_L + \weights^{\mathrm{T}}R_w\weights
+\end{aligned}
+\label{costFunctionalWeights}
+\end{equation}
+
+where the lifted output $\error_L$ can be written as the lifted output matrix $C_L$ times the lifted state vector $\fullvec_L$
+
+\begin{equation}
+\begin{aligned}
+\error_L &= C_L \fullvec_L \\
+C_L &= 
+  \begin{bmatrix}
+   C & 0 & \cdots & 0 \\
+   0 & C & \cdots & 0 \\
+   \vdots  & \vdots  & \ddots & \vdots  \\
+   0 & 0 & \cdots & C
+  \end{bmatrix} \\
+C &= \begin{bmatrix}
+  I_{2n} & -I_{2n} & 0_{2n} & 0
+ \end{bmatrix}
+\end{aligned}
+\label{outputWeights}
+\end{equation}
+
+\noindent and where $Q_L, R_L \in \mathbb{R}^{N \times N}$ are of the following form
+
+\begin{equation*}
+\begin{aligned}
+ Q_L &= 
+ \begin{bmatrix}
+  Q & 0 & \cdots & 0 \\
+  0 & Q & \cdots & 0 \\
+  \vdots  & \vdots  & \ddots & \vdots  \\
+  0 & 0 & \cdots & Q_T
+ \end{bmatrix} \\
+ R_L &= 
+  \begin{bmatrix}
+   R & 0 & \cdots & 0 \\
+   0 & R & \cdots & 0 \\
+   \vdots  & \vdots  & \ddots & \vdots  \\
+   0 & 0 & \cdots & R
+  \end{bmatrix}
+\end{aligned}
+\end{equation*}
+
+Notice that now the weighting matrix $R_w \in \mathbb{R}^{m \times m}$ where $m$ is the number of basis functions used in the controls matrix $B_{\fullvec}$ or equivalently $m = \text{rank}(B_{\fullvec})$.
+
+Gradient descent of \eqref{costFunctionalWeights} can be put in this form \eqref{ILCupdateFormWeights}
+
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \frac{\beta_k}{2} \at{\frac{\partial{\ValueFunction_L}}{\partial{\weights}}}{\weights_k} \\
+\frac{1}{2}\frac{\partial{\ValueFunction_L}}{\partial{\weights}} &= \frac{\partial{\error_L}}{\partial{\weights}}Q_L\error_L + R_{\weights}\weights \\
+\weights_{k+1} &= (I - \beta_kR_{\weights})\weights_k - \beta_k\frac{\partial{\fullvec_L}}{\partial{\weights}}\at{\frac{\partial{\error_L}}{\partial{\fullvec_L}}}{\fullvec_k}Q_L\error_k
+\end{aligned}
+\label{ILCgradientDescentWeights}
+\end{equation}
+
+If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist_L}}{\partial{\weights}} = 0$ we can rewrite \eqref{ILCgradientDescentWeights} as
+
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} = (I - \beta_kR_{\weights})\weights_k - \beta_kF_{\weights}^\mathrm{T}Q_L\error_k
+\end{aligned}
+\label{ILCgradientDescentWeights2}
+\end{equation}
+
+where the \emph{weight-to-output matrix} $F_{\weights}$ is defined as
+
+\begin{equation}
+\begin{aligned}
+\error_L &= F_{\weights}\weights + \linDist_L \\
+\frac{\partial{\error_L}}{\partial{\weights}} &= F_{\weights}^{\mathrm{T}} = \frac{\partial{\fullvec_L}}{\partial{\weights}}C_L^{\mathrm{T}} = 1_{m\times Nm}\tilde{F}_{\weights}^{\mathrm{T}}C_L^{\mathrm{T}} \\
+(\tilde{F}_{\weights})_{(i,j)} &= \left \{
+\begin{array}{cc}
+A^{D}_{\fullvec}(i-1)\ldots A^{D}_{\fullvec}(j)B^{D}_{\fullvec}(j-1), & j < i \\ 
+B^{D}_{\fullvec}(j-1), & j = i \\
+0, & j > i 
+\end{array} \right. \\
+1_{m\times Nm} &= \begin{bmatrix}
+  I_{m} & I_{m} & \ldots & I_{m}
+ \end{bmatrix}
+\end{aligned}
+\label{weightToOutputMatrix}
+\end{equation}
+
+The matrix $1_{m\times Nm}$ appears in \eqref{weightToOutputMatrix} because the weight vector $\weights$ is not dynamic, as opposed to the feedback inputs $\linInput$.
+
+% check numerical optimization book - is this really LM?
+
+The following \emph{Levenberg-Marquardt} (LM) type ILC law updates the weights
+
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \beta_k\Big(\frac{\partial^{2}\ValueFunction_L}{\partial\weights^{2}}\Big)^{-1}\at{\frac{\partial{\ValueFunction_L}}{\partial{\weights}}}{\weights_k} \\
+\frac{\partial^{2}\ValueFunction_L}{\partial\weights^{2}} &= \frac{\partial}{\partial\weights}\{F_{\weights}^{\mathrm{T}}Q_L\error_L + R_{\weights}\weights\} = F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights} \\
+\weights_{k+1} &= \weights_k - \beta_k(F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights})^{-1}F_{\weights}^{\mathrm{T}}Q_L\error_k
+\end{aligned}
+\label{ILCWeightsNewtonsMethod}
+\end{equation}
+
+assuming again that $\beta_k(F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights})^{-1}R_{\weights} \approx 0$. Expanding the terms in the weight-to-output matrix $F_{\weights}$
+
+\begin{equation}
+\begin{aligned}
+F_{\weights} &= \begin{bmatrix}
+  0_{2n \times m} & B_{\joint}(2)K_{\sysInput}\basis_{1} & \ldots
+ \end{bmatrix}^{\mathrm{T}}
+\end{aligned}
+\label{weightToOutputMatrixExpanded}
+\end{equation}
+
+we can rewrite \eqref{ILCWeightsNewtonsMethod} as
+
+% show this properly!
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \beta_k(\Phi^{\mathrm{T}}W(t)\Phi + R_{\weights})^{-1}\Phi^{\mathrm{T}}W(t)\error_k \\
+\Phi &= \begin{bmatrix}
+  \basis_1 & \basis_2 & \ldots & \basis_N
+ \end{bmatrix}
+\end{aligned}
+\label{ILCWeightedRidgeRegression}
+\end{equation}
+
+% definitely reference needed for regression based weight update
+Notice the connection of \eqref{ILCWeightedRidgeRegression} with the weight update law based on ridge regression where the weighting matrix is the identity matrix. In this case the model-based assumptions of our approach appear in the form of a nondiagonal weighting matrix, i.e. we perform the regression update using a different metric.
+% model based update-law
