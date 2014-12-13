@@ -1,6 +1,6 @@
 \section{PROBLEM STATEMENT}\label{problemStatement}
 
-As stated in the introduction, our goal in this work is to track a given reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$. Consider the nonlinear robot dynamics of the form
+As stated in the introduction, our goal in this work is to track a given reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$. The reference trajectory enables the optimal execution of hitting and striking motions. Consider the nonlinear robot dynamics of the form
 
 \begin{equation}
 \begin{aligned}
@@ -10,7 +10,7 @@ As stated in the introduction, our goal in this work is to track a given referen
 \label{dynamics}
 \end{equation}
 
-\noindent where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\nu(t)$~\footnote{Nominal inputs $\sysInput_{\mathrm{IDM}} = \nu(t)$ can be calculated using the inverse dynamics model.} to obtain the following linear time varying (LTV) representation
+\noindent where on the right hand side are the terms due to the rigid body dynamics model and $\dist(\joint,\dot{\joint})$ are the (unmodeled) disturbances that act on the robot, such as viscous friction, stiction, etc. This system can be linearized around a given joint space trajectory $\traj(t), \ 0 \leq t \leq T$ with nominal inputs $\trjInput(t)$ calculated using the inverse dynamics model. We then obtain the following linear time varying (LTV) representation
 
 \begin{equation}
 \begin{aligned}
@@ -19,7 +19,7 @@ As stated in the introduction, our goal in this work is to track a given referen
 \label{LTV}
 \end{equation}
 
-\noindent where $\error(t) = \state(t) - \traj(t)$, $\state = [\joint,\dot{\joint}]^{\mathrm{T}}$, $\linInput(t) = \sysInput(t) - \trjInput(t)$ and the time varying matrices are
+\noindent where the state error is denoted as $\error(t) = \state(t) - \traj(t)$, the joint angles and velocities are $\state = [\joint,\dot{\joint}]^{\mathrm{T}}$, $\linInput(t) = \sysInput(t) - \trjInput(t)$ and the time varying matrices are
 
 \begin{equation}
 \begin{aligned}
@@ -29,7 +29,8 @@ B(t) &= \at{\frac{\partial{\dynamics}}{\partial{\sysInput}}}{(\traj(t),\trjInput
 \label{LTVmatrices}
 \end{equation}
 
-\noindent In \eqref{LTV} the additional term $\linDist(t,\sysInput)$ are due to the disturbances and the effects of the linearization. We can discretize (\ref{LTV}-\ref{LTVmatrices}) with step size $\Delta t$, $N = T/\Delta$ and step index $j = 1, \ldots, N$ to get the following discrete linear system
+% what about estimation errors, i.e. sensor errors ...
+\noindent In the error dynamics \eqref{LTV} the additional term $\linDist(t,\sysInput)$ accounts for the disturbances and the effects of the linearization. We can discretize (\ref{LTV}-\ref{LTVmatrices}) with step size $\Delta$, $N = T/\Delta$ and step index $j = 1, \ldots, N$ to get the following discrete linear system
 
 \begin{equation}
 \begin{aligned}
@@ -38,9 +39,18 @@ B(t) &= \at{\frac{\partial{\dynamics}}{\partial{\sysInput}}}{(\traj(t),\trjInput
 \label{discreteLTV}
 \end{equation}
 
-Sometimes for safety reasons~\footnote{For instance, when interacting with external objects or under unforeseen perturbations \cite{Schaal07}.} a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant or one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases, it is not possible to modify the input signals $\sysInput_L$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
+where the matrices $A^{D}, B^{D}$ are the discretizations of \eqref{LTVmatrices}. 
 
-In this work we focus on modifying the parameters or the weights of the dynamic motor primitives (DMP), which acts as a \emph{kinematic policy} $\dmp(t) = [\joint_{\text{des}},\dot{\joint}_{\text{des}}]^{\mathrm{T}}$. For a linear time-varying system under a given linear feedback law $\linInput = -K_u(\state - \dmp)$ we consider the following transition dynamics
+Sometimes for safety reasons, for instance when interacting with external objects or under unforeseen perturbations \cite{Schaal07}, a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant. As another practical restriction, one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases, it is not possible to modify the input signals $\sysInput$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
+
+In this work we focus on modifying the parameters or the weights of the dynamic movement primitives (DMP) $\dmp(t) = [\joint_{\text{des}},\dot{\joint}_{\text{des}}]^{\mathrm{T}}$. An initial DMP might be constructed out of a given optimal reference trajectory $\traj(t)$ using regression or locally weighted regression techniques \cite{Ijspeert13}. Representing a reference trajectory with movement primitives has some benefits: nonsmooth parts of the trajectory can be filtered, time and scaling invariance of the differential equations can be used to adapt the trajectory to task changes and robustness to goal position and velocities can be ensured.
+
+% detail how the dmp is constructed
+% talk about goal position and velocities 
+
+For the the linearization of the robot dynamics \eqref{dynamics} under a given linear feedback law $\linInput = -K(\state - \dmp)$ we consider the addition of the movement primitive dynamics to \eqref{LTV} 
+
+% what about uff = u_IDM
 
 \begin{IEEEeqnarray}{rCl}
 %\footnotesize
@@ -83,10 +93,9 @@ where the phase $\phase$ evolves according to
 \label{phase}
 \end{equation}
 
-The constants $\tau$ and $\alpha$ determine the scaling and settling time respectively. $A_s$ and $A_g$ matrices include the spring constants that drive the DMP to the goal state $g$.
-% this needs to be rephrased perhaps.
+The constants $\tau$ and $\alpha$ determine the scaling and settling time respectively. $A_s$ and $A_g$ matrices include the spring constants that drive the DMP to the goal states $g$. The system matrices $A_\joint$ and $B_\joint$ ensure the coupling of the DMP to the states. Reference trajectory $r(t)$ moves with a given velocity $\nu(t)$.
 
-If we introduce for this enlarged vector $\fullvec$ the following cost functional as our optimality criterion
+By incorporating the reference trajectory $\traj$ into the extended dynamics vector $\fullvec$, we can consider optimality criteria as a function of state $\fullvec$ only. If we introduce the following cost functional as our optimality criterion
 
 \begin{IEEEeqnarray}{rCl}
 \begin{aligned}
@@ -104,7 +113,7 @@ we can apply a weight-update form of the ILC update law \cite{Bristow06}
 \label{ILCupdateFormWeights}
 \end{equation}
 
-To do this, we discretize \eqref{cost2} an stack the vectors together to get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}
+The index $k = 0, 1, \ldots$ denotes the iteration number. To get the weight update law \eqref{ILCupdateFormWeights} we discretize \eqref{cost2} and stack the vectors together to get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}
 
 \begin{equation}
 \begin{aligned}
@@ -113,7 +122,7 @@ To do this, we discretize \eqref{cost2} an stack the vectors together to get the
 \label{costFunctionalWeights}
 \end{equation}
 
-where the lifted output $\error_L$ can be written as the lifted output matrix $C_L$ times the lifted state vector $\fullvec_L$
+where the error as the lifted output $\error_L = (\error_1, \error_2, \ldots, \error_N)$ can be written as the lifted output matrix $C_L$ times the lifted state vector $\fullvec_L$
 
 \begin{equation}
 \begin{aligned}
@@ -126,13 +135,13 @@ C_L &=
    0 & 0 & \cdots & C
   \end{bmatrix} \\
 C &= \begin{bmatrix}
-  I_{2n} & -I_{2n} & 0_{2n} & 0
+  I_{2n} & -I_{2n} & 0_{2n} & 0_{2n}
  \end{bmatrix}
 \end{aligned}
 \label{outputWeights}
 \end{equation}
 
-\noindent and where $Q_L, R_L \in \mathbb{R}^{N \times N}$ are of the following form
+\noindent and where $Q_L \in \mathbb{R}^{N \times N}$ is of the following form
 
 \begin{equation*}
 \begin{aligned}
@@ -142,18 +151,11 @@ C &= \begin{bmatrix}
   0 & Q & \cdots & 0 \\
   \vdots  & \vdots  & \ddots & \vdots  \\
   0 & 0 & \cdots & Q_T
- \end{bmatrix} \\
- R_L &= 
-  \begin{bmatrix}
-   R & 0 & \cdots & 0 \\
-   0 & R & \cdots & 0 \\
-   \vdots  & \vdots  & \ddots & \vdots  \\
-   0 & 0 & \cdots & R
-  \end{bmatrix}
+ \end{bmatrix}
 \end{aligned}
 \end{equation*}
 
-Notice that now the weighting matrix $R_w \in \mathbb{R}^{m \times m}$ where $m$ is the number of basis functions used in the controls matrix $B_{\fullvec}$ or equivalently $m = \text{rank}(B_{\fullvec})$.
+Notice that the weighting matrix $R_w \in \mathbb{R}^{m \times m}$ where $m$ is the number of basis functions used in the controls matrix $B_{\fullvec}$ or equivalently $m = \text{rank}(\basis)$.
 
 Gradient descent of \eqref{costFunctionalWeights} can be put in this form \eqref{ILCupdateFormWeights}
 
@@ -211,6 +213,7 @@ The following \emph{Levenberg-Marquardt} (LM) type ILC law updates the weights
 
 assuming again that $\beta_k(F_{\weights}^{\mathrm{T}}Q_LF_{\weights} + R_{\weights})^{-1}R_{\weights} \approx 0$. Expanding the terms in the weight-to-output matrix $F_{\weights}$
 
+% show this properly, expand it
 \begin{equation}
 \begin{aligned}
 F_{\weights} &= \begin{bmatrix}
@@ -222,17 +225,16 @@ F_{\weights} &= \begin{bmatrix}
 
 we can rewrite \eqref{ILCWeightsNewtonsMethod} as
 
-% show this properly!
 \begin{equation}
 \begin{aligned}
 \weights_{k+1} &= \weights_k - \beta_k(\Phi^{\mathrm{T}}W(t)\Phi + R_{\weights})^{-1}\Phi^{\mathrm{T}}W(t)\error_k \\
 \Phi &= \begin{bmatrix}
-  \basis_1 & \basis_2 & \ldots & \basis_N
- \end{bmatrix}
+  \basis_1^{T} & \basis_2^{T} & \ldots & \basis_N^{T}
+ \end{bmatrix}^{T}
 \end{aligned}
-\label{ILCWeightedRidgeRegression}
+\label{ILCRegression}
 \end{equation}
 
-% definitely reference needed for regression based weight update
-Notice the connection of \eqref{ILCWeightedRidgeRegression} with the weight update law based on ridge regression where the weighting matrix is the identity matrix. In this case the model-based assumptions of our approach appear in the form of a nondiagonal weighting matrix, i.e. we perform the regression update using a different metric.
-% model based update-law
+% online regression methods? are they discussed in the given reference?
+Notice the connection of \eqref{ILCRegression} with the online regression methods performed on the DMP weights \cite{Ijspeert13}. In model-free approaches the weighting matrix $W(t)$ is taken as the identity matrix. In our case the model-based assumptions of our approach appear in the form of a nondiagonal weighting matrix, i.e. we perform regression in a predictive metric space. Compared with the \emph{credit-assignment} issues of RL algorithms, we see that ILC, equipped with our linearized models, offers us a more principled way to assign errors to the weights of the movement primitives.
+% predictive metric space? does it exist?

@@ -4,7 +4,7 @@
 
 %\documentclass[a4paper, 10pt, conference]{ieeeconf}      % Use this line for a4 paper
 
-%\IEEEoverridecommandlockouts % This command is only needed if you want to use the \thanks command
+\IEEEoverridecommandlockouts % This command is only needed if you want to use the \thanks command
 
 \overrideIEEEmargins % Needed to meet printer requirements.
 
@@ -52,7 +52,7 @@
 
 \newcommand{\sysInput}{u} % used to denote the system inputs
 \newcommand{\linInput}{\tilde{u}} % denotes the LTV inputs
-\newcommand{\trjInput}{\nu} % denotes the inputs on the trajectory
+\newcommand{\trjInput}{\sysInput_{\mathrm{IDM}}} % denotes the inputs on the trajectory (calculated using IDM)
 
 
 % % % % DMP terminology % % % %
@@ -113,7 +113,7 @@ Optimal Striking Movement Generation \& Representation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 
-Motivated by the recent advances of Reinforcement Learning (RL) applications in complex robotics tasks we consider in this article the movement generation and representation of optimal striking motions. More precisely, we present an Iterative Learning Control \cite{Bristow06} based approach to track reference trajectories by adapting the weights of dynamic movement primitives. This way, unlike the existing RL approaches, we ensure the optimality of the converged kinematic policies. We show the performance of the approach in two hitting tasks: generating the putting motions in golf and striking motions in robotic table tennis.
+Motivated by the recent advances of Reinforcement Learning (RL) applications in complex robotics tasks we consider in this article the movement generation and representation of optimal striking motions. More precisely, we present an Iterative Learning Control \cite{Bristow06} based approach to track reference trajectories by adapting the weights of Dynamic Movement Primitives. This way, unlike the existing RL approaches, we ensure the optimality of the converged kinematic policies. We show the performance of the approach in two hitting tasks: execution of the putting motions in golf and striking motions in table tennis with an anthropomorphic robot arm.
 
 \end{abstract}
 

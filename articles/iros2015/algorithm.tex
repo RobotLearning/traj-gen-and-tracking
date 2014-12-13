@@ -1,20 +1,23 @@
 \section{Algorithm}\label{algorithm}
 
-We use the update law derived in \eqref{ILCWeightedRidgeRegression} in our algorithm, given in Algorithm~\ref{alg1}. We initialize the algorithm $\alg$ with the necessary weighting and transition matrices. The transition matrix $A_{\fullvec}$ is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs $\nu$ are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using weighted regression on the reference trajectory.
+We use the update law derived in \eqref{ILCRegression} in our algorithm, given in Algorithm~\ref{alg1}. LM-type update law enables us to take advantage of the superlinear order of convergence property of Newton's method based descent methods while ensuring some degree of robustness on the nonrepeating disturbances in \eqref{fullTransition} arising from model mismatch and other unpredictable environmental conditions. Depending on the task and models available, weighting matrices $Q_L$ and $R_\weights$ can be varied as desired. Iteration dependent matrices will ensure that performance does not degrade, as one can reduce the weight matrix $R_\weights$ as the errors get smaller. We discuss this additional degree of freedom of the algorithm in more detail in section \ref{experiments}.
 
-% notice the stability of the approach compared to iLQR methods where the reference trajectory and the nominal inputs are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative linear optimal control approaches.
+%We initialize the algorithm $\alg$ with the necessary weighting and transition matrices. The transition matrix $A_{\fullvec}$ is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using regression on the reference trajectory.
+
+% maybe reference needed
+Notice the stability of the approach compared to iLQR methods where the reference trajectory $\traj$ and the nominal inputs $\sysInput_{IDM}$ are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative optimal control approaches. However under high mismatch cases where the weight-to-output matrix $F_\weights$ is not accurate, the descent direction might not be estimated and exploration in joint space might be necessary. We leave the extension of our work to such difficult settings for future work.
 
 \begin{algorithm}[tb]
    \caption{\alg}
    \label{alg1}
 \begin{algorithmic}
-   \STATE {\bfseries Input:} $\threshold > 0$, $\beta > 0$, $Q_L, R_{\weights} \succeq 0$, $A_{\fullvec}$, $\ \traj = \{\traj_0, \traj_1, \ldots, \traj_N \}$, $\ \nu = \sysInput_{\mathrm{IDM}} = \{\nu_0, \nu_1, \ldots, \nu_N \}$
-   \STATE Initialize $k = 1$, $\dmp(\weights) = \dmp(\weights_0)$, $\beta_k = \beta$
+   \STATE {\bfseries Input:} $\threshold > 0$, $\beta_k > 0$, $Q_L, R_{\weights} \succeq 0$, $A_{\fullvec}$, $\ \traj = (\traj_1, \traj_2, \ldots, \traj_N)$, $\ \sysInput_{\mathrm{IDM}} = (\nu_1, \nu_2, \ldots, \nu_N)$
+   \STATE Initialize $k = 1$, $\dmp(\weights) = \dmp(\weights_0)$
    \REPEAT 
  	   \STATE Run controller $\ddot{\joint} = \dynamics(\joint,\dot{\joint},\sysInput)$ %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
  	   \STATE Observe $\error_k = \state_k - \traj$
  	   \STATE Compute $\ValueFunction_k$ = $\error_k^{\mathrm{T}}Q_L\error_k + \weights^{\mathrm{T}}R_w\weights$
- 	   \STATE Form $W(t)$ from $A_{\fullvec}$, $Q_L$
+ 	   \STATE Form $W(t)$ using $A_{\fullvec}$, $Q_L$
  	   \STATE Update weights $\weights \leftarrow \weights - \beta_k(\Phi^{\mathrm{T}}W\Phi + R_{\weights})^{-1}\Phi^{\mathrm{T}}W\error_L$
  	   \STATE $k \leftarrow k + 1$
    \UNTIL{$\ValueFunction_k < \threshold$}
