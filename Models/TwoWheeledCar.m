@@ -113,11 +113,13 @@ classdef TwoWheeledCar < Model
             % change parameters
             par.wheel1.radius = 1.1 * obj.PAR.wheel1.radius;
             par.wheel2.radius = 0.9 * obj.PAR.wheel2.radius;
-            par.length = obj.PAR.length;
+            par.length = 1.0 * obj.PAR.length;
+            % time varying drift on the angle
+            %a = 1*[0;0;1];
             
             % differential equation of the inverse dynamics
-            % x_dot = B(x)u
             x_dot = robotTwoWheelsKinematics(t,x,u,par,false);
+            %x_dot = robotTwoWheelsKinematics(t,x,u,par,false) + a*sin(2*pi*t);
             
         end
                            

@@ -97,7 +97,7 @@ TW.animate(xact,s(1:2,:));
 
 %% Iterative Learning Control
 
-num_trials = 10;
+num_trials = 5;
 %ilc = aILC(TW,Traj);
 ilc = mILC(TW,traj);
 y = TW.evolve(t,x0,traj.unom);

@@ -1,28 +1,6 @@
-%% Simulate trajectories for the planar RR arm
-%
-% TODO: Investigate the following
-%
-% Other models (RRR arm, ...)
-% Other mismatches (parametric, friction, ...)
-% Adding feedback 
-% slow down with DMP 
+%% Test Putting with underactuated RR arm
 
-%# store breakpoints
-tmp = dbstatus;
-save('tmp.mat','tmp')
-
-%# clear all
-close all
-clear classes %# clears even more than clear all
-clc
-
-%# reload breakpoints
-load('tmp.mat')
-dbstop(tmp)
-
-%# clean up
-clear tmp
-delete('tmp.mat')
+clc; clear; close all;
 
 %% Define constants and parameters
 
@@ -103,8 +81,10 @@ rr = RR(PAR,CON,COST,SIM);
 h = SIM.h;
 tin = 0; tfin = 1;
 t = tin:h:tfin;
-y_des = 0.4 + 0.2 * t;
-x_des = 0.6 * ones(1,length(t));
+theta = pi/6 * ((t <= 0.5).*t + (t > 0.5).*(1-t));
+rad = l1 + l2;
+y_des = rad * sin(theta);
+x_des = rad * cos(theta);
 ref = [x_des; y_des]; % displacement profile 
 traj = rr.generateInputs(t,ref);
 
@@ -119,32 +99,6 @@ q0 = traj.s(:,1);
 y = rr.evolve(t,q0,traj.unom);
 % add performance to trajectory
 traj.addPerformance(traj.unom,y,rr.COST,'Inverse Dynamics');
-
-% Plot the controls and animate the robot arm
-rr.plot_inputs(traj);
-rr.plot_outputs(traj);
-rr.animateArm(y(1:2,:),ref);
-
-%% Start learning with ILC
-
-num_trials = 10;
-
-%ilc = aILC(rr,traj);
-ilc = mILC(rr,traj); 
-
-for i = 1:num_trials
-    % get next inputs
-    u = ilc.feedforward(traj,y);
-    %u = ilc.feedforward(traj,rr,dev);
-    % evolve system
-    y = rr.evolve(t,q0,u);
-    % get the cartesian coordinates
-    %[~,y] = rr.kinematics(qact(1:2,:));
-    % add performance to trajectory
-    traj.addPerformance(u,y,rr.COST,ilc);
-    % Plot the controls and animate the robot arm
-    %rr.animateArm(q_act(1:2,:),s(1:2,:));
-end
 
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);

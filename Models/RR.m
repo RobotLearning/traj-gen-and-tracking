@@ -187,13 +187,13 @@ classdef RR < Robot
         end
 
         % using a simple inverse kinematics method
+        % notice that we represent reference in joint space!
         function Traj = generateInputs(obj,t,ref)
 
-            x_des = ref(1:2,:);
             h = obj.SIM.h;
             dim = obj.SIM.dimx / 2;
             dimu = obj.SIM.dimu;
-            q = RRInvKinematics(x_des,obj.PAR);
+            q = RRInvKinematics(ref,obj.PAR);
             % check for correctness
             %[x1,x2] = RRKinematics(q,PAR);
             qd = diff(q')' / h; 
@@ -202,6 +202,8 @@ classdef RR < Robot
             % start with zero initial velocity
             %qd = [zeros(dim,1), qd];
             %qdd = [zeros(dim,1), qdd];
+            % assume you end with same velocity as before
+            qd(:,end+1) = qd(:,end);
             % assume you end with same acceleration as before
             qdd(:,end+1) = qdd(:,end);
             % this leads to large decelerations!
@@ -215,7 +217,8 @@ classdef RR < Robot
                 uff(:,i) = RRInvDynamics(q(:,i),qd(:,i),qdd(:,i),obj.PAR);
             end
             
-            Traj = Trajectory(t,ref,uff,[]);
+            % notice that we represent reference in joint space!
+            Traj = Trajectory(t,[q;qd],uff,[]);
         end
         
         % get lifted model constraints

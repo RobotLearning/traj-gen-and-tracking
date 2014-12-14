@@ -137,15 +137,15 @@ classdef mILC < ILC
             dev = dev(:,2:end);                        
     
             % set learning rate
-            beta = 1;
+            beta = 10;
             
             % gradient descent
             %u = obj.u_last(:) - beta * obj.F' * obj.Ql * dev(:);
             % model inversion based Newton-Raphson update
-            u = obj.u_last(:) - obj.F \ dev(:);
+            %u = obj.u_last(:) - obj.F \ dev(:);
             % more stable inverse based Newton-Raphson update
             % computes very high inverses though
-            %u = obj.u_last(:) - pinv(obj.F) * dev(:);
+            u = obj.u_last(:) - pinv(obj.F) * dev(:);
             % LM-type update
             %Mat = (obj.F' * obj.Ql * obj.F + obj.Rl) \ (obj.F' * obj.Ql);
             %u = obj.u_last(:) - Mat * dev(:);
