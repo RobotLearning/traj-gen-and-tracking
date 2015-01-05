@@ -1,0 +1,303 @@
+\section{METHOD}\label{method}
+
+Sometimes for safety reasons, for instance when interacting with external objects or under unforeseen perturbations \cite{Schaal07}, a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant. As another practical restriction, one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases, it is not possible to modify the input signals $\sysInput$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
+
+In this paper we focus on modifying the parameters or the weights of the dynamic movement primitives (DMP) $\dmp(t) = [\joint_{\text{des}}(t),\dot{\joint}_{\text{des}}(t)]^{\mathrm{T}}$. An initial DMP might be constructed out of a given optimal reference trajectory $\traj(t)$ using regression or locally weighted regression techniques \cite{Ijspeert13}. Representing a reference trajectory with movement primitives has some benefits: nonsmooth parts of the trajectory can be filtered, time and scaling invariance of the differential equations can be used to adapt the trajectory to task changes and robustness to goal position and velocities can be ensured.
+
+\subsection{Movement Primitive Formulation}
+The dynamic movement primitive equations~\cite{Kober08} can be given as a weakly nonlinear system 
+%
+\begin{equation}
+\begin{aligned}
+\dot{\dmp} &= \begin{bmatrix}
+   \dot{\dmp}_1 \\
+   \dot{\dmp}_2
+ \end{bmatrix} = \begin{bmatrix}
+    \tau \dmp_2  \\
+    \tau \alpha (\beta(\goal - \dmp_1) - \dmp_2) + \tau \vec{\phi}(\phase)\weights
+  \end{bmatrix}
+\label{dmp},
+\end{aligned}
+\end{equation}
+%
+\noindent where the phase $\phase$ evolves according to
+%
+\begin{equation}
+\dot{\phase} = -\tau\alpha\phase.
+\label{phase}
+\end{equation}
+%
+\noindent The constants $\tau$ and $\alpha$ determine the scaling and settling time respectively. Equation \eqref{dmp} can be written succintly by enlarging $\dmp = [\dmp_1,\dmp_2,\goal]^{\mathrm{T}}$ as follows
+%
+\begin{equation}
+\begin{aligned}
+\dot{\dmp} &= \vec{A}_s \dmp + \basis(\phase) \weights,
+\label{dmp2}
+\end{aligned}
+\end{equation}
+%
+\noindent where the matrix $\vec{A}_s$ includes the spring constants that drive the DMP to the goal state $\goal = \traj_T$
+%
+\begin{equation}
+\begin{aligned}
+\vec{A}_s &= \tau \begin{bmatrix}
+    \vec{0} & \vec{I} & \vec{0}  \\
+    -\alpha \beta \vec{I}& -\alpha \vec{I} & \alpha \beta \vec{I}\\
+    \vec{0} & \vec{0} & \vec{0}
+  \end{bmatrix},
+\end{aligned}
+\label{dmpMatrices1}
+\end{equation}
+%
+\noindent and $\basis(\phase)$ includes the basis functions of the forcing term $\force = \vec{\phi}(\phase)\weights$ that warps the motion of the spring along a particular path
+%
+\begin{equation}
+\begin{aligned}
+\basis(\phase) &= \tau \begin{bmatrix}
+    \vec{0} \\
+    \vec{\phi}(\phase) \\
+    \vec{0} 
+  \end{bmatrix}.
+\label{dmpMatrices2}
+\end{aligned}
+\end{equation}
+
+\subsection{Iterative Learning Control for Movement Primitives}\label{ilcOnDMP} 
+
+For the linearization of the robot dynamics \eqref{dynamics} under a given linear feedback law $\linInput(t) = -\vec{K}(t)(\state - \dmp)$ we consider the addition of the movement primitive dynamics to \eqref{LTV} 
+%
+\begin{equation}
+\begin{aligned}
+\dot{\fullvec} &= \vec{A}_{\fullvec}\fullvec(t) + \vec{B}_{\fullvec} \weights + \linDist(t,\weights),
+\label{fullTransition}
+\end{aligned}
+\end{equation}
+%
+\noindent where for the enlarged vector $\fullvec = [\error,\dmp]^{\mathrm{T}}$ the transition matrices are 
+%
+\begin{IEEEeqnarray}{rCl}
+%\footnotesize
+\arraycolsep=3pt
+\medmuskip = 1mu
+\begin{aligned}
+ \vec{A}_{\fullvec} &= \begin{bmatrix}
+  \vec{A}(t) - \vec{B}(t)\vec{K}(t) & \vec{B}(t)\vec{K}(t) \\
+  \vec{0} & \vec{A}_s
+ \end{bmatrix}, \\
+ \vec{B}_{\fullvec} &= \begin{bmatrix}
+    \vec{0} \\
+    \vec{\basis}(\phase)
+   \end{bmatrix}. 
+\end{aligned}
+\label{fullMatrices}
+\end{IEEEeqnarray}
+%
+\noindent The system matrices $\vec{A}$ and $\vec{B}$ ensure the coupling of the DMP to the states. 
+%Reference trajectory $\traj(t)$ moves with a given velocity $\nu(t)$.
+
+By detaching the reference trajectory $\traj(t)$ from the feedback law and hence from the dynamics \eqref{fullTransition} we can consider applying ILC techniques to the movement primitives $\dmp$. If we introduce the following cost functional as our optimality criterion
+%
+% We don't need the continous form!
+%
+\begin{IEEEeqnarray}{rCl}
+\begin{aligned}
+J(\weights) =& \int_{0}^{T} \error^{\mathrm{T}}\vec{Q}\error + \weights^{\mathrm{T}}\vec{R}_w \weights \ \mathrm{d}t \ \scalebox{0.9}[1]{\( + \)} \, (\state_T\scalebox{0.85}[1.0]{\( - \)}\goal)^{\mathrm{T}}\vec{Q}_{T}(\state_T\scalebox{0.85}[1.0]{\( - \)}\goal),
+\end{aligned}
+\label{cost2}
+\end{IEEEeqnarray}
+%
+\noindent we can apply a weight-update form of the ILC update law~\cite{Bristow06}
+%
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} = \qmatrix(\weights_{k} - \lmatrix\error_{k}),
+\end{aligned}
+\label{ILCupdateFormWeights}
+\end{equation}
+%
+\noindent to minimize \eqref{cost2}. The index $k = 0, 1, \ldots$ denotes the iteration number. The matrices $\qmatrix$ and $\lmatrix$ are the filtering and learning matrices respectively~\cite{Bristow06}. They modulate the dependency between the inputs $\weights$ and the errors $\error$. Depending on these two matrices, the ILC update law \eqref{ILCupdateFormWeights} can be designed to be noncausal (i.e. predictive) and iteration-dependent. In order to reach the weight update law \eqref{ILCupdateFormWeights} we first discretize \eqref{cost2} and \eqref{fullTransition}. Then we stack the vectors together and get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}
+%
+\begin{equation}
+\begin{aligned}
+\ValueFunction &= \error_L^{\mathrm{T}}\vec{Q}_L\error_L + \weights^{\mathrm{T}}\vec{R}_{w}\weights,
+\end{aligned}
+\label{costFunctionalWeights}
+\end{equation}
+%
+\noindent where the error as the lifted output $\error_L = [\error_1, \error_2, \ldots, \error_N]^{\mathrm{T}}$ can be written using the lifted output matrix $\vec{C}_L$ in terms of the lifted state vector $\fullvec_L$ and the lifted reference trajectory $\traj_L = [\traj_1, \traj_2, \ldots, \traj_N]^{\mathrm{T}}$
+%
+\begin{equation}
+\begin{aligned}
+\error_L &= \vec{C}_L \fullvec_L,\\
+\vec{C}_L &= 
+  \begin{bmatrix}
+   \vec{C} & \vec{0} & \cdots & \vec{0} \\
+   \vec{0} & \vec{C} & \cdots & \vec{0} \\
+   \vdots  & \vdots  & \ddots & \vdots  \\
+   \vec{0} & \vec{0} & \cdots & \vec{C}
+  \end{bmatrix}, \\
+\vec{C} &= \begin{bmatrix}
+  \vec{I}_{2n} & \vec{0}_{2n}
+ \end{bmatrix},
+\end{aligned}
+\label{outputWeights}
+\end{equation}
+%
+\noindent where $\vec{Q}_L \in \mathbb{R}^{2Nn \times 2Nn}$ is of the following form
+%
+\begin{equation*}
+\begin{aligned}
+ \vec{Q}_L &= 
+ \begin{bmatrix}
+  \vec{Q} & \vec{0} & \cdots & \vec{0} \\
+  \vec{0} & \vec{Q} & \cdots & \vec{0} \\
+  \vdots  & \vdots  & \ddots & \vdots  \\
+  \vec{0} & \vec{0} & \cdots & \vec{Q}_T
+ \end{bmatrix}.
+\end{aligned}
+\end{equation*}
+%
+%\noindent The same sort of diagonal concatenation of matrices holds for the penalty matrix $\vec{R}_L$.
+Notice that the weighting matrix $\vec{R}_w \in \mathbb{R}^{m \times m}$ where $m$ is the number of basis functions used in the controls matrix $\vec{B}_{\fullvec}$ or equivalently $m = \text{rank}(\basis)$. It can be shown that punishing the weights in \eqref{cost2} with a suitable nondiagonal $\vec{R}_w$ bounds the control inputs $\linInput$ when the system outputs $\state$ are also bounded.
+
+% should we show this?
+
+\subsection{Derivation of ILC Updates}
+
+\subsubsection{Gradient descent} If we consider the gradient descent of \eqref{costFunctionalWeights}
+%
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \frac{\beta_k}{2} \at{\frac{\partial{\ValueFunction}}{\partial{\weights}}}{\weights_k}, \\
+\frac{1}{2}\frac{\partial{\ValueFunction}}{\partial{\weights}} &= \frac{\partial{\error_L}}{\partial{\weights}}\vec{Q}_L\error_L + \vec{R}_w\weights, \\
+\weights_{k+1} &= (\vec{I} - \beta_k\vec{R}_w)\weights_k - \beta_k\at{\frac{\partial{\error_L}}{\partial{\weights}}}{\weights_k}\vec{Q}_L\error_k.
+\end{aligned}
+\label{ILCgradientDescentWeights}
+\end{equation}
+%
+\noindent If the disturbances are repeating every iteration, i.e. $\partial{\linDist_L}/{\partial{\weights}} = 0$ we can rewrite \eqref{ILCgradientDescentWeights} as
+%
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} = (\vec{I} - \beta_k\vec{R}_w)\weights_k - \beta_k\vec{F}_{w}^\mathrm{T}\vec{Q}_L\error_k,
+\end{aligned}
+\label{ILCgradientDescentWeights2}
+\end{equation}
+%
+\noindent where the \emph{weight-to-output matrix} $\vec{F}_{w}$ is defined as
+%
+\begin{equation}
+\begin{aligned}
+\error_L &= \vec{F}_{w}\weights + \linDist_L, \\
+\frac{\partial{\error_L}}{\partial{\weights}} &= \frac{\partial{\dmp_L}}{\partial{\weights}}\frac{\partial{\error_L}}{\partial{\dmp_L}}, \\
+\vec{F}_{w} &= \Big(\frac{\partial{\error_L}}{\partial{\weights}}\Big)^{\mathrm{T}} = \tilde{\vec{F}}_{w}\vec{F}_{\dmp}\vec{I}_{Nm \times m}.
+\end{aligned}
+\label{weightToOutputMatrix1}
+\end{equation}
+%
+\noindent The lifted matrices $\vec{F}_{s}$ and $\tilde{\vec{F}}_{w}$ are formed using \eqref{fullTransition} and discretized as in \eqref{discreteLTV}
+%
+\begin{equation}
+\begin{aligned}
+(\tilde{\vec{F}}_{w})_{(i,j)} &= \left \{
+\begin{array}{cc}
+\bar{\vec{A}}_{i}\ldots \bar{\vec{A}}_{j+1}\vec{B}_{j}\vec{K}_{j}, & j < i, \\ 
+\vec{B}_{j}\vec{K}_{j}, & j = i, \\
+\vec{0}, & j > i,  
+\end{array} \right. \\
+(\vec{F}_{s})_{(i,j)} &= \left \{
+\begin{array}{cc}
+\vec{A}_s^{i-1}\basis_{j}, & j < i, \\ 
+\basis_{j}, & j = i, \\
+\vec{0}, & j > i,  
+\end{array} \right. \\
+\bar{\vec{A}}_j &= \vec{A}_j - \vec{B}_j\vec{K}_j. \\ 
+\end{aligned}
+\label{weightToOutputMatrix2}
+\end{equation}
+%
+\noindent The transpose of the matrix $\vec{I}_{m\times Nm} = \begin{bmatrix}
+  \vec{I}_{m} & \vec{I}_{m} & \ldots & \vec{I}_{m}
+ \end{bmatrix}$ appears in \eqref{weightToOutputMatrix1} because the weight vector $\weights$ is not dynamic, as opposed to the control inputs $\linInput$. 
+ 
+The gradient descent based ILC update law given in \eqref{ILCgradientDescentWeights2} is in standard ILC form~\eqref{ILCupdateFormWeights} with the filtering matrix given as $\qmatrix = \vec{I} - \beta_k\vec{R}_w$ and the learning matrix as $\lmatrix = (\vec{I} - \beta_k\vec{R}_w)^{-1}\beta_k\vec{F}_{w}^\mathrm{T}\vec{Q}_L$.
+% check numerical optimization book - is this really LM?
+
+\subsubsection{Newton's method} ILC update law can be related to Newton's method if we consider the Hessian of the cost functional \eqref{cost2}
+%
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \beta_k\Big(\frac{\partial^{2}\ValueFunction}{\partial\weights^{2}}\Big)^{-1}\at{\frac{\partial{\ValueFunction}}{\partial{\weights}}}{\weights_k}, \\
+\frac{\partial^{2}\ValueFunction}{\partial\weights^{2}} &= \frac{\partial}{\partial\weights}\{\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\error_L + \vec{R}_w\weights\} = \vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{\weights}, \\
+\weights_{k+1} &= \qmatrix\weights_k - \beta_k(\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{w})^{-1}\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\error_k,
+\end{aligned}
+\label{ILCWeightsNewtonsMethod}
+\end{equation}
+%
+\noindent where the filtering matrix is $\qmatrix = \beta_k(\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{w})^{-1}\vec{R}_{w}$. Multiplying the matrices in \eqref{weightToOutputMatrix2} as in \eqref{weightToOutputMatrix1} we can form the weight-to-output matrix $\vec{F}_{w}$ explicitly
+%
+\begin{equation}
+\begin{aligned}
+\vec{F}_{w} &= \begin{bmatrix}
+  \vec{B}_1 \vec{K}_1 \basis_1 \\
+  \bar{\vec{A}}_1\vec{B}_1\vec{K}_1\basis_1 + \vec{B}_2\vec{K}_2\vec{A}_s\basis_1 + \vec{B}_2\vec{K}_2\basis_2 \\
+  \ldots
+ \end{bmatrix}.
+\end{aligned}
+\label{weightToOutputMatrixExpanded}
+\end{equation}
+%
+Note the connection of \eqref{ILCWeightsNewtonsMethod} to plant inversion methods~\cite{Bristow06}: taking $\vec{Q}_L = \vec{I}, \vec{R}_{w} = \vec{0}, \beta = 1,$ \eqref{ILCWeightsNewtonsMethod} becomes
+%
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \vec{F}_{w}^{\dagger}\error_k.
+\end{aligned}
+\label{ILCPlantInversion}
+\end{equation}
+%
+% However this can be very unstable in practice, especially in nonminimum phase systems. Having a small, but nonzero weighting matrix R makes it much more stable.
+%
+\noindent Notice also the connection of \eqref{ILCRegression} with the online regression methods performed on the DMP weights \cite{Ijspeert13}. We can rewrite \eqref{ILCWeightsNewtonsMethod} as
+%
+\begin{equation}
+\begin{aligned}
+\weights_{k+1} &= \weights_k - \beta_k(\vec{\Psi}^{\mathrm{T}}\vec{W}\vec{\Psi} + \vec{R}_{w})^{-1}\vec{\Psi}^{\mathrm{T}}\vec{W}\error_k, \\
+\vec{\Psi} &= \begin{bmatrix}
+  \basis_1^{T} & \basis_2^{T} & \ldots & \basis_N^{T}
+ \end{bmatrix}^{T}.
+\end{aligned}
+\label{ILCRegression}
+\end{equation}
+%
+%
+% online regression methods? are they discussed in the given reference?
+In model-free approaches the weighting matrix $\vec{W}(t)$ is taken as the identity matrix. In our case the model-based assumptions of our approach appear in the form of a nondiagonal covariance matrix. We perform generalized least-squares regression by taking advantage of the linearized model in~\eqref{fullTransition} to form the right correlations between states. Compared with the \emph{credit-assignment} issues of RL algorithms, we see that ILC, equipped with our linearized models, offers us a more principled way to assign errors to the weights of the movement primitives.
+
+% talk about filtered version in a new and last paragraph?
+
+\subsection{Algorithm \& Implementation}\label{algorithm}
+
+We use the update law derived in \eqref{ILCWeightsNewtonsMethod} in our algorithm, given in Algorithm~\ref{alg1}. This update law enables us to take advantage of the superlinear order of convergence property of Newton's method based descent methods while ensuring with $\qmatrix$ some degree of robustness on the nonrepeating disturbances in \eqref{fullTransition} arising from model mismatch and other unpredictable environmental conditions. Depending on the task and models available, weighting matrices $\vec{Q}_{L}$ and $\vec{R}_{w}$ can be varied as desired. Iteration dependent matrices will ensure that performance does not degrade, as one can reduce the weight matrix $\vec{R}_{w}$ as the errors get smaller. We discuss this additional degree of freedom of the algorithm in more detail in section \ref{experiments}.
+
+%We initialize the algorithm $\alg$ with the necessary weighting and transition matrices. The transition matrix $A_{\fullvec}$ is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using regression on the reference trajectory.
+
+% maybe reference needed
+Notice the stability of the approach compared to iLQR methods where the reference trajectory $\traj(t)$ and the nominal inputs $\sysInput_{\mathrm{IDM}}$ are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative optimal control approaches. However under high mismatch cases where the weight-to-output matrix $\vec{F}_{w}$ is not accurate, the descent direction might not be estimated and exploration in joint space might be necessary. We leave the extension of our work to such difficult settings for future work.
+
+\begin{algorithm}[tb]
+   \caption{\alg}
+   \label{alg1}
+\begin{algorithmic}
+   \STATE {\bfseries Input:} $\threshold > 0$, $\beta_k > 0$, $\vec{Q}_L, \vec{R}_{w} \succeq 0$, $\vec{A}_{\fullvec}$, $\ \traj = (\traj_1, \traj_2, \ldots, \traj_N)$, $\ \sysInput_{\mathrm{IDM}} = (\nu_1, \nu_2, \ldots, \nu_N)$
+   \STATE Initialize $k = 1$, $\dmp(\weights) = \dmp(\weights_0)$
+   \REPEAT 
+ 	   \STATE Run controller $\ddot{\joint} = \dynamics(\joint,\dot{\joint},\sysInput)$ %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
+ 	   \STATE Observe $\error_k = \state_k - \traj$
+ 	   \STATE Compute $\ValueFunction_k$ = $\error_k^{\mathrm{T}}\vec{Q}_L\error_k + \weights^{\mathrm{T}}\vec{R}_w\weights$
+ 	   \STATE Form $\vec{F}_w$, $\qmatrix$ using $\vec{A}_{\fullvec}$, $\vec{Q}_L$, $\vec{R}_{w}$
+ 	   \STATE Update $\weights \leftarrow \weights - \beta_k(\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{w})^{-1}\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\error_k$
+ 	   \STATE $k \leftarrow k + 1$
+   \UNTIL{$\ValueFunction_k < \threshold$}
+\end{algorithmic}
+\end{algorithm}

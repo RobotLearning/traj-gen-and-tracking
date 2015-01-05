@@ -83,8 +83,8 @@ tin = 0; tfin = 1;
 t = tin:h:tfin;
 theta = pi/6 * ((t <= 0.5).*t + (t > 0.5).*(1-t));
 rad = l1 + l2;
-y_des = rad * sin(theta);
-x_des = rad * cos(theta);
+y_des = rad * sin(2*pi-theta);
+x_des = rad * cos(2*pi-theta);
 ref = [x_des; y_des]; % displacement profile 
 traj = rr.generateInputs(t,ref);
 

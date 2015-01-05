@@ -12,6 +12,7 @@
 % on the last page of the document
 
 \usepackage[latin1]{inputenc}
+\usepackage{pgfplots}
 \usepackage{amsmath}
 %\usepackage{amsthm}
 \usepackage{amsfonts}
@@ -19,6 +20,7 @@
 \usepackage{mathtools}
 \usepackage{graphicx}
 \usepackage{color}
+\usetikzlibrary{plotmarks}
 %\usepackage{hyperref}
 
 % theorem environment
@@ -33,6 +35,8 @@
 \usepackage{algorithmic}
 
 % custom commands
+\newcommand{\boldvec}[1]{\boldsymbol{\mathrm{#1}}}
+\let\vec\boldvec
 \newcommand\at[2]{\left.#1\right|_{#2}} % the at differential sign
 \newcommand\scalemath[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}} % scaling matrices
 
@@ -41,35 +45,35 @@
 \newcommand{\kin}{\mathcal{T}} % used to denote inverse kinematics
 \newcommand{\invKin}{\mathcal{T}^{-1}} % used to denote inverse kinematics
 
-\newcommand{\joint}{q} % used to denote robot state in joint space
-\newcommand{\state}{y} % denotes the generalized coordinates - joint space and velocity coordinates
-\newcommand{\dmp}{s} % used to denote the dmp trajectory states
-\newcommand{\error}{e} % difference between state and reference
-\newcommand{\traj}{r} % used to denote the points on the trajectory to be tracked
+\newcommand{\joint}{\vec{q}} % used to denote robot state in joint space
+\newcommand{\state}{\vec{y}} % denotes the generalized coordinates - joint space and velocity coordinates
+\newcommand{\dmp}{\vec{s}} % used to denote the dmp trajectory states
+\newcommand{\error}{\vec{e}} % difference between state and reference
+\newcommand{\traj}{\vec{r}} % used to denote the points on the trajectory to be tracked
 
-\newcommand{\dist}{\epsilon} % denotes the disturbances acting on the rigid body dynamics
-\newcommand{\linDist}{d} % denotes the disturbances on the LTV model
+\newcommand{\dist}{\vec{\epsilon}} % denotes the disturbances acting on the rigid body dynamics
+\newcommand{\linDist}{\vec{d}} % denotes the disturbances on the LTV model
 
-\newcommand{\sysInput}{u} % used to denote the system inputs
-\newcommand{\linInput}{\tilde{u}} % denotes the LTV inputs
+\newcommand{\sysInput}{\vec{u}} % used to denote the system inputs
+\newcommand{\linInput}{\tilde{\sysInput}} % denotes the LTV inputs
 \newcommand{\trjInput}{\sysInput_{\mathrm{IDM}}} % denotes the inputs on the trajectory (calculated using IDM)
 
 
 % % % % DMP terminology % % % %
-\newcommand{\fullvec}{\psi} % full vector for state-ref-dmp-goal
-\newcommand{\force}{f} % forcing term of the dmps
+\newcommand{\fullvec}{\vec{\psi}} % full vector for state-ref-dmp-goal
+\newcommand{\goal}{\vec{g}} % goal state
+\newcommand{\force}{\vec{f}} % forcing term of the dmps
 \newcommand{\phase}{x} % phase of the dmp
-\newcommand{\weights}{w} % weights of the dmp
-\newcommand{\basis}{\phi} % basis functions of the dmp as a matrix
+\newcommand{\weights}{\vec{w}} % weights of the dmp
+\newcommand{\basis}{\vec{\Phi}} % basis functions of the dmp as a matrix
 
 % % % % ILC terminology % % % %
-\newcommand{\qmatrix}{\Gamma} % denotes the filtering qmatrix term of Bristow et al.
-\newcommand{\lmatrix}{L} % denotes the learning matrix of Bristow et al.
+\newcommand{\qmatrix}{\vec{\Gamma}} % denotes the filtering qmatrix term of Bristow et al.
+\newcommand{\lmatrix}{\vec{L}} % denotes the learning matrix of Bristow et al.
 
-\newcommand{\observations}{\mathbf{y}} % used for the observed output
-\newcommand{\dynamics}{f}
-\newcommand{\dynamicsNominal}{f_{\mathrm{nom}}}
-\newcommand{\policy}{\mathbf{\pi}}
+\newcommand{\dynamics}{\vec{f}}
+\newcommand{\dynamicsNominal}{\dynamics_{\mathrm{nom}}}
+\newcommand{\policy}{\vec{\pi}}
 \newcommand{\ValueFunction}{J}
 \newcommand{\episode}{k} % used for episode number
 
@@ -92,7 +96,7 @@
 }
 
 \title{\LARGE \bf
-Optimal Striking Movement Generation \& Representation
+Optimizing Robot Striking Movement Primitives with Iterative Learning Control
 }
 
 \author{Okan Ko\c c$^{1}$, Guilherme Maeda$^{2}$, Gerhard Neumann${^2}$, Jan Peters$^{1,2}$% <-this % stops a space 
@@ -113,15 +117,15 @@ Optimal Striking Movement Generation \& Representation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 
-Motivated by the recent advances of Reinforcement Learning (RL) applications in complex robotics tasks we consider in this article the movement generation and representation of optimal striking motions. More precisely, we present an Iterative Learning Control \cite{Bristow06} based approach to track reference trajectories by adapting the weights of Dynamic Movement Primitives. This way, unlike the existing RL approaches, we ensure the optimality of the converged kinematic policies. We show the performance of the approach in two hitting tasks: execution of the putting motions in golf and striking motions in table tennis with an anthropomorphic robot arm.
+
+Complex robotics tasks can be represented efficiently with a sequence of movement primitives. However in order to perform the task effectively, a robot needs to be able to track the corresponding primitives accurately. To achieve optimality in tracking in this paper we investigate the weight updates of Dynamic Movement Primitives and present two families of Iterative Learning Control based update laws. We evaluate the performance of the approaches in a simulated putting task as well as in a real robotic table tennis platform, where we show how the striking performance of a seven degree of freedom anthropomorphic arm can be optimized. Our final implemented algorithm compares favorably with two state-of-the-art Reinforcement Learning approaches.
 
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \input{introduction}
-\input{problemstatement}
-\input{algorithm}
+\input{method}
 \input{experiments}
 \input{conclusion}
 
