@@ -7,13 +7,18 @@ x_des = X_des(1,:);
 y_des = X_des(2,:);
 
 % x1 and x2 are the cartesian coordinates of joint 2 and end-effector
-
 link1_x = [0 x1(1,1)];
 link1_y = [0 x1(2,1)];
 link2_x = [x1(1,1),x2(1,1)];
 link2_y = [x1(2,1),x2(2,1)];
 hf = figure('color','white');
-axis manual, axis equal;
+axis manual; axis equal; 
+
+% TODO: only for putting
+axis auto;
+camroll(-90); 
+set(gca, 'YTick',[]);
+
 h1 = line(link1_x, link1_y, 'color', [.4 .4 .8],'LineWidth',4);
 h2 = line(link2_x, link2_y, 'color', [.4 .4 .8],'LineWidth',4);
 title('Two-link planar arm','Color',[.6 0 0]);

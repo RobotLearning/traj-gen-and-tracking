@@ -81,16 +81,15 @@ rr = RR(PAR,CON,COST,SIM);
 h = SIM.h;
 tin = 0; tfin = 1;
 t = tin:h:tfin;
-theta = pi/6 * ((t <= 0.5).*t + (t > 0.5).*(1-t));
+theta = -pi/6 * ((t <= 0.5).*t + (t > 0.5).*(1-t));
+% TODO: filter theta to get smooth input
 rad = l1 + l2;
-y_des = rad * sin(2*pi-theta);
-x_des = rad * cos(2*pi-theta);
+y_des = rad * sin(theta);
+x_des = rad * cos(theta);
 ref = [x_des; y_des]; % displacement profile 
 traj = rr.generateInputs(t,ref);
 
 %% Evolve system dynamics and animate the robot arm
-
-% TODO: add a nonzero friction matrix B
 
 q0 = traj.s(:,1);
 % add nonzero velocity
@@ -103,4 +102,5 @@ traj.addPerformance(traj.unom,y,rr.COST,'Inverse Dynamics');
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
+% modify the animation
 rr.animateArm(y(1:2,:),ref);
