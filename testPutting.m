@@ -69,8 +69,23 @@ CON = [];
 COST.Q = 100*diag([1,1,0,0]);
 COST.R = 1 * eye(SIM.dimu);
 
-% initialize model
-rr = RR(PAR,CON,COST,SIM);
+%% Calculate desired final velocity of the arm endeffector
+
+% distance to the hole
+dist = 0.95;
+% hole radius
+hole_rad = 0.05;
+% total length of ball trajectory
+l = dist + hole_rad;
+% kinetic friction constant
+mu_k = 0.6;
+% mass of the ball
+m_b = 1;
+% gravity is already defined
+% initial desired velocity of the ball
+vin = sqrt(2*mu_k*g*l);
+% calculate vf using conservation of momentum
+vf = m_b * vin / (m1 + m2);
 
 %% Generate inputs for a desired trajectory
 
@@ -81,23 +96,39 @@ rr = RR(PAR,CON,COST,SIM);
 h = SIM.h;
 tin = 0; tfin = 1;
 t = tin:h:tfin;
-theta = -pi/6 * ((t <= 0.5).*t + (t > 0.5).*(1-t));
-% TODO: filter theta to get smooth input
+amp = pi/6;
+sigma = 0.5;
+mean = 0.5;
+% trajectory consists of a compact gaussian
+theta = amp * exp(-0.5*((t-mean).^2)/(sigma^2));
+theta = theta - theta(1);
 rad = l1 + l2;
-y_des = rad * sin(theta);
+y_des = -rad * sin(theta);
 x_des = rad * cos(theta);
 ref = [x_des; y_des]; % displacement profile 
-traj = rr.generateInputs(t,ref);
+% modify ref slightly to avoid singularity in inverse kinematics 
+ref = ref - 1e-6;
+% modify time profile to meet desired final velocity 
+% in y_des due to 90 deg rotation
+scale = vf/((y_des(end)-y_des(end-1))/h); 
+t = t / scale;
+
+% initialize model
+SIM.h = SIM.h / scale;
+rr = RR(PAR,CON,COST,SIM);
+% create trajectory in cartesian space
+traj = rr.generateInputs(t,ref,0);
 
 %% Evolve system dynamics and animate the robot arm
 
-q0 = traj.s(:,1);
+%q0 = traj.s(:,1);
+q0 = rr.invKinematics(traj.s(:,1));
 % add nonzero velocity
 %q0(3:4) = q0(3:4) + 0.1*rand(2,1);
 % observe output
 y = rr.evolve(t,q0,traj.unom);
 % add performance to trajectory
-traj.addPerformance(traj.unom,y,rr.COST,'Inverse Dynamics');
+traj.addPerformance(traj.unom,y,rr.COST,'Computed Torque - IDM');
 
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);

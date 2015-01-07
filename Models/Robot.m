@@ -5,12 +5,9 @@ classdef (Abstract) Robot < Model
         
     % Field necessary for all robotic manipulators?
     properties (Abstract)        
-        
-        % cartesian coordinates of the trajectory
-        %x, xd, xdd
-        
-        % joint space coordinates
-        %q, qd, qdd
+
+        % jacobian
+        jac
     end
     
     % methods to be implemented

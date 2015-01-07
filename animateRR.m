@@ -14,10 +14,11 @@ link2_y = [x1(2,1),x2(2,1)];
 hf = figure('color','white');
 axis manual; axis equal; 
 
-% TODO: only for putting
+%%%%%%%%%%%%%%%%%%%%%%%% TODO: only for putting
 axis auto;
 camroll(-90); 
 set(gca, 'YTick',[]);
+%%%%%%%%%%%%%%%%%%%%%%%%
 
 h1 = line(link1_x, link1_y, 'color', [.4 .4 .8],'LineWidth',4);
 h2 = line(link2_x, link2_y, 'color', [.4 .4 .8],'LineWidth',4);

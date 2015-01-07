@@ -106,7 +106,7 @@ t = tin:h:tfin;
 y_des = 0.4 + 0.2 * t;
 x_des = 0.6 * ones(1,length(t));
 ref = [x_des; y_des]; % displacement profile 
-traj = rr.generateInputs(t,ref);
+traj = rr.generateInputs(t,ref,1); % trajectory generated in joint space
 
 %% Evolve system dynamics and animate the robot arm
 

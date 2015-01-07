@@ -13,6 +13,8 @@ classdef RR < Robot
         SIM
         % observation matrix
         C
+        % jacobian matrix
+        jac
     end
     
     methods
@@ -111,6 +113,8 @@ classdef RR < Robot
             obj.CON = con;        
             % cost function handle
             obj.COST = cost;
+            % TODO: construct jacobian
+            obj.jac = [];
         end
         
         % provides nominal model
@@ -187,8 +191,8 @@ classdef RR < Robot
         end
 
         % using a simple inverse kinematics method
-        % notice that we represent reference in joint space!
-        function Traj = generateInputs(obj,t,ref)
+        % if flag is 1 then reference in joint space!
+        function Traj = generateInputs(obj,t,ref,flag)
 
             h = obj.SIM.h;
             dim = obj.SIM.dimx / 2;
@@ -217,8 +221,16 @@ classdef RR < Robot
                 uff(:,i) = RRInvDynamics(q(:,i),qd(:,i),qdd(:,i),obj.PAR);
             end
             
-            % notice that we represent reference in joint space!
-            Traj = Trajectory(t,[q;qd],uff,[]);
+            % check for joint space representation
+            if flag == 1
+                Traj = Trajectory(t,[q;qd],uff,[]);
+            else
+                %xd = obj.jac * qd;
+                x =  ref;
+                xd = diff(x')'/h;
+                xd(:,end+1) = xd(:,end);
+                Traj = Trajectory(t,[x;xd],uff,[]);
+            end
         end
         
         % get lifted model constraints
