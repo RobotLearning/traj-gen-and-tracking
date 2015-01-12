@@ -131,7 +131,7 @@ classdef RR < Robot
         end
         
         % provides actual model
-        % TODO: should we wrap the inverse dynamics?
+        % TODO: should we wrap the dynamics?
         function x_dot = actual(obj,~,x,u)
             
             % change parameters

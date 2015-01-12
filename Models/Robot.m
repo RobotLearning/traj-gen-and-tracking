@@ -8,6 +8,8 @@ classdef (Abstract) Robot < Model
 
         % jacobian
         jac
+        % TODO: flag for using operational (0) or joint space (1) ?
+        %flag_jspace
     end
     
     % methods to be implemented

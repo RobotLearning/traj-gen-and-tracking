@@ -72,7 +72,7 @@ COST.R = 1 * eye(SIM.dimu);
 %% Calculate desired final velocity of the arm endeffector
 
 % distance to the hole
-dist = 0.95;
+dist = 0.45;
 % hole radius
 hole_rad = 0.05;
 % total length of ball trajectory
@@ -111,27 +111,50 @@ ref = ref - 1e-6;
 % modify time profile to meet desired final velocity 
 % in y_des due to 90 deg rotation
 scale = vf/((y_des(end)-y_des(end-1))/h); 
-t = t / scale;
+h = h/scale;
+t = t/scale;
 
 % initialize model
-SIM.h = SIM.h / scale;
+SIM.h = h;
 rr = RR(PAR,CON,COST,SIM);
 % create trajectory in cartesian space
 traj = rr.generateInputs(t,ref,0);
 
 %% Evolve system dynamics and animate the robot arm
 
-%q0 = traj.s(:,1);
 q0 = rr.invKinematics(traj.s(:,1));
+q1 = rr.invKinematics(traj.s(:,2));
+q0(3:4) = (q1 - q0)/h;
 % add nonzero velocity
 %q0(3:4) = q0(3:4) + 0.1*rand(2,1);
 % observe output
-y = rr.evolve(t,q0,traj.unom);
+qact = rr.evolve(t,q0,traj.unom);
+% get the cartesian coordinates
+[~,y] = rr.kinematics(qact(1:2,:));
+% add cartesian velocities
+yd = diff(y')'/ h; yd(:,end+1) = yd(:,end);
+y = [y;yd];
 % add performance to trajectory
 traj.addPerformance(traj.unom,y,rr.COST,'Computed Torque - IDM');
 
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
-% modify the animation
-rr.animateArm(y(1:2,:),ref);
+rr.animateArm(qact(1:2,:),ref);
+
+%% Modify the animation
+
+width = 0.025;
+% initial position of the ball
+ball = y(1:2,end) + [width/2;width];
+h1 = scatter(ball(1,1),ball(2,1),100,[.4 .4 .4],'filled','LineWidth',4);
+% trajectory of the ball
+balltrj_x = [y(1,end)+width y(1,end)+width];
+balltrj_y = [y(2,end) y(2,end) + l];
+h2 = line(balltrj_x, balltrj_y, 'LineStyle', '-.', 'color', [.4 .4 .4],'LineWidth',2);
+% position the hole
+hole_x = [y(1,end)+width y(1,end)+width];
+hole_y = [y(2,end)+l-hole_rad y(2,end)+l+hole_rad];
+h3 = line(hole_x, hole_y, 'LineStyle', '-', 'color', [0 0 0],'LineWidth',2);
+% print as grayscale eps 
+print(gcf,'-deps2','putting.eps');

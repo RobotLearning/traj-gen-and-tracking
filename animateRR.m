@@ -55,4 +55,4 @@ for j = 2:length(x1)
      pause(0.005);
 end
 
-hold off;
+%hold off;

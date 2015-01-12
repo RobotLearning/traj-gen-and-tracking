@@ -116,14 +116,14 @@ q0 = traj.s(:,1);
 % add nonzero velocity
 %q0(3:4) = q0(3:4) + 0.1*rand(2,1);
 % observe output
-y = rr.evolve(t,q0,traj.unom);
+qact = rr.evolve(t,q0,traj.unom);
 % add performance to trajectory
-traj.addPerformance(traj.unom,y,rr.COST,'Inverse Dynamics');
+traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics');
 
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
-rr.animateArm(y(1:2,:),ref);
+rr.animateArm(qact(1:2,:),ref);
 
 %% Start learning with ILC
 
@@ -134,19 +134,19 @@ ilc = mILC(rr,traj);
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforward(traj,y);
+    u = ilc.feedforward(traj,qact);
     %u = ilc.feedforward(traj,rr,dev);
     % evolve system
-    y = rr.evolve(t,q0,u);
+    qact = rr.evolve(t,q0,u);
     % get the cartesian coordinates
     %[~,y] = rr.kinematics(qact(1:2,:));
     % add performance to trajectory
-    traj.addPerformance(u,y,rr.COST,ilc);
+    traj.addPerformance(u,qact,rr.COST,ilc);
     % Plot the controls and animate the robot arm
-    %rr.animateArm(q_act(1:2,:),s(1:2,:));
+    %rr.animateArm(qact(1:2,:),ref);
 end
 
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
-rr.animateArm(y(1:2,:),ref);
+rr.animateArm(qact(1:2,:),ref);
