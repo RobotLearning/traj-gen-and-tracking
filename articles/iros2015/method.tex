@@ -295,7 +295,7 @@ Notice the stability of the approach compared to iLQR methods where the referenc
  	   \STATE Run controller $\ddot{\joint} = \dynamics(\joint,\dot{\joint},\sysInput)$ %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
  	   \STATE Observe $\error_k = \state_k - \traj$
  	   \STATE Compute $\ValueFunction_k$ = $\error_k^{\mathrm{T}}\vec{Q}_L\error_k + \weights^{\mathrm{T}}\vec{R}_w\weights$
- 	   \STATE Form $\vec{F}_w$, $\qmatrix$ using $\vec{A}_{\fullvec}$, $\vec{Q}_L$, $\vec{R}_{w}$
+ 	   \STATE Form $\vec{F}_w$ using $\vec{A}_{\fullvec}$, $\vec{Q}_L$, $\vec{R}_{w}$
  	   \STATE Update $\weights \leftarrow \weights - \beta_k(\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{w})^{-1}\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\error_k$
  	   \STATE $k \leftarrow k + 1$
    \UNTIL{$\ValueFunction_k < \threshold$}

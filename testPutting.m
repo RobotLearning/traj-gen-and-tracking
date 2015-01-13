@@ -144,17 +144,19 @@ rr.animateArm(qact(1:2,:),ref);
 
 %% Modify the animation
 
+shift = [0; 0.9];
+R = [0 1; -1 0];
 width = 0.025;
 % initial position of the ball
-ball = y(1:2,end) + [width/2;width];
-h1 = scatter(ball(1,1),ball(2,1),100,[.4 .4 .4],'filled','LineWidth',4);
-% trajectory of the ball
-balltrj_x = [y(1,end)+width y(1,end)+width];
-balltrj_y = [y(2,end) y(2,end) + l];
-h2 = line(balltrj_x, balltrj_y, 'LineStyle', '-.', 'color', [.4 .4 .4],'LineWidth',2);
+ball = R * (y(1:2,end) + [0;width]);
+h1 = scatter(ball(1,1)+shift(1),ball(2,1)+shift(2),100,[.4 .4 .4],'filled','LineWidth',4);
+% % trajectory of the ball
+% balltrj_x = [y(1,end)+width y(1,end)+width];
+% balltrj_y = [y(2,end)+width/2 y(2,end) + l];
+% h2 = line(balltrj_x, balltrj_y, 'LineStyle', '-.', 'color', [.4 .4 .4],'LineWidth',1);
 % position the hole
-hole_x = [y(1,end)+width y(1,end)+width];
-hole_y = [y(2,end)+l-hole_rad y(2,end)+l+hole_rad];
-h3 = line(hole_x, hole_y, 'LineStyle', '-', 'color', [0 0 0],'LineWidth',2);
+hole = [y(1,end)+width/2 y(1,end)+width/2; y(2,end)+l-hole_rad y(2,end)+l+hole_rad];
+hole = R * hole;
+h3 = line(hole(1,:)+shift(1), hole(2,:)+shift(2), 'LineStyle', '-', 'color', [0 0 0],'LineWidth',4);
 % print as grayscale eps 
-print(gcf,'-deps2','putting.eps');
+% print(gcf,'-depsc','putting.eps');
