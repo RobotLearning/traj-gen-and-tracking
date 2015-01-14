@@ -28,4 +28,53 @@ classdef (Abstract) Robot < Model
         
     end
     
+    % methods that robots share
+    methods (Access = public)
+        
+        % using a simple inverse kinematics method
+        % if flag is 1 then reference in joint space!
+        function Traj = generateInputs(obj,t,ref,flag)
+
+            h = obj.SIM.h;
+            dim = obj.SIM.dimx / 2;
+            dimu = obj.SIM.dimu;
+            q = obj.invKinematics(ref);
+            % check for correctness
+            %[x1,x2] = RRKinematics(q,PAR);
+            qd = diff(q')' / h; 
+            qdd = diff(qd')' / h; 
+            
+            % start with zero initial velocity
+            %qd = [zeros(dim,1), qd];
+            %qdd = [zeros(dim,1), qdd];
+            % assume you end with same velocity as before
+            qd(:,end+1) = qd(:,end);
+            % assume you end with same acceleration as before
+            qdd(:,end+1) = qdd(:,end);
+            % this leads to large decelerations!
+            % add one more acceleration assuming q(end+1) = q(end)
+            %qdd(:,end+1) = (q(:,end-1) - q(:,end))/(h^2);
+
+            % get the desired inputs
+            Nu = length(t) - 1;
+            uff = zeros(dimu,Nu);
+            for i = 1:Nu
+                uff(:,i) = obj.invDynamics(q(:,i),qd(:,i),qdd(:,i));
+            end
+            
+            % check for joint space representation
+            if flag == 1
+                Traj = Trajectory(t,[q;qd],uff,[]);
+            else
+                %xd = obj.jac * qd;
+                x =  ref;
+                xd = diff(x')'/h;
+                xd(:,end+1) = xd(:,end);
+                Traj = Trajectory(t,[x;xd],uff,[]);
+            end            
+        end
+        
+    end
+        
+    
 end

@@ -1,6 +1,6 @@
-% Two-link planar revolute robot manipulator (RR)
+% One-link revolute arm (pendulum)
 
-classdef RR < Robot
+classdef R < Robot
 
     properties   
         % parameters structure
@@ -24,18 +24,12 @@ classdef RR < Robot
             
             % initialize everything to zero
             obj.PAR.const.g = 0;
-            obj.PAR.link1.mass = 0;
-            obj.PAR.link2.mass = 0;
-            obj.PAR.link1.length = 0;
-            obj.PAR.link2.length = 0;
-            obj.PAR.link1.centre.dist = 0;
-            obj.PAR.link2.centre.dist = 0;
-            obj.PAR.link1.inertia = 0;
-            obj.PAR.link2.inertia = 0;
-            obj.PAR.link1.motor.inertia = 0;
-            obj.PAR.link2.motor.inertia = 0;
-            obj.PAR.link1.motor.gear_ratio = 0;
-            obj.PAR.link2.motor.gear_ratio = 0;
+            obj.PAR.link.mass = 0;
+            obj.PAR.link.length = 0;
+            obj.PAR.link.centre.dist = 0;
+            obj.PAR.link.inertia = 0;
+            obj.PAR.link.motor.inertia = 0;
+            obj.PAR.link.motor.gear_ratio = 0;
                          
             % check that the input has all the fields
             % TODO: is there a better way?
@@ -49,26 +43,16 @@ classdef RR < Robot
         % copies the constraint values inside the structure
         function set.CON(obj, STR)
             % initialize all fields
-            obj.CON.link1.q.max = Inf;
-            obj.CON.link1.q.min = -Inf;
-            obj.CON.link1.qd.max = Inf;
-            obj.CON.link1.qd.min = -Inf;
-            obj.CON.link1.qdd.max = Inf;
-            obj.CON.link1.qdd.min = -Inf;
-            obj.CON.link1.u.max = Inf;
-            obj.CON.link1.u.min = -Inf;
-            obj.CON.link1.udot.max = Inf;
-            obj.CON.link1.udot.min = -Inf;
-            obj.CON.link2.q.max = Inf;
-            obj.CON.link2.q.min = -Inf;
-            obj.CON.link2.qd.max = Inf;
-            obj.CON.link2.qd.min = -Inf;
-            obj.CON.link2.qdd.max = Inf;
-            obj.CON.link2.qdd.min = -Inf;            
-            obj.CON.link2.u.max = Inf;
-            obj.CON.link2.u.min = -Inf;
-            obj.CON.link2.udot.max = Inf;
-            obj.CON.link2.udot.min = -Inf;
+            obj.CON.link.q.max = Inf;
+            obj.CON.link.q.min = -Inf;
+            obj.CON.link.qd.max = Inf;
+            obj.CON.link.qd.min = -Inf;
+            obj.CON.link.qdd.max = Inf;
+            obj.CON.link.qdd.min = -Inf;
+            obj.CON.link.u.max = Inf;
+            obj.CON.link.u.min = -Inf;
+            obj.CON.link.udot.max = Inf;
+            obj.CON.link.udot.min = -Inf;
             
             % check that the input has all the fields
             %assert(all(strcmp(fieldnames(obj.CON), fieldnames(STR))));
@@ -136,58 +120,52 @@ classdef RR < Robot
             
             % change parameters
             par.const.g = obj.PAR.const.g;
-            par.link1.mass = 1.0 * obj.PAR.link1.mass;
-            par.link2.mass = 1.0 * obj.PAR.link2.mass;
-            par.link1.length = 1.0 * obj.PAR.link1.length;
-            par.link2.length = 1.0 * obj.PAR.link2.length;
-            par.link1.centre.dist = obj.PAR.link1.centre.dist;
-            par.link2.centre.dist = obj.PAR.link2.centre.dist;
-            par.link1.inertia = 1.0 * obj.PAR.link1.inertia;
-            par.link2.inertia = 1.0 * obj.PAR.link2.inertia;
-            par.link1.motor.inertia = 1.0 * obj.PAR.link1.motor.inertia;
-            par.link2.motor.inertia = 1.0 * obj.PAR.link2.motor.inertia;
-            par.link1.motor.gear_ratio = 1.0 * obj.PAR.link1.motor.gear_ratio;
-            par.link2.motor.gear_ratio = 1.0 * obj.PAR.link2.motor.gear_ratio;
-            
+            par.link.mass = 1.0 * obj.PAR.link.mass;
+            par.link.length = 1.0 * obj.PAR.link.length;
+            par.link.centre.dist = obj.PAR.link.centre.dist;
+            par.link.inertia = 1.0 * obj.PAR.link.inertia;            
+            par.link.motor.inertia = 1.0 * obj.PAR.link.motor.inertia;            
+            par.link.motor.gear_ratio = 1.0 * obj.PAR.link.motor.gear_ratio;            
             
             % differential equation of the inverse dynamics
             % x_dot = A(x)x + B(x)u + C(x)
-            x_dot = RRDynamics(x,u,par,false);
+            x_dot = RDynamics(x,u,par,false);
             
         end
         
-        % run kinematics using an external function
-        function [x1,x2] = kinematics(obj,q)
+        % run kinematics
+        function x1 = kinematics(obj,q)
             
-            [x1,x2] = RRKinematics(q,obj.PAR);
+            l1 = obj.PAR.link.length;
+            x1 = [l1 * cos(q); l1 * sin(q)];
         end
         
         % call inverse kinematics from outside
         function q = invKinematics(obj,x)
             
-            q = RRInvKinematics(x,obj.PAR);
+            q = atan(x(2,:)./x(1,:));
         end
                    
         % dynamics to get u
         function u = invDynamics(obj,q,qd,qdd)
-            u = RRInvDynamics(q,qd,qdd,obj.PAR);
+            u = RInvDynamics(q,qd,qdd,obj.PAR);
         end
         
         % dynamics to qet Qd = [qd,qdd]
         function [Qd, varargout] = dynamics(obj,Q,u,flag)
             if flag
-                [Qd, dfdx, dfdu] = RRDynamics(Q,u,obj.PAR,flag);
+                [Qd, dfdx, dfdu] = RDynamics(Q,u,obj.PAR,flag);
                 varargout{1} = dfdx;
                 varargout{2} = dfdu;
             else
-                Qd = RRDynamics(Q,u,obj.PAR,flag);
+                Qd = RDynamics(Q,u,obj.PAR,flag);
             end
         end
         
         % make an animation of the robot manipulator
         function animateArm(obj,q_actual,s)
             [x1,x2] = obj.kinematics(q_actual);
-            animateRR(x1,x2,s);
+            animateR(x1,x2,s);
         end
         
         % get lifted model constraints
@@ -198,10 +176,8 @@ classdef RR < Robot
             u_trj = trj.unom(:,1:N);
             %dimx = obj.SIM.dimx;
             dimu = obj.SIM.dimu;
-            umin(1,:) = obj.CON.link1.u.min - u_trj(1,:);
-            umin(2,:) = obj.CON.link2.u.min - u_trj(2,:);
-            umax(1,:) = obj.CON.link1.u.max - u_trj(1,:);
-            umax(2,:) = obj.CON.link2.u.max - u_trj(2,:);
+            umin = obj.CON.link.u.min - u_trj;
+            umax = obj.CON.link.u.max - u_trj;
 
             % arrange them in a format suitable for optimization
             umin = umin(:);
@@ -211,8 +187,8 @@ classdef RR < Robot
             D = (diag(ones(1,dimu*(N-1)),dimu) - eye(dimu*N))/h;
             D = D(1:end-dimu,:);
             
-            u_dot_max = [obj.CON.link1.udot.max; obj.CON.link2.udot.max];
-            u_dot_min = [obj.CON.link1.udot.min; obj.CON.link2.udot.min];
+            u_dot_max = obj.CON.link.udot.max;
+            u_dot_min = obj.CON.link1.udot.min;
             U_dot_max = repmat(u_dot_max,N-1,1);
             U_dot_min = repmat(u_dot_min,N-1,1);
             u_star = u_trj(:);

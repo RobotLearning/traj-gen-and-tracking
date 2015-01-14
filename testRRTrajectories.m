@@ -2,8 +2,6 @@
 %
 % TODO: Investigate the following
 %
-% Other models (RRR arm, ...)
-% Other mismatches (parametric, friction, ...)
 % Adding feedback 
 % slow down with DMP 
 

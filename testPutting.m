@@ -114,11 +114,37 @@ scale = vf/((y_des(end)-y_des(end-1))/h);
 h = h/scale;
 t = t/scale;
 
-% initialize model
+% initialize RR model
 SIM.h = h;
 rr = RR(PAR,CON,COST,SIM);
+% initialize R model
+% Simulation Values 
+% dimension of the x vector
+SIM.dimx = 2;
+% dimension of the output y
+SIM.dimy = 2;
+% dimension of the control input
+SIM.dimu = 1;
+% pass it as a parameter structure
+PAR.const.g = g;
+PAR.link.mass = m2;
+PAR.link.length = l2;
+PAR.link.centre.dist = l_c2;
+PAR.link.inertia = I2;
+PAR.link.motor.inertia = J_m2;
+PAR.link.motor.gear_ratio = r_2;
+PAR.C = eye(SIM.dimy,SIM.dimx);
+% form constraints
+CON = [];
+% cost structure
+% only penalize positions
+COST.Q = 100*diag([1,0]);
+COST.R = 1 * eye(SIM.dimu);
+% initialize model
+r = R(PAR,CON,COST,SIM);
+
 % create trajectory in cartesian space
-traj = rr.generateInputs(t,ref,0);
+traj = r.generateInputs(t,ref,0);
 
 %% Evolve system dynamics and animate the robot arm
 
@@ -128,18 +154,45 @@ q0(3:4) = (q1 - q0)/h;
 % add nonzero velocity
 %q0(3:4) = q0(3:4) + 0.1*rand(2,1);
 % observe output
-qact = rr.evolve(t,q0,traj.unom);
+ubar = [zeros(1,length(traj.unom)); traj.unom];
+qact = rr.evolve(t,q0,ubar);
 % get the cartesian coordinates
 [~,y] = rr.kinematics(qact(1:2,:));
 % add cartesian velocities
 yd = diff(y')'/ h; yd(:,end+1) = yd(:,end);
 y = [y;yd];
 % add performance to trajectory
-traj.addPerformance(traj.unom,y,rr.COST,'Computed Torque - IDM');
+traj.addPerformance(traj.unom,y([2,4],:),r.COST,'Computed Torque - IDM');
 
 % Plot the controls and animate the robot arm
-rr.plot_inputs(traj);
-rr.plot_outputs(traj);
+r.plot_inputs(traj);
+r.plot_outputs(traj);
+rr.animateArm(qact(1:2,:),ref);
+
+%% Start learning with ILC
+
+num_trials = 10;
+
+%ilc = aILC(rr,traj);
+ilc = mILC(r,traj); 
+
+for i = 1:num_trials
+    % get next inputs
+    u = ilc.feedforward(traj,qact);
+    ubar = [zeros(1,length(u)); u];
+    % evolve complete system
+    qact = rr.evolve(t,q0,ubar);
+    % get the cartesian coordinates
+    [~,y] = rr.kinematics(qact(1:2,:));
+    % add performance to trajectory
+    traj.addPerformance(ubar,y([2,4],:),r.COST,ilc);
+    % Plot the controls and animate the robot arm
+    %rr.animateArm(qact(1:2,:),ref);
+end
+
+% Plot the controls and animate the robot arm
+r.plot_inputs(traj);
+r.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
 
 %% Modify the animation
@@ -149,7 +202,7 @@ R = [0 1; -1 0];
 width = 0.025;
 % initial position of the ball
 ball = R * (y(1:2,end) + [0;width]);
-h1 = scatter(ball(1,1)+shift(1),ball(2,1)+shift(2),100,[.4 .4 .4],'filled','LineWidth',4);
+h1 = scatter(ball(1,1)+shift(1),ball(2,1)+shift(2),100,[.6 .6 .6],'filled','LineWidth',4);
 % % trajectory of the ball
 % balltrj_x = [y(1,end)+width y(1,end)+width];
 % balltrj_y = [y(2,end)+width/2 y(2,end) + l];

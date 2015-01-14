@@ -38,9 +38,9 @@ h1 = line(link1_x, link1_y, 'color', [.6 .6 .6],'LineWidth',4);
 h2 = line(link2_x, link2_y, 'color', [.6 .6 .6],'LineWidth',4);
 title('Two-link planar arm');
 hold on;
-h3 = scatter(shift(1),shift(2),100,[.4 .4 .4],'LineWidth',4);
-h4 = scatter(x1(1,1),x1(2,1),100,[.4 .4 .4],'LineWidth',4);
-h5 = scatter(x2(1,1),x2(2,1),10,[.4 .4 .4],'LineWidth',4);
+h3 = scatter(shift(1),shift(2),100,'b','LineWidth',4);
+h4 = scatter(x1(1,1),x1(2,1),100,'b','LineWidth',4);
+h5 = scatter(x2(1,1),x2(2,1),10,'b','LineWidth',4);
 h6 = plot(x_des,y_des,'-.','color', [.6 .6 .6], 'LineWidth',1);
 
 for j = 2:length(x1)
