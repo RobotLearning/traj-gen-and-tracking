@@ -124,6 +124,19 @@ classdef mILC < ILC
             
         end
         
+        % Use this version when you want to first use inverse kinematics
+        % to get the joint angles
+        function u = feedWithKinematics(obj,model,trj,y)
+            
+            s = model.invKinematics(trj.s);
+            % add cartesian velocities
+            h = trj.t(2) - trj.t(1);
+            sd = diff(s')'/ h; sd(:,end+1) = sd(:,end);
+            traj = Trajectory(trj.t,[s;sd],[],[]);
+            u = obj.feedforward(traj,y);
+            
+        end
+        
         function u = feedforward(obj,trj,y)
             
             dimu = size(obj.u_last,1);

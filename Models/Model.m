@@ -206,7 +206,21 @@ classdef (Abstract) Model < handle
             
             N = trj.N - 1; 
             t = trj.t;
+            h = trj.t(2) - trj.t(1);
             s = trj.s;
+            
+            % if learning takes place in cartesian space then run inverse
+            % kinematics
+            if isa(obj,'Robot')
+                if ~obj.flag_jspace
+                    % in this case run inverse kinematics
+                    s = obj.invKinematics(s);
+                    % add joint velocities
+                    sd = diff(s')'/ h; sd(:,end+1) = sd(:,end);
+                    s = [s;sd];
+                end
+            end
+            
             dimx = obj.SIM.dimx;
             dimu = obj.SIM.dimu;
             h = obj.SIM.h;

@@ -8,8 +8,8 @@ classdef (Abstract) Robot < Model
 
         % jacobian
         jac
-        % TODO: flag for using operational (0) or joint space (1) ?
-        %flag_jspace
+        % flag for using operational (0) or joint space (1) ?
+        flag_jspace
     end
     
     % methods to be implemented
@@ -33,7 +33,7 @@ classdef (Abstract) Robot < Model
         
         % using a simple inverse kinematics method
         % if flag is 1 then reference in joint space!
-        function Traj = generateInputs(obj,t,ref,flag)
+        function Traj = generateInputs(obj,t,ref)
 
             h = obj.SIM.h;
             dim = obj.SIM.dimx / 2;
@@ -63,7 +63,7 @@ classdef (Abstract) Robot < Model
             end
             
             % check for joint space representation
-            if flag == 1
+            if obj.flag_jspace == 1
                 Traj = Trajectory(t,[q;qd],uff,[]);
             else
                 %xd = obj.jac * qd;

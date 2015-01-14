@@ -15,6 +15,8 @@ classdef R < Robot
         C
         % jacobian matrix
         jac
+        % learning in joint space?
+        flag_jspace
     end
     
     methods
@@ -72,6 +74,7 @@ classdef R < Robot
             assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
                    'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;
+            obj.flag_jspace = ~sim.cartesian;
         end
         
         % change the cost function
@@ -79,7 +82,7 @@ classdef R < Robot
             obj.COST.Q = cost.Q;
             obj.COST.R = cost.R;
             obj.COST.fnc = @(x1,x2) diag((x1-x2)'*cost.Q*(x1-x2));
-            %assert(length(Q) == obj.SIM.dimx);
+            %assert(length(cost.Q) == obj.SIM.dimx);
         end
         
     end
@@ -88,7 +91,7 @@ classdef R < Robot
         
         % constructor for convenience
         % TODO: divide into several methods?
-        function obj = RR(par,con,cost,sim)
+        function obj = R(par,con,cost,sim)
             
             obj.SIM = sim;            
             % set object parameter
@@ -124,8 +127,8 @@ classdef R < Robot
             par.link.length = 1.0 * obj.PAR.link.length;
             par.link.centre.dist = obj.PAR.link.centre.dist;
             par.link.inertia = 1.0 * obj.PAR.link.inertia;            
-            par.link.motor.inertia = 1.0 * obj.PAR.link.motor.inertia;            
-            par.link.motor.gear_ratio = 1.0 * obj.PAR.link.motor.gear_ratio;            
+            par.link.motor.inertia = 1.5 * obj.PAR.link.motor.inertia;            
+            par.link.motor.gear_ratio = 1.5 * obj.PAR.link.motor.gear_ratio;            
             
             % differential equation of the inverse dynamics
             % x_dot = A(x)x + B(x)u + C(x)
@@ -134,10 +137,10 @@ classdef R < Robot
         end
         
         % run kinematics
-        function x1 = kinematics(obj,q)
+        function x = kinematics(obj,q)
             
             l1 = obj.PAR.link.length;
-            x1 = [l1 * cos(q); l1 * sin(q)];
+            x = [l1 * cos(q); l1 * sin(q)];
         end
         
         % call inverse kinematics from outside
@@ -164,8 +167,8 @@ classdef R < Robot
         
         % make an animation of the robot manipulator
         function animateArm(obj,q_actual,s)
-            [x1,x2] = obj.kinematics(q_actual);
-            animateR(x1,x2,s);
+            x = obj.kinematics(q_actual);
+            animateR(x,s);
         end
         
         % get lifted model constraints

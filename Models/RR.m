@@ -15,6 +15,8 @@ classdef RR < Robot
         C
         % jacobian matrix
         jac
+        % learning in joint space?
+        flag_jspace
     end
     
     methods
@@ -88,6 +90,7 @@ classdef RR < Robot
             assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
                    'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;
+            obj.flag_jspace = ~sim.cartesian;
         end
         
         % change the cost function
