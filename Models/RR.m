@@ -137,21 +137,20 @@ classdef RR < Robot
         % TODO: should we wrap the dynamics?
         function x_dot = actual(obj,~,x,u)
             
-            % change parameters
+            % assume we dont know the actuator inertia
             par.const.g = obj.PAR.const.g;
-            par.link1.mass = 1.0 * obj.PAR.link1.mass;
-            par.link2.mass = 1.0 * obj.PAR.link2.mass;
-            par.link1.length = 1.0 * obj.PAR.link1.length;
-            par.link2.length = 1.0 * obj.PAR.link2.length;
+            par.link1.mass = obj.PAR.link1.mass;
+            par.link2.mass = obj.PAR.link2.mass;
+            par.link1.length = obj.PAR.link1.length;
+            par.link2.length = obj.PAR.link2.length;
             par.link1.centre.dist = obj.PAR.link1.centre.dist;
             par.link2.centre.dist = obj.PAR.link2.centre.dist;
-            par.link1.inertia = 1.0 * obj.PAR.link1.inertia;
-            par.link2.inertia = 1.0 * obj.PAR.link2.inertia;
-            par.link1.motor.inertia = 1.0 * obj.PAR.link1.motor.inertia;
-            par.link2.motor.inertia = 1.0 * obj.PAR.link2.motor.inertia;
-            par.link1.motor.gear_ratio = 1.0 * obj.PAR.link1.motor.gear_ratio;
-            par.link2.motor.gear_ratio = 1.0 * obj.PAR.link2.motor.gear_ratio;
-            
+            par.link1.inertia = 0.15;
+            par.link2.inertia = obj.PAR.link2.inertia;
+            par.link1.motor.inertia = obj.PAR.link1.motor.inertia;
+            par.link2.motor.inertia = obj.PAR.link2.motor.inertia;
+            par.link1.motor.gear_ratio = obj.PAR.link1.motor.gear_ratio;
+            par.link2.motor.gear_ratio = obj.PAR.link2.motor.gear_ratio;
             
             % differential equation of the inverse dynamics
             % x_dot = A(x)x + B(x)u + C(x)

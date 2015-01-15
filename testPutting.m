@@ -1,4 +1,4 @@
-%% Test Putting with underactuated RR arm
+%% Test Putting with full actuated RR arm
 
 clc; clear; close all;
 
@@ -8,7 +8,7 @@ clc; clear; close all;
 % system is continous
 SIM.discrete = false;
 % learn in cartesian space
-SIM.cartesian = true;
+SIM.cartesian = false;
 % dimension of the x vector
 SIM.dimx = 4;
 % dimension of the output y
@@ -26,7 +26,7 @@ SIM.int = 'Euler';
 % constants
 g = 9.81;
 % joint parameters
-m1 = 1; %mass of first link, kg
+m1 = 1.0; %mass of first link, kg
 m2 = 0.5; %mass of second link, kg
 l1 = 0.50; %length of first link, m
 l2 = 0.40; %length of second link, m
@@ -55,7 +55,7 @@ PAR.link1.centre.dist = l_c1;
 PAR.link2.centre.dist = l_c2;
 PAR.link1.inertia = I1;
 PAR.link2.inertia = I2;
-PAR.link1.motor.inertia = J_m1;
+PAR.link1.motor.inertia = 0;
 PAR.link2.motor.inertia = J_m2;
 PAR.link1.motor.gear_ratio = r_1;
 PAR.link2.motor.gear_ratio = r_2;
@@ -119,56 +119,23 @@ t = t/scale;
 % initialize RR model
 SIM.h = h;
 rr = RR(PAR,CON,COST,SIM);
-% initialize R model
-% Simulation Values 
-% dimension of the x vector
-SIM.dimx = 2;
-% dimension of the output y
-SIM.dimy = 2;
-% dimension of the control input
-SIM.dimu = 1;
-% pass it as a parameter structure
-PAR.const.g = g;
-PAR.link.mass = m2;
-PAR.link.length = l2;
-PAR.link.centre.dist = l_c2;
-PAR.link.inertia = I2;
-PAR.link.motor.inertia = J_m2;
-PAR.link.motor.gear_ratio = r_2;
-PAR.C = eye(SIM.dimy,SIM.dimx);
-% form constraints
-CON = [];
-% cost structure
-% only penalize positions
-COST.Q = 100*diag([1,0]);
-COST.R = 1 * eye(SIM.dimu);
-% initialize model
-r = R(PAR,CON,COST,SIM);
 
 % create trajectory in cartesian space
-traj = r.generateInputs(t,ref);
+traj = rr.generateInputs(t,ref);
 
 %% Evolve system dynamics and animate the robot arm
 
-q0 = rr.invKinematics(traj.s(:,1));
-q1 = rr.invKinematics(traj.s(:,2));
-q0(3:4) = (q1 - q0)/h;
+q0 = traj.s(:,1);
 % add nonzero velocity
 %q0(3:4) = q0(3:4) + 0.1*rand(2,1);
 % observe output
-ubar = [zeros(1,length(traj.unom)); traj.unom];
-qact = rr.evolve(t,q0,ubar);
-% get the cartesian coordinates
-[~,y] = rr.kinematics(qact(1:2,:));
-% add cartesian velocities
-yd = diff(y')'/ h; yd(:,end+1) = yd(:,end);
-y = [y;yd];
+qact = rr.evolve(t,q0,traj.unom);
 % add performance to trajectory
-traj.addPerformance(traj.unom,y,rr.COST,'Computed Torque - IDM');
+traj.addPerformance(traj.unom,qact,rr.COST,'Computed Torque - IDM');
 
 % Plot the controls and animate the robot arm
-r.plot_inputs(traj);
-r.plot_outputs(traj);
+rr.plot_inputs(traj);
+rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
 
 %% Start learning with ILC
@@ -176,45 +143,40 @@ rr.animateArm(qact(1:2,:),ref);
 num_trials = 10;
 
 %ilc = aILC(rr,traj);
-ilc = mILC(r,traj); 
+ilc = mILC(rr,traj); 
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedWithKinematics(r,traj,qact([2,4],:));
-    ubar = [zeros(1,length(u)); u];
+    u = ilc.feedforward(traj,qact);
     % evolve complete system
-    qact = rr.evolve(t,q0,ubar);
-    % get the cartesian coordinates
-    [~,y] = rr.kinematics(qact(1:2,:));
-    % add cartesian velocities
-    yd = diff(y')'/ h; yd(:,end+1) = yd(:,end);
-    y = [y;yd];
+    qact = rr.evolve(t,q0,u);
     % add performance to trajectory
-    traj.addPerformance(u,y,rr.COST,ilc);
+    traj.addPerformance(u,qact,rr.COST,ilc);
     % Plot the controls and animate the robot arm
     %rr.animateArm(qact(1:2,:),ref);
 end
 
 % Plot the controls and animate the robot arm
-r.plot_inputs(traj);
-r.plot_outputs(traj);
+rr.plot_inputs(traj);
+rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
 
 %% Modify the animation
 
-% shift = [0; 0.9];
-% R = [0 1; -1 0];
-% width = 0.025;
-% % initial position of the ball
-% ball = R * (y(1:2,end) + [0;width]);
-% h1 = scatter(ball(1,1)+shift(1),ball(2,1)+shift(2),100,[.6 .6 .6],'filled','LineWidth',4);
-% % % trajectory of the ball
-% % balltrj_x = [y(1,end)+width y(1,end)+width];
-% % balltrj_y = [y(2,end)+width/2 y(2,end) + l];
-% % h2 = line(balltrj_x, balltrj_y, 'LineStyle', '-.', 'color', [.4 .4 .4],'LineWidth',1);
-% % position the hole
-% hole = [y(1,end)+width/2 y(1,end)+width/2; y(2,end)+l-hole_rad y(2,end)+l+hole_rad];
-% hole = R * hole;
-% h3 = line(hole(1,:)+shift(1), hole(2,:)+shift(2), 'LineStyle', '-', 'color', [0 0 0],'LineWidth',4);
-% % print as grayscale eps 
-% % print(gcf,'-depsc','putting.eps');
+y = rr.kinematics(qact);
+shift = [0; 0.5];
+R = [0 1; -1 0];
+width = 0.025;
+% initial position of the ball
+ball = R * (y(1:2,end) + [0;width]);
+h1 = scatter(ball(1,1)+shift(1),ball(2,1)+shift(2),100,[.6 .6 .6],'filled','LineWidth',4);
+% % trajectory of the ball
+% balltrj_x = [y(1,end)+width y(1,end)+width];
+% balltrj_y = [y(2,end)+width/2 y(2,end) + l];
+% h2 = line(balltrj_x, balltrj_y, 'LineStyle', '-.', 'color', [.4 .4 .4],'LineWidth',1);
+% position the hole
+hole = [y(1,end)+width/2 y(1,end)+width/2; y(2,end)+l-hole_rad y(2,end)+l+hole_rad];
+hole = R * hole;
+h3 = line(hole(1,:)+shift(1), hole(2,:)+shift(2), 'LineStyle', '-', 'color', [0 0 0],'LineWidth',4);
+% print as grayscale eps 
+% print(gcf,'-depsc','putting.eps');

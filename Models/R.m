@@ -127,8 +127,8 @@ classdef R < Robot
             par.link.length = 1.0 * obj.PAR.link.length;
             par.link.centre.dist = obj.PAR.link.centre.dist;
             par.link.inertia = 1.0 * obj.PAR.link.inertia;            
-            par.link.motor.inertia = 1.5 * obj.PAR.link.motor.inertia;            
-            par.link.motor.gear_ratio = 1.5 * obj.PAR.link.motor.gear_ratio;            
+            par.link.motor.inertia = 1.0 * obj.PAR.link.motor.inertia;            
+            par.link.motor.gear_ratio = 1.0 * obj.PAR.link.motor.gear_ratio;            
             
             % differential equation of the inverse dynamics
             % x_dot = A(x)x + B(x)u + C(x)
