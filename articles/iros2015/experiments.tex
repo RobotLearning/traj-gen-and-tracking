@@ -14,21 +14,22 @@ Putting is a simple and natural domain for testing ILC algorithms because it all
 
 We illustrate in Figure~\ref{putting1} a simplified simulation of a two-link planar arm with two revolute joints hitting a golf ball on the ground. We can imagine that a golf stick is attached to the end-effector at the second joint. We assume that we have available a circular reference trajectory that intercepts the ball with a desired velocity of $1.8$ m/s. This lets us account for the masses of the arm and the ball as well as a simulated kinetic friction of $\mu = 0.6$ between the golf ball and the ground. Good putting trajectories can be shown easily by expert humans or recorded via kinesthetic teach-in. 
 
-\begin{figure} 
-\centering 
-%\newlength\figureheight 
-%\newlength\figurewidth 
-%\setlength\figureheight{6cm}  
-%\setlength\figurewidth{6cm} 
-%\input{putting1.tikz} 
-\includegraphics[scale=0.40]{putting1.eps}
-\caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The trajectory is shown as a blue dashed curve. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
+
+\begin{figure}[ht]
+\centering
+\subfloat[Initial attempt]{%
+\includegraphics[width=1.0\linewidth, bb = 0 0 1 1]{putting0.eps}
+\label{fig:subfig1}}
+\subfloat[Final trajectory]{%
+\includegraphics[width=1.0\linewidth]{putting1.eps}
+\label{fig:subfig2}}
+\caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The reference trajectory is shown as a blue dashed curve. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
 \label{putting1} 
-\end{figure} 
+\end{figure}
 
 The iterations of \emph{wILC} are shown in Figure~\ref{wILCTrajectoryPutting}. Learning takes place directly in the operational space of the robot, since the unactuated link prevents us from applying inverse kinematics. We can see how initially the first link of the robot prevents the second link from following the trajectory precisely. The matrix $\vec{F}_{w}$ is constructed by linearizing the second link, i.e. using a linearized pendulum model, whereas the full dynamics $\dynamics(\joint,\dot{\joint},\sysInput)$ involves the nonlinear effects from both links. The following iterations show how ILC compensates for such an effect and in the last iteration the ball is given the desired velocity to reach the hole. 
 
-We compare the approach with \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{puttingComparison} by plotting the RMS-error of the iterations with each algorithm. Notice that these stochastic approaches take much longer to converge.
+We compare the approach with \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{wILCTrajectoryPutting} by plotting the RMS-error of the iterations with each algorithm. Notice that these stochastic approaches take much longer to converge.
 
 % Compare alternative methods, gradient descent, etc.
 % table shows that $R = 0$, $Q = I$ appears to be optimal in this case.
@@ -36,18 +37,13 @@ We compare the approach with \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{putt
 \begin{figure}
 \center
 %\includegraphics[scale=0.50]{comparison.eps}
-\scalebox{1.0}{\input{Pictures/ilc.tikz}}
-\caption{Convergence of $\alg$ to the reference putting trajectory}
+\newlength\figureheight 
+\newlength\figurewidth 
+\setlength\figureheight{6cm}  
+\setlength\figurewidth{6cm} 
+\scalebox{1.0}{\input{Pictures/wILC.tikz}}
+\caption{Convergence of $\alg$ to the reference putting trajectory. Note the slow convergence of the other stochastic RL algorithms.}
 \label{wILCTrajectoryPutting}
-\end{figure}
-
-\begin{figure}
-\begingroup
-%\tikzset{every picture/.style={scale=0.8}}%
-\scalebox{0.5}{\input{comparisonPutting.tex}}
-\endgroup
-\caption{The log-scale plot of convergence of \emph{wILC}. Note the slow convergence of the other stochastic RL algorithms.}
-\label{puttingComparison}
 \end{figure}
 
 \subsection{Application in Table Tennis}

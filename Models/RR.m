@@ -145,10 +145,10 @@ classdef RR < Robot
             par.link2.length = obj.PAR.link2.length;
             par.link1.centre.dist = obj.PAR.link1.centre.dist;
             par.link2.centre.dist = obj.PAR.link2.centre.dist;
-            par.link1.inertia = 0.15;
+            par.link1.inertia = obj.PAR.link1.inertia;
             par.link2.inertia = obj.PAR.link2.inertia;
-            par.link1.motor.inertia = obj.PAR.link1.motor.inertia;
-            par.link2.motor.inertia = obj.PAR.link2.motor.inertia;
+            par.link1.motor.inertia = 0.15;
+            par.link2.motor.inertia = 0.12;
             par.link1.motor.gear_ratio = obj.PAR.link1.motor.gear_ratio;
             par.link2.motor.gear_ratio = obj.PAR.link2.motor.gear_ratio;
             

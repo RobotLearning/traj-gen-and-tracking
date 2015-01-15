@@ -55,8 +55,8 @@ PAR.link1.centre.dist = l_c1;
 PAR.link2.centre.dist = l_c2;
 PAR.link1.inertia = I1;
 PAR.link2.inertia = I2;
-PAR.link1.motor.inertia = 0;
-PAR.link2.motor.inertia = J_m2;
+PAR.link1.motor.inertia = J_m1 + 0.05 * randn;
+PAR.link2.motor.inertia = J_m2 + 0.05 * randn;
 PAR.link1.motor.gear_ratio = r_1;
 PAR.link2.motor.gear_ratio = r_2;
 
