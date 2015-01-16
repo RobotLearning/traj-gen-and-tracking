@@ -9,27 +9,26 @@ We assume that the reference trajectories are \emph{feasible}, i.e. that it is p
 
 \subsection{Verification and Comparisons in Simulated Putting}
 
-Putting is a simple and natural domain for testing ILC algorithms because it allows a robot to apply ILC to actuate few degrees of freedom (typically the end joint) while having the dynamical effects from the other links act as disturbances. This kind of learning in underactuated dynamical systems can act as a scalable interface to more complex hitting tasks in the full-joint space of robots with high DoFs. Here we provide only a simple example to illustrate such \emph{scalable} learning.
+%Putting is a simple and natural domain for testing ILC algorithms because it allows a robot to apply ILC to actuate few degrees of freedom (typically the end joint) while having the dynamical effects from the other links act as disturbances. This kind of learning in underactuated dynamical systems can act as a scalable interface to more complex hitting tasks in the full-joint space of robots with high DoFs. Here we provide only a simple example to illustrate such \emph{scalable} learning.
 %By learning the causal map of the disturbances acting on the robot (i.e. a graphical model) one can iteratively construct increasingly sophisticated controllers that are cognizant of the causal relationships between the joints and the disturbances. 
 
-We illustrate in Figure~\ref{putting1} a simplified simulation of a two-link planar arm with two revolute joints hitting a golf ball on the ground. We can imagine that a golf stick is attached to the end-effector at the second joint. We assume that we have available a circular reference trajectory that intercepts the ball with a desired velocity of $1.8$ m/s. This lets us account for the masses of the arm and the ball as well as a simulated kinetic friction of $\mu = 0.6$ between the golf ball and the ground. Good putting trajectories can be shown easily by expert humans or recorded via kinesthetic teach-in. 
+Putting is a simple and natural domain for testing ILC algorithms, in particular we consider it as a scalable interface to more complex hitting tasks with high DoF robots. We illustrate in Figure~\ref{putting1} a simplified simulation of a two-link planar arm with two revolute joints hitting a golf ball on the ground. We can imagine that a golf stick is attached to the end-effector at the second joint. We assume that we have available a circular reference trajectory that intercepts the ball with a desired velocity of $1.8$ m/s. This lets us account for the masses of the arm and the ball as well as a simulated kinetic friction of $\mu = 0.6$ between the golf ball and the ground. Good putting trajectories can be shown easily by expert humans or recorded via kinesthetic teach-in. 
 
+In order to simulate learning with ILC, we assume that there is a model mismatch due to the motor inertia of both joints. We give the motor inertia a Gaussian distributed disturbance with zero mean and a variance of $0.05$, while the actual values of the motor inertia are $0.15$ and $0.12$ respectively. With these random disturbances we can construct error bars for $\alg$ and also test for the robustness of the proposed method.
 
 \begin{figure}[ht]
 \centering
 \subfloat[Initial attempt]{%
-\includegraphics[width=1.0\linewidth, bb = 0 0 1 1]{putting0.eps}
+\includegraphics[width=0.5\linewidth]{putting0.eps}
 \label{fig:subfig1}}
 \subfloat[Final trajectory]{%
-\includegraphics[width=1.0\linewidth]{putting1.eps}
+\includegraphics[width=0.5\linewidth]{putting1.eps}
 \label{fig:subfig2}}
-\caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The reference trajectory is shown as a blue dashed curve. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
+\caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The reference trajectory is shown as a blue dashed curve. We can see in Fig.~\ref{fig:subfig1} that the initial attempt falls short of the reference trajectory. ILC then modifies the weights of the DMP to compensate for the modeling errors. In Fig.~\ref{fig:subfig2} the reference trajectory is executed perfectly. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
 \label{putting1} 
 \end{figure}
 
-The iterations of \emph{wILC} are shown in Figure~\ref{wILCTrajectoryPutting}. Learning takes place directly in the operational space of the robot, since the unactuated link prevents us from applying inverse kinematics. We can see how initially the first link of the robot prevents the second link from following the trajectory precisely. The matrix $\vec{F}_{w}$ is constructed by linearizing the second link, i.e. using a linearized pendulum model, whereas the full dynamics $\dynamics(\joint,\dot{\joint},\sysInput)$ involves the nonlinear effects from both links. The following iterations show how ILC compensates for such an effect and in the last iteration the ball is given the desired velocity to reach the hole. 
-
-We compare the approach with \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{wILCTrajectoryPutting} by plotting the RMS-error of the iterations with each algorithm. Notice that these stochastic approaches take much longer to converge.
+The iterations of \emph{wILC} are shown in Figure~\ref{wILCTrajectoryPutting}. Learning takes place in the joint space of the robot, since the matrix $\vec{F}_{w}$ is constructed using the nominal dynamics model \eqref{dynamics} in joint space. The full dynamics $\dynamics(\joint,\dot{\joint},\sysInput)$ involves the nonlinear effects from both links. We can see how initially the inertial disturbances of the motors prevent the end-effector from following the trajectory precisely. The following iterations show how ILC compensates for such an effect and in the last iteration the ball is given the desired velocity to reach the hole. We compare the approach with \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{wILCTrajectoryPutting} by plotting the RMS-error of the iterations with each algorithm. The error bars indicate one standard deviation within $10$ trials with different inertial mismatches. Notice that these stochastic approaches take much longer to converge.
 
 % Compare alternative methods, gradient descent, etc.
 % table shows that $R = 0$, $Q = I$ appears to be optimal in this case.
@@ -42,7 +41,7 @@ We compare the approach with \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{wILC
 \setlength\figureheight{6cm}  
 \setlength\figurewidth{6cm} 
 \scalebox{1.0}{\input{Pictures/wILC.tikz}}
-\caption{Convergence of $\alg$ to the reference putting trajectory. Note the slow convergence of the other stochastic RL algorithms.}
+\caption{Convergence of $\alg$ to the reference putting trajectory. Convergence is quadratic for the simulated scenario where we have unknown inertial disturbances acting on the motors. Note the slow and unstable performance of the other stochastic RL algorithms.}
 \label{wILCTrajectoryPutting}
 \end{figure}
 
