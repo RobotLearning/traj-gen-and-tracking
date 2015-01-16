@@ -1,4 +1,4 @@
-\section{METHOD}\label{method}
+\section{Iterative Learning Control with Movement Primitives}\label{method}
 
 Sometimes for safety reasons, for instance when interacting with external objects or under unforeseen perturbations \cite{Schaal07}, a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant. As another practical restriction, one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases, it is not possible to modify the input signals $\sysInput$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
 
@@ -275,7 +275,7 @@ Note the connection of \eqref{ILCWeightsNewtonsMethod} to plant inversion method
 In model-free approaches the weighting matrix $\vec{W}(t)$ is taken as the identity matrix. In our case the model-based assumptions of our approach appear in the form of a nondiagonal covariance matrix. We perform generalized least-squares regression by taking advantage of the linearized model in~\eqref{fullTransition} to form the right correlations between states. Compared with the \emph{credit-assignment} issues of RL algorithms, we see that ILC, equipped with our linearized models, offers us a more principled way to assign errors to the weights of the movement primitives.
 
 % talk about filtered version in a new and last paragraph?
-
+% talk about choosing beta_k values properly
 \subsection{Algorithm \& Implementation}\label{algorithm}
 
 We use the update law derived in \eqref{ILCWeightsNewtonsMethod} in our algorithm, given in Algorithm~\ref{alg1}. This update law enables us to take advantage of the superlinear order of convergence property of Newton's method based descent methods while ensuring with $\qmatrix$ some degree of robustness on the nonrepeating disturbances in \eqref{fullTransition} arising from model mismatch and other unpredictable environmental conditions. Depending on the task and models available, weighting matrices $\vec{Q}_{L}$ and $\vec{R}_{w}$ can be varied as desired. Iteration dependent matrices will ensure that performance does not degrade, as one can reduce the weight matrix $\vec{R}_{w}$ as the errors get smaller. We discuss this additional degree of freedom of the algorithm in more detail in section \ref{experiments}.

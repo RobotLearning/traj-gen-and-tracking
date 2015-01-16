@@ -62,13 +62,12 @@ DMPs have been also combined in a bimanual robotics task with ILC~\cite{Gams13} 
 
 \subsection{Problem Statement}\label{problemStatement}
 
-The goal in trajectory tracking is to track a given reference $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput(t)$. The reference trajectory in our case enables the \emph{optimal} execution of hitting and striking motions, e.g., forehand and backhand strikes in (table) tennis. We assume that such optimal trajectories are available to us, either through kinesthetic teach-in or computed recursively.
+The goal in trajectory tracking is to track a given reference $\traj(t), \ 0 \leq t \leq T \ $, in state space $\state \in S \subset \mathbb{R}^{n}$ by applying the control inputs $\sysInput(t)$. The reference trajectory in our case enables the \emph{optimal} execution of hitting and striking motions, e.g., forehand and backhand strikes in (table) tennis. We assume that such optimal trajectories are available to us, either through kinesthetic teach-in or computed recursively.
 % talk about feasibility.
 % reference needed? Dynamic programming?
 
 % subsubsection entitled 'modelling assumptions'?
 % talk of model-free regression update of DMP there maybe?
-
 Consider the nonlinear robot dynamics of the form
 %
 \begin{equation}
