@@ -17,6 +17,38 @@ dbstop(tmp)
 clear tmp
 delete('tmp.mat')
 
+%% Show that regression on states and state derivatives are equivalent
+
+t0 = 0;
+tf = 1;
+h = 0.02;
+t = t0:h:tf;
+t = t(:);
+N = length(t)-1;
+s = 1./(1+exp(-(100*t-20)/10));
+s = s(:);
+
+% form the regression matrix
+bfs = N+1;
+Psi = zeros(N+1,bfs);
+hh = ones(bfs,1) * bfs^(1.5);
+c = linspace(t(1),t(end),bfs);
+for i = 1:bfs
+    Psi(:,i) = exp(-hh(i) * (t - c(i)).^2);
+end
+
+% usual regression
+w = Psi \ s(:);
+s1 = Psi * w;
+
+% regression on derivatives
+D = (diag(-ones(1,N),-1) + eye(N+1))/h;
+S = h*tril(ones(N+1));
+w = Psi \ (D * s(:));
+
+sd = Psi * w;
+s2 = S * sd;
+
 %% Basic (model-free) ILC with feedback converges faster
 
 % dimx = 2;
@@ -187,7 +219,7 @@ plot(1:num_trials,ilc.error);
 title('Squared-2-Norm of ILC error');
 legend(ilc.name);
 
-%% tILC with weights as filtering
+%% tILC with derivative weights
 
 dimx = 2;
 dimu = 1;
@@ -258,7 +290,7 @@ num_trials = 10;
 
 for i = 1:num_trials
     
-    traj2 = ilc.updateDerivativeWeights(traj,y);
+    traj2 = ilc.updateWeights(traj,y);
     % update the weights of the dmp
     %ilc.feedforward(dmp,traj,y);
     % get the measurements

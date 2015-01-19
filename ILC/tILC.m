@@ -34,24 +34,22 @@ classdef tILC < ILC
                         
             obj.episode = 0;
             obj.color = 'k';
-            obj.name = 'ILC modifying trajectories';
+            obj.name = 'tILC';
             obj.error = 0;
             
-            N = traj.N - 1;
+            N = traj.N;
+            h = traj.t(2) - traj.t(1);
             obj.trj = traj.s;
             %s = dmp.evolve();
             %s = s(1,:);
             C = model.C;
             obj.sbar = C'*((C*C')\traj.s);
             
-            obj.Psi = obj.formPsi(N,traj.t(1:N));
-            s = traj.s(:);
-            obj.w = pinv(obj.Psi) * s(1:N);
-            h = traj.t(2) - traj.t(1);
-            D = diag(ones(1,N),1) - eye(traj.N);
-            D = D(1:end-1,:)/h;
-            %D = flipud(D);
-            obj.wd = pinv(obj.Psi) * D * traj.s(:);
+            obj.Psi = obj.formPsi(N,traj.t);
+            obj.w = pinv(obj.Psi) * obj.sbar';
+
+            D = (diag(-ones(1,N-1),-1) + eye(N))/h;
+            obj.wd = pinv(obj.Psi) * D * obj.sbar';
             
         end
         
@@ -59,7 +57,7 @@ classdef tILC < ILC
             N = length(t);
             Psi = zeros(N,bfs);
             h = ones(bfs,1) * bfs^(1.5);
-            c = linspace(t(1),t(end-1),bfs);
+            c = linspace(t(1),t(end),bfs);
             for i = 1:bfs
                 Psi(:,i) = obj.basis(t,h(i),c(i));
             end
@@ -78,14 +76,29 @@ classdef tILC < ILC
             K = traj.K;
             dev = y - obj.trj;            
     
+            % construct learning matrix
+            L = 0.5;
+            % get rid of x0 in dev
+            ddev = diff(dev')';
+            dev = dev(:,2:end);
+    
             % set learning rate
-            a = 0.5;
-            dev2 = dev(:,2:end);
-            obj.w = obj.w + a*pinv(obj.Psi)*dev2(:);
-            s = obj.Psi * obj.w;
-            s = [s; traj.s(:,end)];
+            a_p = 0.5;
+            a_d = 0.2;
+            delta = a_p * dev + a_d * ddev;
             
-            traj2 = Trajectory(traj.t, s', traj.unom,K);
+            Kl = zeros(size(K,1)*N,size(K,2)*N);
+            % construct lifted domain matrix Kl
+            for l = 1:N
+                vec1 = (l-1)*size(K,1) + 1:l*size(K,1);
+                vec2 = (l-1)*size(K,2) + 1:l*size(K,2);
+                Kl(vec1,vec2) = K(:,:,l); % on diagonals only
+            end
+            
+            obj.w = obj.w + pinv(obj.Psi)*pinv(Kl)*L*dev(:);
+            sbar = obj.Psi * obj.w;
+            
+            traj2 = Trajectory(traj.t, sbar', traj.unom, K);
             
         end
         
@@ -100,17 +113,22 @@ classdef tILC < ILC
             % set learning rate
             a = 0.5;
             
+            Kl = zeros(size(K,1)*N,size(K,2)*N);
+            % construct lifted domain matrix Kl
+            for l = 1:N
+                vec1 = (l-1)*size(K,1) + 1:l*size(K,1);
+                vec2 = (l-1)*size(K,2) + 1:l*size(K,2);
+                Kl(vec1,vec2) = K(:,:,l); % on diagonals only
+            end
+            
             % get derivatives
-            D = diag(ones(1,N),1) - eye(traj.N);
-            D = D(1:end-1,:)/h;
-            %D = flipud(D);
-            S = h*[zeros(1,N); tril(ones(N))];
-            %S = flipud(S);
+            D = (diag(-ones(1,N),-1) + eye(N+1))/h;
+            S = h*tril(ones(N+1));
             obj.wd = obj.wd + a*pinv(obj.Psi)*D*dev(:);
             sd = obj.Psi * obj.wd;
-            s = traj.s(:,1) + S * sd;            
+            sbar = S * sd;           
             
-            traj2 = Trajectory(traj.t, s', traj.unom,K);
+            traj2 = Trajectory(traj.t, sbar', traj.unom,K);
             
         end
         
