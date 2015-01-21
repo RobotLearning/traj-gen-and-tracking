@@ -1,5 +1,6 @@
 % A simple linear dynamics model
 % continous model always discretized
+% assumes for now time invariant (stupid!) - should be called LTI maybe
 
 classdef Linear < Model
 

@@ -19,6 +19,8 @@ classdef mILC < ILC
         name
         % costs incurred (Q-SSE)
         error
+        % flag for learning with feedback? [then model changes]
+        learn_fb
         
         % ILC's Last input sequence
         u_last
@@ -32,7 +34,8 @@ classdef mILC < ILC
     
     methods
         
-        function obj = mILC(model,trj)
+        % varargin is for learning with feedback, better way?
+        function obj = mILC(model,trj,varargin)
                         
             obj.episode = 0;
             obj.color = 'm';
@@ -56,6 +59,11 @@ classdef mILC < ILC
             obj.Ql = zeros(N*dim_y, N*dim_y);
             obj.Rl = zeros(N*dim_u, N*dim_u);
             
+            obj.learn_fb = false;
+            if nargin == 3
+                obj.learn_fb = true;
+            end
+            
             % fill the F matrix
             obj.lift(model,trj);
             
@@ -66,6 +74,7 @@ classdef mILC < ILC
         function lift(obj,model,trj)
             
             N = trj.N - 1;
+            
             dim_x = model.SIM.dimx;
             dim_u = model.SIM.dimu;
             
@@ -85,39 +94,70 @@ classdef mILC < ILC
             
                 Ad = model.Ad;
                 Bd = model.Bd;
-                % construct lifted domain matrix F
-                % TODO: this can be computed much more efficiently
-                % for linear systems
-                for i = 1:N
-                    for j = 1:i
-                        vec_x = (i-1)*dim_x + 1:i*dim_x;
-                        vec_u = (j-1)*dim_u + 1:j*dim_u;
-                        mat = Bd;
-                        for k = j+1:i
-                            mat = Ad * mat;
+                if ~obj.learn_fb
+                    % construct lifted domain matrix F
+                    % TODO: this can be computed much more efficiently
+                    % for linear systems
+                    for i = 1:N
+                        for j = 1:i
+                            vec_x = (i-1)*dim_x + 1:i*dim_x;
+                            vec_u = (j-1)*dim_u + 1:j*dim_u;
+                            mat = Bd;
+                            for k = j+1:i
+                                mat = Ad * mat;
+                            end
+                            obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
                         end
-                        obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                    end
+                else % learn with feedback
+                    K = trj.K;
+                    % construct lifted domain matrix F
+                    % TODO: this can be computed much more efficiently
+                    % for linear systems
+                    for i = 1:N
+                        for j = 1:i
+                            vec_x = (i-1)*dim_x + 1:i*dim_x;
+                            vec_u = (j-1)*dim_u + 1:j*dim_u;
+                            mat = Bd;
+                            for k = j+1:i
+                                mat = (Ad + Bd * K(:,:,k)) * mat;
+                            end
+                            obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                        end
                     end
                 end
-
-                
             else
                 % get linear time variant matrices around trajectory
                 [Ad,Bd] = model.linearize(trj);
                 
-                % construct lifted domain matrix F
-                for i = 1:N
-                    for j = 1:i
-                        vec_x = (i-1)*dim_x + 1:i*dim_x;
-                        vec_u = (j-1)*dim_u + 1:j*dim_u;
-                        mat = Bd(:,:,j);
-                        for k = j+1:i
-                            mat = Ad(:,:,k) * mat;
+                if ~obj.learn_fb
+                    % construct lifted domain matrix F
+                    for i = 1:N
+                        for j = 1:i
+                            vec_x = (i-1)*dim_x + 1:i*dim_x;
+                            vec_u = (j-1)*dim_u + 1:j*dim_u;
+                            mat = Bd(:,:,j);
+                            for k = j+1:i
+                                mat = Ad(:,:,k) * mat;
+                            end
+                            obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
                         end
-                        obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                    end
+                else % learn with feedback
+                    K = trj.K;
+                    % construct lifted domain matrix F
+                    for i = 1:N
+                        for j = 1:i
+                            vec_x = (i-1)*dim_x + 1:i*dim_x;
+                            vec_u = (j-1)*dim_u + 1:j*dim_u;
+                            mat = Bd(:,:,j);
+                            for k = j+1:i
+                                mat = (Ad(:,:,k) + Bd(:,:,k)*K(:,:,k)) * mat;
+                            end
+                            obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                        end
                     end
                 end
-                
             end
             
             obj.F = obj.G * obj.F;

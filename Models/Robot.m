@@ -74,6 +74,25 @@ classdef (Abstract) Robot < Model
             end            
         end
         
+        % generating feedback to stabilize
+        function generateFeedback(obj,traj)
+            
+            % calculate the optimal feedback law
+            t = traj.t;
+            Q = obj.COST.Q;
+            R = obj.COST.R;
+            C = obj.C;
+            N = length(t)-1;
+            h = t(2) - t(1);
+            % get linear time variant matrices around trajectory
+            [Ad,Bd] = obj.linearize(traj);
+            lqr = LQR(Q,R,Q,Ad,Bd,C,N,h,true);
+            K = lqr.computeFinHorizonLTV();
+            
+            traj.K = K;
+            
+        end
+        
     end
         
     

@@ -286,11 +286,11 @@ traj.addPerformance(traj.s,y,lin.COST,'LQR');
 % create the simpler ilc
 ilc = tILC(traj,lin);
 %ilc = wILC(lin,dmp,traj);
-num_trials = 10;
+num_trials = 50;
 
 for i = 1:num_trials
     
-    traj2 = ilc.updateWeights(traj,y);
+    traj2 = ilc.updateDerivativeWeights(traj,y);
     % update the weights of the dmp
     %ilc.feedforward(dmp,traj,y);
     % get the measurements
