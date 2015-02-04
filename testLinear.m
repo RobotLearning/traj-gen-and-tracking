@@ -79,9 +79,9 @@ traj.addPerformance(us,y,lin.COST,'zeros');
 
 %% Iterative Learning Control
 
-num_trials = 1;
-%ilc = bILC(traj);
-ilc = mILC(lin,traj);
+num_trials = 25;
+ilc = bILC(traj);
+%ilc = mILC(lin,traj);
 
 for i = 1:num_trials
     
