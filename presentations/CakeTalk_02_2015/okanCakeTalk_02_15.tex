@@ -5,6 +5,7 @@
 
 %math fonts
 %\renewcommand\mathfamilydefault{\rmdefault}
+\usepackage{graphicx}
 
 %page numbers
 \setbeamertemplate{footline}[page number]
@@ -15,11 +16,14 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{epstopdf}
+\usepackage{pgfplots}
 \usepackage{color}
-
+\usepackage{subfig}
+\usepackage{tikzscale}
+\usetikzlibrary{plotmarks}
 
 \title[Trajectory Tracking]{Optimizing Robot Striking Movement Primitives with Iterative Learning Control}
-\author{Okan Ko\c{c}}
+\author{Okan Ko\c c, Guilherme Maeda, Gerhard Neumann, Jan Peters}
 \institute[IAS]
 {
 MPI for Intelligent Systems, T\"ubingen \\
@@ -77,7 +81,7 @@ Robot Learning Lab \\
 \newcommand{\numepisode}{K} % total number of episodes
 
 \newcommand{\threshold}{\epsilon}
-\newcommand{\alg}{\emph{wILC}}
+\newcommand{\alg}{\emph{wILC }}
 \newcommand{\dataset}{E}
 
 % Set the paths where all figures are taken from:
@@ -119,7 +123,8 @@ Robot Learning Lab \\
 \item Dynamic Movement Primitives (DMP) are a dynamical systems based approach to represent reaching motions:
 \begin{equation}
 \begin{aligned}
-\dot{\dmp} &= \vec{A}_s \dmp + \basis(\phase) \weights,
+\dot{\dmp} &= \vec{A}_s \dmp + \basis(\phase) \weights \\
+\dot{\phase} &= -\tau\alpha\phase.
 \label{dmp2}
 \end{aligned}
 \end{equation}
@@ -135,6 +140,28 @@ Robot Learning Lab \\
 \end{itemize}
 \end{frame}
 %
+\begin{frame}{Remark on notation}
+\begin{itemize}
+\item $k$ denotes the iteration index.
+\item $j$ denotes the discretization index.
+\item For example $\sysInput_k = [\sysInput_0^{\mathrm{T}}, \ldots, \sysInput_j^{\mathrm{T}}, \ldots, \sysInput_T^{\mathrm{T}}]$ is inputs stacked  together to form a \emph{lifted vector}.
+\item Matrices with index $L$ are in accordance with this representation, e.g. \begin{equation*}
+\begin{aligned}
+ \vec{Q}_L &= 
+ \begin{bmatrix}
+  \vec{Q}_{1} & \vec{0} & \cdots & \cdots & \vec{0} \\
+  \vec{0} & \ddots & \cdots & \cdots & \vdots \\
+  \vdots  & \vdots  & \vec{Q}_{j} & \vdots & \vdots \\
+  \vdots  & \vdots  & \vdots & \ddots & \vdots \\
+  \vec{0} & \cdots & \cdots & \cdots & \vec{Q}_T
+ \end{bmatrix}.
+\end{aligned}
+\end{equation*}
+\end{itemize}
+\end{frame}
+%
+\section{ILC on Linear Systems}
+%
 \begin{frame}{Iterative Learning Control (ILC)}
 \begin{itemize}
 \item Task: track a reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ under unknown repeating disturbances or model mismatch.
@@ -146,7 +173,6 @@ Robot Learning Lab \\
 \caption{ILC Framework}
 \end{figure}
 \end{frame}
-%
 %
 \begin{frame}{Iterative Learning Control (ILC)}
 \begin{itemize}
@@ -161,20 +187,21 @@ Robot Learning Lab \\
 \end{itemize}
 \begin{figure}
 \center
-\includegraphics[scale=0.2]{ilcBlowup}			
+\includegraphics[scale=0.15]{ilcBlowup.pdf}			
 \caption{Naive ILC Implementation}
 \end{figure}
 \end{frame}
 %
-\begin{frame}{Generic ILC Update Rule}
+\begin{frame}{Model-based ILC}
 \begin{itemize}
-\item ILC update rules can be written as: $\sysInput_{k+1} = \qmatrix(\sysInput_{k} - \lmatrix\error_{k})$
-\item Using the cost functional $J(\sysInput) = \sum_{j=1}^{T} \error_j^{\mathrm{T}}\vec{Q}\error_j + \sysInput_j^{\mathrm{T}}\vec{R}\sysInput_j$ as our optimality criterion,
-\item Newton's method gives us a model-based ILC update rule: 
+\item ILC update rules can be written generically as: $\sysInput_{k+1} = \qmatrix\sysInput_{k} - \lmatrix\error_{k}$
+\item Using the cost functional $\sum_{j=1}^{T} \error_j^{\mathrm{T}}\vec{Q}\error_j + \sysInput_j^{\mathrm{T}}\vec{R}\sysInput_j = \error_k^{\mathrm{T}}\vec{Q}_L\error_k + \sysInput_k^{\mathrm{T}}\vec{R}_L\sysInput_k$ as our optimality criterion,
+\item With gradient descent we get: 
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
-\lmatrix &= (\vec{F}^{\mathrm{T}}\vec{Q}_L\vec{F} + \vec{R})^{-1}\vec{F}^{\mathrm{T}}\vec{Q}_L \\
+\qmatrix &= \vec{I} - \beta_k \vec{R}_L \\
+\lmatrix &= \vec{F}^{\mathrm{T}}\vec{Q}_L \\
 \vec{F}_{(i,j)} &= \left \{
 \begin{array}{cc}
 \vec{A}_{i-1}\ldots \vec{A}_j\vec{B}_{j-1}, & j < i \\ 
@@ -185,73 +212,219 @@ Robot Learning Lab \\
 \end{equation*}
 \end{frame}
 %
+\begin{frame}{Model-based ILC}
+\begin{itemize}
+\item $\vec{F}$ is the plant dynamics in the \emph{lifted} domain: $\state_k = \vec{F}\sysInput_k + \linDist_k$
+\item With Newton's method 
+\begin{equation*}
+\begin{aligned}
+\lmatrix &= (\vec{F}^{\mathrm{T}}\vec{Q}_L\vec{F} + \vec{R})^{-1}\vec{F}^{\mathrm{T}}\vec{Q}_L \\
+\end{aligned}
+\end{equation*}
+\item Upper diagonal entries of $\lmatrix$ use the model matrices to predict and compensate for the \emph{future} errors on the trajectory. 
+\item This noncausal update is very useful for tracking trajectories. What about movement primitives?
+\end{itemize}
+\end{frame}
+%
+\section{ILC with DMPs}
+%
 \begin{frame}{ILC with Movement Primitives}
 \begin{itemize}
-\item Equivalently we can update the DMP weights $\weights_k$ if we have feedback on our system.
+\item Equivalently we can update the DMP weights $\weights_k$ if we apply feedback $\vec{K}$ on our system
+\end{itemize}
+\begin{equation*}
+\begin{aligned}
+\weights_{k+1} &= \weights_{k} - \lmatrix\error_{k} \\
+\lmatrix &= (\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_w + \vec{R})^{-1}\vec{F}_w^{\mathrm{T}}\vec{Q}_L \\
+\end{aligned}
+\end{equation*}
+\begin{itemize}
+\item We call this update rule \alg!
 \end{itemize}
 \begin{figure}
-\center
-\includegraphics[scale=0.5]{fb_plant}			
-\caption{Inputs to the feedback coupled system is now $\dmp(t)$.}
+\centering
+\def\svgwidth{200pt}
+\input{Pictures/fb_plant.pdf_tex}
+\caption{Inputs to the feedback coupled system $\vec{P}$ is now $\dmp(t)$.}
 \end{figure}
 \end{frame}
 %
-\section{Methodology}
-%
-\begin{frame}{Problem Setting}
+\begin{frame}{ILC with Movement Primitives}
 \begin{itemize}
-\item Problem: Continuous time trajectory tracking under the \emph{nonlinear} system dynamics: 
+\item $\vec{F}_w$ looks slightly uglier
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
-\dot{\state}(t) &= \mathbf{f}(\state(t),\sysInput(t)) \\
+\vec{F}_{w} &= \tilde{\vec{F}}_{w}\vec{F}_{\dmp}\vec{I}_{Nm \times m} \\
+(\tilde{\vec{F}}_{w})_{(i,j)} &= \left \{
+\begin{array}{cc}
+\bar{\vec{A}}_{i}\ldots \bar{\vec{A}}_{j+1}\vec{B}_{j}\vec{K}_{j}, & j < i, \\ 
+\vec{B}_{j}\vec{K}_{j}, & j = i, \\
+\vec{0}, & j > i,  
+\end{array} \right. \\
+(\vec{F}_{s})_{(i,j)} &= \left \{
+\begin{array}{cc}
+\vec{A}_s^{i-1}\basis_{j}, & j < i, \\ 
+\basis_{j}, & j = i, \\
+\vec{0}, & j > i,  
+\end{array} \right. \\
+\bar{\vec{A}}_j &= \vec{A}_j - \vec{B}_j\vec{K}_j. \\
+\vec{I}_{m\times Nm} &= \begin{bmatrix}
+  \vec{I}_{m} & \vec{I}_{m} & \ldots & \vec{I}_{m}
+ \end{bmatrix}
 \end{aligned}
 \end{equation*}
-\begin{itemize}
-\item Goal: Track a reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ by applying the control inputs $\sysInput^{*}(t)$. 
-\item Use: Any trajectory generation algorithm.
-.
-\end{itemize}
+
 \end{frame}
 %
-\begin{frame}{Problem Setting}
-\begin{itemize}	
-\item However $\mathbf{f}$ is not known very well! 
-\item We will fail to track $\traj(t)$ just by applying $\sysInput^{*}(t)$.
-\item We can use ILC to correct for deviations! 
-\end{itemize}
-\end{frame}
+\section{ILC on Nonlinear Systems}
 %
-\subsection{Lifted vector representation}
-%
-\begin{frame}{Linearize Around Trajectory}
+\begin{frame}{Learning to Control Robots}
 \begin{itemize}
-\item Linearize model around trajectory: 
+\item Trajectory tracking under the \emph{nonlinear} dynamics of the robot: \pause
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
-\dot{\state}(t) &= A(t)\state(t) + B(t)\sysInput(t) \\
+\ddot{\joint} &= M^{-1}(\joint)\{ \tau - C(\joint,\dot{\joint})\dot{\joint} - G(\joint) \}\\
+\ddot{\joint} &= \vec{f}(\joint,\dot{\joint},\sysInput)
+\end{aligned}
+\end{equation*} \pause
+\begin{itemize}
+\item Use: An (inaccurate) inverse dynamics model (IDM) of the robot: \pause
+\end{itemize}
+\begin{equation*}
+\begin{aligned}
+M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \\
+\sysInput_{IDM} = \vec{f}_{inv}(\joint_{des},\dot{\joint}_{des},\ddot{\joint}_{des})
+\end{aligned}
+\end{equation*}
+\pause 
+\begin{itemize}
+\item And a finely-tuned compliant feedback law: \pause
+\end{itemize}
+\begin{equation*}
+\begin{aligned}
+\sysInput_{FB} &= -\vec{K}_{p}(\joint - \joint_{des}) - \vec{K}_{d}(\dot{\joint} - \dot{\joint}_{des})
+\end{aligned}
+\end{equation*}
+\end{frame}
+%
+\begin{frame}{Learning to Control Robots}
+\begin{itemize}
+\item Linearize the dynamics around the reference trajectory to obtain the time varying matrices $\vec{A}_j, \vec{B}_j$
+\end{itemize}
+\begin{equation*}
+\begin{aligned}
+\error_{j+1} &= \vec{A}_j\error_j + \vec{B}_j\sysInput_j + \linDist_j\\
 \end{aligned}
 \end{equation*} 
 \begin{itemize}
-\item The time variant matrices are: 
-\linebreak
+\item The time variant matrices are discretizations of 
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
-A(t) & = \at{\frac{\partial{\mathbf{f}}}{\partial{\state}}}{(\state^{*}(t),\sysInput^{*}(t))} \\
-B(t) & = \at{\frac{\partial{\mathbf{f}}}{\partial{\state}}}{(\state^{*}(t),\sysInput^{*}(t))} \\
+\vec{A}(t) & = \at{\frac{\partial{\mathbf{f}}}{\partial{\state}}}{(\traj(t),\sysInput_{IDM}(t))} \\
+\vec{B}(t) & = \at{\frac{\partial{\mathbf{f}}}{\partial{\sysInput}}}{(\traj(t),\sysInput_{IDM}(t))} \\
+\end{aligned}
+\end{equation*}
+\begin{itemize}
+\item We use these matrices to construct the learning matrix $L$ for \alg! 
+\end{itemize}
+\end{frame}
+%
+\begin{frame}{Toy Example: Putting}
+\begin{itemize}
+\item Task: follow a pre-assigned trajectory (blue dashed curve) to give the golf ball the right velocity at impact.
+\end{itemize}
+\begin{figure}[ht]
+\centering
+\subfloat[Initial attempt]{%
+\includegraphics[width=0.3\linewidth]{putting0.pdf}
+\label{fig:subfig1}}
+\subfloat[Final trajectory]{%
+\includegraphics[width=0.3\linewidth]{putting1.pdf}
+\label{fig:subfig2}}
+\caption{We can see in Fig.~\ref{fig:subfig1} that the initial attempt falls short of the reference trajectory. \alg then modifies the weights of the DMP to compensate for the modeling errors. In Fig.~\ref{fig:subfig2} the reference trajectory is executed perfectly. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
+\label{putting1} 
+\end{figure}
+\end{frame}
+%
+\begin{frame}{Toy Example: Putting}
+\begin{figure}
+\centering
+%\includegraphics[scale=0.50]{comparison.eps}
+\newlength\figureheight 
+\newlength\figurewidth 
+\setlength\figureheight{6cm}  
+\setlength\figurewidth{6cm} 
+\scalebox{0.8}{\input{Pictures/wILC.tikz}}
+\caption{Convergence is quadratic for the simulated scenario where we have unknown inertial disturbances acting on the motors.}
+\label{wILCTrajectoryPutting}
+\end{figure}
+\end{frame}
+%
+\begin{frame}{Recent Developments in the Science of Movement Primitives}
+\begin{itemize}
+\item Or how to optimally move your primitives!
+\item Notice: no matter what weights you choose for $\dmp$, $\dot{\dmp} = \vec{A}_s \dmp + \basis(\phase) \weights$ ensures that you end up at the goal position $\goal$.
+\item We don't need to depend on $\traj(t)$ to get to $\goal$: redefining $\error(t) = \state(t) - \dmp(t)$, we can optimize $\error_k^{\mathrm{T}}\vec{Q}_L\error_k + \weights_k^{\mathrm{T}}\vec{R}_L\weights_k$.
+\end{itemize}
+\end{frame}
+%
+\begin{frame}{Move Your Primitives}
+\begin{itemize}
+\item \alg update becomes
+\end{itemize}
+\begin{equation*}
+\begin{aligned}
+\weights_{k+1} &= \weights_{k} - \lmatrix_k\error_{k} \\
+\lmatrix_k &= (\vec{M}_{k}^{\mathrm{T}}\vec{Q}_L\vec{M}_k + \vec{R})^{-1}\vec{M}_k^{\mathrm{T}}\vec{Q}_L \\
+\vec{M}_k &= \vec{F}_{w,k} - \vec{\Psi} \\
+\end{aligned}
+\end{equation*}
+\begin{itemize}
+\item $\vec{\Psi}$ comes from the DMP formulation
+\end{itemize}
+\begin{equation*}
+\begin{aligned}
+\vec{\Psi} &= \begin{bmatrix}
+  \vec{\Phi}_{1} & \vec{0} & \cdots & \vec{0} \\
+  \vec{0} & \vec{\Phi}_{2} & \cdots & \vdots \\
+  \vdots  & \vdots  & \ddots &  \vdots \\
+  \vec{0} & \cdots & \cdots & \vec{\Phi}_T
+ \end{bmatrix}.
 \end{aligned}
 \end{equation*}
 \end{frame}
 %
-\begin{frame}{Discretize linearized model}
+\begin{frame}{Future Work}
 \begin{itemize}
-\item For k $\in \{ 0, 1, \ldots, N-1 \}$, 
+\item Extensions to the \alg setting: 
+\begin{enumerate}
+\item Trajectory states are fixed/varying $\checkmark$
+\item Time profile is fixed
+\item Penalty matrices $\vec{Q},\vec{R}$ are fixed
+\item Feedback is fixed
+\end{enumerate}
+\item For table tennis one needs to consider robust control: ball trajectories may not be well estimated, ball dynamics can be quite wild!
+\end{itemize}
+\end{frame}
+%
+\begin{frame}{The End}
+\begin{itemize}
+\item Thank you for listening!
+\end{itemize}
+\end{frame}
+%
+% End of slides
+% TODO: add supplementary material!
+\begin{frame}{Appendix A: Discretize linearized model}
+\begin{itemize}
+\item For j $\in \{ 0, 1, \ldots, T-1 \}$, 
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
-\state(k+1) &= A_{D}(k)\state(k) + B_{D}(k)\sysInput(k) \\
+\error_{j+1} &= \vec{A}_j\error_j + B_j\sysInput_j \\
 \end{aligned}
 \end{equation*}
 
@@ -265,49 +438,16 @@ B(t) & = \at{\frac{\partial{\mathbf{f}}}{\partial{\state}}}{(\state^{*}(t),\sysI
 \left[
 \scalemath{0.5}{
 \begin{array}{c|c}
-A(k) & B(k) \\ \hline
+A(jh) & B(jh) \\ \hline
 0 & 0
 \end{array}}\right]}
 &= 
 \left[
 \begin{array}{c|c}
-A_{D}(k) & B_{D}(k) \\ \hline
+\vec{A}_j & \vec{B}_j \\ \hline
 0 & I
-\end{array}\right] \\
-C_{D}(k) &= C(k)
+\end{array}\right]
 \end{aligned}
 \end{equation*}
 \end{frame}
-%
-\begin{frame}{Lifted Vector Representation}
-\begin{itemize}
-\item Stack inputs together, $\sysInput_L = (\sysInput(1), \ldots, \sysInput(N-1))$ to obtain the lifted vector form: 
-\end{itemize}
-\begin{equation*}
-\begin{aligned}
-\state_L &= F\sysInput_L + d_L \\
-\end{aligned}
-\end{equation*}
-
-\begin{itemize}
-\item where the submatrices are: 
-\linebreak
-\end{itemize}
-\begin{equation*}
-\begin{aligned}
-F_{(i,j)} &= \left \{
-\begin{array}{cc}
-A_{D}(i-1)\ldots A_{D}(j)B_{D}(j-1), & j < i \\ 
-B_{D}(j-1), & j = i \\
-0, & j > i 
-\end{array} \right. \\
-G_{(i,j)} &= C_{D}
-\end{aligned}
-\end{equation*}
-\end{frame}
-%
-
-%
-% End of slides
-% TODO: add supplementary material!
 \end{document} 
