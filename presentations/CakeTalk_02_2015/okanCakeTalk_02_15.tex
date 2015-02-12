@@ -150,28 +150,57 @@ Robot Learning Lab \\
 %
 \begin{frame}{Movement Primitives}
 \begin{itemize}
-\item Dynamic Movement Primitives (DMP) are a dynamical systems based approach to represent reaching motions:
-\end{itemize}
+\item Dynamic Movement Primitives (DMP) are a dynamical systems based approach to represent reaching motions
 \begin{equation}
 \begin{aligned}
-\dot{\dmp} &= \vec{A}_s \dmp + \basis(\phase) \weights \\
+\dot{\dmp} &= \vec{A}_s \dmp + \basis(\phase) \weights, \\
 \dot{\phase} &= -\tau\alpha\phase.
 \label{dmp1}
 \end{aligned}
 \end{equation}
+\item As phase $\phase$ decays, the state $\dmp$ is attracted to the goal state $\goal$ and follows a particular path along the way.
+\end{itemize}
+\begin{figure}
+\center
+\includegraphics[scale=0.20]{dmp0.pdf}			
+\caption{DMP following a certain path.}
+\end{figure}
 \end{frame}
 %
 \begin{frame}{Movement Primitives}
 \begin{itemize}
 \item DMPs are very useful for representing trajectories taught with imitation learning! 
-\item One can regress over the example trajectories to form the primitive.
+\item One can do regression of example trajectories on the primitive weights $\weights$.
 \end{itemize}
+\begin{figure}
+\center
+\includegraphics[scale=0.25]{dmp1.pdf}			
+\caption{DMP out of a trajectory.}
+\end{figure}
+\end{frame}
+%
+\begin{frame}{Nice properties of Movement Primitives}
+\begin{figure}[ht]
+\centering
+\subfloat[Starting from a different initial position]{%
+\includegraphics[width=0.5\linewidth]{dmp2.pdf}}
+\subfloat[Stretching a DMP to a different goal position]{%
+\includegraphics[width=0.5\linewidth]{dmp3.pdf}}
+\caption{DMPs are nice!} 
+\label{niceDMPs} 
+\end{figure}
 \end{frame}
 %
 \begin{frame}{Movement Primitives}
 \begin{itemize}
 \item Approximation and control errors in table tennis make the application of DMPs less useful in practice. Small changes to DMPs can often make them more useful.
 \end{itemize}
+\begin{figure}
+\centering
+\def\svgwidth{150pt}
+\input{Pictures/ball_trj.pdf_tex}
+\caption{Robot may not follow the desired DMP due to modelling errors.}
+\end{figure}
 \end{frame}
 %
 \begin{frame}{Research Question}
@@ -334,7 +363,7 @@ F_{net} &= ma
 \begin{equation*}
 \begin{aligned}
 M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \\
-\sysInput_{IDM} = \vec{f}_{inv}(\joint_{des},\dot{\joint}_{des},\ddot{\joint}_{des})
+\sysInput_{IDM} = \vec{f}_{inv}(\joint,\dot{\joint},\ddot{\joint})
 \end{aligned}
 \end{equation*}
 \end{frame}
@@ -350,13 +379,13 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
 \end{aligned}
 \end{equation*}
 \begin{itemize}
-\item Apply a feedback law
+\item Use the existing feedback on the robot
 \begin{equation*}
 \begin{aligned}
 \sysInput_{FB} &= -\vec{K}_{p}(\joint - \joint_{des}) - \vec{K}_{d}(\dot{\joint} - \dot{\joint}_{des})
 \end{aligned}
 \end{equation*}
-\item Linearize the dynamics around the reference trajectory $\traj(t)$ to obtain $\lmatrix$. Now we can apply ILC to the movement primitives!
+\item Linearize the dynamics around the reference trajectory $\traj(t) = [\joint_{des}, \dot{\joint}_{des}]$ to obtain $\lmatrix$. Now we can apply ILC to the movement primitives!
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
@@ -386,7 +415,7 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
 \subfloat[Final trajectory]{%
 \includegraphics[width=0.3\linewidth]{putting1.pdf}
 \label{fig:subfig2}}
-\caption{The initial attempt falls short of the reference trajectory. We then modify the weights of the DMP to compensate for the modeling errors. In Fig.~\ref{fig:subfig2} the reference trajectory is executed perfectly. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
+\caption{The initial attempt falls short of the reference trajectory. We then modify the weights of the DMP to compensate for the modeling errors. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
 \label{putting1} 
 \end{figure}
 \end{frame}
@@ -405,36 +434,30 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
 \end{figure}
 \end{frame}
 %
-\begin{frame}{Recent Developments in the Science of Movement Primitives}
+\begin{frame}{Recent Developments in the Primitive Sciences}
 \begin{itemize}
 \item Or how to optimally move your primitives!
 \item Notice: no matter what weights you choose for $\dmp$, $\dot{\dmp} = \vec{A}_s \dmp + \basis(\phase) \weights$ ensures that you end up at the goal position $\goal$.
-\item We don't need to depend on $\traj(t)$ to get to $\goal$: redefining $\error(t) = \state(t) - \dmp(t)$, we can optimize $\error_k^{\mathrm{T}}\vec{Q}_L\error_k + \weights_k^{\mathrm{T}}\vec{R}_L\weights_k$.
+\item We don't need to depend on $\traj(t)$ to get to $\goal$: redefining $\error(t) = \state(t) - \dmp_{out}(t)$, we can optimize $\error_k^{\mathrm{T}}\vec{Q}_L\error_k + \weights_k^{\mathrm{T}}\vec{R}_L\weights_k$.
 \end{itemize}
+\begin{figure}
+\centering
+\def\svgwidth{150pt}
+\input{Pictures/fb_plant_ilc.pdf_tex}
+\caption{ILC that modifies also the reference trajectory $\dmp_{out}$.}
+\end{figure}
 \end{frame}
 %
 \begin{frame}{Move Your Primitives}
 \begin{itemize}
-\item \alg update becomes
+\item ILC update becomes
 \end{itemize}
 \begin{equation*}
 \begin{aligned}
+$\weights_{k+1} &= \begin{bmatrix} \weights_{in} \\ \weights_{out} \end{bmatrix} \\
 \weights_{k+1} &= \weights_{k} - \lmatrix_k\error_{k} \\
 \lmatrix_k &= (\vec{M}_{k}^{\mathrm{T}}\vec{Q}_L\vec{M}_k + \vec{R})^{-1}\vec{M}_k^{\mathrm{T}}\vec{Q}_L \\
-\vec{M}_k &= \vec{F}_{w,k} - \vec{\Psi} \\
-\end{aligned}
-\end{equation*}
-\begin{itemize}
-\item $\vec{\Psi}$ comes from the DMP formulation
-\end{itemize}
-\begin{equation*}
-\begin{aligned}
-\vec{\Psi} &= \begin{bmatrix}
-  \vec{\Phi}_{1} & \vec{0} & \cdots & \vec{0} \\
-  \vec{0} & \vec{\Phi}_{2} & \cdots & \vdots \\
-  \vdots  & \vdots  & \ddots &  \vdots \\
-  \vec{0} & \cdots & \cdots & \vec{\Phi}_T
- \end{bmatrix}.
+\vec{M}_k &= \begin{bmatrix} \vec{F}_{w,k} \\ -\vec{F}_{s} \end{bmatrix}
 \end{aligned}
 \end{equation*}
 \end{frame}
@@ -445,8 +468,8 @@ M(\joint)\ddot{\joint} + C(\joint,\dot{\joint})\dot{\joint} + G(\joint) = \tau \
 \begin{enumerate}
 \item Trajectory states are fixed/varying $\checkmark$
 \item Time profile is fixed
+\item Goal states are fixed
 \item Penalty matrices $\vec{Q},\vec{R}$ are fixed
-\item Feedback is fixed
 \end{enumerate}
 \item For table tennis one needs to consider robust control: ball trajectories may not be well estimated, ball dynamics can be quite wild!
 \end{itemize}

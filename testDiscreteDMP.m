@@ -148,3 +148,45 @@ plot(path1,path2,'-',y11,y12,'-.');
 legend('desired trajectory','followed trajectory');
 title('Trajectory in xy space');
 
+%% Test changing the goal position
+
+% create two paths
+path1 = log(t+1);
+path2 = sin(2*pi*t);
+
+% learn the weights with the usual linear regression
+dmp1.setWeights(path1);
+dmp2.setWeights(path2);
+
+% initial states of DMPs
+%yin1 = [1;0];
+%yin2 = [0;2*pi];
+yin1 = [0;0];
+yin2 = [0;0];
+dmp1.setInitState(yin1);
+dmp1.resetStates();
+dmp2.setInitState(yin2);
+dmp2.resetStates();
+
+[x,y1] = dmp1.evolve();
+[~,y2] = dmp2.evolve();
+y11 = y1(1,:);
+y12 = y2(1,:);
+
+dmp1.setInitState(yin1);
+dmp1.resetStates();
+dmp2.setInitState(yin2);
+dmp2.resetStates();
+dmp1.setGoal(1.2 * path1(end));
+dmp2.setGoal(1.4 * path2(end));
+
+[~,y3] = dmp1.evolve();
+[~,y4] = dmp2.evolve();
+y21 = y3(1,:);
+y22 = y4(1,:);
+
+% plot the x-y trajectory tracked
+figure(8);
+plot(path1,path2,'-',y11,y12,'-',y21,y22,'-.');
+legend('desired trajectory','original DMP','stretched DMP');
+title('Trajectory in xy space');
