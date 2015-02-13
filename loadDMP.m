@@ -20,49 +20,66 @@ for i = 1:dof
     %err{i} = ['err_j_', int2str(i)];
 end
 
-%idxStart = 900;
-%idxEnd = 1200;
-idxStart = 1;
-idxEnd = length(t);
-tCut = t(idxStart:idxEnd);
-qCut = q(idxStart:idxEnd,:);
-qdCut = qd(idxStart:idxEnd,:);
-
-qdCut2 = diff(qCut)./(repmat(diff(tCut),1,dof));
-qdCut2 = [qdCut2; qdCut2(end,:)];
+qd2 = diff(q)./(repmat(diff(t),1,dof));
+qd2 = [qd2; qd2(end,:)];
 
 figure;
-plot(tCut,qCut);
+plot(t,q);
 legend(joints);
 figure;
-plot(tCut,qdCut);
+plot(t,qd);
 legend(vel);
 
-% check whether velocity data matches to differences in one joint
+%% check whether velocity data matches to differences in one joint
 figure;
-j = 5;
-plot(tCut,qdCut(:,j),tCut,qdCut2(:,j));
-legend([vel{1},'\_real'],[vel{1},'\_diff']);
+for j = 1:dof
+subplot(7,1,j);
+plot(t,qd(:,j),t,qd2(:,j));
+legend([vel{j},'\_real'],[vel{j},'\_diff']);
+end
 
-% check noise spectrum
-L = 500 * ceil((idxEnd-idxStart)/500);
-Fs = L/(tCut(end)-tCut(1));
-tLin = linspace(tCut(1),tCut(end),L);
-qdLin = interp1(tCut,qdCut(:,j),tLin);
+%% check noise spectrum 
+L = 500 * ceil(length(t)/500);
 NFFT = 2^nextpow2(L);
-qdSpecs = fft(qdLin,NFFT)/L;
+Fs = L/(t(end)-t(1));
 f = Fs/2*linspace(0,1,NFFT/2+1);
+tLin = linspace(t(1),t(end),L);
+qLin= interp1(t,q,tLin);
+qdLin = interp1(t,qd,tLin);
+qSpecs = fft(qLin,NFFT)/L;
+qdSpecs = fft(qdLin,NFFT)/L;
 
 % plot single-sided amplitude spectrum.
 figure;
-plot(f,2*abs(qdSpecs(1:NFFT/2+1)))
-title('Single-Sided Amplitude Spectrum of qd(t)')
-xlabel('Frequency (Hz)')
-ylabel('|qd(f)|')
+for j = 1:dof
+subplot(7,2,2*j-1);
+plot(f,2*abs(qSpecs(1:NFFT/2+1,j)));
+legend(['spectra\_',joints{j}]);
+subplot(7,2,2*j);
+plot(f,2*abs(qdSpecs(1:NFFT/2+1,j)));
+legend(['spectra\_',vel{j}]);
+end
+
+%% Filter the signals
+% 20 Hz seems to be a good cutoff rate
+% fft back the signals
+
+qSpecsZeroed = [qSpecs(f < 20), zeros(1,sum(f >= 20))];
+qdSpecsZeroed = [qdSpecs(f < 20), zeros(1,sum(f >= 20))];
+qFil = ifft(qSpecsZeroed,NFFT)*L;
+qdFil = ifft(qdSpecsZeroed,NFFT)*L;
+
+figure;
+for j = 1:dof
+subplot(7,2,2*j-1);
+plot(t,qFil(:,j));
+legend([joints{j},'\_filt'])
+subplot(7,2,2*j);
+plot(t,qdFil(:,j));
+legend([vel{j},'\_filt']);
+end
 
 % segment motion based on maximum velocity
-% cut off the rest and filter
-% 40 Hz seems to be a good cutoff rate
 % feed them all to a dmp
 % sample one dmp (based on a goal position) and save to txt file
 % load from SL and run it
