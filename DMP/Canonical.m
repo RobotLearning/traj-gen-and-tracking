@@ -42,6 +42,7 @@ classdef Canonical < handle
         
         % err is the error coupling term due to feedback error
         % slows down the canonical system 
+        % can be used for varying dt as well
         function step(obj,err)
            
             if strcmp(obj.pattern,'d')

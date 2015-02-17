@@ -83,6 +83,63 @@ classdef (Abstract) DMP < handle
             
         end
         
+        % Regression on processed actual demonstrations
+        %
+        % INPUTS:
+        %
+        % q, dq, ddq - joint positions, velocities, acc.
+        %
+        function force = regressLive(obj,q,qd,qdd,goals)
+
+            dt = obj.can.dt;
+            pat = obj.can.pattern;
+            force = obj.FORCE;
+            alpha = obj.alpha_g;
+            beta = obj.beta_g;
+            
+            % number of demonstrations
+            D = length(goals);
+            N = length(q)/D;
+            goals = repmat(goals',N,1);
+            goals = goals(:);
+
+            % calculate fd
+            fd = qdd - alpha * (beta * (goals - q) - qd);
+
+            h = force.h;
+            c = force.c;
+            % number of weights to regress 
+            lenw = length(force.c);
+            x = obj.can.evolve();
+
+            % make sure x is column vector
+            x = x(:);
+
+            % regress on the weights
+            Psi = zeros(N,lenw);
+            for i = 1:lenw
+                Psi(:,i) = obj.basis(x,h(i),c(i));
+            end
+            % scale the psi matrices
+            if strcmp(pat,'d')
+                scale = x ./ sum(Psi,2); 
+            else
+                scale = 1 ./ (sum(Psi,2) + 1e-10);
+            end
+            scale = repmat(scale,1,lenw);
+            Psi = Psi .* scale;
+            
+            % in case there are multiple demonstrations
+            obj.Psi = repmat(Psi,D,1);
+            
+            % TODO: use pinv or add lambda to smoothen inverse
+            w = pinv(obj.Psi) * fd(:);
+            %w = obj.Psi \ fd(:);
+            force.w = w;
+            obj.setForcing(force);
+
+        end
+        
         
         % Basic regression
         % To learn the weights of DMPs
