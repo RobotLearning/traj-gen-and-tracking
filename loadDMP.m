@@ -122,8 +122,8 @@ velMax = max(abs(qdFil));
 % throw away bad examples (~5 demonstrations)
 % segment based on position and guess
 % consider the first 3 joints
-% motion takes 3 seconds so 1.5 seconds on each side
-window = 3;
+% motion takes 1.5 seconds so 0.75 seconds on each side
+window = 1.5;
 
 % take the median index of the maximum of the first 3 joints
 [~,idx] = max(abs(qdFil(:,1:3)));
