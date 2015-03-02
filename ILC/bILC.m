@@ -15,7 +15,7 @@ classdef bILC < ILC
         error
         
         % ILC's Last input sequence
-        u_last
+        inp_last
     end
     
     methods
@@ -29,10 +29,10 @@ classdef bILC < ILC
             
             N = traj.N - 1;
             if ~isempty(traj.unom)
-                obj.u_last = traj.unom(:,1:N);
+                obj.inp_last = traj.unom(:,1:N);
             else
                 warning('Using last performance results');
-                obj.u_last = traj.PERF(end).u;
+                obj.inp_last = traj.PERF(end).u;
             end
             
         end
@@ -48,7 +48,7 @@ classdef bILC < ILC
             % set learning rate
             a_p = 0.5;
             a_d = 0.2;
-            u_next = obj.u_last - a_p * dev - a_d * ddev;
+            u_next = obj.inp_last - a_p * dev - a_d * ddev;
             
         end
         

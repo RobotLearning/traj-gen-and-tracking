@@ -16,7 +16,7 @@ classdef (Abstract) ILC < handle
         error
         
         % ILC's Last input sequence
-        u_last
+        inp_last
         
     end
     
@@ -30,9 +30,9 @@ classdef (Abstract) ILC < handle
     methods
         
         % get sse costs for the controller
-        function record(obj,u_applied,cost)            
+        function record(obj,inp_applied,cost)            
             obj.episode = obj.episode + 1;
-            obj.u_last = u_applied;
+            obj.inp_last = inp_applied;
             obj.error(obj.episode) = cost;            
         end
         

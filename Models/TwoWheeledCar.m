@@ -151,6 +151,7 @@ classdef TwoWheeledCar < Model
             R1 = obj.PAR.wheel1.radius;
             R2 = obj.PAR.wheel2.radius;
             d = obj.PAR.length;
+            Cout = obj.C;
 
             for i = 1:N
                 % discretize B(phi) around phi0
@@ -163,7 +164,7 @@ classdef TwoWheeledCar < Model
                 unom(:,i) = B(2:3,:)\delta;
             end
             
-            Traj = Trajectory(t,x_des,unom,[]);
+            Traj = Trajectory(t,Cout*x_des,unom,[]);
         end
         
         % get lifted model constraints

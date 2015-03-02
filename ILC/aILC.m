@@ -16,7 +16,7 @@ classdef aILC < ILC
         error
         
         % ILC's Last input sequence
-        u_last
+        inp_last
         % Lifted state matrix F
         F
         % Lifted state matrix G
@@ -63,7 +63,7 @@ classdef aILC < ILC
             obj.H = zeros(N*dim_y,N*dim_u); 
             obj.eps = model.SIM.eps;
             obj.eps_d = model.SIM.eps_d;
-            obj.u_last = trj.unom(:,1:N);
+            obj.inp_last = trj.unom(:,1:N);
             
             obj.lift(model,trj);
             % initialize Kalman filter
@@ -129,7 +129,7 @@ classdef aILC < ILC
             dim_u = model.SIM.dimu;
             h = model.SIM.h;
             % get u from last applied input
-            u = obj.u_last - trj.unom(:,1:Nu);
+            u = obj.inp_last - trj.unom(:,1:Nu);
             
             % Filter to estimate disturbance
             obj.filter.predict(u(:));

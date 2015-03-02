@@ -21,8 +21,8 @@ classdef wILC < ILC
         % costs incurred (Q-SSE)
         error
         
-        % control inputs are not updated for wILC
-        u_last
+        % inputs are the weights for wILC
+        inp_last
         % Lifted state matrix F (weight-state) and G (state-output)
         Fw
         G

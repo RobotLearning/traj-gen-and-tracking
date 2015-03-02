@@ -72,8 +72,8 @@ CON = [];
 
 % cost structure
 % only penalize positions
-COST.Q = 100*diag([1,0]);
-COST.R = 1 * eye(SIM.dimu);
+COST.Q = 100 * eye(SIM.dimy);
+COST.R = 1;
 
 % initialize model
 r = R(PAR,CON,COST,SIM);
@@ -104,13 +104,12 @@ traj = r.generateInputs(t,ref); % trajectory generated in cartesian space
 % TODO: add a nonzero friction matrix B
 
 q0 = traj.s(:,1);
-% q0 = r.invKinematics(traj.s(:,1));
-% q1 = r.invKinematics(traj.s(:,2));
-% q0(2,1) = (q1 - q0)/h;
+q1 = traj.s(:,2);
+%q0(2,1) = (q1 - q0)/h;
 % add nonzero velocity
-% q0(2) = q0(2) + 0.1*randn;
+q0(2) = 0.1*randn;
 % observe output
-qact = r.evolve(t,q0,traj.unom);
+qact = r.observe(t,q0,traj.unom);
 % get the cartesian coordinates
 % y = r.kinematics(qact(1,:));
 % % add cartesian velocities
@@ -135,16 +134,11 @@ for i = 1:num_trials
     % get next inputs
     u = ilc.feedforward(traj,qact);
     % evolve complete system
-    qact = r.evolve(t,q0,u);
-    % get the cartesian coordinates
-    %y = r.kinematics(qact(1,:));
-    % add cartesian velocities
-    %yd = diff(y')'/ h; yd(:,end+1) = yd(:,end);
-    %y = [y;yd];
+    qact = r.observe(t,q0,u);
     % add performance to trajectory
     traj.addPerformance(u,qact,r.COST,ilc);
     % Plot the controls and animate the robot arm
-    %r.animateArm(qact(1,:),ref);
+    %r.animateArm(qact,ref);
 end
 
 % Plot the controls and animate the robot arm

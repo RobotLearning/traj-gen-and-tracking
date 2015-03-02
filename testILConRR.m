@@ -116,9 +116,9 @@ traj = rr.generateInputs(t,ref); % trajectory generated in joint space
 
 q0 = traj.s(:,1);
 % add nonzero velocity
-q0(3:4) = q0(3:4) + 0.1*rand(2,1);
+q0(3:4) = 0.1*rand(2,1);
 % observe output
-qact = rr.evolve(t,q0,traj.unom);
+qact = rr.observe(t,q0,traj.unom);
 % add performance to trajectory
 traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics');
 
@@ -139,7 +139,7 @@ for i = 1:num_trials
     u = ilc.feedforward(traj,qact);
     %u = ilc.feedforward(traj,rr,dev);
     % evolve system
-    qact = rr.evolve(t,q0,u);
+    qact = rr.observe(t,q0,u);
     % get the cartesian coordinates
     %[~,y] = rr.kinematics(qact(1:2,:));
     % add performance to trajectory

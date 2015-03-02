@@ -14,10 +14,9 @@ classdef tILC < ILC
         % costs incurred (Q-SSE)
         error
         
-        % TODO: NOT USED!
-        u_last
-        % ILC's Last input sequence (in this case a trajectory)
-        trj
+        inp_last
+        % output matrix
+        C
         % initial trajectory's dimension increased
         sbar
         % Psi matrix used for weight updates
@@ -39,11 +38,13 @@ classdef tILC < ILC
             
             N = traj.N - 1;
             h = traj.t(2) - traj.t(1);
-            obj.trj = traj.s;
+            obj.inp_last = traj.s;
             %s = dmp.evolve();
             %s = s(1,:);
-            C = model.C;
-            obj.sbar = C'*((C*C')\traj.s);
+            obj.C = model.C;
+            
+            Cout = obj.C;
+            obj.sbar = Cout'*((Cout*Cout')\traj.s);
             dim = size(obj.sbar,1);
             
             obj.Psi = obj.formPsi(dim*N,traj.t);
@@ -78,7 +79,8 @@ classdef tILC < ILC
             h = traj.t(2) - traj.t(1);
             N = traj.N - 1;
             K = traj.K;
-            dev = y - obj.trj;            
+            Cout = obj.C;
+            dev = y - traj.s;            
     
             % get rid of x0 in dev
             %ddev = diff(dev')';
@@ -106,7 +108,7 @@ classdef tILC < ILC
             sbar = reshape(sbar,dim,N);
             obj.sbar = [sbar,obj.sbar(:,end)];
             
-            traj2 = Trajectory(traj.t, obj.sbar, traj.unom, K);
+            traj2 = Trajectory(traj.t, Cout*obj.sbar, traj.unom, K);
             
         end
         
@@ -116,7 +118,8 @@ classdef tILC < ILC
             h = traj.t(2) - traj.t(1);
             N = traj.N - 1;
             K = traj.K;
-            dev = y - obj.trj; 
+            dev = y - traj.s; 
+            Cout = obj.C;
             
             % construct derivative matrix
             dim = size(obj.sbar,1);
@@ -149,7 +152,7 @@ classdef tILC < ILC
             sbar = reshape(sbar,dim,N);
             obj.sbar = [sbar,obj.sbar(:,end)];
             
-            traj2 = Trajectory(traj.t, obj.sbar, traj.unom, K);
+            traj2 = Trajectory(traj.t, Cout*obj.sbar, traj.unom, K);
             
             % get s from derivatives
             %S = h*tril(ones(N+1));
@@ -163,7 +166,8 @@ classdef tILC < ILC
             
             N = traj.N - 1;
             K = traj.K;
-            dev = y - obj.trj;
+            dev = y - traj.s;
+            Cout = obj.C;
             %dev = dev(2,:);
             %h = trj.t(2) - trj.t(1);
             % get rid of x0 in dev
@@ -191,7 +195,7 @@ classdef tILC < ILC
             sbar = reshape(s,dim,N);
             obj.sbar = [sbar,obj.sbar(:,end)];
             
-            traj2 = Trajectory(traj.t, obj.sbar,traj.unom,K);
+            traj2 = Trajectory(traj.t, Cout*obj.sbar,traj.unom,K);
             
         end
         

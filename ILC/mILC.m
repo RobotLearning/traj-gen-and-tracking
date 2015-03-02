@@ -23,7 +23,7 @@ classdef mILC < ILC
         learn_fb
         
         % ILC's Last input sequence
-        u_last
+        inp_last
         % Lifted state matrix F (input-state) and G (state-output)
         F
         G
@@ -48,10 +48,10 @@ classdef mILC < ILC
             
             N = trj.N - 1;
             if ~isempty(trj.unom)
-                obj.u_last = trj.unom(:,1:N);
+                obj.inp_last = trj.unom(:,1:N);
             else
                 warning('Using last performance results');
-                obj.u_last = trj.PERF(end).u;
+                obj.inp_last = trj.PERF(end).u;
             end
             
             obj.F = zeros(N*dim_x, N*dim_u);
@@ -166,8 +166,8 @@ classdef mILC < ILC
         
         function u = feedforward(obj,trj,y)
             
-            dimu = size(obj.u_last,1);
-            N = size(obj.u_last,2);
+            dimu = size(obj.inp_last,1);
+            N = size(obj.inp_last,2);
             
             dev = y - trj.s;
             h = trj.t(2) - trj.t(1);
@@ -180,15 +180,15 @@ classdef mILC < ILC
             beta = 1;
             
             % gradient descent
-            %u = obj.u_last(:) - beta * obj.F' * obj.Ql * dev(:);
+            %u = obj.inp_last(:) - beta * obj.F' * obj.Ql * dev(:);
             % model inversion based Newton-Raphson update
-            %u = obj.u_last(:) - obj.F \ dev(:);
+            %u = obj.inp_last(:) - obj.F \ dev(:);
             % more stable inverse based Newton-Raphson update
             % computes very high inverses though
-            u = obj.u_last(:) - pinv(obj.F) * dev(:);
+            u = obj.inp_last(:) - pinv(obj.F) * dev(:);
             % LM-type update
             %Mat = (obj.F' * obj.Ql * obj.F + obj.Rl) \ (obj.F' * obj.Ql);
-            %u = obj.u_last(:) - Mat * dev(:);
+            %u = obj.inp_last(:) - Mat * dev(:);
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,N);

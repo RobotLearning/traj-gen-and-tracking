@@ -41,6 +41,8 @@ classdef (Abstract) Robot < Model
             h = obj.SIM.h;
             dim = obj.SIM.dimx / 2;
             dimu = obj.SIM.dimu;
+            Cout = obj.C;
+            
             if (obj.flag_ref_jsp)
                 q = ref(1:dim,:);
                 qd = ref(dim+1:2*dim,:);
@@ -71,22 +73,25 @@ classdef (Abstract) Robot < Model
             
             % check for joint space representation
             if obj.flag_jspace == 1
-                Traj = Trajectory(t,[q;qd],uff,[]);
+                Traj = Trajectory(t,Cout*[q;qd],uff,[]);
             else
                 %xd = obj.jac * qd;
                 x =  ref;
                 xd = diff(x')'/h;
                 xd(:,end+1) = xd(:,end);
-                Traj = Trajectory(t,[x;xd],uff,[]);
+                Traj = Trajectory(t,Cout*[x;xd],uff,[]);
             end            
         end
         
         % Method useful when modifying DMPs directly
+        % TODO: for now reference is directly in cartesian space
         function [Traj,dmps] = generateInputsWithDMP(obj,t,ref)
 
             h = obj.SIM.h;
             dim = obj.SIM.dimx / 2;
             dimu = obj.SIM.dimu;
+            Cout = obj.C;
+            
             if (obj.flag_ref_jsp)
                 q = ref(1:dim,:);
                 qd = ref(dim+1:2*dim,:);
@@ -99,12 +104,14 @@ classdef (Abstract) Robot < Model
             end
             
             % create the DMPs in joint space
-            Q{1} = q;
-            Qd{1} = qd;
-            tcell{1} = t;
+            Q{1} = q';
+            Qd{1} = qd';
+            tcell{1} = t';
 
             % feed them all to a dmp
             dmps = trainMultiDMPs(tcell,Q,Qd);
+            q = zeros(dim,length(t)); 
+            qd = zeros(dim,length(t));
             for j = 1:dim
                 [~,Q] = dmps(j).evolve();
                 q(j,:) = Q(1,:);
@@ -124,13 +131,13 @@ classdef (Abstract) Robot < Model
             
             % check for joint space representation
             if obj.flag_jspace == 1
-                Traj = Trajectory(t,[q;qd],uff,[]);
+                Traj = Trajectory(t,Cout*[q;qd],uff,[]);
             else
                 %xd = obj.jac * qd;
                 x =  ref;
                 xd = diff(x')'/h;
                 xd(:,end+1) = xd(:,end);
-                Traj = Trajectory(t,[x;xd],uff,[]);
+                Traj = Trajectory(t,Cout*[x;xd],uff,[]);
             end            
         end
         
@@ -141,12 +148,12 @@ classdef (Abstract) Robot < Model
             t = traj.t;
             Q = obj.COST.Q;
             R = obj.COST.R;
-            C = obj.C;
+            Cout = obj.C;
             N = length(t)-1;
             h = t(2) - t(1);
             % get linear time variant matrices around trajectory
             [Ad,Bd] = obj.linearize(traj);
-            lqr = LQR(Q,R,Q,Ad,Bd,C,N,h,true);
+            lqr = LQR(Q,R,Q,Ad,Bd,Cout,N,h,true);
             K = lqr.computeFinHorizonLTV();
             
             traj.K = K;

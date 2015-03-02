@@ -31,8 +31,8 @@ SIM.dimu = 2;
 % time step h 
 SIM.h = 0.01;
 % noise and initial error
-SIM.eps = 0.003;
-SIM.eps_d = 0.005;
+SIM.eps = 3e-10;
+SIM.eps_d = 5e-10;
 % integration method
 SIM.int = 'Euler';
 
@@ -63,7 +63,7 @@ COST.Q = diag([1,1,0]);
 COST.R = 0.1 * eye(SIM.dimu);
 
 % initialize model
-TW = TwoWheeledCar(PAR,CON,COST,SIM);
+twc = TwoWheeledCar(PAR,CON,COST,SIM);
 
 %% Create desired trajectory 
 
@@ -80,39 +80,39 @@ s(2,:) = sin(2*pi*t);
 s(3,1:end-1) = atan2(diff(s(2,:)),diff(s(1,:)));
 s(3,end) = s(3,1); % since trajectory is periodical after t = 1
 
-traj = TW.generateInputs(t,s);
+traj = twc.generateInputs(t,s);
 
 %% Evolve system dynamics and animate the robot arm
 
 x0 = s(:,1);
-xact = TW.evolve(t,x0,traj.unom);
+%x0(3) = rand(1); % phi angle
+y = twc.observe(t,x0,traj.unom);
 
 % add performance to trajectory
-traj.addPerformance(traj.unom,xact,TW.COST,'Inverse Dynamics');
+traj.addPerformance(traj.unom,y,twc.COST,'Inverse Dynamics');
 
 % Plot the controls and animate the robot arm
-TW.plot_inputs(traj);
-TW.plot_outputs(traj);
-TW.animate(xact,s(1:2,:));
+twc.plot_inputs(traj);
+twc.plot_outputs(traj);
+twc.animate(y,s(1:2,:));
 
 %% Iterative Learning Control
 
 num_trials = 5;
-%ilc = aILC(TW,Traj);
-ilc = mILC(TW,traj);
-y = TW.evolve(t,x0,traj.unom);
+%ilc = aILC(twc,traj);
+ilc = mILC(twc,traj);
 
 for i = 1:num_trials
     
     u = ilc.feedforward(traj,y);
     % u = ilc.feedforward(traj,TW,y);    
     % get error (observed trajectory deviation)
-    y = TW.evolve(t,x0,u);
-    traj.addPerformance(u,y,TW.COST,ilc);
+    y = twc.observe(t,x0,u);
+    traj.addPerformance(u,y,twc.COST,ilc);
     
 end
 
 % Plot the controls and animate the robot arm
-TW.plot_inputs(traj);
-TW.plot_outputs(traj);
-TW.animate(y,s(1:2,:));
+twc.plot_inputs(traj);
+twc.plot_outputs(traj);
+twc.animate(y,s(1:2,:));

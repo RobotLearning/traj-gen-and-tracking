@@ -58,10 +58,16 @@ classdef Trajectory < handle
             sse = sum(obj.PERF(i+1).cost);
             fprintf('%d. trial: SSE for %s is %f \n', i+1, name, sse);
             
-            if ~ischar(controller)
+            if ~ischar(controller) && ~isempty(u)
                 controller.record(u,sse);
             end
             
+        end
+        
+        % inverse project output trajectory s back to state space
+        function sbar = projectBack(obj,C)
+            
+            sbar = C'*((C*C')\obj.s);
         end
         
     end

@@ -33,7 +33,6 @@ classdef (Abstract) Model < handle
     methods (Access = public)
         
         % one step simulation along the trajectory
-        % TODO: assumes continous dynamics
         function next = step(obj,t,prev,u,fun)
             
             h = obj.SIM.h;
@@ -105,11 +104,12 @@ classdef (Abstract) Model < handle
             K = traj.K;
             uff = traj.unom;
             
-            [~,s] = dmp.evolve();
-            s = s(1,:);
-            %s = traj.s;
-            C = obj.C;
-            sbar = C'*((C*C')\s);
+            s = zeros(length(dmp),length(t));
+            for i = 1:length(dmp)
+                [~,r] = dmp(i).evolve();
+                s(i,:) = r(1,:);
+            end
+            sbar = traj.projectBack(obj.C);
 
             N = length(t)-1;
             x = zeros(length(x0),N+1);
@@ -132,15 +132,7 @@ classdef (Abstract) Model < handle
             K = traj.K;
             uff = traj.unom;
             
-            %sbar = traj.s;
-            s = traj.s;
-            C = obj.C;
-            dimx = size(x0,1);
-            if size(s,1) ~= dimx
-                sbar = C'*((C*C')\s);
-            else
-                sbar = s;
-            end
+            sbar = traj.projectBack(obj.C);
 
             N = length(t)-1;
             x = zeros(length(x0),N+1);
@@ -207,7 +199,7 @@ classdef (Abstract) Model < handle
             N = trj.N - 1; 
             t = trj.t;
             h = trj.t(2) - trj.t(1);
-            s = trj.s;
+            s = trj.projectBack(obj.C); % get full state space repr.
             
             % if learning takes place in cartesian space then run inverse
             % kinematics

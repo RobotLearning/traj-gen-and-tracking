@@ -28,7 +28,7 @@ SIM.cartesian = false;
 % dimension of the x vector
 SIM.dimx = 4;
 % dimension of the output y
-SIM.dimy = 4;
+SIM.dimy = 2;
 % dimension of the control input
 SIM.dimu = 2;
 % time step h 
@@ -86,7 +86,7 @@ CON = [];
 
 % cost structure
 % only penalize positions
-COST.Q = 100*diag([1,1,0,0]);
+COST.Q = 100*eye(SIM.dimy);
 COST.R = 1 * eye(SIM.dimu);
 
 % initialize model
@@ -109,9 +109,9 @@ rr.generateFeedback(traj);
 
 q0 = traj.s(:,1);
 % add nonzero velocity
-q0(3:4) = q0(3:4) + 0.1*rand(2,1);
+q0(3:4) = 0.1*rand(2,1);
 % observe output
-[qact,ufull] = rr.observeWithDMPFeedback(obj,dmp,traj,q0);
+[qact,ufull] = rr.observeWithDMPFeedback(dmp,traj,q0);
 % add performance to trajectory
 traj.addPerformance(ufull,qact,rr.COST,'ID + LQR');
 
@@ -123,13 +123,13 @@ rr.animateArm(qact(1:2,:),ref);
 %% Start learning with ILC
 
 num_trials = 10;
-ilc = wILC(rr,traj); 
+ilc = ILC(rr,traj); 
 
 for i = 1:num_trials
     % get next inputs
     dmp = ilc.feedforward(dmp,traj,qact);
     % get the measurements
-    [qact,ufull] = rr.observeWithDMPFeedback(obj,dmp,traj,q0);
+    [qact,ufull] = rr.observeWithDMPFeedback(dmp,traj,q0);
     traj.addPerformance(ufull,qact,rr.COST,ilc);
     % Plot the controls and animate the robot arm
     %rr.animateArm(qact(1:2,:),ref);

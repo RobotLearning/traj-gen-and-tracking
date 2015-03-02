@@ -145,7 +145,7 @@ classdef Linear < Model
         
         % Creates a dmp trajectory
         % numbf: number of basis functions to use
-        % TODO: extend for multiple outputs
+        % WARNING: only for one output dimension (i.e. q1)
         function [dmp,s] = dmpTrajectory(obj,t,numbf,goal,yin,ref)
             
             h = obj.SIM.h;
