@@ -1,6 +1,6 @@
-% One-link revolute arm (pendulum)
+% Anthropomorphic arm (3shoulder+1elbow+1wrist)
 
-classdef R < Robot
+classdef BarrettWAM < Robot
 
     properties   
         % parameters structure
@@ -17,7 +17,7 @@ classdef R < Robot
         jac
         % learning in joint space?
         flag_jspace
-        % represent references in joint space
+        % reference shown in joint space?
         flag_ref_jsp
     end
     
@@ -26,17 +26,6 @@ classdef R < Robot
         % copies the parameter values inside the structure
         function set.PAR(obj, STR)  
             
-            % initialize everything to zero
-            obj.PAR.const.g = 0;
-            obj.PAR.link.mass = 0;
-            obj.PAR.link.length = 0;
-            obj.PAR.link.centre.dist = 0;
-            obj.PAR.link.inertia = 0;
-            obj.PAR.link.motor.inertia = 0;
-            obj.PAR.link.motor.gear_ratio = 0;
-                         
-            % check that the input has all the fields
-            % TODO: is there a better way?
             %assert(all(strcmp(fieldnames(obj.PAR), fieldnames(STR))));
             obj.PAR = STR;
             
@@ -46,17 +35,6 @@ classdef R < Robot
         
         % copies the constraint values inside the structure
         function set.CON(obj, STR)
-            % initialize all fields
-            obj.CON.link.q.max = Inf;
-            obj.CON.link.q.min = -Inf;
-            obj.CON.link.qd.max = Inf;
-            obj.CON.link.qd.min = -Inf;
-            obj.CON.link.qdd.max = Inf;
-            obj.CON.link.qdd.min = -Inf;
-            obj.CON.link.u.max = Inf;
-            obj.CON.link.u.min = -Inf;
-            obj.CON.link.udot.max = Inf;
-            obj.CON.link.udot.min = -Inf;
             
             % check that the input has all the fields
             %assert(all(strcmp(fieldnames(obj.CON), fieldnames(STR))));
@@ -76,7 +54,6 @@ classdef R < Robot
             assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
                    'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;
-            % TODO: matlab is right to complain here
             obj.flag_jspace = ~sim.cartesian;
             obj.flag_ref_jsp = sim.jref;
         end
@@ -86,7 +63,7 @@ classdef R < Robot
             obj.COST.Q = cost.Q;
             obj.COST.R = cost.R;
             obj.COST.fnc = @(x1,x2) diag((x1-x2)'*cost.Q*(x1-x2));
-            %assert(length(cost.Q) == obj.SIM.dimx);
+            %assert(length(Q) == obj.SIM.dimx);
         end
         
     end
@@ -95,7 +72,7 @@ classdef R < Robot
         
         % constructor for convenience
         % TODO: divide into several methods?
-        function obj = R(par,con,cost,sim)
+        function obj = BarrettWAM(par,con,cost,sim)
             
             obj.SIM = sim;            
             % set object parameter
@@ -110,7 +87,7 @@ classdef R < Robot
         
         % provides nominal model
         function [x_dot,varargout] = nominal(obj,~,x,u,flg)
-            % differential equation of the inverse dynamics
+            % differential equation of the forward dynamics
             % x_dot = A(x)x + B(x)u + C(x)
             [x_dot,dfdx,dfdu] = obj.dynamics(x,u,true);
             
@@ -125,84 +102,51 @@ classdef R < Robot
         % TODO: should we wrap the dynamics?
         function x_dot = actual(obj,~,x,u)
             
-            % change parameters
-            par.const.g = obj.PAR.const.g;
-            par.link.mass = 1.0 * obj.PAR.link.mass;
-            par.link.length = 1.0 * obj.PAR.link.length;
-            par.link.centre.dist = obj.PAR.link.centre.dist;
-            par.link.inertia = 1.0 * obj.PAR.link.inertia;            
-            par.link.motor.inertia = 1.0 * obj.PAR.link.motor.inertia;            
-            par.link.motor.gear_ratio = 1.0 * obj.PAR.link.motor.gear_ratio;            
-            
             % differential equation of the inverse dynamics
             % x_dot = A(x)x + B(x)u + C(x)
-            x_dot = RDynamics(x,u,par,false);
+            x_dot = obj.dynamics(x,u,false);
+            
             
         end
         
-        % run kinematics
-        function x = kinematics(obj,q)
+        % run kinematics using an external function
+        function [x1,x2] = kinematics(obj,q)
             
-            l1 = obj.PAR.link.length;
-            x = [l1 * cos(q); l1 * sin(q)];
+            %TODO:
         end
         
         % call inverse kinematics from outside
         function q = invKinematics(obj,x)
             
-            q = atan(x(2,:)./x(1,:));
+            %TODO:
         end
                    
         % dynamics to get u
         function u = invDynamics(obj,q,qd,qdd)
-            u = RInvDynamics(q,qd,qdd,obj.PAR);
+            % code taken from SL has 11 joints - 4 for the fingers
+            u = wamInvDynamics(q,qd,qdd,obj.PAR);
         end
         
         % dynamics to qet Qd = [qd,qdd]
         function [Qd, varargout] = dynamics(obj,Q,u,flag)
             if flag
-                [Qd, dfdx, dfdu] = RDynamics(Q,u,obj.PAR,flag);
+                [Qd, dfdx, dfdu] = wamDynamics(Q,u,obj.PAR,flag);
                 varargout{1} = dfdx;
                 varargout{2} = dfdu;
             else
-                Qd = RDynamics(Q,u,obj.PAR,flag);
+                Qd = wamDynamics(Q,u,obj.PAR,flag);
             end
         end
         
         % make an animation of the robot manipulator
         function animateArm(obj,q_actual,s)
-            x = obj.kinematics(q_actual);
-            animateR(x,s);
+            %TODO:
         end
         
         % get lifted model constraints
         function [umin,umax,L,q] = lift_constraints(obj,trj,ilc)
             
-            h = obj.SIM.h;
-            N = trj.N - 1; 
-            u_trj = trj.unom(:,1:N);
-            %dimx = obj.SIM.dimx;
-            dimu = obj.SIM.dimu;
-            umin = obj.CON.link.u.min - u_trj;
-            umax = obj.CON.link.u.max - u_trj;
-
-            % arrange them in a format suitable for optimization
-            umin = umin(:);
-            umax = umax(:);
-            
-            % construct D
-            D = (diag(ones(1,dimu*(N-1)),dimu) - eye(dimu*N))/h;
-            D = D(1:end-dimu,:);
-            
-            u_dot_max = obj.CON.link.udot.max;
-            u_dot_min = obj.CON.link1.udot.min;
-            U_dot_max = repmat(u_dot_max,N-1,1);
-            U_dot_min = repmat(u_dot_min,N-1,1);
-            u_star = u_trj(:);
-
-            L = [D; -D];
-            q = [U_dot_max - D*u_star;
-                 -U_dot_min + D*u_star];
+            %TODO:
             
         end
         

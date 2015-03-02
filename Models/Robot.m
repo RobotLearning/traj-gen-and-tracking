@@ -8,8 +8,11 @@ classdef (Abstract) Robot < Model
 
         % jacobian
         jac
-        % flag for using operational (0) or joint space (1) ?
+        % flag for representing learned trajectories
+        % in operational (0) or joint space (1) ?
         flag_jspace
+        % flag indicating joint space references
+        flag_ref_jsp
     end
     
     % methods to be implemented
@@ -38,22 +41,79 @@ classdef (Abstract) Robot < Model
             h = obj.SIM.h;
             dim = obj.SIM.dimx / 2;
             dimu = obj.SIM.dimu;
-            q = obj.invKinematics(ref);
-            % check for correctness
-            %[x1,x2] = RRKinematics(q,PAR);
-            qd = diff(q')' / h; 
-            qdd = diff(qd')' / h; 
+            if (obj.flag_ref_jsp)
+                q = ref(1:dim,:);
+                qd = ref(dim+1:2*dim,:);
+            else
+                % assuming that only positions are demonstrated
+                q = obj.invKinematics(ref);
+                qd = diff(q')' / h; 
+                % start with zero initial velocity
+                %qd = [zeros(dim,1), qd];
+                %qdd = [zeros(dim,1), qdd];
+                % assume you end with same velocity as before
+                qd(:,end+1) = qd(:,end);
+            end
             
-            % start with zero initial velocity
-            %qd = [zeros(dim,1), qd];
-            %qdd = [zeros(dim,1), qdd];
-            % assume you end with same velocity as before
-            qd(:,end+1) = qd(:,end);
+            qdd = diff(qd')' / h; 
             % assume you end with same acceleration as before
             qdd(:,end+1) = qdd(:,end);
             % this leads to large decelerations!
             % add one more acceleration assuming q(end+1) = q(end)
             %qdd(:,end+1) = (q(:,end-1) - q(:,end))/(h^2);
+
+            % get the desired inputs
+            Nu = length(t) - 1;
+            uff = zeros(dimu,Nu);
+            for i = 1:Nu
+                uff(:,i) = obj.invDynamics(q(:,i),qd(:,i),qdd(:,i));
+            end
+            
+            % check for joint space representation
+            if obj.flag_jspace == 1
+                Traj = Trajectory(t,[q;qd],uff,[]);
+            else
+                %xd = obj.jac * qd;
+                x =  ref;
+                xd = diff(x')'/h;
+                xd(:,end+1) = xd(:,end);
+                Traj = Trajectory(t,[x;xd],uff,[]);
+            end            
+        end
+        
+        % Method useful when modifying DMPs directly
+        function [Traj,dmps] = generateInputsWithDMP(obj,t,ref)
+
+            h = obj.SIM.h;
+            dim = obj.SIM.dimx / 2;
+            dimu = obj.SIM.dimu;
+            if (obj.flag_ref_jsp)
+                q = ref(1:dim,:);
+                qd = ref(dim+1:2*dim,:);
+            else
+                % assuming that only positions are demonstrated
+                q = obj.invKinematics(ref);
+                qd = diff(q')' / h; 
+                % assume you end with same velocity as before
+                qd(:,end+1) = qd(:,end);
+            end
+            
+            % create the DMPs in joint space
+            Q{1} = q;
+            Qd{1} = qd;
+            tcell{1} = t;
+
+            % feed them all to a dmp
+            dmps = trainMultiDMPs(tcell,Q,Qd);
+            for j = 1:dim
+                [~,Q] = dmps(j).evolve();
+                q(j,:) = Q(1,:);
+                qd(j,:) = Q(2,:);
+            end
+            
+            qdd = diff(qd')' / h; 
+            % assume you end with same acceleration as before
+            qdd(:,end+1) = qdd(:,end);
 
             % get the desired inputs
             Nu = length(t) - 1;

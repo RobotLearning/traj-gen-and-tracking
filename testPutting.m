@@ -22,6 +22,8 @@ SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
 % integration method
 SIM.int = 'Euler';
+% trajectory in joint space?
+SIM.jref = false;
 
 % constants
 g = 9.81;

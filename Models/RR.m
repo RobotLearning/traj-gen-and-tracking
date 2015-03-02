@@ -17,6 +17,8 @@ classdef RR < Robot
         jac
         % learning in joint space?
         flag_jspace
+        % represent references in joint space
+        flag_ref_jsp
     end
     
     methods
@@ -91,6 +93,7 @@ classdef RR < Robot
                    'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;
             obj.flag_jspace = ~sim.cartesian;
+            obj.flag_ref_jsp = sim.jref;
         end
         
         % change the cost function

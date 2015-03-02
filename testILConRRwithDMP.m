@@ -1,9 +1,5 @@
-%% Simulate trajectories for the planar RR arm
+%% ILC on RR modifying DMPs now
 %
-% TODO: Investigate the following
-%
-% Adding feedback 
-% slow down with DMP 
 
 %# store breakpoints
 tmp = dbstatus;
@@ -98,29 +94,26 @@ rr = RR(PAR,CON,COST,SIM);
 
 %% Generate inputs for a desired trajectory
 
-% TODO: implement Jacobian and inverse computations of
-% q, qd, qdd from x, xd, xdd
-% Put Jacobian in Kinematics
-
 h = SIM.h;
 tin = 0; tfin = 1;
 t = tin:h:tfin;
 y_des = 0.4 + 0.2 * t;
-x_des = 0.6 * ones(1,length(t));
+x_des = 0.6 - 0.1 * t;
 ref = [x_des; y_des]; % displacement profile 
-traj = rr.generateInputs(t,ref); % trajectory generated in joint space
+
+[traj,dmp] = rr.generateInputsWithDMP(t,ref); % trajectory generated in joint space
+% Generate feedback with LQR
+rr.generateFeedback(traj);
 
 %% Evolve system dynamics and animate the robot arm
-
-% TODO: add a nonzero friction matrix B
 
 q0 = traj.s(:,1);
 % add nonzero velocity
 q0(3:4) = q0(3:4) + 0.1*rand(2,1);
 % observe output
-qact = rr.evolve(t,q0,traj.unom);
+[qact,ufull] = rr.observeWithDMPFeedback(obj,dmp,traj,q0);
 % add performance to trajectory
-traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics');
+traj.addPerformance(ufull,qact,rr.COST,'ID + LQR');
 
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
@@ -130,50 +123,16 @@ rr.animateArm(qact(1:2,:),ref);
 %% Start learning with ILC
 
 num_trials = 10;
-
-%ilc = aILC(rr,traj);
-ilc = mILC(rr,traj); 
+ilc = wILC(rr,traj); 
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforward(traj,qact);
-    %u = ilc.feedforward(traj,rr,dev);
-    % evolve system
-    qact = rr.evolve(t,q0,u);
-    % get the cartesian coordinates
-    %[~,y] = rr.kinematics(qact(1:2,:));
-    % add performance to trajectory
-    traj.addPerformance(u,qact,rr.COST,ilc);
+    dmp = ilc.feedforward(dmp,traj,qact);
+    % get the measurements
+    [qact,ufull] = rr.observeWithDMPFeedback(obj,dmp,traj,q0);
+    traj.addPerformance(ufull,qact,rr.COST,ilc);
     % Plot the controls and animate the robot arm
     %rr.animateArm(qact(1:2,:),ref);
-end
-
-% Plot the controls and animate the robot arm
-rr.plot_inputs(traj);
-rr.plot_outputs(traj);
-rr.animateArm(qact(1:2,:),ref);
-
-%% Learn with feedback
-
-close all;
-traj = Trajectory(traj.t,traj.s,traj.unom,[]);
-% add feedback K to traj
-rr.generateFeedback(traj); % form feedback to stabilize
-ilc = mILC(rr,traj,1); % 1 means learn with feedback
-ilc.u_last = traj.unom;
-% observe output
-qact = rr.observeWithFeedbackErrorForm(traj,q0);
-traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics + LQR');
-num_trials = 10;
-
-for i = 1:num_trials
-    
-    us = ilc.feedforward(traj,qact);     
-    traj.unom = us;
-    % get the measurements
-    qact = rr.observeWithFeedbackErrorForm(traj,q0);
-    traj.addPerformance(us,qact,rr.COST,ilc);
-
 end
 
 % Plot the controls and animate the robot arm

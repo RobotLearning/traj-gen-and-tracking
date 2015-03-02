@@ -259,8 +259,10 @@ classdef (Abstract) Model < handle
                 subplot(num_inp,1,i);
                 plot(t,u(i,:));
                 title(strcat(num2str(i),'. control input'));
-                xlabel('Time (s)');
-                ylabel(strcat('Control input u',num2str(i)));
+                if ~isa(obj,'BarrettWAM')
+                    xlabel('Time (s)');
+                    ylabel(strcat('Control input u',num2str(i)));
+                end
             end
             
         end
@@ -278,13 +280,28 @@ classdef (Abstract) Model < handle
             end
             num_out = size(y,1);
             figure;
-            for i = 1:num_out
-                subplot(num_out,1,i);
-                plot(t,y(i,:),'.-',t,y_des(i,:),'-');
-                legend(name,'Reference');
-                title(strcat(num2str(i),'. state'));
-                xlabel('Time (s)');
-                ylabel(strcat('State x',num2str(i)));
+            
+            if isa(obj,'BarrettWAM') % too many joints       
+                for i = 1:num_out/2
+                    subplot(num_out/2,2,2*i-1);
+                    plot(t,y(2*i-1,:),'.-',t,y_des(2*i-1,:),'-');
+                    subplot(num_out/2,2,2*i);
+                    plot(t,y(2*i,:),'.-',t,y_des(2*i,:),'-');
+                    %legend(name,'Reference');
+                    %title(strcat(num2str(i),'. state'));
+                    %xlabel('Time (s)');
+                    %ylabel(strcat('State x',num2str(i)));
+                end
+            else % other models            
+                for i = 1:num_out
+                    subplot(num_out,1,i);
+                    plot(t,y(i,:),'.-',t,y_des(i,:),'-');
+                    legend(name,'Reference');
+                    title(strcat(num2str(i),'. state'));
+                    xlabel('Time (s)');
+                    ylabel(strcat('State x',num2str(i)));
+                end
+            
             end
             
         end

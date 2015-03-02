@@ -161,7 +161,7 @@ dmps = trainMultiDMPs(tcell,Q,Qd);
 % t q1 qd1 q2 qd2 ... q7 qd7
 M = [];
 tLin = linspace(tNew(1),tNew(end),length(tNew));
-M = [M, tLin(:)];
+M = tLin(:);
 figure;
 for j = 1:dof
 [~,q] = dmps(j).evolve();
