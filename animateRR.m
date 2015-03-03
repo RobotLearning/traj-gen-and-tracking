@@ -27,14 +27,14 @@ hf = figure('color','white');
 axis manual; axis equal; 
 
 %%%%%%%%%%%%%%%%%%%%%%%% TODO: only for putting
-xlabel('Distance to hole (m)');
-ylabel('Distance to ground (m)');
+xlabel('Distance in x (m)');
+ylabel('Distance in y (m)');
 axis auto;
 %camroll(-90); 
 %set(gca, 'YTick',[]);
 %%%%%%%%%%%%%%%%%%%%%%%%
 
-h1 = line(link1_x, link1_y, 'color', [.6 .6 .6],'LineWidth',4);
+h1 = line(link1_x, link1_y, 'color', [.4 .4 .4],'LineWidth',4);
 h2 = line(link2_x, link2_y, 'color', [.6 .6 .6],'LineWidth',4);
 title('Two-link planar arm');
 hold on;

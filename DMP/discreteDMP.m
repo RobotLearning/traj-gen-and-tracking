@@ -122,10 +122,10 @@ classdef discreteDMP < DMP
             h = obj.FORCE.h;
             c = obj.FORCE.c;
             x = obj.can.x;
-            N = length(w);
+            M = length(w);
             f = 0;
             scale = 0;
-            for i = 1:N
+            for i = 1:M
                 f = f + obj.basis(x,h(i),c(i))*w(i)*x;
                 scale = scale + obj.basis(x,h(i),c(i));
             end

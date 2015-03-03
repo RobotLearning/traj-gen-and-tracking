@@ -148,6 +148,87 @@ plot(path1,path2,'-',y11,y12,'-.');
 legend('desired trajectory','followed trajectory');
 title('Trajectory in xy space');
 
+%% Test the linear model s = Fs * w
+
+% create two paths
+path1 = cos(2*pi*t);
+path2 = sin(2*pi*t);
+
+% goal position
+goal = path1(end);
+
+% learn the weights with the usual linear regression
+dmp1.setWeights(path1);
+dmp2.setWeights(path2);
+
+yin1 = [0;0];
+yin2 = [0;0];
+dmp1.setInitState(yin1);
+dmp1.resetStates();
+dmp2.setInitState(yin2);
+dmp2.resetStates();
+[~,sref1] = dmp1.evolve();
+
+% construct As
+tau = dmp1.can.tau;
+As = tau * [0, 1, 0; 
+     -alpha*beta, -alpha, alpha*beta; 
+            0, 0, 0];
+        
+% construct Phi
+dmp1.can.reset();
+N = 2; %length(t)-1;
+M = length(dmp1.FORCE.w);
+Phi = zeros(N,M);
+for i = 1:N
+    dmp1.can.step(1);
+    sumphi = 0;
+    for j = 1:M
+        x = dmp1.can.x;
+        Phi(i,j) = x * dmp1.basis(x,dmp1.FORCE.h(j),dmp1.FORCE.c(j));
+        sumphi = sumphi + dmp1.basis(x,dmp1.FORCE.h(j),dmp1.FORCE.c(j));
+    end
+    Phi(i,:) = Phi(i,:)/sumphi;
+end
+
+% discretize As and Phi
+As = eye(3) + h * As;
+Phi = h * Phi;
+
+dim_x = 3;
+dim_w = M;
+Fs = zeros(N*3,N*M);
+% add the evolution of s0
+sfree = zeros(N*3,1);
+sf = [sref1(:,1);goal];
+% construct Fs
+for i = 1:N
+    vec_x = (i-1)*dim_x + 1:i*dim_x;
+    for j = 1:i        
+        vec_w = (j-1)*dim_w + 1:j*dim_w;
+        % put zeros in between
+        mat = [zeros(1,M); Phi(i,:); zeros(1,M)];
+        for k = j+1:i
+            mat = As * mat;
+        end
+        Fs(vec_x,vec_w) = mat; 
+    end
+    sf = As * sf;
+    sfree(vec_x) = sf;    
+end
+
+% get the weights
+w = dmp1.FORCE.w;
+wL = repmat(eye(M),N,1)*w;
+sbar = Fs * wL;
+
+sbar = sbar + sfree;
+sbar = reshape(sbar,dim_x,N);
+s = sbar(1:2,:);
+sref2(1,:) = [yin1(1),yin1(1)+s(1,:)];
+sref2(2,:) = [yin1(2),yin1(2)+s(2,:)];
+
+
 %% Test changing the goal position
 
 % create two paths
