@@ -5,6 +5,9 @@
 % unext = ulast - L*error;
 %
 % Ideally we need L = inv(F), a model-based ILC update rule
+%
+% TODO: learn with feedback construction of F matrix
+%       offers no improvement!
 
 classdef mILC < ILC
     
