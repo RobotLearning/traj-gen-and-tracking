@@ -13,8 +13,6 @@ classdef (Abstract) DMP < handle
         goal
         % y, yd (or z), ydd values
         Y
-        % field containing Psi matrix
-        Psi
         % forcing structure has weights w, widths h, and centers c
         FORCE
     end
@@ -130,11 +128,11 @@ classdef (Abstract) DMP < handle
             Psi = Psi .* scale;
             
             % in case there are multiple demonstrations
-            obj.Psi = repmat(Psi,D,1);
+            Psi = repmat(Psi,D,1);
             
             % TODO: use pinv or add lambda to smoothen inverse
-            w = pinv(obj.Psi) * fd(:);
-            %w = obj.Psi \ fd(:);
+            w = pinv(Psi) * fd(:);
+            %w = Psi \ fd(:);
             force.w = w;
             obj.setForcing(force);
 
@@ -193,10 +191,10 @@ classdef (Abstract) DMP < handle
                 scale = 1 ./ (sum(Psi,2) + 1e-10);
             end
             scale = repmat(scale,1,lenw);
-            obj.Psi = Psi .* scale;
+            Psi = Psi .* scale;
             
             % TODO: use pinv or add lambda to smoothen inverse
-            w = pinv(obj.Psi) * fd(:);
+            w = pinv(Psi) * fd(:);
             %w = Psi \ fd(:);
             force.w = w;
 

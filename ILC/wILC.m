@@ -12,7 +12,7 @@
 % switching between different methods done in initialization
 %
 
-classdef tILC < ILC
+classdef wILC < ILC
     
     % fields common to all ILCs (defined in abstract ILC class)
     properties
@@ -40,13 +40,12 @@ classdef tILC < ILC
     
     methods
         
-        function obj = tILC(traj,model,update_method)
+        function obj = wILC(traj,model,varargin)
                         
             obj.episode = 0;
             obj.color = 'k';
-            obj.name = 'tILC';
+            obj.name = 'wILC';
             obj.error = 0;
-            obj.upd_meth = update_method;
             obj.formL(traj);
             
             N = traj.N - 1;
@@ -59,18 +58,22 @@ classdef tILC < ILC
             sbar = Cout'*((Cout*Cout')\traj.s);
             svec = sbar(:);
 
-            switch update_method 
+            switch varargin{1}
                 case 't'                
                 obj.inp_last = svec(1:end-dim_x);
+                obj.upd_meth = 't';
                 case 'w' 
-                svec = sbar(:);
                 obj.inp_last = pinv(obj.Psi) * svec(1:end-dim_x);
+                obj.upd_meth = 'w';
                 case 'wd'
-                svec = sbar(:);
                 D = eye(N*dim_x) - diag(ones(1,(N-1)*dim_x),-dim_x);
                 obj.inp_last = pinv(obj.Psi) * D * svec(1:end-dim_x);
+                obj.upd_meth = 'wd';
                 otherwise 
-                error('Something wrong!');
+                dmp = varargin{1};
+                dmp.constructF(traj.t);
+                obj.inp_last = dmp.FORCE.w;
+                obj.upd_meth = 'dmp';
             end
             
             
@@ -200,17 +203,10 @@ classdef tILC < ILC
             
             r = traj.s;
             dev = y - r;
-            %dev = zeros(1,length(dev));
-            force = dmp.updateWeights(dev);
-            w_change = force.w;
-    
-            % set learning rate
-            beta = 1;
-            
-            w_last = dmp.FORCE.w;
-            w_next = w_last + beta * w_change;
-            force.w = w_next;
-            dmp.setForcing(force);
+            Fs = dmp.FORCE.Fs;
+            w_next = obj.inp_last - pinv(Fs)*obj.L*dev(:);
+            dmp.FORCE.w = w_next;
+            obj.inp_last = w_next;
             
         end
         
@@ -222,13 +218,14 @@ classdef tILC < ILC
             
             switch update_method 
                 case 't'
-                traj2 = updateTraj(obj,traj,y);
+                    traj2 = obj.updateTraj(traj,y);
                 case 'w'
-                traj2 = updateWeights(obj,traj,y);
+                    traj2 = obj.updateWeights(traj,y);
                 case 'wd'
-                traj2 = updateDerivativeWeights(obj,traj,y);
+                    traj2 = obj.updateDerivativeWeights(traj,y);
                 otherwise %updates dmp weights
-                updateDMP(dmps,traj,y);
+                    obj.updateDMP(dmps,traj,y);
+                    traj2 = [];
             end
             
         end

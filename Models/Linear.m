@@ -216,7 +216,7 @@ classdef Linear < Model
         
         % create a dmp trajectory and inputs using feedback law
         % ref is the reference trajectory
-        function [Traj,dmp] = generateDMP(obj,t,yin,ref)
+        function [traj,dmp] = generateDMP(obj,t,yin,ref)
             
             % check controllability
             obj.assertControllability();
@@ -247,7 +247,7 @@ classdef Linear < Model
             sbar = C'*((C*C')\s);
             [K,uff] = lqr.computeErrorForm(sbar);
             
-            Traj = Trajectory(t,ref,uff,K);
+            traj = Trajectory(t,s,uff,K);
         end
         
     end

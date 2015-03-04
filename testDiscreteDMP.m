@@ -197,11 +197,11 @@ As = eye(3) + h * As;
 Phi = h * Phi;
 
 s1 = [yin1;goal];
-dim_x = 3;
+dim_x = 2;
 dim_w = M;
-Fs = zeros(N*3,N*M);
+Fs = zeros(N*dim_x,N*M);
 % add the evolution of s0
-sfree = zeros(N*3,1);
+sfree = zeros(N*2,1);
 sf = s1;
 % construct Fs
 for i = 1:N
@@ -209,21 +209,23 @@ for i = 1:N
     for j = 1:i        
         vec_w = (j-1)*dim_w + 1:j*dim_w;
         % put zeros in between
-        mat = [zeros(1,M); Phi(j,:); zeros(1,M)];
+        mat = [zeros(1,M); Phi(j,:)];
         for k = j+1:i
-            mat = As * mat;
+            mat = As(1:2,1:2) * mat;
         end
         Fs(vec_x,vec_w) = mat; 
     end
     sf = As * sf;
-    sfree(vec_x) = sf;
+    sfree(vec_x) = sf(1:dim_x);
 end
 
 % get the weights
 Fs = Fs * repmat(eye(M),N,1);
-s = [sref(:,2:end);goal*ones(1,N)];
+s = sref(:,2:end);
 w_est = pinv(Fs) * (s(:) - sfree);
 w = dmp1.FORCE.w;
+% max diff
+max(abs(w_est - w))
 
 %% Test changing the goal position
 

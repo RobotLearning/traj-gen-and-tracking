@@ -21,8 +21,6 @@ classdef discreteDMP < DMP
         Y
         % initial y,yd values
         Y0
-        % field containing Psi matrix
-        Psi
         % forcing structure has weights w, widths h, and centers c
         FORCE
     end
@@ -44,6 +42,7 @@ classdef discreteDMP < DMP
             obj.FORCE.w = zeros(bfs,1);
             obj.FORCE.h = ones(bfs,1) * bfs^(1.5);
             obj.FORCE.c = linspace(xtr(end),1,bfs);
+            obj.FORCE.Fs = [];
             % reset all states and phases
             obj.resetStates();
         end
@@ -128,22 +127,24 @@ classdef discreteDMP < DMP
             end
             
             % discretize As and Phi
-            As = eye(3) + h * As;
-            Phi = h * Phi;
+            % we don't need the g component for relating
+            % inputs w to outputs w
+            As = eye(3) + dt * As;
+            Phi = dt * Phi;
             
-            Fs = zeros(N*3,N*M);
+            Fs = zeros(N*2,N*M);
             % add the evolution of s0
             %sfree = zeros(N*3,1);
             %sf = s1;
             % construct Fs
             for i = 1:N
-                vec_x = (i-1)*3 + 1:i*3;
+                vec_x = (i-1)*2 + 1:i*2;
                 for j = 1:i        
                     vec_w = (j-1)*M + 1:j*M;
                     % put zeros in between
-                    mat = [zeros(1,M); Phi(j,:); zeros(1,M)];
+                    mat = [zeros(1,M); Phi(j,:)];
                     for k = j+1:i
-                        mat = As * mat;
+                        mat = As(1:2,1:2) * mat;
                     end
                     Fs(vec_x,vec_w) = mat; 
                 end
@@ -153,6 +154,7 @@ classdef discreteDMP < DMP
 
             % get the weights
             Fs = Fs * repmat(eye(M),N,1);
+            obj.FORCE.Fs = Fs;
         end
         
         % one step of the DMP

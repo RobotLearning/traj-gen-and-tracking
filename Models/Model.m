@@ -103,13 +103,14 @@ classdef (Abstract) Model < handle
             t = traj.t;
             K = traj.K;
             uff = traj.unom;
+            Cbar = obj.C;
             
             s = zeros(length(dmp),length(t));
             for i = 1:length(dmp)
                 [~,r] = dmp(i).evolve();
                 s(i,:) = r(1,:);
             end
-            sbar = traj.projectBack(obj.C);
+            sbar = Cbar'*((Cbar*Cbar')\s);
 
             N = length(t)-1;
             x = zeros(length(x0),N+1);
