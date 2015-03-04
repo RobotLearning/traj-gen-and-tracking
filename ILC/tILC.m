@@ -1,12 +1,13 @@
 % 
 % Iterative Learning Control 
 %
-% updates trajectories using feedback
+% updates trajectories/DMPs using feedback
 %
 % includes ancillary methods that update 
 % i) trajectory directly
 % ii) weights of the trajectory
 % iii) weights of the derivative of the trajectory
+% iv) weights of the DMPs
 %
 % switching between different methods done in initialization
 %
@@ -195,9 +196,27 @@ classdef tILC < ILC
             
         end
         
+        function updateDMP(obj,dmp,traj,y)
+            
+            r = traj.s;
+            dev = y - r;
+            %dev = zeros(1,length(dev));
+            force = dmp.updateWeights(dev);
+            w_change = force.w;
+    
+            % set learning rate
+            beta = 1;
+            
+            w_last = dmp.FORCE.w;
+            w_next = w_last + beta * w_change;
+            force.w = w_next;
+            dmp.setForcing(force);
+            
+        end
+        
         % switching function that switches between different
         % methods
-        function traj2 = feedforward(obj,traj,y)
+        function traj2 = feedforward(obj,traj,dmps,y)
         
             update_method = obj.upd_meth;
             
@@ -208,8 +227,8 @@ classdef tILC < ILC
                 traj2 = updateWeights(obj,traj,y);
                 case 'wd'
                 traj2 = updateDerivativeWeights(obj,traj,y);
-                otherwise %TODO
-                    %TODO
+                otherwise %updates dmp weights
+                updateDMP(dmps,traj,y);
             end
             
         end

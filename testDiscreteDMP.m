@@ -150,6 +150,7 @@ title('Trajectory in xy space');
 
 %% Test the linear model s = Fs * w
 
+close all;
 % create two paths
 path1 = cos(2*pi*t);
 path2 = sin(2*pi*t);
@@ -167,7 +168,7 @@ dmp1.setInitState(yin1);
 dmp1.resetStates();
 dmp2.setInitState(yin2);
 dmp2.resetStates();
-[~,sref1] = dmp1.evolve();
+[~,sref] = dmp1.evolve();
 
 % construct As
 tau = dmp1.can.tau;
@@ -177,11 +178,10 @@ As = tau * [0, 1, 0;
         
 % construct Phi
 dmp1.can.reset();
-N = 2; %length(t)-1;
+N = length(t)-1;
 M = length(dmp1.FORCE.w);
 Phi = zeros(N,M);
 for i = 1:N
-    dmp1.can.step(1);
     sumphi = 0;
     for j = 1:M
         x = dmp1.can.x;
@@ -189,45 +189,41 @@ for i = 1:N
         sumphi = sumphi + dmp1.basis(x,dmp1.FORCE.h(j),dmp1.FORCE.c(j));
     end
     Phi(i,:) = Phi(i,:)/sumphi;
+    dmp1.can.step(1);
 end
 
 % discretize As and Phi
 As = eye(3) + h * As;
 Phi = h * Phi;
 
+s1 = [yin1;goal];
 dim_x = 3;
 dim_w = M;
 Fs = zeros(N*3,N*M);
 % add the evolution of s0
 sfree = zeros(N*3,1);
-sf = [sref1(:,1);goal];
+sf = s1;
 % construct Fs
 for i = 1:N
     vec_x = (i-1)*dim_x + 1:i*dim_x;
     for j = 1:i        
         vec_w = (j-1)*dim_w + 1:j*dim_w;
         % put zeros in between
-        mat = [zeros(1,M); Phi(i,:); zeros(1,M)];
+        mat = [zeros(1,M); Phi(j,:); zeros(1,M)];
         for k = j+1:i
             mat = As * mat;
         end
         Fs(vec_x,vec_w) = mat; 
     end
     sf = As * sf;
-    sfree(vec_x) = sf;    
+    sfree(vec_x) = sf;
 end
 
 % get the weights
+Fs = Fs * repmat(eye(M),N,1);
+s = [sref(:,2:end);goal*ones(1,N)];
+w_est = pinv(Fs) * (s(:) - sfree);
 w = dmp1.FORCE.w;
-wL = repmat(eye(M),N,1)*w;
-sbar = Fs * wL;
-
-sbar = sbar + sfree;
-sbar = reshape(sbar,dim_x,N);
-s = sbar(1:2,:);
-sref2(1,:) = [yin1(1),yin1(1)+s(1,:)];
-sref2(2,:) = [yin1(2),yin1(2)+s(2,:)];
-
 
 %% Test changing the goal position
 

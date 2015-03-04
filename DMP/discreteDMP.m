@@ -92,6 +92,69 @@ classdef discreteDMP < DMP
             end            
         end
         
+        % useful function for ILC
+        % constructs the matrix Fs, i.e. s = Fs*w + s_free
+        function Fs = constructF(obj,t)
+            
+            
+            alpha = obj.alpha_g;
+            beta = obj.beta_g;
+            g = obj.goal;
+            tau = obj.can.tau;
+            yin = obj.Y0(1);
+            dt = obj.can.dt;
+            h = obj.FORCE.h;
+            c = obj.FORCE.c;            
+            
+            % construct As
+            As = tau * [0, 1, 0; 
+                 -alpha*beta, -alpha, alpha*beta; 
+                        0, 0, 0];
+                    
+            % construct Phi
+            obj.can.reset();
+            N = length(t)-1;
+            M = length(obj.FORCE.w);
+            Phi = zeros(N,M);
+            for i = 1:N
+                sumphi = 0;
+                for j = 1:M
+                    x = obj.can.x;
+                    Phi(i,j) = x * obj.basis(x,h(j),c(j));
+                    sumphi = sumphi + obj.basis(x,h(j),c(j));
+                end
+                Phi(i,:) = Phi(i,:)/sumphi;
+                obj.can.step(1);
+            end
+            
+            % discretize As and Phi
+            As = eye(3) + h * As;
+            Phi = h * Phi;
+            
+            Fs = zeros(N*3,N*M);
+            % add the evolution of s0
+            %sfree = zeros(N*3,1);
+            %sf = s1;
+            % construct Fs
+            for i = 1:N
+                vec_x = (i-1)*3 + 1:i*3;
+                for j = 1:i        
+                    vec_w = (j-1)*M + 1:j*M;
+                    % put zeros in between
+                    mat = [zeros(1,M); Phi(j,:); zeros(1,M)];
+                    for k = j+1:i
+                        mat = As * mat;
+                    end
+                    Fs(vec_x,vec_w) = mat; 
+                end
+                %sf = As * sf;
+                %sfree(vec_x) = sf;
+            end
+
+            % get the weights
+            Fs = Fs * repmat(eye(M),N,1);
+        end
+        
         % one step of the DMP
         function step(obj,err)
            
