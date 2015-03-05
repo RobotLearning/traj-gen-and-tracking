@@ -96,45 +96,37 @@ classdef (Abstract) Model < handle
             end
         end
         
-        % useful to propagate feedback law
-        % LQR-calculated K has to be in error-feedback form!
-        function [y,u] = observeWithDMPFeedback(obj,dmp,traj,x0)
-            fun = @(t,x,u) obj.actual(t,x,u);
-            t = traj.t;
-            K = traj.K;
-            uff = traj.unom;
-            Cbar = obj.C;
-            
-            s = zeros(length(dmp),length(t));
-            for i = 1:length(dmp)
-                [~,r] = dmp(i).evolve();
-                s(i,:) = r(1,:);
-            end
-            sbar = Cbar'*((Cbar*Cbar')\s);
-
-            N = length(t)-1;
-            x = zeros(length(x0),N+1);
-            u = zeros(size(K,1),N);
-            x(:,1) = x0;
-            y(:,1) = obj.C * x(:,1);
-            for i = 1:N
-                u(:,i) = K(:,:,i)*(x(:,i)-sbar(:,i)) + uff(:,i);
-                x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
-                y(:,i+1) = obj.C * x(:,i+1);
-                % no constraint checking
-            end
-        end
-        
         % useful to propagate tILC
         % LQR-calculated K has to be in error-feedback form!
-        function [y,u] = observeWithFeedbackErrorForm(obj,traj,x0)
+        % DMP can be supplied as an additional argument
+        function [y,u] = observeWithFeedbackErrorForm(obj,traj,x0,varargin)
             fun = @(t,x,u) obj.actual(t,x,u);
             t = traj.t;
+            h = t(2) - t(1);
             K = traj.K;
             uff = traj.unom;
-            
-            sbar = traj.projectBack(obj.C);
 
+            % in case dmp is supplied
+            if nargin == 4
+                dmps = varargin{:};
+                for j = 1:length(dmps)
+                    [~,Q] = dmps(j).evolve();
+                    q(j,:) = Q(1,:);
+                    qd(j,:) = Q(2,:);
+                end
+                sbar = [q;qd];
+                % add acceleration
+                %sdd = diff(s(2,:))/h;
+                %sdd(:,end+1) = sdd(:,end);
+                %sbar = [s; sdd];
+                %Cbar = obj.C;
+                %sbar = Cbar'*((Cbar*Cbar')\s(1,:));
+            elseif size(traj.s,1) == length(x0)
+                sbar = traj.s;
+            else
+                sbar = traj.projectBack(obj.C);
+            end
+            
             N = length(t)-1;
             x = zeros(length(x0),N+1);
             u = zeros(size(K,1),N);

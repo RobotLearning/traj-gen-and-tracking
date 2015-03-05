@@ -98,7 +98,7 @@ yin = [ref(1);0];
 
 % create DMP trajectory and execute LQR
 [traj,dmp] = lin.generateDMP(t,x0,ref);
-[y,~] = lin.observeWithDMPFeedback(dmp,traj,x0);
+[y,~] = lin.observeWithFeedbackErrorForm(traj,x0);
 traj.addPerformance([],y,lin.COST,'LQR'); 
 
 % create trajectory and execute LQR
@@ -109,8 +109,8 @@ traj.addPerformance([],y,lin.COST,'LQR');
 % Create an ilc controller
 % create the simpler ilc
 %ilc = wILC(traj,lin,dmp);
-ilc = wILC(traj,lin,'t');
-num_trials = 50;
+ilc = wILC(traj,lin,'wd');
+num_trials = 0;
 
 for i = 1:num_trials
     
@@ -119,7 +119,7 @@ for i = 1:num_trials
     %ilc.feedforward(traj,dmp,y);
     % get the measurements
     [y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
-    %[y,~] = lin.observeWithDMPFeedback(dmp,traj,x0);
+    %[y,~] = lin.observeWithFeedbackErrorForm(traj,x0,dmp);
     traj.addPerformance([],y,lin.COST,ilc);
 
 end
@@ -128,79 +128,74 @@ lin.plot_outputs(traj);
 
 %% Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf
 
-% dimx = 3;
-% dimu = 1;
-% dimy = 1;
-% 
-% % simulation variables
-% t0 = 0;
-% tf = 1;
-% h = 0.02;
-% t = t0:h:tf;
-% N = length(t)-1;
-% 
-% % system and weighting matrices
-% Q = 100*eye(dimy);
-% %Q = diag([100,0,0]);
-% R = 0.01*eye(dimu);
-% % continuous time matrices
-% A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
-% B = [0;0;1];
-% % partial observation model
-% %C = eye(dimy);
-% %C = [1 0 0; 0 1 0];
-% C = [1 0 0];
-% 
-% % create the structures
-% SIM.discrete = false;
-% SIM.dimx = dimx;
-% SIM.dimu = dimu;
-% SIM.dimy = dimy;
-% SIM.h = h;
-% SIM.eps = 0;
-% SIM.int = 'Euler';
-% PAR.A = A;
-% PAR.B = B;
-% PAR.C = C;
-% CON = [];
-% COST.Q = Q;
-% COST.R = R;
-% lin = Linear(PAR,CON,COST,SIM);
-% 
-% % track the sin trajectory
-% ref = t.^2;
-% %ref = [ref; 2*t];
-% %ref = [ref; 0, 2*ones(1,length(t)-1)];
-% x0 = zeros(dimx,1);
-% y0 = C * x0;
-% % create yin with zero velocity
-% yin = [y0;0];      
-% 
-% % create trajectory and execute LQR
-% traj = lin.generateInputs(t,ref,1);
-% [y,~] = lin.observeWithFeedbackErrorForm(traj,x0);
-% traj.addPerformance(traj.s,y,lin.COST,'LQR'); 
-% 
-% lin.plot_outputs(traj);
-% 
-% % Create an ilc controller
-% ilc = wILC(traj,lin,'t');
-% %ilc = wILC(traj,lin,dmp);
-% num_trials = 100;
-% 
-% for i = 1:num_trials
-%     % update the weights of the dmp
-%     traj2 = ilc.feedforward(traj,[],y);
-%     %ilc.feedforward(traj,dmp,y);     
-%     % get the measurements
-%     [y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
-%     %[y,~] = lin.observeWithDMPFeedback(dmp,traj,x0);
-%     traj.addPerformance([],y,lin.COST,ilc);
-% end
-% 
-% lin.plot_outputs(traj);
-% 
-% figure;
-% plot(1:num_trials,ilc.error);
-% title('Squared-2-Norm of ILC error');
-% legend(ilc.name);
+dimx = 3;
+dimu = 1;
+dimy = 1;
+
+% simulation variables
+t0 = 0;
+tf = 1;
+h = 0.02;
+t = t0:h:tf;
+N = length(t)-1;
+
+% system and weighting matrices
+Q = 100*eye(dimy);
+%Q = diag([100,0,0]);
+R = 0.01*eye(dimu);
+% continuous time matrices
+A = [0 1 0; 0 0 1; -0.4 -4.2 -2.1];
+B = [0;0;1];
+% partial observation model
+%C = eye(dimy);
+%C = [1 0 0; 0 1 0];
+C = [1 0 0];
+
+% create the structures
+SIM.discrete = false;
+SIM.dimx = dimx;
+SIM.dimu = dimu;
+SIM.dimy = dimy;
+SIM.h = h;
+SIM.eps = 0;
+SIM.int = 'Euler';
+PAR.A = A;
+PAR.B = B;
+PAR.C = C;
+CON = [];
+COST.Q = Q;
+COST.R = R;
+lin = Linear(PAR,CON,COST,SIM);
+
+% track the sin trajectory
+ref = t.^2;
+%ref = [ref; 2*t];
+%ref = [ref; 0, 2*ones(1,length(t)-1)];
+x0 = zeros(dimx,1);
+y0 = C * x0;
+% create yin with zero velocity
+yin = [y0;0];      
+
+% create DMP trajectory and execute LQR
+[traj,dmp] = lin.generateDMP(t,yin,ref);
+[y,~] = lin.observeWithFeedbackErrorForm(traj,x0);
+traj.addPerformance([],y,lin.COST,'LQR'); 
+
+lin.plot_outputs(traj);
+
+% Create an ilc controller
+%ilc = wILC(traj,lin,'t');
+ilc = wILC(traj,lin,dmp);
+num_trials = 10;
+
+for i = 1:num_trials
+    % update the weights of the dmp
+    %traj2 = ilc.feedforward(traj,[],y);
+    ilc.feedforward(traj,dmp,y);     
+    % get the measurements
+    %[y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
+    [y,~] = lin.observeWithFeedbackErrorForm(traj,x0,dmp);
+    traj.addPerformance([],y,lin.COST,ilc);
+end
+
+lin.plot_outputs(traj);

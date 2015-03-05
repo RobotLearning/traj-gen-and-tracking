@@ -52,27 +52,28 @@ classdef wILC < ILC
             h = traj.t(2) - traj.t(1);
             obj.C = model.C;            
             Cout = obj.C;
-            dim_x = size(Cout,2);
-            obj.Psi = obj.formPsi(dim_x*N,traj.t);
+            dim = size(Cout,2);
+            obj.Psi = obj.formPsi(dim*N,traj.t);
             
             sbar = Cout'*((Cout*Cout')\traj.s);
             svec = sbar(:);
 
             switch varargin{1}
                 case 't'                
-                obj.inp_last = svec(1:end-dim_x);
+                obj.inp_last = svec(1:end-dim);
                 obj.upd_meth = 't';
                 case 'w' 
-                obj.inp_last = pinv(obj.Psi) * svec(1:end-dim_x);
+                obj.inp_last = pinv(obj.Psi) * svec(1:end-dim);
                 obj.upd_meth = 'w';
                 case 'wd'
-                D = eye(N*dim_x) - diag(ones(1,(N-1)*dim_x),-dim_x);
-                obj.inp_last = pinv(obj.Psi) * D * svec(1:end-dim_x);
+                D = eye(N*dim) - diag(ones(1,(N-1)*dim),-dim);
+                obj.inp_last = pinv(obj.Psi) * D * svec(1:end-dim);
                 obj.upd_meth = 'wd';
                 otherwise 
-                dmp = varargin{1};
-                dmp.constructF(traj.t);
-                obj.inp_last = dmp.FORCE.w;
+                %dmp = varargin{1};
+                %dmp.constructF(traj.t);
+                obj.inp_last = svec(1:end-dim);
+                %obj.inp_last = dmp.FORCE.w;
                 obj.upd_meth = 'dmp';
             end
             
@@ -82,10 +83,11 @@ classdef wILC < ILC
         % Form the Psi matrix
         function Psi = formPsi(obj,bfs,t)
             N = length(t)-1;
-            Psi = zeros(2*N,bfs);
+            dimx = size(obj.C,2);
+            Psi = zeros(dimx*N,bfs);
             h = ones(bfs,1) * bfs^(1.5);
             c = linspace(t(1),t(end),bfs);
-            tbar = linspace(t(1),t(end),2*N);
+            tbar = linspace(t(1),t(end),dimx*N);
             for i = 1:bfs
                 Psi(:,i) = obj.basis(tbar,h(i),c(i));
             end
@@ -137,7 +139,8 @@ classdef wILC < ILC
             % form back the trajectory
             sbar = obj.Psi * w;
             sbar = reshape(sbar,dim,N);
-            s = [Cout*sbar,traj.s(:,end)];
+            %s = [Cout*sbar,traj.s(:,end)];
+            s = [sbar,sbar(:,end)];
             
             traj2 = Trajectory(traj.t, s, traj.unom, K);
             
@@ -157,10 +160,8 @@ classdef wILC < ILC
             D = eye(N*dim) - diag(ones(1,(N-1)*dim),-dim);
             
             % construct integral matrix S
-            Sv = repmat([1;0],N,1);
-            Sv2 = repmat([0;1],N,1);
-            S = repmat([Sv,Sv2],1,N);
-            S = tril(S);
+            Sv = repmat(eye(dim),N,N);
+            S = tril(Sv);
             
             % ILC update
             wd = obj.inp_last + pinv(obj.Psi)*D*obj.L*dev(:);
@@ -168,7 +169,8 @@ classdef wILC < ILC
             % form back the trajectory
             sbar = S * obj.Psi * wd;
             sbar = reshape(sbar,dim,N);
-            s = [Cout*sbar,traj.s(:,end)];
+            %s = [Cout*sbar,traj.s(:,end)];
+            s = [sbar,sbar(:,end)];
             
             traj2 = Trajectory(traj.t, s, traj.unom, K);
             
@@ -193,7 +195,8 @@ classdef wILC < ILC
             obj.inp_last = s;
             % form back the trajectory
             sbar = reshape(s,dim,N);
-            s = [Cout*sbar,traj.s(:,end)];
+            %s = [Cout*sbar,traj.s(:,end)];
+            s = [sbar,sbar(:,end)];
             
             traj2 = Trajectory(traj.t,s,traj.unom,K);
             
@@ -201,12 +204,30 @@ classdef wILC < ILC
         
         function updateDMP(obj,dmp,traj,y)
             
+            N = traj.N - 1;
+            h = traj.t(2) - traj.t(1);
             ref = traj.s;
             dev = y - ref;
-            Fs = dmp.FORCE.Fs;
-            w_next = obj.inp_last - pinv(Fs)*obj.L*dev(:);
-            dmp.FORCE.w = w_next;
-            obj.inp_last = w_next;
+            Cout = obj.C;
+            dim = size(Cout,2);  
+            
+            s = obj.inp_last + obj.L*dev(:);
+            obj.inp_last = s;
+            % form back the trajectory
+            sbar = reshape(s,dim,N);
+            s = [Cout*sbar,sbar(2,end)];
+            sd = diff(s)/h;
+            sd(:,end+1) = sd(:,end);
+            sdd = diff(sd)/h;
+            sdd(:,end+1) = sdd(:,end);
+            goal = s(end);
+            dmp.regressLive(s(:),sd(:),sdd(:),goal);
+            dmp.setGoal(s);
+            
+            %Fs = dmp.FORCE.Fs;
+            %w_next = obj.inp_last - pinv(Fs)*obj.L*dev(:);
+            %dmp.FORCE.w = w_next;
+            %obj.inp_last = w_next;
             
         end
         

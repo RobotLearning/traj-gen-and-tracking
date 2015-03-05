@@ -28,7 +28,7 @@ SIM.cartesian = false;
 % dimension of the x vector
 SIM.dimx = 4;
 % dimension of the output y
-SIM.dimy = 2;
+SIM.dimy = 4;
 % dimension of the control input
 SIM.dimu = 2;
 % time step h 
@@ -111,31 +111,30 @@ q0 = traj.s(:,1);
 % add nonzero velocity
 q0(3:4) = 0.1*rand(2,1);
 % observe output
-[qact,ufull] = rr.observeWithDMPFeedback(dmp,traj,q0);
+qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
 % add performance to trajectory
-traj.addPerformance(ufull,qact,rr.COST,'ID + LQR');
+traj.addPerformance([],qact,rr.COST,'ID + LQR');
 
 % Plot the controls and animate the robot arm
-rr.plot_inputs(traj);
 rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
 
 %% Start learning with ILC
 
 num_trials = 10;
-ilc = ILC(rr,traj); 
+%ilc = wILC(traj,rr,'t');
+ilc = wILC(traj,rr,dmp);
 
 for i = 1:num_trials
     % get next inputs
     dmp = ilc.feedforward(dmp,traj,qact);
     % get the measurements
-    [qact,ufull] = rr.observeWithDMPFeedback(dmp,traj,q0);
-    traj.addPerformance(ufull,qact,rr.COST,ilc);
+    qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
+    traj.addPerformance([],qact,rr.COST,ilc);
     % Plot the controls and animate the robot arm
     %rr.animateArm(qact(1:2,:),ref);
 end
 
 % Plot the controls and animate the robot arm
-rr.plot_inputs(traj);
 rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
