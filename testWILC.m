@@ -96,8 +96,8 @@ y0 = C * x0;
 % create yin with zero velocity
 yin = [ref(1);0];   
 
-% create trajectory and execute LQR
-[traj,dmp] = lin.generateDMP(t,yin,ref);
+% create DMP trajectory and execute LQR
+[traj,dmp] = lin.generateDMP(t,x0,ref);
 [y,~] = lin.observeWithDMPFeedback(dmp,traj,x0);
 traj.addPerformance([],y,lin.COST,'LQR'); 
 
@@ -108,27 +108,23 @@ traj.addPerformance([],y,lin.COST,'LQR');
 
 % Create an ilc controller
 % create the simpler ilc
-ilc = wILC(traj,lin,dmp);
-num_trials = 100;
+%ilc = wILC(traj,lin,dmp);
+ilc = wILC(traj,lin,'t');
+num_trials = 50;
 
 for i = 1:num_trials
     
-    %traj2 = ilc.feedforward(traj,[],y);
+    traj2 = ilc.feedforward(traj,[],y);
     % update the weights of the dmp
-    ilc.feedforward(traj,dmp,y);
+    %ilc.feedforward(traj,dmp,y);
     % get the measurements
-    %[y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
-    [y,~] = lin.observeWithDMPFeedback(dmp,traj,x0);
+    [y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
+    %[y,~] = lin.observeWithDMPFeedback(dmp,traj,x0);
     traj.addPerformance([],y,lin.COST,ilc);
 
 end
 
 lin.plot_outputs(traj);
-
-figure;
-plot(1:num_trials,ilc.error);
-title('Squared-2-Norm of ILC error');
-legend(ilc.name);
 
 %% Example taken from http://www.egr.msu.edu/classes/me851/jchoi/lecture/Lect_14.pdf
 

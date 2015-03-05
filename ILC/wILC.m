@@ -137,9 +137,9 @@ classdef wILC < ILC
             % form back the trajectory
             sbar = obj.Psi * w;
             sbar = reshape(sbar,dim,N);
-            sbar = [sbar,sbar(:,end)];
+            s = [Cout*sbar,traj.s(:,end)];
             
-            traj2 = Trajectory(traj.t, Cout*sbar, traj.unom, K);
+            traj2 = Trajectory(traj.t, s, traj.unom, K);
             
         end
         
@@ -168,9 +168,9 @@ classdef wILC < ILC
             % form back the trajectory
             sbar = S * obj.Psi * wd;
             sbar = reshape(sbar,dim,N);
-            sbar = [sbar,sbar(:,end)];
+            s = [Cout*sbar,traj.s(:,end)];
             
-            traj2 = Trajectory(traj.t, Cout*sbar, traj.unom, K);
+            traj2 = Trajectory(traj.t, s, traj.unom, K);
             
             % get s from derivatives
             %S = h*tril(ones(N+1));
@@ -193,16 +193,16 @@ classdef wILC < ILC
             obj.inp_last = s;
             % form back the trajectory
             sbar = reshape(s,dim,N);
-            sbar = [sbar,sbar(:,end)];
+            s = [Cout*sbar,traj.s(:,end)];
             
-            traj2 = Trajectory(traj.t, Cout*sbar,traj.unom,K);
+            traj2 = Trajectory(traj.t,s,traj.unom,K);
             
         end
         
         function updateDMP(obj,dmp,traj,y)
             
-            r = traj.s;
-            dev = y - r;
+            ref = traj.s;
+            dev = y - ref;
             Fs = dmp.FORCE.Fs;
             w_next = obj.inp_last - pinv(Fs)*obj.L*dev(:);
             dmp.FORCE.w = w_next;
