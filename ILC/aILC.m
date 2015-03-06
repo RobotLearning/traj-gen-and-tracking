@@ -1,5 +1,7 @@
 % Iterative Learning Control using Angela's Kalman-filtering
 % approach
+%
+% TODO: Is this class still working?
 
 classdef aILC < ILC
     
@@ -46,6 +48,7 @@ classdef aILC < ILC
     
     methods
         
+        %% Constructor for convex optim + Kalman filter based ILC
         function obj = aILC(model,trj)
                         
             obj.episode = 0;
@@ -77,7 +80,7 @@ classdef aILC < ILC
             
         end
         
-        % get the lifted vector representation 
+        %% get the lifted vector representation 
         % around the trajectory
         function obj = lift(obj,model,trj)
             
@@ -117,6 +120,7 @@ classdef aILC < ILC
 
         end
         
+        %% Main ILC function
         function unext = feedforward(obj,trj,model,y)
                         
             ydev = y - trj.s;

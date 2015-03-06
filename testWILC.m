@@ -1,4 +1,7 @@
 %% Example to test wILC algorithm on linear systems with drift
+%
+% TODO: this does not run now!
+%
 
 %# store breakpoints
 tmp = dbstatus;
@@ -108,7 +111,7 @@ traj.addPerformance([],y,lin.COST,'LQR');
 
 % Create an ilc controller
 % create the simpler ilc
-%ilc = wILC(traj,lin,dmp);
+%ilc = wILC(traj,lin,'dmp');
 ilc = wILC(traj,lin,'wd');
 num_trials = 0;
 
@@ -184,17 +187,17 @@ traj.addPerformance([],y,lin.COST,'LQR');
 lin.plot_outputs(traj);
 
 % Create an ilc controller
-%ilc = wILC(traj,lin,'t');
-ilc = wILC(traj,lin,dmp);
+ilc = wILC(traj,lin,'t');
+%ilc = wILC(traj,lin,'dmp');
 num_trials = 10;
 
 for i = 1:num_trials
     % update the weights of the dmp
-    %traj2 = ilc.feedforward(traj,[],y);
-    ilc.feedforward(traj,dmp,y);     
+    traj2 = ilc.feedforward(traj,[],y);
+    %dmp = ilc.feedforward(traj,dmp,y);     
     % get the measurements
-    %[y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
-    [y,~] = lin.observeWithFeedbackErrorForm(traj,x0,dmp);
+    [y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
+    %[y,~] = lin.observeWithFeedbackErrorForm(traj,x0,dmp);
     traj.addPerformance([],y,lin.COST,ilc);
 end
 

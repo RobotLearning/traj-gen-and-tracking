@@ -19,7 +19,8 @@ classdef Canonical < handle
     end
     
     methods (Access = public)
-       
+        
+        %% Constructor for the common phase of DMPs
         % TODO: provide default values for ax and tau
         function obj = Canonical(h, ax, tau, num_steps, pat)
         
@@ -34,6 +35,8 @@ classdef Canonical < handle
             % call reset to make sure we start from zero
             obj.reset();
         end
+        
+        %% Methods modifying the phase
         
         function reset(obj)
             

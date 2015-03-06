@@ -17,6 +17,8 @@ classdef TwoWheeledCar < Model
     
     methods
         
+        %% Methods for initializing variables and constructor
+        
         % copies the parameter values inside the structure
         function set.PAR(obj, STR)  
             
@@ -94,6 +96,8 @@ classdef TwoWheeledCar < Model
             obj.COST = cost;
         end
         
+        %% Methods for evolving dynamics models
+        
         % provides nominal model
         function [x_dot,varargout] = nominal(obj,t,x,u,flg)
             % differential equation of the inverse dynamics
@@ -122,6 +126,8 @@ classdef TwoWheeledCar < Model
             %x_dot = robotTwoWheelsKinematics(t,x,u,par,false) + a*sin(2*pi*t);
             
         end
+        
+        %% Kinematics based simple model
                            
         % dynamics to get xdot
         function [x_dot,varargout] = differentialKinematics(obj,t,x,u,flag)
@@ -134,12 +140,13 @@ classdef TwoWheeledCar < Model
             end
         end
         
-        % make an animation of the robot manipulator
+        %% Make an animation of the model
         function animate(obj,x,s)
             
             animateCar(x,s,obj.PAR);
         end
 
+        %% Generate inputs for tracking reference
         % using a simple inverse kinematics method
         % TODO: extend using planning to incorporate constraints
         function Traj = generateInputs(obj,t,x_des)
@@ -167,6 +174,7 @@ classdef TwoWheeledCar < Model
             Traj = Trajectory(t,Cout*x_des,unom,[]);
         end
         
+        % unused except for aILC
         % get lifted model constraints
         function [umin,umax,L,q] = lift_constraints(obj,trj,ilc)
             

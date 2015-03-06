@@ -27,6 +27,7 @@ classdef rhythmicDMP < DMP
     
     methods
         
+        %% Constructor for the rhythmic DMP
         function obj = rhythmicDMP(canonical,alpha,beta,goal,amplitude,yin,bfs)
             
             assert(strcmp(canonical.pattern, 'r'),...
@@ -44,6 +45,8 @@ classdef rhythmicDMP < DMP
             obj.FORCE.c = linspace(xtr(end),1,bfs);
             obj.resetStates();
         end
+        
+        %% Modify or set variables of DMPs
         
         function resetStates(obj)
            
@@ -74,12 +77,12 @@ classdef rhythmicDMP < DMP
             obj.Y0 = y0;
         end
         
-        % basis functions are unscaled gaussians
+        %% basis functions are unscaled gaussians
         function out = basis(obj,phi,h,c)
             out = exp(h * (cos(phi - c) - 1));
         end
         
-        % evolve is the feedforward rollout function
+        %% evolve is the feedforward rollout function
         % TODO: apply bsxfun or arrayfun
         function [x_roll, Y_roll] = evolve(obj)
             
@@ -116,7 +119,7 @@ classdef rhythmicDMP < DMP
             obj.can.step(err);
         end
         
-        % forcing function to drive nonlinear system dynamics
+        %% Forcing function to drive nonlinear system dynamics
         function f = forcing(obj)
 
         w = obj.FORCE.w;

@@ -27,6 +27,7 @@ classdef discreteDMP < DMP
     
     methods
         
+        %% Constructor for discrete DMP
         function obj = discreteDMP(canonical,alpha,beta,goal,yin,bfs)
             
             assert(strcmp(canonical.pattern, 'd'),...
@@ -47,6 +48,7 @@ classdef discreteDMP < DMP
             obj.resetStates();
         end
         
+        %% Set and reset functions
         function resetStates(obj)
            
             %N = obj.can.N;
@@ -73,12 +75,12 @@ classdef discreteDMP < DMP
             obj.Y0 = y0;
         end
         
-        % basis functions are unscaled gaussians
+        %% basis functions are unscaled gaussians
         function out = basis(obj,x,h,c)
         out = exp(-h * (x - c).^2);
         end
         
-        % evolve is the feedforward rollout function
+        %% evolve is the feedforward rollout function
         % TODO: apply bsxfun or arrayfun
         function [x_roll, Y_roll] = evolve(obj)
             
@@ -91,8 +93,9 @@ classdef discreteDMP < DMP
             end            
         end
         
+        
+        %% constructs the matrix Fs, i.e. s = Fs*w + s_free
         % useful function for ILC
-        % constructs the matrix Fs, i.e. s = Fs*w + s_free
         function Fs = constructF(obj,t)
             
             
@@ -157,7 +160,7 @@ classdef discreteDMP < DMP
             obj.FORCE.Fs = Fs;
         end
         
-        % one step of the DMP
+        %% one step of the DMP
         function step(obj,err)
            
             alpha = obj.alpha_g;
@@ -180,7 +183,7 @@ classdef discreteDMP < DMP
             obj.can.step(err);
         end
         
-        % forcing function to drive nonlinear system dynamics
+        %% forcing function to drive nonlinear system dynamics
         function f = forcing(obj)
 
             w = obj.FORCE.w;

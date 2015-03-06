@@ -34,6 +34,7 @@ classdef (Abstract) Robot < Model
     % methods that robots share
     methods (Access = public)
         
+        %% Generate inputs for a reference
         % using a simple inverse kinematics method
         % if flag is 1 then reference in joint space!
         function Traj = generateInputs(obj,t,ref)
@@ -83,8 +84,7 @@ classdef (Abstract) Robot < Model
             end            
         end
         
-        % Method useful when modifying DMPs directly
-        % TODO: for now reference is directly in cartesian space
+        %% Method useful when modifying DMPs directly
         function [Traj,dmps] = generateInputsWithDMP(obj,t,ref)
 
             h = obj.SIM.h;
@@ -141,7 +141,7 @@ classdef (Abstract) Robot < Model
             end            
         end
         
-        % generating feedback to stabilize
+        %% generating feedback with LQR to stabilize the robot
         function generateFeedback(obj,traj)
             
             % calculate the optimal feedback law

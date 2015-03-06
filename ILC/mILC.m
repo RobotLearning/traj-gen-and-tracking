@@ -37,6 +37,7 @@ classdef mILC < ILC
     
     methods
         
+        %% Constructor for model-based ILC
         % varargin is for learning with feedback, better way?
         function obj = mILC(model,trj,varargin)
                         
@@ -72,7 +73,7 @@ classdef mILC < ILC
             
         end
         
-        % get the lifted vector representation 
+        %% get the lifted vector representation 
         % around the trajectory
         function lift(obj,model,trj)
             
@@ -167,6 +168,7 @@ classdef mILC < ILC
             
         end
         
+        %% Main ILC function
         function u = feedforward(obj,trj,y)
             
             dimu = size(obj.inp_last,1);

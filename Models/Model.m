@@ -32,7 +32,7 @@ classdef (Abstract) Model < handle
     % methods that can be implemented here in abstract class
     methods (Access = public)
         
-        % one step simulation along the trajectory
+        %% one step simulation along the trajectory
         function next = step(obj,t,prev,u,fun)
             
             h = obj.SIM.h;
@@ -59,6 +59,8 @@ classdef (Abstract) Model < handle
 
         end
         
+        %% Prediction functions
+        
         % predict one step using nominal model
         function x_pre = predict(obj,t,x,u)         
             x_pre = step(obj,t,x,u,@obj.nominal);
@@ -75,6 +77,8 @@ classdef (Abstract) Model < handle
                                     @obj.nominal);
             end            
         end
+        
+        %% Rollout methods here
         
         % useful to propagate feedback law
         % Feedback has to be in state-feedback form!
@@ -186,7 +190,7 @@ classdef (Abstract) Model < handle
             
         end
         
-        % linearizes the nominal dynamics around the trajectory
+        %% linearizes the nominal dynamics around the trajectory
         function [A,B] = linearize(obj,trj)
             
             N = trj.N - 1; 
@@ -226,6 +230,8 @@ classdef (Abstract) Model < handle
                 B(:,:,i) = MD(1:dimx,dimx+1:end);
             end
         end
+        
+        %% Plotting methods
         
         % plot the control inputs
         function plot_inputs(obj,trj)

@@ -40,13 +40,13 @@ classdef wILC < ILC
     
     methods
         
+        %% Constructor for wILC
         function obj = wILC(traj,model,varargin)
                         
             obj.episode = 0;
             obj.color = 'k';
             obj.name = 'wILC';
             obj.error = 0;
-            obj.formL(traj);
             
             N = traj.N - 1;
             h = traj.t(2) - traj.t(1);
@@ -54,6 +54,9 @@ classdef wILC < ILC
             Cout = obj.C;
             dim = size(Cout,2);
             obj.Psi = obj.formPsi(dim*N,traj.t);
+            
+            % learning matrix
+            obj.formL(traj);
             
             sbar = Cout'*((Cout*Cout')\traj.s);
             svec = sbar(:);
@@ -80,7 +83,7 @@ classdef wILC < ILC
             
         end
         
-        % Form the Psi matrix
+        %% Form the Psi matrix
         function Psi = formPsi(obj,bfs,t)
             N = length(t)-1;
             dimx = size(obj.C,2);
@@ -93,18 +96,23 @@ classdef wILC < ILC
             end
         end
         
-        % Form the learning matrix
+        %% Form the learning matrix
         function formL(obj,traj)
             
             N = traj.N - 1;
             K = traj.K;
+            dim = size(obj.C,2)/2;
+            dim = floor(dim);
             % set learning rate
             a_p = 0.5;
             a_d = 0.2;
             %delta = a_p * dev + a_d * ddev;
             % construct learning matrix
-            L = diag((a_p+a_d)*ones(1,N),1) - a_d*eye(N+1);
-            L = L(1:end-1,:);            
+            %L = diag((a_p+a_d)*ones(1,N),1) - a_d*eye(N+1);
+            
+            M = [a_d*eye(dim),a_p*eye(dim)];
+            M = kron(eye(N),M);
+            L = [zeros(dim*N,dim),M,zeros(dim*N,dim)];         
             
             Kl = zeros(size(K,1)*N,size(K,2)*N);
             % construct lifted domain matrix Kl
@@ -118,12 +126,12 @@ classdef wILC < ILC
             
         end
         
-        % basis functions are unscaled gaussians
+        %% basis functions are unscaled gaussians
         function out = basis(obj,t,h,c)
             out = exp(-h * (t - c).^2);
         end
         
-        % update weights for the trajectory instead
+        %% update weights for the trajectory instead
         function traj2 = updateWeights(obj,traj,y)
             
             h = traj.t(2) - traj.t(1);
@@ -146,7 +154,7 @@ classdef wILC < ILC
             
         end
         
-        % doing regression on derivatives is equivalent
+        %% doing regression on derivatives is equivalent
         function traj2 = updateDerivativeWeights(obj,traj,y)
             
             h = traj.t(2) - traj.t(1);
@@ -181,7 +189,7 @@ classdef wILC < ILC
             
         end
         
-        % update trajectories 
+        %% update trajectories 
         function traj2 = updateTraj(obj,traj,y)
             
             N = traj.N - 1;
@@ -202,7 +210,8 @@ classdef wILC < ILC
             
         end
         
-        function updateDMP(obj,dmp,traj,y)
+        %% update DMPs
+        function dmps = updateDMP(obj,dmp,traj,y)
             
             N = traj.N - 1;
             h = traj.t(2) - traj.t(1);
@@ -215,14 +224,14 @@ classdef wILC < ILC
             obj.inp_last = s;
             % form back the trajectory
             sbar = reshape(s,dim,N);
-            s = [Cout*sbar,sbar(2,end)];
-            sd = diff(s)/h;
-            sd(:,end+1) = sd(:,end);
-            sdd = diff(sd)/h;
-            sdd(:,end+1) = sdd(:,end);
-            goal = s(end);
-            dmp.regressLive(s(:),sd(:),sdd(:),goal);
-            dmp.setGoal(s);
+            s = Cout*[sbar,sbar(:,end)];            
+            
+            Q{1} = s(1:dim/2,:)';
+            Qd{1} = s(dim/2+1:end,:)';
+            tcell{1} = traj.t';
+
+            % feed them all to a dmp
+            dmps = trainMultiDMPs(tcell,Q,Qd);
             
             %Fs = dmp.FORCE.Fs;
             %w_next = obj.inp_last - pinv(Fs)*obj.L*dev(:);
@@ -231,22 +240,23 @@ classdef wILC < ILC
             
         end
         
-        % switching function that switches between different
-        % methods
-        function traj2 = feedforward(obj,traj,dmps,y)
+        %% switching function that switches between different
+        % methods. In the first three, out is a new trajectory class
+        % updateDMP outputs a DMP class
+        function out = feedforward(obj,traj,dmps,y)
         
             update_method = obj.upd_meth;
             
             switch update_method 
                 case 't'
-                    traj2 = obj.updateTraj(traj,y);
+                    out = obj.updateTraj(traj,y);
                 case 'w'
-                    traj2 = obj.updateWeights(traj,y);
+                    out = obj.updateWeights(traj,y);
                 case 'wd'
-                    traj2 = obj.updateDerivativeWeights(traj,y);
+                    out = obj.updateDerivativeWeights(traj,y);
                 otherwise %updates dmp weights
-                    obj.updateDMP(dmps,traj,y);
-                    traj2 = [];
+                    out = obj.updateDMP(dmps,traj,y);
+                    
             end
             
         end

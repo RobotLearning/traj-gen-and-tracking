@@ -49,6 +49,8 @@ classdef (Abstract) DMP < handle
     % methods that can be implemented here in abstract class
     methods (Access = public)
         
+        %% Regression methods here
+        
         % set the weights using regression methods
         function setWeights(obj,path)
             

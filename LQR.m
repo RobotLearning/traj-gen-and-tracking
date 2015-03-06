@@ -13,8 +13,7 @@
 % Outputs:
 % K - Feedback gain
 %
-% TODO: extend to include feedforward term
-%       Qf can be also input 
+% TODO: Qf can be also input 
 
 classdef LQR 
 
@@ -39,7 +38,7 @@ classdef LQR
 
     methods
         
-        % constructor for convenience
+        %% constructor for LQR
         % varargin is a flag for discrete input
         function obj = LQR(Q,R,Qf,A,B,C,N,h,varargin)
             
@@ -71,6 +70,7 @@ classdef LQR
 
         end
         
+        %% Get discrete matrices for dLQR
         function obj = discretizeMatrices(obj)
             
             dimu = size(obj.B,2);
@@ -82,7 +82,7 @@ classdef LQR
             obj.Bd = MD(1:dimx,dimx+1:end);
         end
         
-        % TODO: replace with output controllability
+        %% TODO: replace with output controllability
         % make sure the system is controllable/reachable
         % otherwise give an error
         function assertControllability(obj)
@@ -102,7 +102,7 @@ classdef LQR
             
         end
         
-        % assumed to be LTI
+        %% assumed to be LTI
         function K = computeInfHorizonLTI(obj)
             
             % inf horizon
@@ -129,7 +129,7 @@ classdef LQR
             K = -(R + B'*Pinf*B)\(B'*Pinf*A);
         end
         
-        % simplest discrete-time case, i.e. no tracking
+        %% LTI, simplest discrete-time case, i.e. no tracking
         function K = computeFinHorizonLTI(obj)
             
             % finite horizon
@@ -154,7 +154,7 @@ classdef LQR
             end
         end
         
-        % assumed to be finite horizon (inf. horizon case?)
+        %% LTV for finite horizon (inf. horizon case?)
         function K = computeFinHorizonLTV(obj)
             
             % Arrays A and B hold time-varying matrices
@@ -181,8 +181,8 @@ classdef LQR
             end
         end
         
-        % TODO: is this correct? Dependence on R may be wrong!
-        % discrete-time finite-horizon trajectory tracking
+        %% Discrete-time finite-horizon trajectory tracking
+        % TODO: is this correct? Dependence on R may be wrong
         % The state-form of LQR tracking is used
         % 
         % 
@@ -218,7 +218,7 @@ classdef LQR
             
         end
         
-        % Get the error form of the finite horizon LQR law, i.e.
+        %% Get the error form of the finite horizon LQR law, i.e.
         %
         % u = -K(x-s) + uff
         %
@@ -234,7 +234,7 @@ classdef LQR
             
         end
         
-        % discrete-time finite-horizon trajectory tracking
+        %% discrete-time finite-horizon trajectory tracking
         % 
         % Outputs:
         % Kbar is K and uff combined in a n+1 x n+1 feedback/feedforward

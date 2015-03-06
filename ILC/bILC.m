@@ -20,6 +20,7 @@ classdef bILC < ILC
     
     methods
         
+        %% Constructor for basic Arimoto-type ILC modifying u_ff
         function obj = bILC(traj)
                         
             obj.episode = 0;
@@ -37,6 +38,7 @@ classdef bILC < ILC
             
         end
         
+        %% Main ILC function
         function u_next = feedforward(obj,traj,y)
             
             dev = y - traj.s;

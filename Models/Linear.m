@@ -27,6 +27,8 @@ classdef Linear < Model
     
     methods
         
+        %% Constructor and initializing methods
+        
         % copies the parameter values inside the structure
         function set.PAR(obj, STR)  
             
@@ -95,6 +97,7 @@ classdef Linear < Model
             end
         end
         
+        %% Discretize continous matrices
         function obj = discretizeMatrices(obj)
             
             dimu = obj.SIM.dimu;
@@ -106,6 +109,8 @@ classdef Linear < Model
             obj.Ad = MD(1:dimx,1:dimx);
             obj.Bd = MD(1:dimx,dimx+1:end);
         end
+        
+        %% Models for evolution of dynamics
         
         % provides nominal model
         function x_next = nominal(obj,t,x,u)
@@ -125,7 +130,7 @@ classdef Linear < Model
             %x_next = obj.Ad*x + obj.Bd*u + a;        
         end
         
-        % TODO: isn't output controllability enough?
+        %% TODO: isn't output controllability enough?
         function assertControllability(obj)
             
             % make sure the system is controllable/reachable
@@ -143,7 +148,7 @@ classdef Linear < Model
             assert(rank(K) == dimx, 'System is not controllable!');
         end
         
-        % Creates a dmp trajectory
+        %% Creates a dmp trajectory
         % numbf: number of basis functions to use
         % WARNING: only for one output dimension (i.e. q1)
         function [dmp,s] = dmpTrajectory(obj,t,numbf,goal,yin,ref)
@@ -179,6 +184,8 @@ classdef Linear < Model
 
         end
 
+        %% Methods for creating inputs to track references
+        
         % create inputs using feedback law
         % ref is the reference trajectory
         function Traj = generateInputs(obj,t,ref,varargin)

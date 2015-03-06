@@ -23,6 +23,8 @@ classdef RR < Robot
     
     methods
         
+        %% Constructor and initializing methods
+        
         % copies the parameter values inside the structure
         function set.PAR(obj, STR)  
             
@@ -123,6 +125,8 @@ classdef RR < Robot
             obj.jac = [];
         end
         
+        %% Methods for evolving dynamics models
+        
         % provides nominal model
         function [x_dot,varargout] = nominal(obj,~,x,u,flg)
             % differential equation of the inverse dynamics
@@ -161,6 +165,8 @@ classdef RR < Robot
             
         end
         
+        %% Kinematics and dynamics models
+        
         % run kinematics using an external function
         function [x1,x2] = kinematics(obj,q)
             
@@ -189,12 +195,13 @@ classdef RR < Robot
             end
         end
         
-        % make an animation of the robot manipulator
+        %% Make an animation of the robot manipulator
         function animateArm(obj,q_actual,s)
             [x1,x2] = obj.kinematics(q_actual);
             animateRR(x1,x2,s);
         end
         
+        % unused function for now only aILC may use it
         % get lifted model constraints
         function [umin,umax,L,q] = lift_constraints(obj,trj,ilc)
             

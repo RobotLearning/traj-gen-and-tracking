@@ -24,7 +24,7 @@ classdef Filter < handle
     
     methods
         
-        % initialize variances
+        %% Initialize variances
         function obj = Filter(model,trj,mats)
             
             dimx = model.SIM.dimx;
@@ -42,14 +42,14 @@ classdef Filter < handle
             
         end
         
-        % predict state and covariance
+        %% predict state and covariance
         function predict(obj,u)
             
             obj.x = obj.A * obj.x + obj.B * u;
             obj.P = obj.A * obj.P * obj.A + obj.Omega;
         end
         
-        % update Kalman filter variance
+        %% update Kalman filter variance
         function update(obj,dev,u)
             
             % Innovation (output/residual) covariance

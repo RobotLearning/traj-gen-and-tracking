@@ -27,7 +27,7 @@ classdef Trajectory < handle
     
     methods (Access = public)
          
-        % create a trajectory class useful for simulations
+        %% create a trajectory class useful for simulations
         function obj = Trajectory(t,s,unom,K)            
             obj.t = t;
             obj.N = length(t);
@@ -36,6 +36,7 @@ classdef Trajectory < handle
             obj.K = K;
         end
         
+        %% Add performances of learning algorithms
         % fun_cost is a cost function, not necessarily quadratic
         % controller is generally a particular ILC implementation
         function addPerformance(obj,u,y,costfun,controller)
