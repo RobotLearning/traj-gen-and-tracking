@@ -56,7 +56,7 @@ classdef wILC < ILC
             obj.Psi = obj.formPsi(dim*N,traj.t);
             
             % learning matrix
-            obj.formL(traj);
+            obj.formL(model,traj);
             
             sbar = Cout'*((Cout*Cout')\traj.s);
             svec = sbar(:);
@@ -97,10 +97,11 @@ classdef wILC < ILC
         end
         
         %% Form the learning matrix
-        function formL(obj,traj)
+        
+        % Arimoto style PD-update
+        function basicL(obj,traj)
             
             N = traj.N - 1;
-            K = traj.K;
             dim = size(obj.C,2)/2;
             dim = floor(dim);
             % set learning rate
@@ -112,7 +113,82 @@ classdef wILC < ILC
             
             M = [a_d*eye(dim),a_p*eye(dim)];
             M = kron(eye(N),M);
-            L = [zeros(dim*N,dim),M,zeros(dim*N,dim)];         
+            obj.L = [zeros(dim*N,dim),M,zeros(dim*N,dim)];       
+        end
+        
+        % Model based ILC update
+        function lift(obj,model,traj)
+            
+            N = traj.N - 1;
+            dim_x = model.SIM.dimx;
+            dim_y = model.SIM.dimy;
+            dim_u = model.SIM.dimu;
+            F = zeros(N*dim_x, N*dim_u);
+            
+            % deal C matrix to G
+            G = cell(1,N);
+            Ql = cell(1,N);
+            Rl = cell(1,N);
+            % TODO: this could also be time varying!
+            [G{:}] = deal(model.C);
+            [Ql{:}] = deal(model.COST.Q);
+            [Rl{:}] = deal(model.COST.R);
+            G = blkdiag(G{:});
+            Ql = blkdiag(Ql{:});
+            Rl = blkdiag(Rl{:});
+            
+            if isa(model,'Linear')
+            
+                Ad = model.Ad;
+                Bd = model.Bd;
+                % construct lifted domain matrix F
+                % TODO: this can be computed much more efficiently
+                % for linear systems
+                for i = 1:N
+                    for j = 1:i
+                        vec_x = (i-1)*dim_x + 1:i*dim_x;
+                        vec_u = (j-1)*dim_u + 1:j*dim_u;
+                        mat = Bd;
+                        for k = j+1:i
+                            mat = Ad * mat;
+                        end
+                        F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                    end
+                end
+            else
+                % get linear time variant matrices around trajectory
+                [Ad,Bd] = model.linearize(traj);
+                
+                % construct lifted domain matrix F
+                for i = 1:N
+                    for j = 1:i
+                        vec_x = (i-1)*dim_x + 1:i*dim_x;
+                        vec_u = (j-1)*dim_u + 1:j*dim_u;
+                        mat = Bd(:,:,j);
+                        for k = j+1:i
+                            mat = Ad(:,:,k) * mat;
+                        end
+                        F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                    end
+                end
+            end
+            
+            obj.L = pinv(G * F);
+            
+            % errors will have the initial point too
+            obj.L = [zeros(N*dim_u,dim_y),obj.L];
+        end
+        
+        function formL(obj,model,traj)
+            
+            K = traj.K;
+            N = traj.N - 1;
+            
+            % construct learning matrix first
+            %obj.basicL(traj);
+            obj.lift(model,traj);
+            
+            % take pinv(K) to reflect back on the trajectories s
             
             Kl = zeros(size(K,1)*N,size(K,2)*N);
             % construct lifted domain matrix Kl
@@ -122,7 +198,7 @@ classdef wILC < ILC
                 Kl(vec1,vec2) = K(:,:,l); % on diagonals only
             end
             
-            obj.L = pinv(Kl)*L;
+            obj.L = pinv(Kl)*obj.L;
             
         end
         
@@ -131,7 +207,7 @@ classdef wILC < ILC
             out = exp(-h * (t - c).^2);
         end
         
-        %% update weights for the trajectory instead
+        %% update weights of the trajectory or the trajectory directly
         function traj2 = updateWeights(obj,traj,y)
             
             h = traj.t(2) - traj.t(1);
@@ -154,7 +230,7 @@ classdef wILC < ILC
             
         end
         
-        %% doing regression on derivatives is equivalent
+        % doing regression on derivatives is equivalent
         function traj2 = updateDerivativeWeights(obj,traj,y)
             
             h = traj.t(2) - traj.t(1);
@@ -189,7 +265,7 @@ classdef wILC < ILC
             
         end
         
-        %% update trajectories 
+        % update trajectories 
         function traj2 = updateTraj(obj,traj,y)
             
             N = traj.N - 1;

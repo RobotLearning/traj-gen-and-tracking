@@ -4,9 +4,9 @@
 % and L is the learning matrix of the ILC update i.e.
 % unext = ulast - L*error;
 %
-% Ideally we need L = inv(F), a model-based ILC update rule
+% L = pinv(F), a model-based ILC update rule
 %
-% TODO: learn with feedback construction of F matrix
+% TODO: learning with feedback construction of F matrix
 %       offers no improvement!
 
 classdef mILC < ILC

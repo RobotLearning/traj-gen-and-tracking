@@ -35,7 +35,7 @@ axis auto;
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 h1 = line(link1_x, link1_y, 'color', [.4 .4 .4],'LineWidth',4);
-h2 = line(link2_x, link2_y, 'color', [.6 .6 .6],'LineWidth',4);
+h2 = line(link2_x, link2_y, 'color', [.4 .4 .4],'LineWidth',4);
 title('Two-link planar arm');
 hold on;
 h3 = scatter(shift(1),shift(2),100,'b','LineWidth',4);

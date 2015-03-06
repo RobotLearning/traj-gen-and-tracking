@@ -78,7 +78,7 @@ PAR.link2.motor.inertia = J_m2;
 PAR.link1.motor.gear_ratio = r_1;
 PAR.link2.motor.gear_ratio = r_2;
 
-% TODO: we should observe joint angles only
+% we should observe joint angles only
 PAR.C = eye(SIM.dimy,SIM.dimx);
 
 % form constraints
@@ -108,8 +108,8 @@ rr.generateFeedback(traj);
 %% Evolve system dynamics and animate the robot arm
 
 q0 = traj.s(:,1);
-% add nonzero velocity
-q0(3:4) = 0.02;
+% add zero velocity or perturb initial velocity
+q0(3:4) = 0;
 % observe output
 qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
 % add performance to trajectory
@@ -117,12 +117,12 @@ traj.addPerformance([],qact,rr.COST,'ID + LQR');
 
 % Plot the controls and animate the robot arm
 rr.plot_outputs(traj);
-rr.animateArm(qact(1:2,:),ref);
+%rr.animateArm(qact(1:2,:),ref);
 
 %% Start learning with ILC
 
-num_trials = 100;
-ilc = wILC(traj,rr,'t');
+num_trials = 10;
+ilc = wILC(traj,rr,'wd');
 %ilc = wILC(traj,rr,'dmp');
 
 for i = 1:num_trials

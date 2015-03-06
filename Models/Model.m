@@ -119,12 +119,13 @@ classdef (Abstract) Model < handle
                     qd(j,:) = Q(2,:);
                 end
                 sbar = [q;qd];
+                %sbar = q;
                 % add acceleration
                 %sdd = diff(s(2,:))/h;
                 %sdd(:,end+1) = sdd(:,end);
                 %sbar = [s; sdd];
                 %Cbar = obj.C;
-                %sbar = Cbar'*((Cbar*Cbar')\s(1,:));
+                %sbar = Cbar'*((Cbar*Cbar')\sbar);
             elseif size(traj.s,1) == length(x0)
                 sbar = traj.s;
             else
