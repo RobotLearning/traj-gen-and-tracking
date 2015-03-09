@@ -92,32 +92,28 @@ classdef (Abstract) Robot < Model
             dimu = obj.SIM.dimu;
             Cout = obj.C;
             
+            assert(size(Cout,2)==obj.SIM.dimx,...
+                'Currently works only for full observation');
+            
             if (obj.flag_ref_jsp)
-                q = ref(1:dim,:);
-                qd = ref(dim+1:2*dim,:);
+                qdes = ref(1:dim,:);
+                qddes = ref(dim+1:2*dim,:);
             else
                 % assuming that only positions are demonstrated
-                q = obj.invKinematics(ref);
-                qd = diff(q')' / h; 
+                qdes = obj.invKinematics(ref);
+                qddes = diff(qdes')' / h; 
                 % assume you end with same velocity as before
-                qd(:,end+1) = qd(:,end);
+                qddes(:,end+1) = qddes(:,end);
             end
             
-            % create the DMPs in joint space
-            Q{1} = q';
-            Qd{1} = qd';
-            tcell{1} = t';
-
-            % feed them all to a dmp
-            dmps = trainMultiDMPs(tcell,Q,Qd);
-            q = zeros(dim,length(t)); 
-            qd = zeros(dim,length(t));
-            for j = 1:dim
-                [~,Q] = dmps(j).evolve();
-                q(j,:) = Q(1,:);
-                qd(j,:) = Q(2,:);
-            end
+            % make DMPs that smoothens reference, one for each output
+            goal = [qdes(:,end);qddes(:,end)];
+            yin = [qdes(:,1);qddes(:,1)];
+            numbf = 20;      
+            [dmps,s] = obj.dmpTrajectory(t,numbf,goal,yin,[qdes;qddes]);
             
+            q = s(1:dim,:);
+            qd = s(dim+1:end,:);            
             qdd = diff(qd')' / h; 
             % assume you end with same acceleration as before
             qdd(:,end+1) = qdd(:,end);

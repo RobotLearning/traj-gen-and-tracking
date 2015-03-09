@@ -65,6 +65,8 @@ classdef (Abstract) DMP < handle
         end
         
         % update the weights using regression methods
+        % WARNING: not to be used online since sets velocities and
+        % accelerations to zero!
         function force = updateWeights(obj,path)
             
             if strcmp(obj.can.pattern,'d')

@@ -102,6 +102,9 @@ x_des = 0.6 - 0.1 * t;
 ref = [x_des; y_des]; % displacement profile 
 
 [traj,dmp] = rr.generateInputsWithDMP(t,ref); % trajectory generated in joint space
+
+% save dmp weights for later use
+
 % Generate feedback with LQR
 rr.generateFeedback(traj);
 
@@ -109,7 +112,7 @@ rr.generateFeedback(traj);
 
 q0 = traj.s(:,1);
 % add zero velocity or perturb initial velocity
-q0(3:4) = 0;
+%q0(3:4) = 0;
 % observe output
 qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
 % add performance to trajectory
@@ -122,16 +125,16 @@ rr.plot_outputs(traj);
 %% Start learning with ILC
 
 num_trials = 10;
-ilc = wILC(traj,rr,'wd');
-%ilc = wILC(traj,rr,'dmp');
+%ilc = wILC(traj,rr,'t');
+ilc = wILC(traj,rr,'dmp');
 
 for i = 1:num_trials
     % get next inputs
-    %dmp = ilc.feedforward(traj,dmp,qact);
-    traj2 = ilc.feedforward(traj,[],qact);   
+    dmp = ilc.feedforward(traj,dmp,qact);
+    %traj2 = ilc.feedforward(traj,[],qact);   
     % get the measurements
-    %qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
-    qact = rr.observeWithFeedbackErrorForm(traj2,q0);
+    qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
+    %qact = rr.observeWithFeedbackErrorForm(traj2,q0);
     traj.addPerformance([],qact,rr.COST,ilc);
     % Plot the controls and animate the robot arm
     %rr.animateArm(qact(1:2,:),ref);
@@ -140,3 +143,42 @@ end
 % Plot the controls and animate the robot arm
 rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
+
+%% Change trajectory and see how the robot is doing
+% initial state is fixed
+
+y_new = 0.4 + 0.1 * t;
+x_new = 0.6 - 0.1 * t;
+refNew = [x_new; y_new]; % displacement profile 
+
+%trajNew = rr.generateInputs(t,refNew);
+[trajNew,~] = rr.generateInputsWithDMP(t,refNew);
+rr.generateFeedback(trajNew);
+
+q0 = trajNew.s(:,1);
+% observe output
+qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+% add performance to trajectory
+trajNew.addPerformance([],qact,rr.COST,'ID + LQR');
+
+% Plot the controls and animate the robot arm
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);
+
+% try the learned weights
+%trajNew.K = traj.K;
+
+%q1 = trajNew.s(:,2);
+%qin = [q0,(q1-q0)/h];
+%for i = 1:length(dmp)
+    % set/update goal and initial state
+    %dmp(i).setInitState(qin(i,:)');
+    % initial states of DMPs
+    %dmp(i).setGoal(trajNew.s(i,end));
+%end
+
+qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
+trajNew.addPerformance([],qact,rr.COST,ilc);
+% Plot the controls and animate the robot arm
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);

@@ -116,16 +116,9 @@ classdef (Abstract) Model < handle
                 for j = 1:length(dmps)
                     [~,Q] = dmps(j).evolve();
                     q(j,:) = Q(1,:);
-                    qd(j,:) = Q(2,:);
                 end
-                sbar = [q;qd];
-                %sbar = q;
-                % add acceleration
-                %sdd = diff(s(2,:))/h;
-                %sdd(:,end+1) = sdd(:,end);
-                %sbar = [s; sdd];
-                %Cbar = obj.C;
-                %sbar = Cbar'*((Cbar*Cbar')\sbar);
+                Cbar = obj.C;
+                sbar = Cbar'*((Cbar*Cbar')\q);
             elseif size(traj.s,1) == length(x0)
                 sbar = traj.s;
             else
@@ -189,6 +182,46 @@ classdef (Abstract) Model < handle
             % arrange back to normal form
             y = reshape(y_vec,dimy,N);
             
+        end
+        
+        %% Creates a dmp trajectory
+        % numbf: number of basis functions to use
+        function [dmp,s] = dmpTrajectory(obj,t,numbf,goal,yin,ref)
+            
+            h = obj.SIM.h;
+            dim = size(ref,1);
+            N = length(t);
+            s = zeros(dim,N);
+            % make a DMP that smoothens x_des
+            pat = 'd';
+            % scaling
+            tau = 1;
+            % ensure that phase decays
+            exponent = 2;
+            ax = exponent/(tau*t(end));            
+            can = Canonical(h,ax,tau,N,pat);
+            
+            % create different DMPs, one for each dimension
+            alpha = 25;
+            beta = 25/4;
+
+            for i = 1:dim
+                % append zero velocity
+                y0 = [yin(i);0];
+                % create the dmp trajectory
+                dmp(i) = discreteDMP(can,alpha,beta,goal(i),y0,numbf);
+                % learn the weights using regression
+                dmp(i).setWeights(ref(i,:));
+                % evolve the DMP
+                [x,si] = dmp(i).evolve();         
+                s(i,:) = si(1,:);
+                
+                figure;
+                plot(t,ref(i,:),'-',t,s(i,:),'-.',t,x);
+                legend('reference trajectory','state y','phase');
+                title('DMP trajectory');
+            end         
+
         end
         
         %% linearizes the nominal dynamics around the trajectory

@@ -147,42 +147,6 @@ classdef Linear < Model
             end
             assert(rank(K) == dimx, 'System is not controllable!');
         end
-        
-        %% Creates a dmp trajectory
-        % numbf: number of basis functions to use
-        % WARNING: only for one output dimension (i.e. q1)
-        function [dmp,s] = dmpTrajectory(obj,t,numbf,goal,yin,ref)
-            
-            h = obj.SIM.h;
-            N = length(t);
-            % make a DMP that smoothens x_des
-            pat = 'd';
-            % scaling
-            tau = 1;
-            % ensure that phase decays
-            exponent = 2;
-            ax = exponent/(tau*t(end));            
-            can = Canonical(h,ax,tau,N,pat);
-            
-            % create different DMPs, one for each dimension
-            alpha = 25;
-            beta = 25/4;
-
-            % create the dmp trajectory
-            dmp = discreteDMP(can,alpha,beta,goal,yin,numbf);
-            % learn the weights using regression
-            dmp.setWeights(ref);
-            % evolve the DMP
-            [x,s] = dmp.evolve();         
-            % add accelerations
-            %s = [s; 0, diff(s(2,:))/h];
-            
-            figure;
-            plot(t,ref,'-',t,s(1,:),'-.',t,x);
-            legend('reference trajectory','state y','phase');
-            title('DMP trajectory');
-
-        end
 
         %% Methods for creating inputs to track references
         
@@ -223,17 +187,15 @@ classdef Linear < Model
         
         % create a dmp trajectory and inputs using feedback law
         % ref is the reference trajectory
-        function [traj,dmp] = generateDMP(obj,t,yin,ref)
+        function [traj,dmps] = generateDMP(obj,t,yin,ref)
             
             % check controllability
             obj.assertControllability();
              
-            % optional: make DMPs that smoothens x_des
-            % one for each output
+            % make DMPs that smoothens reference, one for each output
             goal = ref(:,end);
-            numbf = 20;      
-            [dmp,s] = obj.dmpTrajectory(t,numbf,goal,yin,ref);
-            s = s(1,:);
+            numbf = 50;      
+            [dmps,s] = obj.dmpTrajectory(t,numbf,goal,yin,ref);
 
             % calculate the optimal feedback law
             Q = obj.COST.Q;

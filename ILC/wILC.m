@@ -287,7 +287,7 @@ classdef wILC < ILC
         end
         
         %% update DMPs
-        function dmps = updateDMP(obj,dmp,traj,y)
+        function dmp = updateDMP(obj,dmp,traj,y)
             
             N = traj.N - 1;
             h = traj.t(2) - traj.t(1);
@@ -302,12 +302,25 @@ classdef wILC < ILC
             sbar = reshape(s,dim,N);
             s = Cout*[sbar,sbar(:,end)];            
             
-            Q{1} = s(1:dim/2,:)';
-            Qd{1} = s(dim/2+1:end,:)';
-            tcell{1} = traj.t';
+            q = s;
+            qd = diff(q')'/h;
+            qd(:,end+1) = qd(:,end);
+            qdd = diff(qd')'./h;
+            qdd(:,end+1) = qdd(:,end);
+    
+            goals= q(:,end);
+            y0 = [q(:,1),qd(:,1)];
 
-            % feed them all to a dmp
-            dmps = trainMultiDMPs(tcell,Q,Qd);
+            for i = 1:length(dmp)
+
+                % set/update goal and initial state
+                dmp(i).setInitState(y0(i,:)');
+                % initial states of DMPs
+                dmp(i).setGoal(goals(i));
+                %dmp(i) = discreteDMP(can,alpha,beta,goal(1),yin,numbf);
+                dmp(i).regressLive(q(i,:)',qd(i,:)',qdd(i,:)',goals(i));
+
+            end
             
             %Fs = dmp.FORCE.Fs;
             %w_next = obj.inp_last - pinv(Fs)*obj.L*dev(:);

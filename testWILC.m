@@ -175,9 +175,8 @@ ref = t.^2;
 %ref = [ref; 2*t];
 %ref = [ref; 0, 2*ones(1,length(t)-1)];
 x0 = zeros(dimx,1);
-y0 = C * x0;
-% create yin with zero velocity
-yin = [y0;0];      
+y0 = C * x0;     
+yin = y0;
 
 % create DMP trajectory and execute LQR
 [traj,dmp] = lin.generateDMP(t,yin,ref);
@@ -187,17 +186,17 @@ traj.addPerformance([],y,lin.COST,'LQR');
 lin.plot_outputs(traj);
 
 % Create an ilc controller
-ilc = wILC(traj,lin,'t');
-%ilc = wILC(traj,lin,'dmp');
+%ilc = wILC(traj,lin,'t');
+ilc = wILC(traj,lin,'dmp');
 num_trials = 10;
 
 for i = 1:num_trials
     % update the weights of the dmp
-    traj2 = ilc.feedforward(traj,[],y);
-    %dmp = ilc.feedforward(traj,dmp,y);     
+    %traj2 = ilc.feedforward(traj,[],y);
+    dmp = ilc.feedforward(traj,dmp,y);     
     % get the measurements
-    [y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
-    %[y,~] = lin.observeWithFeedbackErrorForm(traj,x0,dmp);
+    %[y,~] = lin.observeWithFeedbackErrorForm(traj2,x0);
+    [y,~] = lin.observeWithFeedbackErrorForm(traj,x0,dmp);
     traj.addPerformance([],y,lin.COST,ilc);
 end
 
