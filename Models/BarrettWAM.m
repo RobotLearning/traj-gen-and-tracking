@@ -99,12 +99,21 @@ classdef BarrettWAM < Robot
         end
         
         % provides actual model
-        % TODO: should we wrap the dynamics?
         function x_dot = actual(obj,~,x,u)
             
             % differential equation of the inverse dynamics
             % x_dot = A(x)x + B(x)u + C(x)
-            x_dot = obj.dynamics(x,u,false);
+            
+            % change the masses slightly
+            par = obj.PAR;
+            par.links(1).m = 0.00000 + .5; 
+            par.links(2).m = 0.00000 + .5;
+            par.links(3).m = 3.53923 + .5; 
+            par.links(4).m = 1.03409 + .5;
+            par.links(5).m = 2.28843 + .1;
+            par.links(6).m = 0.25655 + .1; 
+            par.links(7).m = 0.63285 + .1; 
+            x_dot = wamDynamics(x,u,par,false);
             
             
         end
@@ -123,7 +132,7 @@ classdef BarrettWAM < Robot
                    
         % dynamics to get u
         function u = invDynamics(obj,q,qd,qdd)
-            % code taken from SL has 11 joints - 4 for the fingers
+            % inverse dynamics model taken from SL
             u = wamInvDynamics(q,qd,qdd,obj.PAR);
         end
         

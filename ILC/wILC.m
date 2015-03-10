@@ -199,6 +199,7 @@ classdef wILC < ILC
             end
             
             obj.L = pinv(Kl)*obj.L;
+            %obj.L = Kl \ obj.L;
             
         end
         
@@ -271,6 +272,7 @@ classdef wILC < ILC
             N = traj.N - 1;
             K = traj.K;
             dev = y - traj.s;
+            %dev = dev(:,2:end);
             Cout = obj.C;
             dim = size(Cout,2);      
 

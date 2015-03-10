@@ -231,9 +231,10 @@ wam = BarrettWAM(PAR,CON,COST,SIM);
 %% Generate inputs for a desired trajectory
 
 % load percentage of trajectory from dmp file 
-file = [prefs_folder,'dmp_strike.txt'];
+%file = [prefs_folder,'dmp_strike.txt'];
+file = 'dmp.txt';
 M = dlmread(file);
-perc = 1; % learning on whole traj can be unstable unless LQR is used
+perc = 0.1; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
 t = M(:,1); t = t';
@@ -243,7 +244,7 @@ q = M(:,2:2:2*N_DOFS);
 qd = M(:,3:2:2*N_DOFS+1);
 ref = [q';qd'];
 
-% TODO: load DMP weights only
+%[traj,dmp] = wam.generateInputsWithDMP(t,50,ref);
 traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
 % Generate feedback with LQR
