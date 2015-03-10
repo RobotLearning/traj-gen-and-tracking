@@ -5,5 +5,3 @@ TODO List:
 - Effects of error coupling on DMPs?
 - How to avoid large accelerations/large control inputs at start/end
   of trajectory?
-- wILC should work also for state space models not in the form 
-  [x1,x2,...,xN,x1d,x2d,...,xNd]

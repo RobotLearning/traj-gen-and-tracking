@@ -82,10 +82,10 @@ classdef (Abstract) Robot < Model
                 xd(:,end+1) = xd(:,end);
                 Traj = Trajectory(t,Cout*[x;xd],uff,[]);
             end            
-        end
+        end     
         
         %% Method useful when modifying DMPs directly
-        function [Traj,dmps] = generateInputsWithDMP(obj,t,ref)
+        function [Traj,dmps] = generateInputsWithDMP(obj,t,numbf,ref)
 
             h = obj.SIM.h;
             dim = obj.SIM.dimx / 2;
@@ -108,8 +108,7 @@ classdef (Abstract) Robot < Model
             
             % make DMPs that smoothens reference, one for each output
             goal = [qdes(:,end);qddes(:,end)];
-            yin = [qdes(:,1);qddes(:,1)];
-            numbf = 20;      
+            yin = [qdes(:,1);qddes(:,1)];     
             [dmps,s] = obj.dmpTrajectory(t,numbf,goal,yin,[qdes;qddes]);
             
             q = s(1:dim,:);

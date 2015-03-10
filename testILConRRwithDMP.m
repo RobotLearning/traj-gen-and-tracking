@@ -101,9 +101,14 @@ y_des = 0.4 + 0.2 * t;
 x_des = 0.6 - 0.1 * t;
 ref = [x_des; y_des]; % displacement profile 
 
-[traj,dmp] = rr.generateInputsWithDMP(t,ref); % trajectory generated in joint space
+bfs = 20;
+[traj,dmp] = rr.generateInputsWithDMP(t,bfs,ref); % trajectory generated in joint space
 
 % save dmp weights for later use
+w_origin = zeros(length(dmp),bfs);
+for i = 1:length(dmp)
+    w_origin(i,:) = dmp(i).FORCE.w;
+end
 
 % Generate feedback with LQR
 rr.generateFeedback(traj);
@@ -144,18 +149,21 @@ end
 rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
 
-%% Change trajectory and see how the robot is doing
-% initial state is fixed
+%% Fix a hitting region and see how the robot is doing
 
-y_new = 0.4 + 0.1 * t;
-x_new = 0.6 - 0.1 * t;
-refNew = [x_new; y_new]; % displacement profile 
+% new reference in joint space
+rr.flag_ref_jsp = true;
+% center of the region
+g0 = traj.s(:,end);
+% radius of region
+r = 0.05;
+% sample uniformly from the region
+gnew = g0 - r + 2*r*rand(SIM.dimy,1);
+[dmpNew,refNew] = adaptDMP(q0,gnew,dmp,w_origin);
 
-%trajNew = rr.generateInputs(t,refNew);
-[trajNew,~] = rr.generateInputsWithDMP(t,refNew);
+trajNew = rr.generateInputs(t,refNew);
 rr.generateFeedback(trajNew);
 
-q0 = trajNew.s(:,1);
 % observe output
 qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
 % add performance to trajectory
@@ -164,9 +172,6 @@ trajNew.addPerformance([],qact,rr.COST,'ID + LQR');
 % Plot the controls and animate the robot arm
 rr.plot_outputs(trajNew);
 rr.animateArm(qact(1:2,:),refNew);
-
-% try the learned weights
-%trajNew.K = traj.K;
 
 %q1 = trajNew.s(:,2);
 %qin = [q0,(q1-q0)/h];

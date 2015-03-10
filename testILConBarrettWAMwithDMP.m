@@ -1,4 +1,4 @@
-%% Simulate trajectories for the Barrett WAM
+%% ILC on BarrettWAM dynamics modifying DMPs now
 
 %# store breakpoints
 tmp = dbstatus;
@@ -230,20 +230,30 @@ wam = BarrettWAM(PAR,CON,COST,SIM);
 
 %% Generate inputs for a desired trajectory
 
-% load percentage of trajectory from dmp file 
-file = [prefs_folder,'dmp_strike.txt'];
-M = dlmread(file);
-perc = 1; % learning on whole traj can be unstable unless LQR is used
-len = size(M,1);
-M = M(1:(len * perc),:);
-t = M(:,1); t = t';
-% order for refs in file: q1 qd1, ...
-% switching to order: q1 ... q7, qd1, ..., qd7
-q = M(:,2:2:2*N_DOFS);
-qd = M(:,3:2:2*N_DOFS+1);
-ref = [q';qd'];
+% basis functions of DMPs
+bfs = 50;
+% load imitation-learned DMPs from MAT file
+load('dmps.mat','dmps');
 
-% TODO: load DMP weights only
+% save dmp weights for later use
+w_origin = zeros(length(dmps),bfs);
+for i = 1:length(dmps)
+    w_origin(i,:) = dmps(i).FORCE.w;
+end
+
+% center of the region
+t = 0.005:0.005:1.500;
+q0 = [1.8; -0.0011;	-0.106;	1.89; -1.58; 0.149;	0.246];
+g0 = [1.5172; 0.0637; -0.7906; 2.1683; -2.2159; -0.5760; 0.3933];
+
+[dmp,ref] = adaptDMP(q0,g0,dmps,w_origin);
+% get derivatives of dmps
+[ddmp,dref] = diffDMP(zeros(7,1),zeros(7,1),dmp);
+% combine them
+for i = 1:N_DOFS,dmp(N_DOFS+i) = ddmp(i); end
+ref = [ref; dref];
+
+% generate u_ff inputs with inverse dynamics
 traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
 % Generate feedback with LQR
@@ -273,19 +283,15 @@ wam.plot_outputs(traj);
 
 %% Start learning with ILC
 
-num_trials = 10;
-ilc = mILC(wam,traj); 
+num_trials = 5;
+ilc = wILC(traj,wam,'dmp');
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforward(traj,qact);
-    % evolve system
-    %qact = wam.evolve(t,q0,u);
-    % evolve system with feedback
-    traj.unom = u;
-    [qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
-    % add performance to trajectory
-    traj.addPerformance(ufull,qact,wam.COST,ilc);
+    dmp = ilc.feedforward(traj,dmp,qact);  
+    % get the measurements
+    qact = wam.observeWithFeedbackErrorForm(traj,q0,dmp);
+    traj.addPerformance([],qact,wam.COST,ilc);
     % Plot the controls and animate the robot arm
     %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
 end

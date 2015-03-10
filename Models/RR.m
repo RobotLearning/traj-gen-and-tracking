@@ -198,6 +198,9 @@ classdef RR < Robot
         %% Make an animation of the robot manipulator
         function animateArm(obj,q_actual,s)
             [x1,x2] = obj.kinematics(q_actual);
+            if obj.flag_ref_jsp
+                [~,s] = obj.kinematics(s);
+            end
             animateRR(x1,x2,s);
         end
         

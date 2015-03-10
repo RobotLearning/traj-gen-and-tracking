@@ -216,10 +216,10 @@ classdef (Abstract) Model < handle
                 [x,si] = dmp(i).evolve();         
                 s(i,:) = si(1,:);
                 
-                figure;
-                plot(t,ref(i,:),'-',t,s(i,:),'-.',t,x);
-                legend('reference trajectory','state y','phase');
-                title('DMP trajectory');
+                %figure;
+                %plot(t,ref(i,:),'-',t,s(i,:),'-.',t,x);
+                %legend('reference trajectory','state y','phase');
+                %title('DMP trajectory');
             end         
 
         end
