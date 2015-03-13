@@ -1850,8 +1850,8 @@ if flag
         QdhPlus = zeros(2*NDOF);
         QdhMinus = zeros(2*NDOF);
         for i = 1:2*NDOF
-            QdhPlus(:,i) = wamDynamics(QhPlus(:,i),u0,PAR,false);
-            QdhMinus(:,i) = wamDynamics(QhMinus(:,i),u0,PAR,false);
+            QdhPlus(:,i) = barrettWamDynamicsArt(QhPlus(:,i),u0,PAR,false);
+            QdhMinus(:,i) = barrettWamDynamicsArt(QhMinus(:,i),u0,PAR,false);
         end
         der = (QdhPlus - QdhMinus) / (2*h);
         dfdx = [zeros(NDOF), eye(NDOF); der(NDOF+1:2*NDOF,:)];
@@ -1861,8 +1861,8 @@ if flag
         QdhPlus = zeros(2*NDOF,NDOF);
         QdhMinus = zeros(2*NDOF,NDOF);
         for i = 1:NDOF
-            QdhPlus(:,i) = wamDynamics(Q,uhPlus(:,i),PAR,false);
-            QdhMinus(:,i) = wamDynamics(Q,uhMinus(:,i),PAR,false);
+            QdhPlus(:,i) = barrettWamDynamicsArt(Q,uhPlus(:,i),PAR,false);
+            QdhMinus(:,i) = barrettWamDynamicsArt(Q,uhMinus(:,i),PAR,false);
         end
         dfdu = (QdhPlus - QdhMinus) / (2*h);
     
@@ -1877,10 +1877,10 @@ if flag
         QdhMinus = zeros(2*NDOF);
         Qd2hMinus = zeros(2*NDOF);
         for i = 1:2*NDOF
-            Qd2hPlus(:,i) = wamDynamics(Q2hPlus(:,i),u0,PAR,false);
-            QdhPlus(:,i) = wamDynamics(QhPlus(:,i),u0,PAR,false);
-            QdhMinus(:,i) = wamDynamics(QhMinus(:,i),u0,PAR,false);
-            Qd2hMinus(:,i) = wamDynamics(Q2hMinus(:,i),u0,PAR,false);
+            Qd2hPlus(:,i) = barrettWamDynamicsArt(Q2hPlus(:,i),u0,PAR,false);
+            QdhPlus(:,i) = barrettWamDynamicsArt(QhPlus(:,i),u0,PAR,false);
+            QdhMinus(:,i) = barrettWamDynamicsArt(QhMinus(:,i),u0,PAR,false);
+            Qd2hMinus(:,i) = barrettWamDynamicsArt(Q2hMinus(:,i),u0,PAR,false);
         end
         der = (-Qd2hPlus + 8*QdhPlus - 8*QdhMinus + Qd2hMinus) / (12*h);
         dfdx = [zeros(NDOF), eye(NDOF); der(NDOF+1:2*NDOF,:)];
@@ -1894,10 +1894,10 @@ if flag
         QdhMinus = zeros(2*NDOF,NDOF);
         Qd2hMinus = zeros(2*NDOF,NDOF);
         for i = 1:NDOF
-            Qd2hPlus(:,i) = wamDynamics(Q,u2hPlus(:,i),PAR,false);
-            QdhPlus(:,i) = wamDynamics(Q,uhPlus(:,i),PAR,false);
-            QdhMinus(:,i) = wamDynamics(Q,uhMinus(:,i),PAR,false);
-            Qd2hMinus(:,i) = wamDynamics(Q,u2hMinus(:,i),PAR,false);
+            Qd2hPlus(:,i) = barrettWamDynamicsArt(Q,u2hPlus(:,i),PAR,false);
+            QdhPlus(:,i) = barrettWamDynamicsArt(Q,uhPlus(:,i),PAR,false);
+            QdhMinus(:,i) = barrettWamDynamicsArt(Q,uhMinus(:,i),PAR,false);
+            Qd2hMinus(:,i) = barrettWamDynamicsArt(Q,u2hMinus(:,i),PAR,false);
         end
         dfdu = (-Qd2hPlus + 8*QdhPlus - 8*QdhMinus + Qd2hMinus) / (12*h);
         
@@ -1908,7 +1908,7 @@ if flag
         Qh = repmat(Q,1,2*NDOF) + h * eye(2*NDOF);
         Qdh = zeros(2*NDOF);
         for i = 1:2*NDOF
-            Qdh(:,i) = wamDynamics(Qh(:,i),u0,PAR,false);
+            Qdh(:,i) = barrettWamDynamicsArt(Qh(:,i),u0,PAR,false);
         end
         der = (Qdh - repmat(Qd,1,2*NDOF)) / h;
         dfdx = [zeros(NDOF), eye(NDOF); der(NDOF+1:2*NDOF,:)];
@@ -1916,7 +1916,7 @@ if flag
         uh = repmat(u0,1,NDOF) + h * eye(NDOF);
         Qdh = zeros(2*NDOF,NDOF);
         for i = 1:NDOF
-            Qdh(:,i) = wamDynamics(Q,uh(:,i),PAR,false);
+            Qdh(:,i) = barrettWamDynamicsArt(Q,uh(:,i),PAR,false);
         end
         dfdu = (Qdh - repmat(Qd,1,NDOF)) / h;
 

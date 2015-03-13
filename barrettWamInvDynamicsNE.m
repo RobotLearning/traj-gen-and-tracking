@@ -399,9 +399,9 @@ v8(6) = v7(4)*S87(3,1) + v7(5)*S87(3,2) + v7(3)*(-(eff(1).x(2)*S87(3,1)) + eff(1
 a0(1) = baseo.add(1)*S00(1,1) + baseo.add(2)*S00(1,2) + baseo.add(3)*S00(1,3);
 a0(2) = baseo.add(1)*S00(2,1) + baseo.add(2)*S00(2,2) + baseo.add(3)*S00(2,3);
 a0(3) = baseo.add(1)*S00(3,1) + baseo.add(2)*S00(3,2) + baseo.add(3)*S00(3,3);
-a0(4) = basec.xdd(1)*S00(1,1) + basec.xdd(2)*S00(1,2) + (gravity + basec.xdd(3))*S00(1,3);
-a0(5) = basec.xdd(1)*S00(2,1) + basec.xdd(2)*S00(2,2) + (gravity + basec.xdd(3))*S00(2,3);
-a0(6) = basec.xdd(1)*S00(3,1) + basec.xdd(2)*S00(3,2) + (gravity + basec.xdd(3))*S00(3,3);
+a0(4) = basec.xdd(1)*S00(1,1) + basec.xdd(2)*S00(1,2) + (g + basec.xdd(3))*S00(1,3);
+a0(5) = basec.xdd(1)*S00(2,1) + basec.xdd(2)*S00(2,2) + (g + basec.xdd(3))*S00(2,3);
+a0(6) = basec.xdd(1)*S00(3,1) + basec.xdd(2)*S00(3,2) + (g + basec.xdd(3))*S00(3,3);
 
 a1(1) = qd(1)*v1(2) + a0(1)*S10(1,1) + a0(2)*S10(1,2);
 a1(2) = -(qd(1)*v1(1)) + a0(1)*S10(2,1) + a0(2)*S10(2,2);
