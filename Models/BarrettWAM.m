@@ -113,7 +113,7 @@ classdef BarrettWAM < Robot
             par.links(5).m = 2.28843 + .1;
             par.links(6).m = 0.25655 + .1; 
             par.links(7).m = 0.63285 + .1; 
-            x_dot = wamDynamics(x,u,par,false);
+            x_dot = barrettWamDynamicsArt(x,u,par,false);
             
             
         end
@@ -133,17 +133,17 @@ classdef BarrettWAM < Robot
         % dynamics to get u
         function u = invDynamics(obj,q,qd,qdd)
             % inverse dynamics model taken from SL
-            u = wamInvDynamics(q,qd,qdd,obj.PAR);
+            u = barrettWamInvDynamicsNE(q,qd,qdd,obj.PAR);
         end
         
         % dynamics to qet Qd = [qd,qdd]
         function [Qd, varargout] = dynamics(obj,Q,u,flag)
             if flag
-                [Qd, dfdx, dfdu] = wamDynamics(Q,u,obj.PAR,flag);
+                [Qd, dfdx, dfdu] = barrettWamDynamicsArt(Q,u,obj.PAR,flag);
                 varargout{1} = dfdx;
                 varargout{2} = dfdu;
             else
-                Qd = wamDynamics(Q,u,obj.PAR,flag);
+                Qd = barrettWamDynamicsArt(Q,u,obj.PAR,flag);
             end
         end
         
