@@ -217,6 +217,7 @@ K(6,13) = 0.3;
 K(7,7) = 2.5;
 K(7,14) = 0.075;
 % TODO: load also u_max limits!
+K = K/2;
 
 % cost structure
 % only penalize positions
@@ -250,15 +251,15 @@ traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 % Generate feedback with LQR
 wam.generateFeedback(traj);
 % PD control
-%N = length(t) - 1;
-%for i = 1:N, FB(:,:,i) = -K; end
-%traj.K = FB;
+N = length(t) - 1;
+for i = 1:N, FB(:,:,i) = -K; end
+traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
 q0 = traj.s(:,1);
 % add zero velocity as disturbance
-q0(N_DOFS+1:end) = 0;
+%q0(N_DOFS+1:end) = 0;
 % observe output
 %qact = wam.evolve(t,q0,traj.unom);
 % observe with feedback

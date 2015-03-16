@@ -133,7 +133,8 @@ classdef BarrettWAM < Robot
         % dynamics to get u
         function u = invDynamics(obj,q,qd,qdd)
             % inverse dynamics model taken from SL
-            u = barrettWamInvDynamicsArt(q,qd,qdd,obj.PAR);
+            u = barrettWamInvDynamicsNE(q,qd,qdd,obj.PAR);
+            %u = barrettWamInvDynamicsArt(q,qd,qdd,obj.PAR);
         end
         
         % dynamics to qet Qd = [qd,qdd]
