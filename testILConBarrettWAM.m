@@ -37,12 +37,12 @@ SIM.dimy = 2*N_DOFS;
 % dimension of the control input
 SIM.dimu = N_DOFS;
 % time step h 
-SIM.h = 0.005; % 200 Hz recorded data
+SIM.h = 0.002; % 500 Hz recorded data
 % noise and initial error
 SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
 % integration method
-SIM.int = 'Euler';
+SIM.int = 'Symplectic Euler';
 % reference trajectory in joint space?
 SIM.jref = true;
 
@@ -217,7 +217,6 @@ K(6,13) = 0.3;
 K(7,7) = 2.5;
 K(7,14) = 0.075;
 % TODO: load also u_max limits!
-K = K/2;
 
 % cost structure
 % only penalize positions
@@ -231,11 +230,13 @@ wam = BarrettWAM(PAR,CON,COST,SIM);
 
 %% Generate inputs for a desired trajectory
 
+% TODO: scale down frequency
+
 % load percentage of trajectory from dmp file 
 %file = [prefs_folder,'dmp_strike.txt'];
 file = 'dmp.txt';
 M = dlmread(file);
-perc = 0.1; % learning on whole traj can be unstable unless LQR is used
+perc = 0.3; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
 t = M(:,1); t = t';
@@ -251,9 +252,9 @@ traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 % Generate feedback with LQR
 wam.generateFeedback(traj);
 % PD control
-N = length(t) - 1;
-for i = 1:N, FB(:,:,i) = -K; end
-traj.K = FB;
+%N = length(t) - 1;
+%for i = 1:N, FB(:,:,i) = -K; end
+%traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 

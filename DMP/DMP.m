@@ -93,7 +93,6 @@ classdef (Abstract) DMP < handle
         %
         function force = regressLive(obj,q,qd,qdd,goals)
 
-            dt = obj.can.dt;
             pat = obj.can.pattern;
             force = obj.FORCE;
             alpha = obj.alpha_g;

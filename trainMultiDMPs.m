@@ -2,6 +2,9 @@
 
 function dmp = trainMultiDMPs(t,q,qd)
 
+% scaling up to 500 Hz
+scale = 500/200;
+
 % number of demonstrations
 D = length(q);
 dof = size(q{1},2);
@@ -27,7 +30,7 @@ for i = 1:D
 end
 
 % canonical system
-h = tLin(2)-tLin(1);
+h = 0.005; % 200 Hz recordings
 tau = 1;
 ax = 2;
 nst = length(tf);
@@ -55,3 +58,7 @@ for i = 1:dof
     dmp(i).regressLive(q(:,i),qd(:,i),qdd(:,i),goal);
     
 end
+
+% scale evolution up to 500 Hz
+dmp(1).can.dt = h/scale; 
+dmp(1).can.N = scale * dmp(i).can.N;

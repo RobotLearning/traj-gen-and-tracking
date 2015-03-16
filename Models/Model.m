@@ -36,12 +36,20 @@ classdef (Abstract) Model < handle
         function next = step(obj,t,prev,u,fun)
             
             h = obj.SIM.h;
+            dim = obj.SIM.dimx/2;
             
             if obj.SIM.discrete
                 next = fun(t,prev,u);            
             elseif strcmpi(obj.SIM.int,'Euler')
                 delta = h * fun(t,prev,u);
-                next = prev + delta;                
+                next = prev + delta;          
+            elseif strcmpi(obj.SIM.int,'Symplectic Euler')
+                delta = h * fun(t,prev,u);
+                % compute the velocities
+                next_vel = prev(dim+1:end) + delta(dim+1:end);
+                % compute positions with those velocities
+                next_pos = prev(1:dim) + h * next_vel;
+                next = [next_pos; next_vel];
             elseif strcmpi(obj.SIM.int,'RK4')
                 % get trajectory of states
                 % using classical Runge-Kutta method (RK4)  

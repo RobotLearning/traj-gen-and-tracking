@@ -160,7 +160,8 @@ dmps = trainMultiDMPs(tcell,Q,Qd);
 % put into matrix form
 % t q1 qd1 q2 qd2 ... q7 qd7
 M = [];
-tLin = linspace(tNew(1),tNew(end),length(tNew));
+scale = 500/200; % 500 Hz instead of 200
+tLin = linspace(tNew(1),tNew(end),scale*length(tNew));
 M = tLin(:);
 figure;
 for j = 1:dof
