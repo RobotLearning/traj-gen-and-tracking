@@ -106,13 +106,15 @@ classdef BarrettWAM < Robot
             
             % change the masses slightly
             par = obj.PAR;
+            %{
             par.links(1).m = 0.00000 + .5; 
             par.links(2).m = 0.00000 + .5;
             par.links(3).m = 3.53923 + .5; 
             par.links(4).m = 1.03409 + .5;
             par.links(5).m = 2.28843 + .1;
             par.links(6).m = 0.25655 + .1; 
-            par.links(7).m = 0.63285 + .1; 
+            par.links(7).m = 0.63285 + .1;
+            %}
             x_dot = barrettWamDynamicsArt(x,u,par,false);
             
             

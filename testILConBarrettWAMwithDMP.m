@@ -257,7 +257,7 @@ bfs = 50;
 %file = [prefs_folder,'dmp_strike.txt'];
 file = 'dmp.txt';
 M = dlmread(file);
-perc = 0.2; % learning on whole traj can be unstable unless LQR is used
+perc = 0.1; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
 t = M(:,1); t = t';

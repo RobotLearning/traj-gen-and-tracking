@@ -236,7 +236,7 @@ wam = BarrettWAM(PAR,CON,COST,SIM);
 %file = [prefs_folder,'dmp_strike.txt'];
 file = 'dmp.txt';
 M = dlmread(file);
-perc = 0.3; % learning on whole traj can be unstable unless LQR is used
+perc = 0.5; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
 t = M(:,1); t = t';
@@ -253,14 +253,14 @@ traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 wam.generateFeedback(traj);
 % PD control
 %N = length(t) - 1;
-%for i = 1:N, FB(:,:,i) = -K; end
+%for i = 1:N, FB(:,:,i) = -K; end;
 %traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
 q0 = traj.s(:,1);
 % add zero velocity as disturbance
-%q0(N_DOFS+1:end) = 0;
+q0(N_DOFS+1:end) = 0;
 % observe output
 %qact = wam.evolve(t,q0,traj.unom);
 % observe with feedback
