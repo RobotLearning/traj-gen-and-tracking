@@ -176,7 +176,7 @@ M = [M, q(2,:)'];
 legend([vel{j},'\_dmp']);
 end
 
-dlmwrite('dmp.txt',M,'delimiter','\t','precision',3);
+dlmwrite('dmp.txt',M,'delimiter','\t','precision',6);
 save('dmps.mat','dmps');
 
 

@@ -236,7 +236,7 @@ wam = BarrettWAM(PAR,CON,COST,SIM);
 %file = [prefs_folder,'dmp_strike.txt'];
 file = 'dmp.txt';
 M = dlmread(file);
-perc = 0.5; % learning on whole traj can be unstable unless LQR is used
+perc = 0.1; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
 t = M(:,1); t = t';
@@ -252,15 +252,16 @@ traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 % Generate feedback with LQR
 wam.generateFeedback(traj);
 % PD control
-%N = length(t) - 1;
-%for i = 1:N, FB(:,:,i) = -K; end;
-%traj.K = FB;
+N = length(t) - 1;
+for i = 1:N, FB(:,:,i) = -K; end;
+traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
 q0 = traj.s(:,1);
-% add zero velocity as disturbance
-q0(N_DOFS+1:end) = 0;
+% add disturbances around zero velocity
+%q0(1:N_DOFS) = q0(1:N_DOFS) + 0.1 * randn(7,1);
+q0(N_DOFS+1:end) = 0.1 * randn(7,1);
 % observe output
 %qact = wam.evolve(t,q0,traj.unom);
 % observe with feedback
@@ -286,6 +287,9 @@ for i = 1:num_trials
     %qact = wam.evolve(t,q0,u);
     % evolve system with feedback
     traj.unom = u;
+    % add zero velocity as disturbance
+    q0 = traj.s(:,1);
+    q0(N_DOFS+1:end) = 0.001 * randn(7,1);
     [qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
     % add performance to trajectory
     traj.addPerformance(ufull,qact,wam.COST,ilc);
