@@ -91,8 +91,8 @@ classdef RR < Robot
             obj.SIM.h = sim.h;
             obj.SIM.eps = sim.eps;
             obj.SIM.eps_d = sim.eps_d;
-            assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
-                   'Please input Euler or RK4 as integration method');
+            %assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
+            %       'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;
             obj.flag_jspace = ~sim.cartesian;
             obj.flag_ref_jsp = sim.jref;
@@ -154,7 +154,7 @@ classdef RR < Robot
             par.link2.centre.dist = obj.PAR.link2.centre.dist;
             par.link1.inertia = obj.PAR.link1.inertia;
             par.link2.inertia = obj.PAR.link2.inertia;
-            par.link1.motor.inertia = 0.10;
+            par.link1.motor.inertia = 0.10;%obj.PAR.link1.motor.inertia;
             par.link2.motor.inertia = 0.10;
             par.link1.motor.gear_ratio = obj.PAR.link1.motor.gear_ratio;
             par.link2.motor.gear_ratio = obj.PAR.link2.motor.gear_ratio;

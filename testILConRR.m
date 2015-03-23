@@ -51,7 +51,7 @@ l2 = 0.40; %length of second link, m
 l_c1 = 0.25; %distance of first link's center of gravity to prev. joint, m
 l_c2 = 0.20; %dist. of second link's c.oZ.g. to prev. joint, m
 I1 = (1/12)*m1*l1^2; %assume thin rod moment of inertia around c.o.g.
-I2 = (1/12)*m1*l2^2; %kg m^2
+I2 = (1/12)*m2*l2^2; %kg m^2
 % motor parameters
 J_a1 = 0.100; % actuator inertia of link 1
 J_g1 = 0.050; % gear inertia of link1
@@ -101,8 +101,8 @@ rr = RR(PAR,CON,COST,SIM);
 h = SIM.h;
 tin = 0; tfin = 1;
 t = tin:h:tfin;
-y_des = 0.4 + 0.2 * t;
-x_des = 0.6 - 0.1 * t;
+y_des = 0.4 + 0.4 * t;
+x_des = 0.6 - 0.2 * t;
 ref = [x_des; y_des]; % displacement profile 
 traj = rr.generateInputs(t,ref); % trajectory generated in joint space
 
@@ -112,7 +112,7 @@ traj = rr.generateInputs(t,ref); % trajectory generated in joint space
 
 q0 = traj.s(:,1);
 % add nonzero velocity
-q0(3:4) = 0.1*rand(2,1);
+%q0(3:4) = 0.1*rand(2,1);
 % observe output
 qact = rr.observe(t,q0,traj.unom);
 % add performance to trajectory
@@ -123,31 +123,31 @@ rr.plot_inputs(traj);
 rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
 
-%% Start learning with ILC
+%% Start learning feedforward with ILC
 
-num_trials = 10;
-
-%ilc = aILC(rr,traj);
-ilc = mILC(rr,traj); 
-
-for i = 1:num_trials
-    % get next inputs
-    u = ilc.feedforward(traj,qact);
-    %u = ilc.feedforward(traj,rr,dev);
-    % evolve system
-    qact = rr.observe(t,q0,u);
-    % get the cartesian coordinates
-    %[~,y] = rr.kinematics(qact(1:2,:));
-    % add performance to trajectory
-    traj.addPerformance(u,qact,rr.COST,ilc);
-    % Plot the controls and animate the robot arm
-    %rr.animateArm(qact(1:2,:),ref);
-end
-
-% Plot the controls and animate the robot arm
-rr.plot_inputs(traj);
-rr.plot_outputs(traj);
-rr.animateArm(qact(1:2,:),ref);
+% num_trials = 10;
+% 
+% %ilc = aILC(rr,traj);
+% ilc = mILC(rr,traj); 
+% 
+% for i = 1:num_trials
+%     % get next inputs
+%     u = ilc.feedforward(traj,qact);
+%     %u = ilc.feedforward(traj,rr,dev);
+%     % evolve system
+%     qact = rr.observe(t,q0,u);
+%     % get the cartesian coordinates
+%     %[~,y] = rr.kinematics(qact(1:2,:));
+%     % add performance to trajectory
+%     traj.addPerformance(u,qact,rr.COST,ilc);
+%     % Plot the controls and animate the robot arm
+%     %rr.animateArm(qact(1:2,:),ref);
+% end
+% 
+% % Plot the controls and animate the robot arm
+% rr.plot_inputs(traj);
+% rr.plot_outputs(traj);
+% rr.animateArm(qact(1:2,:),ref);
 
 %% Learn with feedback
 
@@ -179,64 +179,67 @@ rr.animateArm(qact(1:2,:),ref);
 
 %% Change the reference slightly and see how the robot is doing
 
-% a new trajectory
-p1 = 0.35;
-p2 = 0.25;
-y_des = 0.4 + p1 * t;
-x_des =  0.6 - p2 * t;
-refNew = [x_des; y_des]; % displacement profile 
-
-trajNew = rr.generateInputs(t,refNew);
-rr.generateFeedback(trajNew);
-
-% observe output
-qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
-% add performance to trajectory
-trajNew.addPerformance(trajNew.unom,qact,rr.COST,'ID + LQR');
-
-% Plot the controls and animate the robot arm
-rr.plot_outputs(trajNew);
-rr.animateArm(qact(1:2,:),refNew);
-
-% test learning starting from scratch
-num_trials = 10;
-ilc.inp_last = trajNew.unom;
-for i = 1:num_trials
-    
-    us2 = ilc.feedforward(trajNew,qact);     
-    trajNew.unom = us2;
-    % get the measurements
-    qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
-    trajNew.addPerformance(us2,qact,rr.COST,ilc);
-
-end
-
-% Plot the controls and animate the robot arm
-rr.plot_inputs(trajNew);
-rr.plot_outputs(trajNew);
-rr.animateArm(qact(1:2,:),refNew);
-
-% test with learned inputs of old reference trajectory
-trajNew.unom = us;
-qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
-trajNew.addPerformance(us,qact,rr.COST,'OLD ILC');
-% Plot the controls and animate the robot arm
-rr.plot_outputs(trajNew);
-rr.animateArm(qact(1:2,:),refNew);
-
-% test learning starting from old inputs
-num_trials = 10;
-for i = 1:num_trials
-    
-    us = ilc.feedforward(trajNew,qact);     
-    trajNew.unom = us;
-    % get the measurements
-    qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
-    trajNew.addPerformance(us,qact,rr.COST,ilc);
-
-end
-
-% Plot the controls and animate the robot arm
-rr.plot_inputs(trajNew);
-rr.plot_outputs(trajNew);
-rr.animateArm(qact(1:2,:),refNew);
+% % a new trajectory
+% p1 = 0.3;
+% p2 = 0.1;
+% y_des = 0.4 + p1 * t;
+% x_des =  0.6 - p2 * t;
+% refNew = [x_des; y_des]; % displacement profile 
+% 
+% trajNew = rr.generateInputs(t,refNew);
+% rr.generateFeedback(trajNew);
+% 
+% q0 = trajNew.s(:,1);
+% % observe output
+% qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+% % add performance to trajectory
+% trajNew.addPerformance(trajNew.unom,qact,rr.COST,'ID + LQR');
+% 
+% % Plot the controls and animate the robot arm
+% rr.plot_outputs(trajNew);
+% rr.animateArm(qact(1:2,:),refNew);
+% 
+% % test learning starting from scratch
+% num_trials = 10;
+% ilc = mILC(rr,trajNew);
+% 
+% for i = 1:num_trials
+%     
+%     us2 = ilc.feedforward(trajNew,qact);     
+%     trajNew.unom = us2;
+%     % get the measurements
+%     qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+%     trajNew.addPerformance(us2,qact,rr.COST,ilc);
+% 
+% end
+% 
+% % Plot the controls and animate the robot arm
+% rr.plot_inputs(trajNew);
+% rr.plot_outputs(trajNew);
+% rr.animateArm(qact(1:2,:),refNew);
+% 
+% % test with learned inputs of old reference trajectory
+% trajNew.unom = us;
+% qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+% trajNew.addPerformance(us,qact,rr.COST,'OLD ILC');
+% % Plot the controls and animate the robot arm
+% rr.plot_outputs(trajNew);
+% rr.animateArm(qact(1:2,:),refNew);
+% 
+% % test learning starting from old inputs
+% num_trials = 10;
+% ilc = mILC(rr,trajNew);
+% for i = 1:num_trials
+%     
+%     us = ilc.feedforward(trajNew,qact);     
+%     trajNew.unom = us;
+%     % get the measurements
+%     qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+%     trajNew.addPerformance(us,qact,rr.COST,ilc);
+% 
+% end
+% 
+% % Plot the controls and animate the robot arm
+% rr.plot_inputs(trajNew);
+% rr.plot_outputs(trajNew);
+% rr.animateArm(qact(1:2,:),refNew);

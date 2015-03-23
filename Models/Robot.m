@@ -55,15 +55,15 @@ classdef (Abstract) Robot < Model
                 %qd = [zeros(dim,1), qd];
                 %qdd = [zeros(dim,1), qdd];
                 % assume you end with same velocity as before
-                qd(:,end+1) = qd(:,end);
+                %qd(:,end+1) = qd(:,end);
+                % linearly extrapolate (zero jerk at traj end)
+                qd(:,end+1) = qd(:,end) + qd(:,end) - qd(:,end-1);
             end
             
             qdd = diff(qd')' / h; 
             % assume you end with same acceleration as before
-            qdd(:,end+1) = qdd(:,end);
+            %qdd(:,end+1) = qdd(:,end);
             % this leads to large decelerations!
-            % add one more acceleration assuming q(end+1) = q(end)
-            %qdd(:,end+1) = (q(:,end-1) - q(:,end))/(h^2);
 
             % get the desired inputs
             Nu = length(t) - 1;

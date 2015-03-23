@@ -36,6 +36,9 @@ classdef wILC < ILC
         Psi
         % learning matrix
         L
+        
+        % flag for modifying only positions
+        modifyPosOnly
     end
     
     methods
@@ -54,6 +57,9 @@ classdef wILC < ILC
             Cout = obj.C;
             dim = size(Cout,2);
             obj.Psi = obj.formPsi(dim*N,traj.t);
+            
+            % modify only positions
+            obj.modifyPosOnly = false;
             
             % learning matrix
             obj.formL(model,traj);
@@ -105,8 +111,8 @@ classdef wILC < ILC
             dim = size(obj.C,2)/2;
             dim = floor(dim);
             % set learning rate
-            a_p = 0.5;
-            a_d = 0.2;
+            a_p = .5;
+            a_d = .2;
             %delta = a_p * dev + a_d * ddev;
             % construct learning matrix
             %L = diag((a_p+a_d)*ones(1,N),1) - a_d*eye(N+1);
@@ -181,6 +187,7 @@ classdef wILC < ILC
         
         function formL(obj,model,traj)
             
+            dim = model.SIM.dimx/2; % dof for positions
             K = traj.K;
             N = traj.N - 1;
             
@@ -188,18 +195,27 @@ classdef wILC < ILC
             %obj.basicL(traj);
             obj.lift(model,traj);
             
-            % take pinv(K) to reflect back on the trajectories s
-            
-            Kl = zeros(size(K,1)*N,size(K,2)*N);
-            % construct lifted domain matrix Kl
-            for l = 1:N
-                vec1 = (l-1)*size(K,1) + 1:l*size(K,1);
-                vec2 = (l-1)*size(K,2) + 1:l*size(K,2);
-                Kl(vec1,vec2) = K(:,:,l); % on diagonals only
+            if obj.modifyPosOnly
+                Kl = zeros(dim*N);
+                % construct lifted domain matrix Kl
+                for l = 1:N
+                    vec = (l-1)*dim + 1:l*dim;
+                    Kl(vec,vec) = K(1:dim,1:dim,l); % on diagonals only
+                end
+            else
+                % take pinv(K) to reflect back on the trajectories s            
+                Kl = zeros(size(K,1)*N,size(K,2)*N);
+                % construct lifted domain matrix Kl
+                for l = 1:N
+                    vec1 = (l-1)*size(K,1) + 1:l*size(K,1);
+                    vec2 = (l-1)*size(K,2) + 1:l*size(K,2);
+                    Kl(vec1,vec2) = K(:,:,l); % on diagonals only
+                end
             end
-            
+
             obj.L = pinv(Kl)*obj.L;
             %obj.L = Kl \ obj.L;
+                
             
         end
         
@@ -274,13 +290,22 @@ classdef wILC < ILC
             dev = y - traj.s;
             %dev = dev(:,2:end);
             Cout = obj.C;
-            dim = size(Cout,2);      
+            dim = size(Cout,2);
 
             % ILC update
-            s = obj.inp_last + obj.L*dev(:);
-            obj.inp_last = s;
-            % form back the trajectory
-            sbar = reshape(s,dim,N);
+            if obj.modifyPosOnly
+                posdiff = obj.L * dev(:);
+                % add zeros
+                posdiff = reshape(posdiff,dim/2,N);
+                state = reshape(obj.inp_last,dim,N);
+                sbar = state + [posdiff;zeros(dim/2,N)];
+                obj.inp_last = sbar(:);
+            else
+                s = obj.inp_last + obj.L*dev(:);
+                obj.inp_last = s;
+                % form back the trajectory
+                sbar = reshape(s,dim,N);
+            end
             %s = [Cout*sbar,traj.s(:,end)];
             s = [sbar,sbar(:,end)];
             

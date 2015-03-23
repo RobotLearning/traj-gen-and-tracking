@@ -37,7 +37,7 @@ SIM.h = 0.01;
 SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
 % integration method
-SIM.int = 'Euler';
+SIM.int = 'Symplectic Euler';
 % trajectory in joint space?
 SIM.jref = false;
 
@@ -51,7 +51,7 @@ l2 = 0.40; %length of second link, m
 l_c1 = 0.25; %distance of first link's center of gravity to prev. joint, m
 l_c2 = 0.20; %dist. of second link's c.oZ.g. to prev. joint, m
 I1 = (1/12)*m1*l1^2; %assume thin rod moment of inertia around c.o.g.
-I2 = (1/12)*m1*l2^2; %kg m^2
+I2 = (1/12)*m2*l2^2; %kg m^2
 % motor parameters
 J_a1 = 0.100; % actuator inertia of link 1
 J_g1 = 0.050; % gear inertia of link1
@@ -86,7 +86,7 @@ CON = [];
 
 % cost structure
 % only penalize positions
-COST.Q = 100*eye(SIM.dimy);
+COST.Q = 100*diag([1,1,0,0]);
 COST.R = 1 * eye(SIM.dimu);
 
 % initialize model
@@ -97,18 +97,19 @@ rr = RR(PAR,CON,COST,SIM);
 h = SIM.h;
 tin = 0; tfin = 1;
 t = tin:h:tfin;
-y_des = 0.4 + 0.1 * t;
+y_des = 0.4 + 0.4 * t;
 x_des = 0.6 - 0.2 * t;
 ref = [x_des; y_des]; % displacement profile 
 
-bfs = 20;
-[traj,dmp] = rr.generateInputsWithDMP(t,bfs,ref); % trajectory generated in joint space
+traj = rr.generateInputs(t,ref);
+%bfs = 20;
+%[traj,dmp] = rr.generateInputsWithDMP(t,bfs,ref); % trajectory generated in joint space
 
 % save dmp weights for later use
-w_origin = zeros(length(dmp),bfs);
-for i = 1:length(dmp)
-    w_origin(i,:) = dmp(i).FORCE.w;
-end
+% w_origin = zeros(length(dmp),bfs);
+% for i = 1:length(dmp)
+%     w_origin(i,:) = dmp(i).FORCE.w;
+% end
 
 % Generate feedback with LQR
 rr.generateFeedback(traj);
@@ -119,7 +120,8 @@ q0 = traj.s(:,1);
 % add zero velocity or perturb initial velocity
 %q0(3:4) = 0;
 % observe output
-qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
+qact = rr.observeWithFeedbackErrorForm(traj,q0);
+%qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
 % add performance to trajectory
 traj.addPerformance([],qact,rr.COST,'ID + LQR');
 
@@ -151,66 +153,67 @@ rr.animateArm(qact(1:2,:),ref);
 
 %% Fix a hitting region and see how the robot is doing
 
-% new reference in joint space
-rr.flag_ref_jsp = true;
-% center of the region
-g0 = traj.s(:,end);
-% radius of region
-r = 0.05;
-% sample a point from that region
-g = g0 + [0.02;0;0.02;0];
-[dmpNew,refNew] = adaptDMP(q0,g,dmp,w_origin);
-
-trajNew = rr.generateInputs(t,refNew);
-rr.generateFeedback(trajNew);
-
-% observe output
-qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmpNew);
-% add performance to trajectory
-trajNew.addPerformance([],qact,rr.COST,'ID + LQR');
-
-%ilc1 = wILC(trajNew,rr,'t');
-ilc1 = wILC(trajNew,rr,'dmp');
-
-for i = 1:num_trials
-    % get next inputs
-    dmpNew = ilc1.feedforward(trajNew,dmpNew,qact);
-    %traj3 = ilc1.feedforward(trajNew,[],qact);   
-    % get the measurements
-    qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmpNew);
-    %qact = rr.observeWithFeedbackErrorForm(traj3,q0);
-    trajNew.addPerformance([],qact,rr.COST,ilc1);
-    % Plot the controls and animate the robot arm
-    %rr.animateArm(qact(1:2,:),ref);
-end
-
-% Plot the controls and animate the robot arm
-rr.plot_outputs(trajNew);
-rr.animateArm(qact(1:2,:),refNew);
-
-% lets see how well the learned dmp generalizes
-qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
-trajNew.addPerformance([],qact,rr.COST,'OLD ILC');
-
-% Plot the controls and animate the robot arm
-rr.plot_outputs(trajNew);
-rr.animateArm(qact(1:2,:),refNew);
-
-%ilc2 = wILC(trajNew,rr,'t');
-ilc2 = wILC(trajNew,rr,'dmp');
-
-for i = 1:num_trials
-    % get next inputs
-    dmp = ilc2.feedforward(trajNew,dmp,qact);
-    %traj3 = ilc1.feedforward(trajNew,[],qact);   
-    % get the measurements
-    qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
-    %qact = rr.observeWithFeedbackErrorForm(traj3,q0);
-    trajNew.addPerformance([],qact,rr.COST,ilc2);
-    % Plot the controls and animate the robot arm
-    %rr.animateArm(qact(1:2,:),ref);
-end
-
-% Plot the controls and animate the robot arm
-rr.plot_outputs(trajNew);
-rr.animateArm(qact(1:2,:),refNew);
+% % new reference in joint space
+% rr.flag_ref_jsp = true;
+% % center of the region
+% g0 = traj.s(:,end);
+% % radius of region
+% r = 0.05;
+% % sample a point from that region
+% g = g0 + [0.02;0;0.02;0];
+% [dmpNew,refNew] = adaptDMP(q0,g,dmp,w_origin);
+% 
+% trajNew = rr.generateInputs(t,refNew);
+% rr.generateFeedback(trajNew);
+% 
+% % observe output
+% qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmpNew);
+% % add performance to trajectory
+% trajNew.addPerformance([],qact,rr.COST,'ID + LQR');
+% 
+% ilc1 = wILC(trajNew,rr,'t');
+% %ilc1 = wILC(trajNew,rr,'dmp');
+% num_trials = 100;
+% 
+% for i = 1:num_trials
+%     % get next inputs
+%     %dmpNew = ilc1.feedforward(trajNew,dmpNew,qact);
+%     traj3 = ilc1.feedforward(trajNew,[],qact);   
+%     % get the measurements
+%     %qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmpNew);
+%     qact = rr.observeWithFeedbackErrorForm(traj3,q0);
+%     trajNew.addPerformance([],qact,rr.COST,ilc1);
+%     % Plot the controls and animate the robot arm
+%     %rr.animateArm(qact(1:2,:),ref);
+% end
+% 
+% % Plot the controls and animate the robot arm
+% rr.plot_outputs(trajNew);
+% rr.animateArm(qact(1:2,:),refNew);
+% 
+% % lets see how well the learned dmp generalizes
+% qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
+% trajNew.addPerformance([],qact,rr.COST,'OLD ILC');
+% 
+% % Plot the controls and animate the robot arm
+% rr.plot_outputs(trajNew);
+% rr.animateArm(qact(1:2,:),refNew);
+% 
+% ilc2 = wILC(trajNew,rr,'t');
+% %ilc2 = wILC(trajNew,rr,'dmp');
+% 
+% for i = 1:num_trials
+%     % get next inputs
+%     %dmp = ilc2.feedforward(trajNew,dmp,qact);
+%     traj3 = ilc2.feedforward(trajNew,[],qact);   
+%     % get the measurements
+%     %qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
+%     qact = rr.observeWithFeedbackErrorForm(traj3,q0);
+%     trajNew.addPerformance([],qact,rr.COST,ilc2);
+%     % Plot the controls and animate the robot arm
+%     %rr.animateArm(qact(1:2,:),ref);
+% end
+% 
+% % Plot the controls and animate the robot arm
+% rr.plot_outputs(trajNew);
+% rr.animateArm(qact(1:2,:),refNew);
