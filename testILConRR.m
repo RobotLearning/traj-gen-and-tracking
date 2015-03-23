@@ -1,9 +1,5 @@
 %% Simulate trajectories for the planar RR arm
 %
-% TODO: Investigate the following
-%
-% Adding feedback 
-% slow down with DMP 
 
 %# store breakpoints
 tmp = dbstatus;
@@ -106,7 +102,7 @@ h = SIM.h;
 tin = 0; tfin = 1;
 t = tin:h:tfin;
 y_des = 0.4 + 0.2 * t;
-x_des = 0.6 * ones(1,length(t));
+x_des = 0.6 - 0.1 * t;
 ref = [x_des; y_des]; % displacement profile 
 traj = rr.generateInputs(t,ref); % trajectory generated in joint space
 
@@ -159,8 +155,8 @@ close all;
 traj = Trajectory(traj.t,traj.s,traj.unom,[]);
 % add feedback K to traj
 rr.generateFeedback(traj); % form feedback to stabilize
-ilc = mILC(rr,traj,1); % 1 means learn with feedback
-ilc.u_last = traj.unom;
+ilc = mILC(rr,traj); % 1 means learn with feedback
+ilc.inp_last = traj.unom;
 % observe output
 qact = rr.observeWithFeedbackErrorForm(traj,q0);
 traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics + LQR');
@@ -180,3 +176,67 @@ end
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
+
+%% Change the reference slightly and see how the robot is doing
+
+% a new trajectory
+p1 = 0.35;
+p2 = 0.25;
+y_des = 0.4 + p1 * t;
+x_des =  0.6 - p2 * t;
+refNew = [x_des; y_des]; % displacement profile 
+
+trajNew = rr.generateInputs(t,refNew);
+rr.generateFeedback(trajNew);
+
+% observe output
+qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+% add performance to trajectory
+trajNew.addPerformance(trajNew.unom,qact,rr.COST,'ID + LQR');
+
+% Plot the controls and animate the robot arm
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);
+
+% test learning starting from scratch
+num_trials = 10;
+ilc.inp_last = trajNew.unom;
+for i = 1:num_trials
+    
+    us2 = ilc.feedforward(trajNew,qact);     
+    trajNew.unom = us2;
+    % get the measurements
+    qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+    trajNew.addPerformance(us2,qact,rr.COST,ilc);
+
+end
+
+% Plot the controls and animate the robot arm
+rr.plot_inputs(trajNew);
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);
+
+% test with learned inputs of old reference trajectory
+trajNew.unom = us;
+qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+trajNew.addPerformance(us,qact,rr.COST,'OLD ILC');
+% Plot the controls and animate the robot arm
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);
+
+% test learning starting from old inputs
+num_trials = 10;
+for i = 1:num_trials
+    
+    us = ilc.feedforward(trajNew,qact);     
+    trajNew.unom = us;
+    % get the measurements
+    qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+    trajNew.addPerformance(us,qact,rr.COST,ilc);
+
+end
+
+% Plot the controls and animate the robot arm
+rr.plot_inputs(trajNew);
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);

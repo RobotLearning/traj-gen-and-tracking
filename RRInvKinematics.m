@@ -11,8 +11,8 @@ l1 = PAR.link1.length;
 l2 = PAR.link2.length;
 
 D = (x(1,:).^2 + x(2,:).^2 - l1^2 - l2^2) / (2*l1*l2);
-theta2 = atan(sqrt(1 - D.^2)./D);
-theta1 = atan(x(2,:)./x(1,:)) - atan(l2*sin(theta2)./(l1+l2*cos(theta2)));
+theta2 = atan2(sqrt(1 - D.^2),D);
+theta1 = atan2(x(2,:),x(1,:)) - atan2(l2*sin(theta2),(l1+l2*cos(theta2)));
 
 q = [theta1; theta2];
 

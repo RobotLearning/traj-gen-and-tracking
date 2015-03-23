@@ -22,17 +22,19 @@ classdef mILC < ILC
         name
         % costs incurred (Q-SSE)
         error
-        % flag for learning with feedback? [then model changes]
-        learn_fb
+        % flags
+        FLAG
         
         % ILC's Last input sequence
         inp_last
         % Lifted state matrix F (input-state) and G (state-output)
         F
         G
-        % Lifted penalty matrices Q and R
+        % Lifted penalty matrices Q and R 
         Ql
         Rl
+        % holding Finv in case F matrix is very big
+        Finv
     end
     
     methods
@@ -63,13 +65,23 @@ classdef mILC < ILC
             obj.Ql = zeros(N*dim_y, N*dim_y);
             obj.Rl = zeros(N*dim_u, N*dim_u);
             
-            obj.learn_fb = false;
+            % learn model with feedback?
+            obj.FLAG.learn_fb = false;
             if nargin == 3
-                obj.learn_fb = true;
+                obj.FLAG.learn_fb = true;
             end
             
+            % load Finv from a saved vector?
+            obj.FLAG.loadFinv = false;
+            
             % fill the F matrix
-            obj.lift(model,trj);
+            if (obj.FLAG.loadFinv)
+                Finv_vec = load('Finv_100perc.txt');
+                obj.Finv = reshape(Finv_vec,N*dim_u,N*dim_x);
+            else
+                obj.lift(model,trj);            
+                obj.Finv = pinv(obj.F);
+            end
             
         end
         
@@ -98,7 +110,7 @@ classdef mILC < ILC
             
                 Ad = model.Ad;
                 Bd = model.Bd;
-                if ~obj.learn_fb
+                if ~obj.FLAG.learn_fb
                     % construct lifted domain matrix F
                     % TODO: this can be computed much more efficiently
                     % for linear systems
@@ -134,7 +146,7 @@ classdef mILC < ILC
                 % get linear time variant matrices around trajectory
                 [Ad,Bd] = model.linearize(trj);
                 
-                if ~obj.learn_fb
+                if ~obj.FLAG.learn_fb
                     % construct lifted domain matrix F
                     for i = 1:N
                         for j = 1:i
@@ -190,7 +202,9 @@ classdef mILC < ILC
             %u = obj.inp_last(:) - obj.F \ dev(:);
             % more stable inverse based Newton-Raphson update
             % computes very high inverses though
-            u = obj.inp_last(:) - pinv(obj.F) * dev(:);
+            %u = obj.inp_last(:) - pinv(obj.F) * dev(:);
+            % in case F is very large
+            u = obj.inp_last(:) - obj.Finv * dev(:);
             % LM-type update
             %Mat = (obj.F' * obj.Ql * obj.F + obj.Rl) \ (obj.F' * obj.Ql);
             %u = obj.inp_last(:) - Mat * dev(:);

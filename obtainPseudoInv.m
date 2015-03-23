@@ -25,4 +25,4 @@ Rl = blkdiag(Rl{:});
 Finv = (F' * Ql * F + Rl) \ (F' * Ql);
 max(max(Finv))
 
-dlmwrite([folder,'Finv.txt'], Finv, 'delimiter', '\t');
+save([folder,'Finv.txt'], 'Finv', '-ascii');
