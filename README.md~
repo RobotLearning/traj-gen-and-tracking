@@ -17,5 +17,4 @@ TODO List:
 - Code DMP and wILC in SL
 - Make MATLAB experiments for generalizing ILC with Barrett arm
 
-- Symplectic Euler causes problems for convergence
-- Why does the height of the basis functions matter?
+- Symplectic Euler causes problems for 

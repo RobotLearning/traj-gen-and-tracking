@@ -72,7 +72,7 @@ classdef wILC < ILC
                 obj.inp_last = svec(1:end-dim);
                 obj.upd_meth = 't';
                 case 'w' 
-                obj.inp_last = pinv(obj.Psi) * svec(1:end-dim);
+                obj.inp_last = obj.Psi \ svec(1:end-dim);
                 obj.upd_meth = 'w';
                 case 'wd'
                 D = eye(N*dim) - diag(ones(1,(N-1)*dim),-dim);
@@ -94,7 +94,7 @@ classdef wILC < ILC
             N = length(t)-1;
             dimx = size(obj.C,2);
             Psi = zeros(dimx*N,bfs);
-            h = ones(bfs,1) * bfs^(1.5);
+            h = ones(bfs,1) * bfs^(2.5);
             c = linspace(t(1),t(end),bfs);
             tbar = linspace(t(1),t(end),dimx*N);
             for i = 1:bfs
@@ -235,7 +235,7 @@ classdef wILC < ILC
             dev = y - traj.s;   
             
             % ILC update
-            w = obj.inp_last + pinv(obj.Psi)*obj.L*dev(:);
+            w = obj.inp_last + obj.Psi \ obj.L*dev(:);
             obj.inp_last = w;
             % form back the trajectory
             sbar = obj.Psi * w;
@@ -335,7 +335,7 @@ classdef wILC < ILC
             qdd = diff(qd')'./h;
             qdd(:,end+1) = qdd(:,end);
     
-            goals= q(:,end);
+            goals = q(:,end);
             y0 = [q(:,1),qd(:,1)];
 
             for i = 1:length(dmp)

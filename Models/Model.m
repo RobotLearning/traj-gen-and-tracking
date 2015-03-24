@@ -205,7 +205,7 @@ classdef (Abstract) Model < handle
             % scaling
             tau = 1;
             % ensure that phase decays
-            exponent = 2;
+            exponent = 1;
             ax = exponent/(tau*t(end));            
             can = Canonical(h,ax,tau,N,pat);
             

@@ -151,16 +151,15 @@ rr.animateArm(qact(1:2,:),ref);
 
 %% Learn with feedback
 
-close all;
-traj = Trajectory(traj.t,traj.s,traj.unom,[]);
 % add feedback K to traj
 rr.generateFeedback(traj); % form feedback to stabilize
-ilc = mILC(rr,traj); % 1 means learn with feedback
-ilc.inp_last = traj.unom;
 % observe output
 qact = rr.observeWithFeedbackErrorForm(traj,q0);
 traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics + LQR');
 num_trials = 10;
+
+ilc = mILC(rr,traj); % 1 means learn with feedback
+ilc.inp_last = traj.unom;
 
 for i = 1:num_trials
     

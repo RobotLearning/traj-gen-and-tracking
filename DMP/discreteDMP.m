@@ -6,6 +6,7 @@
 %    convention
 % 2. yd now is the second dimension, as opposed to first
 %    
+% TODO: exponent of the heights make a difference in regression!
 %
 classdef discreteDMP < DMP
     
@@ -39,10 +40,12 @@ classdef discreteDMP < DMP
             obj.Y0 = yin;
             % get the last phase value
             xtr = obj.can.evolve();
+            % exponent of the heights make a difference in regression!
+            exponent = 1.5;
             % initialize forcing function here
             obj.FORCE.w = zeros(bfs,1);
-            obj.FORCE.h = ones(bfs,1) * bfs^(1.5);
-            obj.FORCE.c = linspace(xtr(end),1,bfs);
+            obj.FORCE.h = ones(bfs,1) * bfs^(exponent);
+            obj.FORCE.c = logspace(log10(xtr(end)),log10(1),bfs);
             obj.FORCE.Fs = [];
             % reset all states and phases
             obj.resetStates();

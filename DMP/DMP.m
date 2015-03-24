@@ -1,5 +1,7 @@
 % Dynamic motor primitive superclass
 % rhythmic and discrete DMPs inherit from this class
+%
+% TODO: clean the regression methods!
 
 classdef (Abstract) DMP < handle
     
@@ -123,7 +125,7 @@ classdef (Abstract) DMP < handle
             end
             % scale the psi matrices
             if strcmp(pat,'d')
-                scale = x ./ sum(Psi,2); 
+                scale = x ./ (sum(Psi,2)); 
             else
                 scale = 1 ./ (sum(Psi,2) + 1e-10);
             end
@@ -133,7 +135,7 @@ classdef (Abstract) DMP < handle
             % in case there are multiple demonstrations
             Psi = repmat(Psi,D,1);
             
-            % TODO: use pinv or add lambda to smoothen inverse
+            % use pinv or add lambda to smoothen inverse
             w = pinv(Psi) * fd(:);
             %w = Psi \ fd(:);
             force.w = w;

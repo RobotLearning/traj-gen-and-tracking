@@ -37,7 +37,7 @@ SIM.h = 0.01;
 SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
 % integration method
-SIM.int = 'Symplectic Euler';
+SIM.int = 'Euler';
 % trajectory in joint space?
 SIM.jref = false;
 
@@ -101,9 +101,10 @@ y_des = 0.4 + 0.4 * t;
 x_des = 0.6 - 0.2 * t;
 ref = [x_des; y_des]; % displacement profile 
 
-traj = rr.generateInputs(t,ref);
-%bfs = 20;
-%[traj,dmp] = rr.generateInputsWithDMP(t,bfs,ref); % trajectory generated in joint space
+%traj = rr.generateInputs(t,ref);
+bfs = 50;
+% trajectory generated in joint space
+[traj,dmp] = rr.generateInputsWithDMP(t,bfs,ref); 
 
 % save dmp weights for later use
 % w_origin = zeros(length(dmp),bfs);
@@ -127,21 +128,21 @@ traj.addPerformance([],qact,rr.COST,'ID + LQR');
 
 % Plot the controls and animate the robot arm
 rr.plot_outputs(traj);
-rr.animateArm(qact(1:2,:),ref);
+%rr.animateArm(qact(1:2,:),ref);
 
 %% Start learning with ILC
 
 num_trials = 10;
-ilc = wILC(traj,rr,'t');
-%ilc = wILC(traj,rr,'dmp');
+%ilc = wILC(traj,rr,'w');
+ilc = wILC(traj,rr,'dmp');
 
 for i = 1:num_trials
     % get next inputs
-    %dmp = ilc.feedforward(traj,dmp,qact);
-    traj2 = ilc.feedforward(traj,[],qact);   
+    dmp = ilc.feedforward(traj,dmp,qact);
+    %traj2 = ilc.feedforward(traj,[],qact);   
     % get the measurements
-    %qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
-    qact = rr.observeWithFeedbackErrorForm(traj2,q0);
+    qact = rr.observeWithFeedbackErrorForm(traj,q0,dmp);
+    %qact = rr.observeWithFeedbackErrorForm(traj2,q0);
     traj.addPerformance([],qact,rr.COST,ilc);
     % Plot the controls and animate the robot arm
     %rr.animateArm(qact(1:2,:),ref);
