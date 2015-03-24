@@ -156,7 +156,7 @@ rr.generateFeedback(traj); % form feedback to stabilize
 % observe output
 qact = rr.observeWithFeedbackErrorForm(traj,q0);
 traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics + LQR');
-num_trials = 10;
+num_trials = 5;
 
 ilc = mILC(rr,traj); % 1 means learn with feedback
 ilc.inp_last = traj.unom;

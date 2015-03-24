@@ -41,7 +41,7 @@ classdef discreteDMP < DMP
             % get the last phase value
             xtr = obj.can.evolve();
             % exponent of the heights make a difference in regression!
-            exponent = 1.5;
+            exponent = 2.5;
             % initialize forcing function here
             obj.FORCE.w = zeros(bfs,1);
             obj.FORCE.h = ones(bfs,1) * bfs^(exponent);

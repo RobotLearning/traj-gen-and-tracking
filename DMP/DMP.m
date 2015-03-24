@@ -136,8 +136,8 @@ classdef (Abstract) DMP < handle
             Psi = repmat(Psi,D,1);
             
             % use pinv or add lambda to smoothen inverse
-            w = pinv(Psi) * fd(:);
-            %w = Psi \ fd(:);
+            %w = pinv(Psi) * fd(:);
+            w = Psi \ fd(:);
             force.w = w;
             obj.setForcing(force);
 
