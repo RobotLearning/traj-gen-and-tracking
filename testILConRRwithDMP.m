@@ -152,7 +152,7 @@ end
 rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
 
-%% Fix a hitting region and see how the robot is doing
+%% Change the hitting point slightly and see how the robot is doing
 
 % new reference in joint space
 %rr.flag_ref_jsp = true;

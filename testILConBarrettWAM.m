@@ -230,8 +230,6 @@ wam = BarrettWAM(PAR,CON,COST,SIM);
 
 %% Generate inputs for a desired trajectory
 
-% TODO: scale down frequency
-
 % load percentage of trajectory from dmp file 
 %file = [prefs_folder,'dmp_strike.txt'];
 file = 'dmp.txt';
@@ -250,15 +248,15 @@ ref = [q';qd'];
 traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
 % Generate feedback with LQR
-%wam.generateFeedback(traj);
+wam.generateFeedback(traj);
 % Load feedback in case trajectory is very large
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)
-load('LQR0.txt','LQR0');
-for i = 1:length(t)-1, FB(:,:,i) = LQR0; end;
+%load('LQR0.txt','LQR0');
+%for i = 1:length(t)-1, FB(:,:,i) = LQR0; end;
 % PD control
 %for i = 1:length(t)-1, FB(:,:,i) = -K; end;
-traj.K = FB;
+%traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 

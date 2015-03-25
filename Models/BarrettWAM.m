@@ -106,7 +106,7 @@ classdef BarrettWAM < Robot
             
             % change the masses slightly
             par = obj.PAR;
-            %{
+            %%{
             par.links(1).m = 0.00000 + .5; 
             par.links(2).m = 0.00000 + .5;
             par.links(3).m = 3.53923 + .5; 
