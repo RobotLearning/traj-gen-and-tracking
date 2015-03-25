@@ -201,21 +201,27 @@ traj.addPerformance([],qact,rr.COST,'ID + LQR');
 wnew = wbar * a;
 % deal to individual dmps
 wnew = reshape(wnew,length(wnew)/length(dmp),length(dmp));
+
 for i = 1:length(dmp)
 
     % set/update goal and initial state
     dmp(i).setInitState(wnew(1:2,i));
     % initial states of DMPs
-    dmp(i).setGoal(wnew(end-1:end,i));
+    dmp(i).setGoal(wnew(end,i));
     % set weights of dmp
-    dmp(i).FORCE.w = wnew(3:end-2,i);
+    dmp(i).FORCE.w = wnew(3:end-1,i);
+    [~,Q] = dmp(i).evolve();
+    q(i,:) = Q(1,:);
 end
 
 ilc = wILC(traj,rr,'dmp');
+inp = q(:);
+dim = SIM.dimx;
+inp = inp(1:end-dim);
 
 qact = rr.observeWithFeedbackErrorForm(traj,qin,dmp);
 % add performance to trajectory
-traj.addPerformance([],qact,rr.COST,'ID + LQR');
+traj.addPerformance(inp,qact,rr.COST,ilc);
 
 for j = 1:num_trials
     % get next inputs
