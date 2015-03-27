@@ -37,7 +37,7 @@ SIM.dimy = 2*N_DOFS;
 % dimension of the control input
 SIM.dimu = N_DOFS;
 % time step h 
-SIM.h = 0.005; % 200 Hz recorded data
+SIM.h = 0.002; % 500 Hz recorded data
 % noise and initial error
 SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
@@ -257,7 +257,7 @@ bfs = 50;
 %file = [prefs_folder,'dmp_strike.txt'];
 file = 'dmp.txt';
 M = dlmread(file);
-perc = 0.1; % learning on whole traj can be unstable unless LQR is used
+perc = 0.5; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
 t = M(:,1); t = t';
@@ -300,16 +300,16 @@ wam.plot_outputs(traj);
 %% Start learning with ILC
 
 num_trials = 5;
-%ilc = wILC(traj,wam,'t');
-ilc = wILC(traj,wam,'dmp');
+ilc = wILC(traj,wam,'t');
+%ilc = wILC(traj,wam,'dmp');
 
 for i = 1:num_trials
     % get next inputs
-    %traj2 = ilc.feedforward(traj,[],qact);   
-    dmp = ilc.feedforward(traj,dmp,qact);  
+    traj2 = ilc.feedforward(traj,[],qact);   
+    %dmp = ilc.feedforward(traj,dmp,qact);  
     % get the measurements
-    %qact = wam.observeWithFeedbackErrorForm(traj2,q0);
-    qact = wam.observeWithFeedbackErrorForm(traj,q0,dmp);
+    qact = wam.observeWithFeedbackErrorForm(traj2,q0);
+    %qact = wam.observeWithFeedbackErrorForm(traj,q0,dmp);
     traj.addPerformance([],qact,wam.COST,ilc);
     % Plot the controls and animate the robot arm
     %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);

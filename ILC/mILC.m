@@ -40,7 +40,8 @@ classdef mILC < ILC
     methods
         
         %% Constructor for model-based ILC
-        % varargin is for learning with feedback, better way?
+        % varargin1 is for learning with feedback
+        % varargin2 is for loading Finv vectorized from a text file
         function obj = mILC(model,trj,varargin)
                         
             obj.episode = 0;
@@ -67,12 +68,10 @@ classdef mILC < ILC
             
             % learn model with feedback?
             obj.FLAG.learn_fb = false;
-            if nargin == 3
-                obj.FLAG.learn_fb = true;
-            end
-            
-            % load Finv from a saved vector?
             obj.FLAG.loadFinv = false;
+            if nargin >= 3
+                obj.FLAG.loadFinv = varargin{1};
+            end
             
             % fill the F matrix
             if (obj.FLAG.loadFinv)

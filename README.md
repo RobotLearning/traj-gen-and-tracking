@@ -14,7 +14,7 @@ General Issues:
 Technical Issues:
 - Symplectic Euler causes problems for convergence
 - Why does the width (h) of the basis functions matter?
-- Reference DMP should start with zero velocity
+- Reference DMP (e.g. loaded dmp.txt) should start with zero velocity
 - Why do we have to run kinematics for generalizing ILC, i.e. [~,refNew] = rr.kinematics(jNew);
 - How can we learn with a smaller (e.g. 20) number of weights?
 - Why are two tracking LQRs not exactly the same (at the end)? 
@@ -22,3 +22,14 @@ Technical Issues:
 - Effects of error coupling on DMPs?
 - Avoid large accelerations/large control inputs at start/end
   of DMP?
+
+reduce frequency of trajectories:
+
+-load dmp
+-downsample to 50 hz
+-construct F in 50 hz
+-traj.t should be in 50 hz
+-update u's in 50 hz
+-upsample to 500 hz
+
+-dont change feedback freq

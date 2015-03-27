@@ -40,6 +40,7 @@ classdef (Abstract) Robot < Model
         function Traj = generateInputs(obj,t,ref)
 
             h = obj.SIM.h;
+            dt = t(2) - t(1); % different from h if downsampled
             dim = obj.SIM.dimx / 2;
             dimu = obj.SIM.dimu;
             Cout = obj.C;
@@ -50,7 +51,7 @@ classdef (Abstract) Robot < Model
             else
                 % assuming that only positions are demonstrated
                 q = obj.invKinematics(ref);
-                qd = diff(q')' / h; 
+                qd = diff(q')' / dt; 
                 % start with zero initial velocity
                 %qd = [zeros(dim,1), qd];
                 %qdd = [zeros(dim,1), qdd];
@@ -60,7 +61,7 @@ classdef (Abstract) Robot < Model
                 qd(:,end+1) = qd(:,end) + qd(:,end) - qd(:,end-1);
             end
             
-            qdd = diff(qd')' / h; 
+            qdd = diff(qd')' / dt; 
             % assume you end with same acceleration as before
             %qdd(:,end+1) = qdd(:,end);
             % this leads to large decelerations!
@@ -78,7 +79,7 @@ classdef (Abstract) Robot < Model
             else
                 %xd = obj.jac * qd;
                 x =  ref;
-                xd = diff(x')'/h;
+                xd = diff(x')'/dt;
                 xd(:,end+1) = xd(:,end);
                 Traj = Trajectory(t,Cout*[x;xd],uff,[]);
             end            

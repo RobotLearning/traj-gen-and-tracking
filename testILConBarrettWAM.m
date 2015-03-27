@@ -237,18 +237,27 @@ M = dlmread(file);
 perc = 1.0; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
-t = M(:,1); t = t';
+%t = M(:,1); 
+t = SIM.h * (1:len);
 % order for refs in file: q1 qd1, ...
 % switching to order: q1 ... q7, qd1, ..., qd7
 q = M(:,2:2:2*N_DOFS);
 qd = M(:,3:2:2*N_DOFS+1);
 ref = [q';qd'];
 
+% downsample reference
+freq = 50;
+freq_original = 500;
+rate = freq_original/freq;
+idx = rate * (1:length(t)/rate);
+refDown = ref(:,idx);
+tDown = t(idx);
+
 %[traj,dmp] = wam.generateInputsWithDMP(t,50,ref);
-traj = wam.generateInputs(t,ref); % trajectory generated in joint space
+trajDown = wam.generateInputs(tDown,refDown); % trajectory generated in joint space
 
 % Generate feedback with LQR
-wam.generateFeedback(traj);
+wam.generateFeedback(trajDown);
 % Load feedback in case trajectory is very large
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)
@@ -260,46 +269,47 @@ wam.generateFeedback(traj);
 
 %% Evolve system dynamics and animate the robot arm
 
-q0 = traj.s(:,1);
+%q0 = traj.s(:,1);
+q0 = ref(:,1);
 % add disturbances around zero velocity
 %q0(1:N_DOFS) = q0(1:N_DOFS) + 0.1 * randn(7,1);
-q0(N_DOFS+1:end) = 0; %0.1 * randn(7,1);
+%q0(N_DOFS+1:end) = 0; %0.1 * randn(7,1);
 % observe output
 %qact = wam.evolve(t,q0,traj.unom);
 % observe with feedback
-[qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
+[qact,ufull] = wam.observeWithFeedbackErrorForm(trajDown,q0);
 % add performance to trajectory
-%traj.addPerformance(traj.unom,qact,wam.COST,'Inverse Dynamics');
-traj.addPerformance(ufull,qact,wam.COST,'ID + FB');
+%traj.addPerformance(traj.unom,qact,wam.COST,'ID');
+trajDown.addPerformance(ufull,qact,wam.COST,'ID + FB');
 
 % Plot the controls and animate the robot arm
-wam.plot_inputs(traj);
-wam.plot_outputs(traj);
+wam.plot_inputs(trajDown);
+wam.plot_outputs(trajDown);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
 
 %% Start learning with ILC
 
 num_trials = 10;
-ilc = mILC(wam,traj); 
+ilc = mILC(wam,trajDown); %1 means load Finv
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforward(traj,qact);
+    u = ilc.feedforward(trajDown,qact);
     % evolve system
     %qact = wam.evolve(t,q0,u);
     % evolve system with feedback
-    traj.unom = u;
+    trajDown.unom = u;
     % add zero velocity as disturbance
-    q0 = traj.s(:,1);
-    q0(N_DOFS+1:end) = 0; %0.001 * randn(7,1);
-    [qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
+    %q0 = traj.s(:,1);
+    %q0(N_DOFS+1:end) = 0; %0.001 * randn(7,1);
+    [qact,ufull] = wam.observeWithFeedbackErrorForm(trajDown,q0);
     % add performance to trajectory
-    traj.addPerformance(ufull,qact,wam.COST,ilc);
+    trajDown.addPerformance(ufull,qact,wam.COST,ilc);
     % Plot the controls and animate the robot arm
     %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
 end
 
 % Plot the controls and animate the robot arm
-wam.plot_inputs(traj);
-wam.plot_outputs(traj);
+wam.plot_inputs(trajDown);
+wam.plot_outputs(trajDown);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);

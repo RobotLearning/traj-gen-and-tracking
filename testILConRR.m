@@ -37,7 +37,7 @@ SIM.h = 0.01;
 SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
 % integration method
-SIM.int = 'Euler';
+SIM.int = 'Symplectic Euler';
 % trajectory in joint space?
 SIM.jref = false;
 
@@ -116,7 +116,7 @@ q0 = traj.s(:,1);
 % observe output
 qact = rr.observe(t,q0,traj.unom);
 % add performance to trajectory
-traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics');
+traj.addPerformance(traj.unom,qact,rr.COST,'ID');
 
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
@@ -154,8 +154,8 @@ rr.animateArm(qact(1:2,:),ref);
 % add feedback K to traj
 rr.generateFeedback(traj); % form feedback to stabilize
 % observe output
-qact = rr.observeWithFeedbackErrorForm(traj,q0);
-traj.addPerformance(traj.unom,qact,rr.COST,'Inverse Dynamics + LQR');
+[qact,ufull] = rr.observeWithFeedbackErrorForm(traj,q0);
+traj.addPerformance(traj.unom,qact,rr.COST,'ID + LQR');
 num_trials = 5;
 
 ilc = mILC(rr,traj); % 1 means learn with feedback
@@ -166,8 +166,8 @@ for i = 1:num_trials
     us = ilc.feedforward(traj,qact);     
     traj.unom = us;
     % get the measurements
-    qact = rr.observeWithFeedbackErrorForm(traj,q0);
-    traj.addPerformance(us,qact,rr.COST,ilc);
+    [qact,ufull] = rr.observeWithFeedbackErrorForm(traj,q0);
+    traj.addPerformance(ufull,qact,rr.COST,ilc);
 
 end
 

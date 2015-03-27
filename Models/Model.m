@@ -113,6 +113,9 @@ classdef (Abstract) Model < handle
         % DMP can be supplied as an additional argument
         function [y,u] = observeWithFeedbackErrorForm(obj,traj,x0,varargin)
             fun = @(t,x,u) obj.actual(t,x,u);
+            hModel = obj.SIM.h;
+            hTraj = traj.t(2) - traj.t(1);
+            traj = traj.upsample(hTraj/hModel);
             t = traj.t;
             h = t(2) - t(1);
             K = traj.K;

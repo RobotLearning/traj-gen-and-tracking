@@ -47,6 +47,15 @@ classdef Trajectory < handle
                 name = controller.name;
             end
             
+            % downsample u,y if necessary
+            n = size(u,2);
+            if n ~= obj.N
+                rate = n / obj.N;
+                idx = rate * (1:obj.N);
+                u = u(:,idx);
+                y = y(:,idx);
+            end
+            
             % append performance
             i = length(obj.PERF);
             obj.PERF(i+1).name = name;
@@ -57,7 +66,8 @@ classdef Trajectory < handle
 
             % display SSE error
             sse = sum(obj.PERF(i+1).cost);
-            fprintf('%d. trial: SSE for %s is %f \n', i+1, name, sse);
+            rms = sqrt(sse/obj.N);
+            fprintf('%d. trial: RMS for %s is %f \n', i+1, name, rms);
             
             if ~ischar(controller) && ~isempty(u)
                 controller.record(u,sse);
@@ -69,6 +79,54 @@ classdef Trajectory < handle
         function sbar = projectBack(obj,C)
             
             sbar = C'*((C*C')\obj.s);
+        end
+        
+        %% Upsample/downsample functions 
+        
+        function trajDown = downsample(obj,rate)
+            
+            if rate == 1
+                trajDown = obj;
+                return;
+            end
+            
+            N = obj.N/rate;
+            idx = rate * (1:N);
+            t = obj.t(idx);
+            s = obj.s(:,idx);
+            unom = obj.unom(idx);
+            
+            if ~isempty(obj.K)
+                K = obj.K(:,:,idx);
+            else
+                K = [];
+            end
+            
+            trajDown = Trajectory(t,s,unom,K);
+            
+        end
+        
+        function trajUp = upsample(obj,rate)
+            
+            if rate == 1
+                trajUp = obj;
+                return;
+            end
+            
+            N = obj.N * rate;
+            t = linspace(obj.t(1),obj.t(end),N);
+            s = interp1(obj.t(:),obj.s,t(:),'linear');
+            unom = interp1(obj.t(:),obj.unom,t(:),'linear');
+            
+            if ~isempty(obj.K)
+                K = interp1(obj.t(:),obj.K,t(:),'linear');
+            else
+                K = [];
+            end
+
+            trajUp = Trajectory(t,s,unom,K);           
+            
+            
         end
         
     end
