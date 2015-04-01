@@ -1,17 +1,23 @@
 TODO List:
 
 General Issues:
-- Correct DMP wILC with Barrett arm
-- Test filtering functions in SL. How to make ILC work with noisy errors? Check aILC?
-- Is LQR different on SL for different trajectories? Can we construct LQR matrix K online?
-- Adapt to Yanlong's table tennis scenario in SL
-- Possible to reduce computation time by scaling down frequency of ILC/DMP? [e.g. to 200 Hz]
-- Correct paper, put simulation results + comparison with REPS,PI2
-- Load weights of DMP in SL instead of traj
-- Code DMP and wILC in SL
-- Make MATLAB experiments for generalizing ILC with Barrett arm
+
+1. Downsample trajectories for WAM and show ILC working
+2. Correct wILC with Barrett ARM.
+3. Test filtering functions in SL.
+4. How to make ILC work with noisy errors?
+5. How does aILC work perform on the robot classes?
+6. Investigate LQR differences for different trajectories. 
+7. Adapt ILC fully to Yanlong's table tennis task. Check the different functions in SL for table tennis.
+8. Correct paper with new results, change methodology
+9. Implement EM and then REPS, PI2 algorithms on MATLAB
+10. Code DMP in SL, check ddmp code of Jens.
+11. Make MATLAB experiments for generalization: DDP, regression, convex hull learning
+12. Try simple ILC on the robot with a whole trajectory
+13. Fast ways to construct/parameterize LQR matrix K online?
 
 Technical Issues:
+
 - Symplectic Euler causes problems for convergence
 - Why does the width (h) of the basis functions matter?
 - Reference DMP (e.g. loaded dmp.txt) should start with zero velocity
@@ -22,14 +28,4 @@ Technical Issues:
 - Effects of error coupling on DMPs?
 - Avoid large accelerations/large control inputs at start/end
   of DMP?
-
-reduce frequency of trajectories:
-
--load dmp
--downsample to 50 hz
--construct F in 50 hz
--traj.t should be in 50 hz
--update u's in 50 hz
--upsample to 500 hz
-
--dont s
+- How to apply/compute feedback when downsampling traj.?

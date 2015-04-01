@@ -249,7 +249,7 @@ ref = [q';qd'];
 freq = 50;
 freq_original = 500;
 rate = freq_original/freq;
-idx = rate * (1:length(t)/rate);
+idx = rate * (1:perc*length(t)/rate);
 refDown = ref(:,idx);
 tDown = t(idx);
 
@@ -257,15 +257,15 @@ tDown = t(idx);
 trajDown = wam.generateInputs(tDown,refDown); % trajectory generated in joint space
 
 % Generate feedback with LQR
-wam.generateFeedback(trajDown);
+%wam.generateFeedback(trajDown);
 % Load feedback in case trajectory is very large
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)
 %load('LQR0.txt','LQR0');
-%for i = 1:length(t)-1, FB(:,:,i) = LQR0; end;
+%for i = 1:length(tDown)-1, FB(:,:,i) = LQR0; end;
 % PD control
-%for i = 1:length(t)-1, FB(:,:,i) = -K; end;
-%traj.K = FB;
+for i = 1:length(tDown)-1, FB(:,:,i) = -K; end;
+trajDown.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
@@ -289,7 +289,7 @@ wam.plot_outputs(trajDown);
 
 %% Start learning with ILC
 
-num_trials = 10;
+num_trials = 1;
 ilc = mILC(wam,trajDown); %1 means load Finv
 
 for i = 1:num_trials

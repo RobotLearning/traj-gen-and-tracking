@@ -183,7 +183,11 @@ classdef mILC < ILC
         function u = feedforward(obj,trj,y)
             
             dimu = size(obj.inp_last,1);
-            N = size(obj.inp_last,2);
+            Nu = size(obj.inp_last,2);
+            N = Nu + 1;
+            rate = size(y,2)/N;
+            idx = rate * (1:N);
+            y = y(:,idx);
             
             dev = y - trj.s;
             h = trj.t(2) - trj.t(1);
@@ -209,7 +213,7 @@ classdef mILC < ILC
             %u = obj.inp_last(:) - Mat * dev(:);
             
             % revert from lifted vector from back to normal form
-            u = reshape(u,dimu,N);
+            u = reshape(u,dimu,Nu);
             
         end
         

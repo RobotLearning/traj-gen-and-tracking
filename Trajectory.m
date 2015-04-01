@@ -48,11 +48,11 @@ classdef Trajectory < handle
             end
             
             % downsample u,y if necessary
-            n = size(u,2);
+            n = size(y,2);
             if n ~= obj.N
                 rate = n / obj.N;
                 idx = rate * (1:obj.N);
-                u = u(:,idx);
+                u = u(:,idx(1:end-1));
                 y = y(:,idx);
             end
             
@@ -114,12 +114,15 @@ classdef Trajectory < handle
             end
             
             N = obj.N * rate;
-            t = linspace(obj.t(1),obj.t(end),N);
-            s = interp1(obj.t(:),obj.s,t(:),'linear');
-            unom = interp1(obj.t(:),obj.unom,t(:),'linear');
+            t = linspace(obj.t(1)/rate,obj.t(end),N);
+            s = interp1(obj.t,obj.s',t,'linear','extrap')';
+            unom = interp1(obj.t(1:end-1),obj.unom',t,'linear','extrap')';
             
             if ~isempty(obj.K)
-                K = interp1(obj.t(:),obj.K,t(:),'linear');
+                % form 2d K
+                K = reshape(obj.K,[],obj.N - 1);
+                K = interp1(obj.t(1:end-1),K',t,'linear','extrap')';
+                K = reshape(K,[size(obj.K,1),size(obj.K,2),N]);                
             else
                 K = [];
             end

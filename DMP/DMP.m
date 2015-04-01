@@ -137,7 +137,9 @@ classdef (Abstract) DMP < handle
             
             % use pinv or add lambda to smoothen inverse
             %w = pinv(Psi) * fd(:);
-            w = Psi \ fd(:);
+            %w = Psi \ fd(:);
+            lambda = 1e-6;
+            w = ((Psi' * Psi + lambda*eye(lenw)) \ (Psi')) * fd(:);
             force.w = w;
             obj.setForcing(force);
 
@@ -198,9 +200,12 @@ classdef (Abstract) DMP < handle
             scale = repmat(scale,1,lenw);
             Psi = Psi .* scale;
             
-            % TODO: use pinv or add lambda to smoothen inverse
-            w = pinv(Psi) * fd(:);
+            %w = pinv(Psi) * fd(:);
             %w = Psi \ fd(:);
+            % add lambda to smoothen inverse
+            lambda = 1e-6;
+            w = ((Psi' * Psi + lambda*eye(lenw)) \ (Psi')) * fd(:);
+            
             force.w = w;
 
         end
