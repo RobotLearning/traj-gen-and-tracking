@@ -37,7 +37,7 @@ SIM.h = 0.01;
 SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
 % integration method
-SIM.int = 'Symplectic Euler';
+SIM.int = 'Euler';
 % trajectory in joint space?
 SIM.jref = false;
 
@@ -99,29 +99,43 @@ rr = RR(PAR,CON,COST,SIM);
 % Put Jacobian in Kinematics
 
 h = SIM.h;
-tin = 0; tfin = 1;
+tin = h; tfin = 1;
 t = tin:h:tfin;
 y_des = 0.4 + 0.4 * t;
 x_des = 0.6 - 0.2 * t;
 ref = [x_des; y_des]; % displacement profile 
+
+% downsample reference
+freq = 50;
+freq_original = 100;
+rate = freq_original/freq;
+idx = rate * (1:length(t)/rate);
+ref = ref(:,idx);
+t = t(idx);
+
 traj = rr.generateInputs(t,ref); % trajectory generated in joint space
 
 %% Evolve system dynamics and animate the robot arm
 
-% TODO: add a nonzero friction matrix B
+% add feedback K to traj
+rr.generateFeedback(traj); % form feedback to stabilize
 
+%q0 = [0.0325; 1.2901; 0.7065; -0.2238];
 q0 = traj.s(:,1);
 % add nonzero velocity
 %q0(3:4) = 0.1*rand(2,1);
 % observe output
-qact = rr.observe(t,q0,traj.unom);
+%qact = rr.observe(t,q0,traj.unom);
 % add performance to trajectory
-traj.addPerformance(traj.unom,qact,rr.COST,'ID');
+%traj.addPerformance(traj.unom,qact,rr.COST,'ID');
+% observe output
+[qact,ufull] = rr.observeWithFeedbackErrorForm(traj,q0);
+traj.addPerformance(ufull,qact,rr.COST,'ID + LQR');
 
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
-rr.animateArm(qact(1:2,:),ref);
+%rr.animateArm(qact(1:2,:),ref);
 
 %% Start learning feedforward with ILC
 
@@ -151,15 +165,10 @@ rr.animateArm(qact(1:2,:),ref);
 
 %% Learn with feedback
 
-% add feedback K to traj
-rr.generateFeedback(traj); % form feedback to stabilize
-% observe output
-[qact,ufull] = rr.observeWithFeedbackErrorForm(traj,q0);
-traj.addPerformance(traj.unom,qact,rr.COST,'ID + LQR');
 num_trials = 5;
 
-ilc = mILC(rr,traj); % 1 means learn with feedback
-ilc.inp_last = traj.unom;
+ilc = mILC(rr,traj); 
+%ilc.inp_last = traj.unom;
 
 for i = 1:num_trials
     
@@ -174,7 +183,7 @@ end
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
-rr.animateArm(qact(1:2,:),ref);
+%rr.animateArm(qact(1:2,:),ref);
 
 %% Change the reference slightly and see how the robot is doing
 

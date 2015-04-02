@@ -164,7 +164,7 @@ COST.R = R;
 lin = Linear(PAR,CON,COST,SIM);
 % create the model based ilc
 ilc = mILC(lin,trj);
-ilc.u_last = u;
+ilc.inp_last = u;
 num_trials = 1;
 
 % Perform ILC updates

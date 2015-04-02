@@ -257,7 +257,7 @@ classdef (Abstract) Model < handle
             
             dimx = obj.SIM.dimx;
             dimu = obj.SIM.dimu;
-            h = obj.SIM.h;
+            %h = obj.SIM.h;
             unom = trj.unom;
             A = zeros(dimx,dimx,N);
             B = zeros(dimx,dimu,N);

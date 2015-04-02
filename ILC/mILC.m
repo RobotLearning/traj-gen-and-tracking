@@ -68,19 +68,10 @@ classdef mILC < ILC
             
             % learn model with feedback?
             obj.FLAG.learn_fb = false;
-            obj.FLAG.loadFinv = false;
-            if nargin >= 3
-                obj.FLAG.loadFinv = varargin{1};
-            end
             
-            % fill the F matrix
-            if (obj.FLAG.loadFinv)
-                Finv_vec = load('Finv_100perc.txt');
-                obj.Finv = reshape(Finv_vec,N*dim_u,N*dim_x);
-            else
-                obj.lift(model,trj);            
-                obj.Finv = pinv(obj.F);
-            end
+            obj.lift(model,trj);            
+            obj.Finv = (obj.F' * obj.F)\(obj.F');
+            %obj.Finv = pinv(obj.F); % takes much more time!
             
         end
         

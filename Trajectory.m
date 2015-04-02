@@ -23,6 +23,8 @@ classdef Trajectory < handle
         % sp
         % particular algorithm's performance as array of structures
         PERF
+        % interpolation method when upsampling
+        upsampling
     end
     
     methods (Access = public)
@@ -34,6 +36,7 @@ classdef Trajectory < handle
             obj.s = s;
             obj.unom = unom;
             obj.K = K;
+            obj.upsampling = 'linear';
         end
         
         %% Add performances of learning algorithms
@@ -115,13 +118,13 @@ classdef Trajectory < handle
             
             N = obj.N * rate;
             t = linspace(obj.t(1)/rate,obj.t(end),N);
-            s = interp1(obj.t,obj.s',t,'linear','extrap')';
-            unom = interp1(obj.t(1:end-1),obj.unom',t,'linear','extrap')';
+            s = interp1(obj.t,obj.s',t,obj.upsampling,'extrap')';
+            unom = interp1(obj.t(1:end-1),obj.unom',t,obj.upsampling,'extrap')';
             
             if ~isempty(obj.K)
                 % form 2d K
                 K = reshape(obj.K,[],obj.N - 1);
-                K = interp1(obj.t(1:end-1),K',t,'linear','extrap')';
+                K = interp1(obj.t(1:end-1),K',t,obj.upsampling,'extrap')';
                 K = reshape(K,[size(obj.K,1),size(obj.K,2),N]);                
             else
                 K = [];
