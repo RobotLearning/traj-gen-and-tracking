@@ -69,9 +69,10 @@ classdef mILC < ILC
             % learn model with feedback?
             obj.FLAG.learn_fb = false;
             
-            obj.lift(model,trj);            
-            obj.Finv = (obj.F' * obj.F)\(obj.F');
-            %obj.Finv = pinv(obj.F); % takes much more time!
+            obj.lift(model,trj);
+            %L = 0.5 * eye(size(obj.F,2));
+            %obj.Finv = (obj.F' * obj.F + L)\(obj.F');
+            obj.Finv = pinv(obj.F); % takes much more time!
             
         end
         

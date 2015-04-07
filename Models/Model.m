@@ -120,6 +120,9 @@ classdef (Abstract) Model < handle
             h = t(2) - t(1);
             K = traj.K;
             uff = traj.unom;
+            
+            % process and measurement noise same for now
+            sigma = obj.SIM.eps ^(1/2);
 
             % in case dmp is supplied
             if nargin == 4
@@ -140,8 +143,9 @@ classdef (Abstract) Model < handle
             x = zeros(length(x0),N+1);
             u = zeros(size(K,1),N);
             x(:,1) = x0;
-            y(:,1) = obj.C * x(:,1);
+            y(:,1) = obj.C * x(:,1) + sigma * randn(length(x0),1);
             for i = 1:N
+                x(:,i) = x(:,i) + sigma * randn(length(x0),1);
                 u(:,i) = K(:,:,i)*(x(:,i)-sbar(:,i)) + uff(:,i);
                 x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
                 y(:,i+1) = obj.C * x(:,i+1);

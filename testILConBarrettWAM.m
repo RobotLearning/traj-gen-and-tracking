@@ -38,9 +38,8 @@ SIM.dimy = 2*N_DOFS;
 SIM.dimu = N_DOFS;
 % time step h 
 SIM.h = 0.002; % 500 Hz recorded data
-% noise and initial error
-SIM.eps = 3e-10;
-SIM.eps_d = 3e-10;
+% noise covariances
+SIM.eps = 1e-10;
 % integration method
 SIM.int = 'Symplectic Euler';
 % reference trajectory in joint space?
@@ -257,23 +256,23 @@ t = t(idx);
 traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
 % Generate feedback with LQR
-wam.generateFeedback(traj);
+%wam.generateFeedback(traj);
 % Load feedback in case trajectory is very large
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)
-%load('LQR0.txt','LQR0');
-%for i = 1:length(t)-1, FB(:,:,i) = LQR0; end;
+load('LQR0.txt','LQR0');
+for i = 1:length(t)-1, FB(:,:,i) = LQR0; end;
 % PD control
 %for i = 1:length(t)-1, FB(:,:,i) = -K; end;
-%traj.K = FB;
+traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
 %q0 = traj.s(:,1);
 q0 = ref_original(:,1);
 % add disturbances around zero velocity
-%q0(1:N_DOFS) = q0(1:N_DOFS) + 0.1 * randn(7,1);
-%q0(N_DOFS+1:end) = 0; %0.1 * randn(7,1);
+q0(1:7) = q0(1:7) + 1e-3 * randn(7,1);
+q0(8:end) = 1e-3 * randn(7,1);
 % observe output
 %qact = wam.evolve(t,q0,traj.unom);
 % observe with feedback
@@ -300,8 +299,8 @@ for i = 1:num_trials
     % evolve system with feedback
     traj.unom = u;
     % add zero velocity as disturbance
-    %q0 = traj.s(:,1);
-    %q0(N_DOFS+1:end) = 0; %0.001 * randn(7,1);
+    q0(1:7) = ref_original(1:7,1) + 1e-3 * randn(7,1);
+    q0(8:end) = 1e-3 * randn(7,1);
     [qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
     % add performance to trajectory
     traj.addPerformance(ufull,qact,wam.COST,ilc);

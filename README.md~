@@ -2,19 +2,20 @@ TODO List:
 
 Major TODO:
 
-- Try simple ILC on the robot with a whole trajectory
 - Are the weights necessary for generalization? 
-- Check ddmp code and other functions in SL
+- Check ddmp code and other  in SL
 - How to make ILC work with noisy errors? 
 - Adapt ILC fully to Yanlong's table tennis task. Check the different functions in SL for table tennis.
 - Correct paper with new results, change methodology
 - Implement EM and then REPS, PI2 algorithms on MATLAB
+- Code DMP in SL, check ddmp code of Jens.
+- Try simple ILC on the robot with a whole trajectory
 - Test end-point learning ILC
 - Make MATLAB experiments for generalization: DDP, regression, convex hull learning. 
 
 Minor TODO:
 
-- Symplectic Euler causes problems for convergence in RR
+- Symplectic Euler causes problems for convergence
 - Why does the width (h) of the basis functions matter?
 - Reference DMP (e.g. loaded dmp.txt) should start with zero velocity
 - How can we learn with a smaller (e.g. 20) number of weights?
