@@ -105,23 +105,17 @@ y_des = 0.4 + 0.4 * t;
 x_des = 0.6 - 0.2 * t;
 ref = [x_des; y_des]; % displacement profile 
 
-% downsample reference
-freq = 100;
-freq_original = 100;
-rate = freq_original/freq;
-idx = rate * (1:length(t)/rate);
-ref = ref(:,idx);
-t = t(idx);
-
 traj = rr.generateInputs(t,ref); % trajectory generated in joint space
+% downsample reference
+%traj = traj.downsample(5);
 
 %% Evolve system dynamics and animate the robot arm
 
 % add feedback K to traj
 rr.generateFeedback(traj); % form feedback to stabilize
 
-%q0 = [0.0325; 1.2901; 0.7065; -0.2238];
-q0 = traj.s(:,1);
+q0 = [0.0325; 1.2901; 0.7065; -0.2238];
+%q0 = traj.s(:,1);
 % add nonzero velocity
 %q0(3:4) = 0.1*rand(2,1);
 % observe output

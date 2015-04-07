@@ -29,3 +29,4 @@ Minor TODO:
 - Fast ways to construct, parameterize LQR matrix K or ILC matrix F online?
 - Investigate LQR differences for different trajectories.
 - Why does only dmpILC show improvement on generalization?
+- Test inverse dynamics in feedback mode

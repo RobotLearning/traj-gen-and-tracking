@@ -242,18 +242,13 @@ t = SIM.h * (1:len);
 % switching to order: q1 ... q7, qd1, ..., qd7
 q = M(:,2:2:2*N_DOFS);
 qd = M(:,3:2:2*N_DOFS+1);
-ref_original = [q';qd'];
-
-% downsample reference
-freq = 50;
-freq_original = 500;
-rate = freq_original/freq;
-idx = rate * (1:perc*length(t)/rate);
-ref = ref_original(:,idx);
-t = t(idx);
+ref = [q';qd'];
 
 %[traj,dmp] = wam.generateInputsWithDMP(t,50,ref);
 traj = wam.generateInputs(t,ref); % trajectory generated in joint space
+
+% downsample reference
+traj = traj.downsample(10);
 
 % Generate feedback with LQR
 %wam.generateFeedback(traj);
@@ -261,15 +256,15 @@ traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)
 load('LQR0.txt','LQR0');
-for i = 1:length(t)-1, FB(:,:,i) = LQR0; end;
+for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
-%for i = 1:length(t)-1, FB(:,:,i) = -K; end;
+%for i = 1:traj.N-1, FB(:,:,i) = -K; end;
 traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
 %q0 = traj.s(:,1);
-q0 = ref_original(:,1);
+q0 = ref(:,1);
 % add disturbances around zero velocity
 q0(1:7) = q0(1:7) + 1e-3 * randn(7,1);
 q0(8:end) = 1e-3 * randn(7,1);
@@ -299,7 +294,7 @@ for i = 1:num_trials
     % evolve system with feedback
     traj.unom = u;
     % add zero velocity as disturbance
-    q0(1:7) = ref_original(1:7,1) + 1e-3 * randn(7,1);
+    q0(1:7) = ref(1:7,1) + 1e-3 * randn(7,1);
     q0(8:end) = 1e-3 * randn(7,1);
     [qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
     % add performance to trajectory

@@ -97,7 +97,7 @@ classdef Trajectory < handle
             idx = rate * (1:N);
             t = obj.t(idx);
             s = obj.s(:,idx);
-            unom = obj.unom(idx);
+            unom = obj.unom(:,idx(1:end-1));
             
             if ~isempty(obj.K)
                 K = obj.K(:,:,idx);
