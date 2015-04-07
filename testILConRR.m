@@ -106,7 +106,7 @@ x_des = 0.6 - 0.2 * t;
 ref = [x_des; y_des]; % displacement profile 
 
 % downsample reference
-freq = 50;
+freq = 100;
 freq_original = 100;
 rate = freq_original/freq;
 idx = rate * (1:length(t)/rate);
@@ -139,6 +139,7 @@ rr.plot_outputs(traj);
 
 %% Start learning feedforward with ILC
 
+%{
 % num_trials = 10;
 % 
 % %ilc = aILC(rr,traj);
@@ -162,10 +163,11 @@ rr.plot_outputs(traj);
 % rr.plot_inputs(traj);
 % rr.plot_outputs(traj);
 % rr.animateArm(qact(1:2,:),ref);
+%}
 
 %% Learn with feedback
 
-num_trials = 5;
+num_trials = 10;
 
 ilc = mILC(rr,traj); 
 %ilc.inp_last = traj.unom;

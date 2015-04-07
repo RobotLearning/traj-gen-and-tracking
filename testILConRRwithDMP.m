@@ -152,73 +152,72 @@ end
 rr.plot_outputs(traj);
 rr.animateArm(qact(1:2,:),ref);
 
-% %% Change the hitting point slightly and see how the robot is doing
-% 
-% % new reference in joint space
-% %rr.flag_ref_jsp = true;
-% % center of the region
-% g0 = traj.s(:,end);
-% % radius of region
-% r = 0.2;
-% % sample a point from that region
-% g = g0 + [r;r;0;0];
-% [dmpNew,jNew] = adaptDMP(q0,g,dmp,w_origin);
-% [~,refNew] = rr.kinematics(jNew);
-% 
-% 
-% trajNew = rr.generateInputs(t,refNew);
-% rr.generateFeedback(trajNew);
-% 
-% q0 = trajNew.s(:,1);
-% % observe output
-% %qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
-% qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmpNew);
-% % add performance to trajectory
-% trajNew.addPerformance([],qact,rr.COST,'ID + LQR');
-% 
-% %ilc1 = wILC(trajNew,rr,'t');
-% ilc1 = wILC(trajNew,rr,'dmp');
-% 
-% for i = 1:num_trials
-%     % get next inputs
-%     dmpNew = ilc1.feedforward(trajNew,dmpNew,qact);
-%     %traj3 = ilc1.feedforward(trajNew,[],qact);   
-%     % get the measurements
-%     qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmpNew);
-%     %qact = rr.observeWithFeedbackErrorForm(traj3,q0);
-%     trajNew.addPerformance([],qact,rr.COST,ilc1);
-%     % Plot the controls and animate the robot arm
-%     %rr.animateArm(qact(1:2,:),ref);
-% end
-% 
-% % Plot the controls and animate the robot arm
-% rr.plot_outputs(trajNew);
-% rr.animateArm(qact(1:2,:),refNew);
-% % 
-% % lets see how well the learned dmp generalizes
-% %qact = rr.observeWithFeedbackErrorForm(traj2,q0);
-% qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
-% trajNew.addPerformance([],qact,rr.COST,'OLD ILC');
-% 
-% % Plot the controls and animate the robot arm
-% rr.plot_outputs(trajNew);
-% rr.animateArm(qact(1:2,:),refNew);
-% 
-% %ilc2 = wILC(trajNew,rr,'t');
-% ilc2 = wILC(trajNew,rr,'dmp');
-% 
-% for i = 1:num_trials
-%     % get next inputs
-%     dmp = ilc2.feedforward(trajNew,dmp,qact);
-%     %traj3 = ilc2.feedforward(trajNew,[],qact);   
-%     % get the measurements
-%     qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
-%     %qact = rr.observeWithFeedbackErrorForm(traj3,q0);
-%     trajNew.addPerformance([],qact,rr.COST,ilc2);
-%     % Plot the controls and animate the robot arm
-%     %rr.animateArm(qact(1:2,:),ref);
-% end
-% 
-% % Plot the controls and animate the robot arm
-% rr.plot_outputs(trajNew);
-% rr.animateArm(qact(1:2,:),refNew);
+%% Change the hitting point slightly and see how the robot is doing
+
+% new reference in joint space
+%rr.flag_ref_jsp = true;
+% center of the region
+g0 = traj.s(:,end);
+% radius of region
+r = 0.05;
+% sample a point from that region
+g = g0 + [r;r;0;0];
+[dmpNew,jNew] = adaptDMP(q0,g,dmp,w_origin);
+[~,refNew] = rr.kinematics(jNew);
+
+trajNew = rr.generateInputs(t,refNew);
+rr.generateFeedback(trajNew);
+
+q0 = trajNew.s(:,1);
+% observe output
+%qact = rr.observeWithFeedbackErrorForm(trajNew,q0);
+qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmpNew);
+% add performance to trajectory
+trajNew.addPerformance([],qact,rr.COST,'ID + LQR');
+
+%ilc1 = wILC(trajNew,rr,'t');
+ilc1 = wILC(trajNew,rr,'dmp');
+
+for i = 1:num_trials
+    % get next inputs
+    dmpNew = ilc1.feedforward(trajNew,dmpNew,qact);
+    %traj3 = ilc1.feedforward(trajNew,[],qact);   
+    % get the measurements
+    qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmpNew);
+    %qact = rr.observeWithFeedbackErrorForm(traj3,q0);
+    trajNew.addPerformance([],qact,rr.COST,ilc1);
+    % Plot the controls and animate the robot arm
+    %rr.animateArm(qact(1:2,:),ref);
+end
+
+% Plot the controls and animate the robot arm
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);
+
+% Lets see how well the learned dmp generalizes
+%qact = rr.observeWithFeedbackErrorForm(traj2,q0);
+qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
+trajNew.addPerformance([],qact,rr.COST,'OLD ILC');
+
+% Plot the controls and animate the robot arm
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);
+
+%ilc2 = wILC(trajNew,rr,'t');
+ilc2 = wILC(trajNew,rr,'dmp');
+
+for i = 1:num_trials
+    % get next inputs
+    dmp = ilc2.feedforward(trajNew,dmp,qact);
+    %traj3 = ilc2.feedforward(trajNew,[],qact);   
+    % get the measurements
+    qact = rr.observeWithFeedbackErrorForm(trajNew,q0,dmp);
+    %qact = rr.observeWithFeedbackErrorForm(traj3,q0);
+    trajNew.addPerformance([],qact,rr.COST,ilc2);
+    % Plot the controls and animate the robot arm
+    %rr.animateArm(qact(1:2,:),ref);
+end
+
+% Plot the controls and animate the robot arm
+rr.plot_outputs(trajNew);
+rr.animateArm(qact(1:2,:),refNew);
