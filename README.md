@@ -8,7 +8,7 @@ Major TODO:
 - How to make ILC work with noisy errors? 
 - Adapt ILC fully to Yanlong's table tennis task. Check the different functions in SL for table tennis.
 - Correct paper with new results, change methodology
-- Implement EM and then REPS, PI2 algorithms on MATLAB
+- Implement REPS, PI2 algorithms on MATLAB
 - Test end-point learning ILC
 - Make MATLAB experiments for generalization: DDP, regression, convex hull learning. 
 
@@ -30,3 +30,4 @@ Minor TODO:
 - Investigate LQR differences for different trajectories.
 - Why does only dmpILC show improvement on generalization?
 - Test inverse dynamics in feedback mode
+- Fix the indexing problem when up/downsampling with unom,K,F

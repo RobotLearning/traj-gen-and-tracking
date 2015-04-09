@@ -54,6 +54,7 @@ classdef mILC < ILC
             dim_y = model.SIM.dimy;
             
             N = trj.N - 1;
+            
             if ~isempty(trj.unom)
                 obj.inp_last = trj.unom(:,1:N);
             else
