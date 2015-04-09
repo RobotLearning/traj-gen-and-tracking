@@ -24,6 +24,8 @@ classdef mILC < ILC
         error
         % flags
         FLAG
+        % downsampling to speed things up
+        downsample
         
         % ILC's Last input sequence
         inp_last
@@ -48,6 +50,9 @@ classdef mILC < ILC
             obj.color = 'm';
             obj.name = 'Model-based ILC';
             obj.error = 0;
+            obj.downsample = 10;
+            
+            trj = trj.downsample(obj.downsample);
             
             dim_x = model.SIM.dimx;
             dim_u = model.SIM.dimu;
@@ -175,22 +180,15 @@ classdef mILC < ILC
         %% Main ILC function
         function u = feedforward(obj,trj,y)
             
+            trj = trj.downsample(obj.downsample);
             dimu = size(obj.inp_last,1);
             Nu = size(obj.inp_last,2);
             N = Nu + 1;
             rate = size(y,2)/N;
             idx = rate * (1:N);
-            y = y(:,idx);
-            
+            y = y(:,idx);            
             dev = y - trj.s;
-            h = trj.t(2) - trj.t(1);
-            % get rid of x0 in dev
-            % ddev = diff(dev')'/h;
-            % ddev = ddev(1,:);
             dev = dev(:,2:end);                        
-    
-            % set learning rate
-            beta = 1;
             
             % gradient descent
             %u = obj.inp_last(:) - beta * obj.F' * obj.Ql * dev(:);
@@ -207,6 +205,10 @@ classdef mILC < ILC
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);
+            
+            trj.unom = u;
+            trj2 = trj.upsample(obj.downsample);
+            u = trj2.unom;
             
         end
         

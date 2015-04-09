@@ -73,6 +73,11 @@ classdef Trajectory < handle
             fprintf('%d. trial: RMS for %s is %f \n', i+1, name, rms);
             
             if ~ischar(controller) && ~isempty(u)
+                if length(u) ~= length(controller.inp_last)
+                    ds = controller.downsample;
+                    idx = ds * (1:obj.N/ds);
+                    u = u(:,idx(1:end-1));
+                end
                 controller.record(u,sse);
             end
             
@@ -100,7 +105,7 @@ classdef Trajectory < handle
             unom = obj.unom(:,idx(1:end-1));
             
             if ~isempty(obj.K)
-                K = obj.K(:,:,idx);
+                K = obj.K(:,:,idx(1:end-1));
             else
                 K = [];
             end

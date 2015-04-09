@@ -39,7 +39,7 @@ SIM.dimu = N_DOFS;
 % time step h 
 SIM.h = 0.002; % 500 Hz recorded data
 % noise covariances
-SIM.eps = 1e-10;
+SIM.eps = 0e-10;
 % integration method
 SIM.int = 'Symplectic Euler';
 % reference trajectory in joint space?
@@ -219,9 +219,9 @@ K(7,14) = 0.075;
 
 % cost structure
 % only penalize positions
-Q1 = 1*diag([ones(1,4),0.1*ones(1,3),0*ones(1,4),0*ones(1,3)]);
+Q1 = 1*diag([ones(1,4),1*ones(1,3),1*ones(1,4),1*ones(1,3)]);
 Q2 = 1*diag([ones(1,4),1*ones(1,3),0.1*ones(1,4),0.1*ones(1,3)]);
-COST.Q = Q2;
+COST.Q = Q1;
 COST.R = 0.01 * eye(SIM.dimu);
 
 % initialize model
@@ -248,7 +248,7 @@ ref = [q';qd'];
 traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
 % downsample reference
-traj = traj.downsample(10);
+traj = traj.downsample(1);
 
 % Generate feedback with LQR
 %wam.generateFeedback(traj);
@@ -265,9 +265,10 @@ traj.K = FB;
 
 %q0 = traj.s(:,1);
 q0 = ref(:,1);
+q0(8:end) = 0.0;
 % add disturbances around zero velocity
-q0(1:7) = q0(1:7) + 1e-3 * randn(7,1);
-q0(8:end) = 1e-3 * randn(7,1);
+%q0(1:7) = q0(1:7) + 1e-3 * randn(7,1);
+%q0(8:end) = 1e-3 * randn(7,1);
 % observe output
 %qact = wam.evolve(t,q0,traj.unom);
 % observe with feedback
@@ -294,8 +295,9 @@ for i = 1:num_trials
     % evolve system with feedback
     traj.unom = u;
     % add zero velocity as disturbance
-    q0(1:7) = ref(1:7,1) + 1e-3 * randn(7,1);
-    q0(8:end) = 1e-3 * randn(7,1);
+    q0(1:7) = ref(1:7,1);% + 1e-3 * randn(7,1);
+    q0(8:end) = 0;
+    %q0(8:end) = 1e-3 * randn(7,1);
     [qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
     % add performance to trajectory
     traj.addPerformance(ufull,qact,wam.COST,ilc);

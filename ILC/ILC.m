@@ -36,6 +36,11 @@ classdef (Abstract) ILC < handle
             obj.error(obj.episode) = cost;            
         end
         
+        % downsampling function to speed things up
+        function downsample(obj,inp_applied)
+            %TODO
+        end
+        
     end
     
     
