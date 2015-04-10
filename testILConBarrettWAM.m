@@ -237,7 +237,7 @@ perc = 1.0; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
 %t = M(:,1); 
-t = SIM.h * (1:len);
+t = SIM.h * (1:perc*len);
 % order for refs in file: q1 qd1, ...
 % switching to order: q1 ... q7, qd1, ..., qd7
 q = M(:,2:2:2*N_DOFS);
@@ -248,10 +248,10 @@ ref = [q';qd'];
 traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
 % downsample reference
-traj = traj.downsample(1);
+traj = traj.downsample(10);
 
 % Generate feedback with LQR
-%wam.generateFeedback(traj);
+wam.generateFeedback(traj);
 % Load feedback in case trajectory is very large
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)

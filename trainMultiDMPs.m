@@ -52,7 +52,8 @@ for i = 1:dof
     % goal and amplitude are initialized here
     goal = goals(:,i);
     % this is not important as dmps can be extended to any yin
-    yin = [q(1,i);qd(1,i)];
+    %yin = [q(1,i);qd(1,i)];
+    yin = [q(1,i); 0];
     % initial states of DMPs
     dmp(i) = discreteDMP(can,alpha,beta,goal(1),yin,numbf);
     dmp(i).regressLive(q(:,i),qd(:,i),qdd(:,i),goal);
