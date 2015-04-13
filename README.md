@@ -2,8 +2,7 @@ TODO List:
 
 SL steps
 
-0. Test IDM without using joint_des_state in SL
-1. Weight/penalize w_early to reduce acc. for DMP
+0. Fix indexing issue on uffs vs. states
 2. Test adding noise in debug fnc in SL
 3. How to filter correctly (test filter fncs on MATLAB)
 4. Test articulate IDM in SL and check again in MATLAB
@@ -19,6 +18,7 @@ SL steps
 13. Check DDP and explore fully the connection between ILC and regression
 14. Recursive pseudoinverse feasible? Connection to IDM?
 15. Prove ILC convergence : keep Fk bounded and show that the cost fnc is convex
+16. Optimize DMPs with minimum jerk criterion
 
 Major TODO:
 
@@ -49,3 +49,7 @@ Minor TODO:
 - Why does only dmpILC show improvement on generalization?
 - Test inverse dynamics in feedback mode
 - Fix the indexing problem when up/downsampling with unom,K,F
+
+Note:
+
+- Adapting DMP for goal velocities can be much easier! Safe learning with DMPs?

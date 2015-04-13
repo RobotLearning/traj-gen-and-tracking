@@ -37,8 +37,8 @@ nst = length(tf);
 pat = 'd';
 can = Canonical(h,ax,tau,nst,pat);
 
-alpha = 25;
-beta = 25/4;
+alpha = 15;
+beta = 15/4;
 % number of basis functions
 numbf = 50;
 

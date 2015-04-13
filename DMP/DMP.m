@@ -138,8 +138,14 @@ classdef (Abstract) DMP < handle
             % use pinv or add lambda to smoothen inverse
             %w = pinv(Psi) * fd(:);
             %w = Psi \ fd(:);
-            lambda = 1e-6;
-            w = ((Psi' * Psi + lambda*eye(lenw)) \ (Psi')) * fd(:);
+            
+            % penalize the first weights
+            M = diag(ones(1,lenw))-2*diag(ones(1,lenw-1),1)+diag(ones(1,lenw-2),2);
+            M(end-1:end,:) = 0;
+            %M = -diag(ones(1,lenw))+diag(ones(1,lenw-1),1);
+            %M(end,:) = 0;
+            lambda = 1e2;
+            w = ((Psi' * Psi + lambda*M) \ (Psi')) * fd(:);
             force.w = w;
             obj.setForcing(force);
 
