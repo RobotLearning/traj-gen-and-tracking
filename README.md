@@ -3,7 +3,6 @@ TODO List:
 SL steps
 
 0. Fix indexing issue on uffs vs. states
-2. Test adding noise in debug fnc in SL
 3. How to filter correctly (test filter fncs on MATLAB)
 4. Test articulate IDM in SL and check again in MATLAB
 5. Test ILC in MATLAB with nominal robot parameters

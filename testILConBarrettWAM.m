@@ -251,21 +251,21 @@ traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 traj = traj.downsample(10);
 
 % Generate feedback with LQR
-wam.generateFeedback(traj);
+%wam.generateFeedback(traj);
 % Load feedback in case trajectory is very large
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)
-load('LQR0.txt','LQR0');
-for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
+%load('LQR0.txt','LQR0');
+%for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
-%for i = 1:traj.N-1, FB(:,:,i) = -K; end;
+for i = 1:traj.N-1, FB(:,:,i) = -K; end;
 traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
 %q0 = traj.s(:,1);
 q0 = ref(:,1);
-q0(8:end) = 0.0;
+%q0(8:end) = 0.0;
 % add disturbances around zero velocity
 %q0(1:7) = q0(1:7) + 1e-3 * randn(7,1);
 %q0(8:end) = 1e-3 * randn(7,1);
@@ -294,10 +294,6 @@ for i = 1:num_trials
     %qact = wam.evolve(t,q0,u);
     % evolve system with feedback
     traj.unom = u;
-    % add zero velocity as disturbance
-    q0(1:7) = ref(1:7,1);% + 1e-3 * randn(7,1);
-    q0(8:end) = 0;
-    %q0(8:end) = 1e-3 * randn(7,1);
     [qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
     % add performance to trajectory
     traj.addPerformance(ufull,qact,wam.COST,ilc);
