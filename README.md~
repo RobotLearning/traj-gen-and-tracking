@@ -6,6 +6,7 @@ SL steps
 3. How to filter correctly (test filter fncs on MATLAB)
 9. Incorporate extending horizon as worst case for experiments
 10. Try IDM as fb in MATLAB
+11. Test adding fb to next iteration one step before
 12. Test end-goal learning in SL
 13. Check DDP and explore fully the connection between ILC and regression
 14. Recursive pseudoinverse feasible? Connection to IDM?

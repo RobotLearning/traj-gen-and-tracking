@@ -140,12 +140,12 @@ classdef (Abstract) DMP < handle
             %w = Psi \ fd(:);
             
             % penalize the first weights
-            M = diag(ones(1,lenw))-2*diag(ones(1,lenw-1),1)+diag(ones(1,lenw-2),2);
-            M(end-1:end,:) = 0;
-            %M = -diag(ones(1,lenw))+diag(ones(1,lenw-1),1);
-            %M(end,:) = 0;
+            C = diag(ones(1,lenw))-2*diag(ones(1,lenw-1),1)+diag(ones(1,lenw-2),2);
+            C(end-1:end,:) = 0;
+            %D = -diag(ones(1,lenw))+diag(ones(1,lenw-1),1);
+            %D(end,:) = 0;
             lambda = 1e2;
-            w = ((Psi' * Psi + lambda*M) \ (Psi')) * fd(:);
+            w = ((Psi' * Psi + lambda*C) \ (Psi')) * fd(:);
             force.w = w;
             obj.setForcing(force);
 

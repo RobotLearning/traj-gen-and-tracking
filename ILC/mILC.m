@@ -212,6 +212,36 @@ classdef mILC < ILC
             
         end
         
+        %% Testing end point learning (Mayer form ILC)
+        
+        function u = feedforwardMayer(obj,trj,y)
+            
+            trj = trj.downsample(obj.downsample);
+            dimu = size(obj.inp_last,1);
+            Nu = size(obj.inp_last,2);
+            N = Nu + 1;
+            rate = size(y,2)/N;
+            idx = rate * (1:N);
+            y = y(:,idx);            
+            e = y - trj.s;                        
+            
+            lend1 = length(obj.Ql);
+            D = diag(ones(1,lend1),2*dimu);
+            D = D(1:end-2*dimu,:) + [-diag(ones(1,lend1)), zeros(lend1,2*dimu)];
+            Ql = obj.Ql * D;
+            
+            Mat = (obj.F' * Ql * obj.F) \ (obj.F' * Ql);
+            u = obj.inp_last(:) - Mat * e(:);
+            
+            % revert from lifted vector from back to normal form
+            u = reshape(u,dimu,Nu);
+            
+            trj.unom = u;
+            trj = trj.upsample(obj.downsample);
+            u = trj.unom;
+            
+        end
+        
     end
     
 end
