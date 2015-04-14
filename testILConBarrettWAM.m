@@ -248,17 +248,17 @@ ref = [q';qd'];
 traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
 % downsample reference
-traj = traj.downsample(10);
+%traj = traj.downsample(10);
 
 % Generate feedback with LQR
 %wam.generateFeedback(traj);
 % Load feedback in case trajectory is very large
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)
-%load('LQR0.txt','LQR0');
-%for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
+load('LQR0.txt','LQR0');
+for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
-for i = 1:traj.N-1, FB(:,:,i) = -K; end;
+%for i = 1:traj.N-1, FB(:,:,i) = -K; end;
 traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm

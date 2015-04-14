@@ -50,7 +50,7 @@ classdef mILC < ILC
             obj.color = 'm';
             obj.name = 'Model-based ILC';
             obj.error = 0;
-            obj.downsample = 1;
+            obj.downsample = 10;
             
             trj = trj.downsample(obj.downsample);
             
@@ -210,30 +210,6 @@ classdef mILC < ILC
             trj = trj.upsample(obj.downsample);
             u = trj.unom;
             
-        end
-        
-        % BLOWS UP!!
-        function u = correct(obj,trj,y)
-            
-            t = trj.t;
-            trj = trj.downsample(obj.downsample);
-            dimu = size(obj.inp_last,1);
-            Nu = size(obj.inp_last,2);
-            N = Nu + 1;
-            rate = size(y,2)/N;
-            idx = rate * (1:N);
-            y = y(:,idx);            
-            dev = y - trj.s;
-            dev = dev(:,2:end);                        
-
-            % in case F is very large
-            ff = obj.Finv * dev(:);
-            
-            % revert from lifted vector from back to normal form
-            ff = reshape(ff,dimu,Nu);
-            
-            % upsample ff
-            u = interp1(trj.t(1:end-1),ff',t(1:end-1),'linear','extrap')';
         end
         
     end

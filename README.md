@@ -49,6 +49,8 @@ Minor TODO:
 - Test inverse dynamics in feedback mode
 - Fix the indexing problem when up/downsampling with unom,K,F
 
-Note:
+Notes:
+
+- NE is more accurate than the Articulate inverse dynamics.
 
 - Adapting DMP for goal velocities can be much easier! Safe learning with DMPs?
