@@ -56,7 +56,7 @@ for i = 1:length(set)
     % legend([vel{j},'\_real'],[vel{j},'\_diff']);
     % end
 
-    %% check noise spectrum 
+    %% check trajectory spectrum 
 
     L = 2048; %500 * ceil(length(t)/500);
     NFFT = 2^nextpow2(L);
