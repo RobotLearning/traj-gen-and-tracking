@@ -1,5 +1,15 @@
 TODO List:
 
+READING TODO:
+
+- Read robotics book up to control chapters
+- Review filtering theory
+- Read maximum principle chapter
+- Read policy search review
+- Read some more ILC papers
+- Read the Barrett WAM inertial specifications
+- Read the next chapter on Barber
+
 SL TODO:
 
 - Load DMPs using weights only
@@ -16,7 +26,7 @@ REAL ROBOT TODO:
 - Test LQR and different feedback (LQG?) w/o learning
 - Test different DMPs, with different taus and velocities w/o learning
 - Which parameters to use?
-- Incorporate extending horizon as worst case for experiments
+
 
 General TODO (i.e. MATLAB):
 
@@ -28,19 +38,10 @@ General TODO (i.e. MATLAB):
 - Correct paper with SL results, change methodology
 - Implement REPS, PI2 algorithms on MATLAB
 
-READING TODO:
+Minor TODO:
 
-- Read robotics book up to control chapters
-- Review filtering theory
-- Read maximum principle chapter
-- Read policy search review
-- Read some more ILC papers
-- Read the Barrett WAM inertial specifications
-
-FUTURE TODO:
-
-- Total Least Squares implementation for ILC?
 - Check DDP and explore fully the connection with ILC (and regression?)
+- Incorporate extending horizon as worst case for experiments
 - Recursive pseudoinverse feasible? Connection to IDM?
 - Prove ILC convergence : keep Fk bounded and show that the cost fnc is convex
 - Try IDM as fb in MATLAB

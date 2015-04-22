@@ -147,12 +147,12 @@ wam.plot_outputs(traj);
 
 %% Start learning with ILC
 
-num_trials = 5;
+num_trials = 1;
 ilc = mILC(wam,traj); %1 means load Finv
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforwardMayer(traj,qact);
+    u = ilc.feedforward(traj,qact);
     % evolve system
     %qact = wam.evolve(t,q0,u);
     % evolve system with feedback

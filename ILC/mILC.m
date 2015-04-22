@@ -223,14 +223,17 @@ classdef mILC < ILC
             rate = size(y,2)/N;
             idx = rate * (1:N);
             y = y(:,idx);            
-            e = y - trj.s;                        
+            e = y - trj.s;  
+            e = e(:,2:end);
             
             lend1 = length(obj.Ql);
-            D = diag(ones(1,lend1),2*dimu);
-            D = D(1:end-2*dimu,:) + [-diag(ones(1,lend1)), zeros(lend1,2*dimu)];
+            D1 = [zeros(lend1-2*dimu,2*dimu),diag(ones(1,lend1-2*dimu))];
+            D2 = [-diag(ones(1,lend1-2*dimu)),zeros(lend1-2*dimu,2*dimu)];
+            D = D1 + D2;
+            D(end+1:end+2*dimu,:) = D(end-2*dimu+1:end,:);
             Ql = obj.Ql * D;
             
-            Mat = (obj.F' * Ql * obj.F) \ (obj.F' * Ql);
+            Mat = (obj.F' * Ql' * obj.F)\(obj.F' * Ql);
             u = obj.inp_last(:) - Mat * e(:);
             
             % revert from lifted vector from back to normal form
