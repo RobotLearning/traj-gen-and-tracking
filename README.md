@@ -9,6 +9,8 @@ TODO List:
 
 REAL ROBOT TODO:
 
+- Update SL version
+- Test without filtering
 - Test LQR and different feedback (LQG?) w/o learning
 - Test different DMPs, with different taus and velocities w/o learning
 - Incorporate extending horizon as worst case for experiments
@@ -21,6 +23,7 @@ General TODO (i.e. MATLAB):
 - Test LQG on MATLAB 
 - Correct paper with SL results, change methodology
 - Implement REPS, PI2 algorithms on MATLAB
+- Check out Yanlong's and Katharina's code
 
 READING TODO:
 
