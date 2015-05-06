@@ -1,28 +1,25 @@
 % Dynamic motor primitive superclass
 % rhythmic and discrete DMPs inherit from this class
 %
-% TODO: clean the regression methods!
 
 classdef (Abstract) DMP < handle
     
     properties (Abstract)
         
+        % state of the dmp
+        y
         % canonical system
         can
         % time constants
         alpha_g, beta_g
         % goal state
         goal
-        % y, yd (or z), ydd values
-        Y
-        % forcing structure has weights w, widths h, and centers c
-        FORCE
     end
     
     methods (Abstract)
 
         % discrete and rhythmic subclasses define their own basis fnc
-        basis(phi,h,c)
+        basis(phi)
         
         % forcing function
         forcing(obj)
@@ -30,46 +27,69 @@ classdef (Abstract) DMP < handle
         % make a step - both for feedback/feedforward simulation
         step(obj)
         
-        % feedforward simulation of DMPs
-        evolve(obj)
-        
-        % phase of the canonical system is set to 0
-        % as well as clearing Y values
-        resetStates(obj)
-        
-        % set the initial state of the DMP
-        setInitState(obj,Y0)
-        
-        % set the goal state from observational data
-        setGoal(obj,path)
-        
-        % set the forcing function after regression for instance
-        setForcing(obj,force)
-        
     end
     
     % methods that can be implemented here in abstract class
     methods (Access = public)
-        
-        %% Regression methods here
-        
-        % set the weights using regression methods
-        function setWeights(obj,path)
+                
+        %% Evolve the DMP by N steps
+        % feedforward simulation of DMPs
+        function [x_roll, Y_roll] = evolve(obj,N)
             
-            [goal,~] = obj.setGoal(path);
-            % learn the weights with locally weighted regression
-            %force = obj.LWR(goal,path);
-            % or with linear regression
-            force = obj.regression(goal,path);
-            
-            % update dmps
-            obj.setForcing(force);
+            Y_roll = zeros(2,N);
+            x_roll = obj.can.evolve(N);
+            obj.resetStates();
+            for i = 1:N
+                Y_roll(:,i) = obj.y;
+                obj.step(1);
+            end            
         end
         
+        %% Set and reset functions
+        
+        % phase of the canonical system is set to 0
+        % as well as clearing Y values
+        function resetStates(obj)
+           
+            obj.y = [obj.y0;0];
+            obj.can.reset();
+        end
+        
+        % set the goal state from observational data
+        function [g,scale] = setGoal(obj,path)
+            
+            if strcmp(obj.can.pattern,'d')
+                obj.goal = path(end);            
+                g = obj.goal;
+                scale = g - obj.y0(1);
+            else            
+                % goal state is the center
+                obj.goal(1) = min(path) + max(path) / 2;
+                % amplitude is the difference
+                obj.goal(2) = max(path) - obj.goal(1);
+
+                g = obj.goal(1);
+                scale = obj.goal(2);
+            end
+        end
+        
+         % set the weights of the forcing function after regression for instance
+        function setWeights(obj,ww)
+            
+            assert(obj.can.nbf == length(ww),'Length of bfs do not match!');
+            obj.w = ww;
+        end
+        
+        % set the initial state of the DMP
+        function setInitState(obj,yin)
+            
+            obj.y0 = yin;
+        end
+        
+        %% Regression methods here        
+        
         % update the weights using regression methods
-        % WARNING: not to be used online since sets velocities and
-        % accelerations to zero!
-        function force = updateWeights(obj,path)
+        function updateWeights(obj,path)
             
             if strcmp(obj.can.pattern,'d')
                 g = path(end);
@@ -78,12 +98,10 @@ classdef (Abstract) DMP < handle
             end
                 
             % learn the weights with locally weighted regression
-            force = obj.LWR(g,path);
+            obj.LWR(g,path);
             % or with linear regression
-            %force = obj.regression(g,path);
+            %obj.regression(g,path);
             
-            % do not update the dmp yet!
-            % obj.setForcing(force);
             
         end
         
@@ -93,10 +111,13 @@ classdef (Abstract) DMP < handle
         %
         % q, dq, ddq - joint positions, velocities, acc.
         %
-        function force = regressLive(obj,q,qd,qdd,goals)
+        function regressLive(obj,q,qd,qdd,goals)
 
+            % make sure phase is reset
+            obj.resetStates();
+            
             pat = obj.can.pattern;
-            force = obj.FORCE;
+            lenw = obj.can.nbf;
             alpha = obj.alpha_g;
             beta = obj.beta_g;
             
@@ -109,23 +130,19 @@ classdef (Abstract) DMP < handle
             % calculate fd
             fd = qdd - alpha * (beta * (goals - q) - qd);
 
-            h = force.h;
-            c = force.c;
             % number of weights to regress 
-            lenw = length(force.c);
-            x = obj.can.evolve();
-
+            x = obj.can.evolve(N);
             % make sure x is column vector
             x = x(:);
 
             % regress on the weights
             Psi = zeros(N,lenw);
-            for i = 1:lenw
-                Psi(:,i) = obj.basis(x,h(i),c(i));
+            for i = 1:N
+                Psi(i,:) = obj.basis(x(i));
             end
             % scale the psi matrices
             if strcmp(pat,'d')
-                scale = x ./ (sum(Psi,2)); 
+                scale = x ./ (sum(Psi,2) + 1e-10); 
             else
                 scale = 1 ./ (sum(Psi,2) + 1e-10);
             end
@@ -146,8 +163,8 @@ classdef (Abstract) DMP < handle
             %D(end,:) = 0;
             lambda = 1e2;
             w = ((Psi' * Psi + lambda*C) \ (Psi')) * fd(:);
-            force.w = w;
-            obj.setForcing(force);
+
+            obj.setWeights(w);
 
         end
         
@@ -167,11 +184,14 @@ classdef (Abstract) DMP < handle
         % OUTPUTS:
         %
         % forcing structure with the forcing weights learned
-        function force = regression(obj,goal,path)
+        function regression(obj,goal,path)
 
+            % make sure phase is reset
+            obj.resetStates();
+            
             dt = obj.can.dt;
             pat = obj.can.pattern;
-            force = obj.FORCE;
+            lenw = obj.can.nbf;
             alpha = obj.alpha_g;
             beta = obj.beta_g;
 
@@ -182,37 +202,33 @@ classdef (Abstract) DMP < handle
             % calculate fd
             fd = ydd_des - alpha * (beta * (goal - y_des) - yd_des);
 
-            h = force.h;
-            c = force.c;
             % number of weights to regress 
-            lenw = length(force.c);
-            x = obj.can.evolve();
-
+            x = obj.can.evolve(length(path));
             % make sure x is column vector
             x = x(:);
 
             % regress on the weights
             lent = length(fd);
             Psi = zeros(lent,lenw);
-            for i = 1:lenw
-                Psi(:,i) = obj.basis(x,h(i),c(i));
+            for i = 1:lent
+                Psi(i,:) = obj.basis(x(i));
             end
             % scale the psi matrices
             if strcmp(pat,'d')
-                scale = x ./ sum(Psi,2); 
+                scale = x ./ (sum(Psi,2) + lenw*1e-10);
             else
-                scale = 1 ./ (sum(Psi,2) + 1e-10);
+                scale = 1 ./ (sum(Psi,2) + lenw*1e-10);
             end
             scale = repmat(scale,1,lenw);
             Psi = Psi .* scale;
             
             %w = pinv(Psi) * fd(:);
-            %w = Psi \ fd(:);
+            w = Psi \ fd(:);
             % add lambda to smoothen inverse
-            lambda = 1e-6;
-            w = ((Psi' * Psi + lambda*eye(lenw)) \ (Psi')) * fd(:);
+            %lambda = 1e-6;
+            %w = ((Psi' * Psi + lambda*eye(lenw)) \ (Psi')) * fd(:);
             
-            force.w = w;
+            obj.setWeights(w);
 
         end
         
@@ -231,11 +247,13 @@ classdef (Abstract) DMP < handle
         % OUTPUTS:
         %
         % dmp with the forcing weights learned
-        function force = LWR(obj,goal,path)
+        function LWR(obj,goal,path)
 
+            % make sure phase is reset
+            obj.resetStates();
+            
             dt = obj.can.dt;
             pat = obj.can.pattern;
-            force = obj.FORCE;
             alpha = obj.alpha_g;
             beta = obj.beta_g;
 
@@ -246,30 +264,35 @@ classdef (Abstract) DMP < handle
             % calculate fd
             fd = ydd_des - alpha * (beta * (goal - y_des) - yd_des);
 
-            h = force.h;
-            c = force.c;
             % number of weights to regress 
-            lenw = length(force.c);
-            x = obj.can.evolve();
+            lenw = obj.can.nbf;
+            x = obj.can.evolve(length(path));
 
             % make sure x is column vector
             x = x(:);
 
             % construct weights
             w = zeros(lenw,1);
+            
+            lent = length(fd);
+            Psi = zeros(lent,lenw);
+            for i = 1:lent
+                Psi(i,:) = obj.basis(x(i));
+            end
+            
             for i = 1:lenw
-                psi = obj.basis(x,h(i),c(i));
+                psi = Psi(:,i);
                 if strcmp(pat,'d')
                     num = x' * diag(psi) * fd(:);
                     denom = x' * diag(psi) * x;
                 else
                     num = psi' * fd(:);
-                    denom = sum(psi) + 1e-10;
+                    denom = sum(psi) + lenw * 1e-10;
                 end
                 w(i) = num / denom;
             end
 
-            force.w = w;
+            obj.setWeights(w);
         end
     end
     

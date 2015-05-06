@@ -1,7 +1,5 @@
 TODO List:
 
-- Implement DMP in SL and create dmp_task. Load using weights only
-- Go to initial posture slowly with a dmp (zero forcing)
 - Try zero-phase filtering in SL as a noncausal offline filter. Test in MATLAB first.
 - Review Kalman filter
 - Does aILC work on robot classes? EM algorithm as an extension ?
@@ -9,7 +7,6 @@ TODO List:
 
 REAL ROBOT TODO:
 
-- Update SL version
 - Test without filtering
 - Test LQR and different feedback (LQG?) w/o learning
 - Test different DMPs, with different taus and velocities w/o learning

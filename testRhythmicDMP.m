@@ -27,44 +27,44 @@ ax = 1;
 % temporal scaling factor
 tau = 1;
 % time evolution
-tspan = [0 10];
+tspan = [0 1];
 % number of points
-nst = tspan(2)/h + 1;
 t = tspan(1):h:tspan(2);
+N = length(t);
+% number of basis functions
+numbf = 50;
 % type of pattern to be generated
 pat = 'r';
-can = Canonical(h,ax,tau,nst,pat);
+can = CAN(h,ax,tau,numbf,pat);
 
 %% test forced rhythmic DMP
 
 % create two different DMPs
 alpha = 25;
 beta = 25/4;
-% number of basis functions
-numbf = 50;
 % goal and amplitude are initialized here
 goal = 1;
 amp = 1;
 % initial states of DMPs
-yin1 = [0;0];
-yin2 = [0;0];
-dmp1 = rhythmicDMP(can,alpha,beta,goal,amp,yin1,numbf);
-dmp2 = rhythmicDMP(can,alpha,beta,goal,amp,yin2,numbf);
+yin1 = 0;
+yin2 = 0;
+dmp1 = RDMP(can,alpha,beta,goal,amp,yin1);
+dmp2 = RDMP(can,alpha,beta,goal,amp,yin2);
 
 % create two paths
 ctr1 = 5; % center 
 amp1 = 2; % amplitude
-path1 = ctr1 + amp1 * sin(pi*t);
+path1 = ctr1 + amp1 * sin(10*pi*t);
 ctr2 = 1;
 amp2 = 2;
-path2 = ctr2 + amp2 * cos(pi*t);
+path2 = ctr2 + amp2 * cos(10*pi*t);
 
 % learn the weights with the usual linear regression
-dmp1.setWeights(path1);
-dmp2.setWeights(path2);
+dmp1.regression(path1(end),path1);
+dmp2.regression(path1(end),path2);
 
-[x,y1] = dmp1.evolve();
-[~,y2] = dmp2.evolve();
+[x,y1] = dmp1.evolve(N);
+[~,y2] = dmp2.evolve(N);
 
 % plotting each dmp trajectory
 y = y1(1,:);

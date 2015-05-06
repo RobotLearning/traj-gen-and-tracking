@@ -1,6 +1,6 @@
 % Canonical system which is being shared by multiple DMPs
 
-classdef Canonical < handle
+classdef CAN < handle
     
     properties
         
@@ -12,25 +12,43 @@ classdef Canonical < handle
         tau
         % boolean pattern variable - discrete or rhythmic
         pattern
-        % number of time steps
-        N
         % time step
         dt
+        % number of basis functions
+        nbf
+        % centers of the forcing function rbfs
+        c
+        % heights of the forcing function rbfs
+        h
     end
     
     methods (Access = public)
         
         %% Constructor for the common phase of DMPs
-        % TODO: provide default values for ax and tau
-        function obj = Canonical(h, ax, tau, num_steps, pat)
+        function obj = CAN(h, ax, tau, bfs, pat)
         
             assert(strcmp(pat,'d') || strcmp(pat, 'r'), ...
                    'Please input d for discrete and r for rhythmic');
-            obj.pattern = pat;
-            obj.N = num_steps;            
+            obj.pattern = pat;          
             obj.dt = h;
             obj.a_x = ax;
             obj.tau = tau;
+            
+            % initialize the forcing function parameters
+            obj.nbf = bfs;
+            obj.c = zeros(1,bfs);
+            obj.h = zeros(1,bfs);
+            
+            t_total_guess = 1.0; % guess running time
+            t = (t_total_guess/(bfs-1)) * ((1:bfs)-1);
+            for i = 1:bfs
+                obj.c(i) = exp(-ax * t(i));
+            end
+            
+            for i = 1:bfs-1
+                obj.h(i) = 0.5 / ((0.65 * (obj.c(i+1)-obj.c(i))) ^ 2);
+            end
+            obj.h(end) = obj.h(end-1);
             
             % call reset to make sure we start from zero
             obj.reset();
@@ -58,13 +76,12 @@ classdef Canonical < handle
         end
         
         % evolve is the feedforward rollout function
-        % TODO: apply bsxfun or arrayfun
-        function x_tr = evolve(obj)
+        function x_tr = evolve(obj,N)
             
             % make sure phase is reset
             obj.reset();
-            x_tr = zeros(1,obj.N);
-            for i = 1:obj.N
+            x_tr = zeros(1,N);
+            for i = 1:N
                 x_tr(1,i) = obj.x;
                 obj.step(1);
             end  
