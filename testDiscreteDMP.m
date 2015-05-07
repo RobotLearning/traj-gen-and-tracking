@@ -35,7 +35,7 @@ t = tin:h:tf;
 N = length(t);
 % type of pattern to be generated
 pat = 'd';
-can = CAN(h,ax,tau,nst,pat);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+can = CAN(h,ax,tau,nst,tf,pat);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
 
 %% test unforced discrete DMP
 
@@ -238,7 +238,7 @@ dmp2.regression(path2(end),path2);
 
 % initial states of DMPs
 yin1 = 0;
-yin2 = 0;
+yin2 = 1;
 dmp1.setInitState(yin1);
 dmp1.setGoal(path1);
 dmp1.resetStates();
@@ -253,8 +253,8 @@ y12 = y2(1,:);
 
 dmp1.resetStates();
 dmp2.resetStates();
-dmp1.setGoal(1.2 * path1(end));
-dmp2.setGoal(1.4 * path2(end));
+dmp1.setGoal(path1(end));
+dmp2.setGoal(1);
 
 [~,y3] = dmp1.evolve(N);
 [~,y4] = dmp2.evolve(N);

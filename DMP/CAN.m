@@ -25,7 +25,7 @@ classdef CAN < handle
     methods (Access = public)
         
         %% Constructor for the common phase of DMPs
-        function obj = CAN(h, ax, tau, bfs, pat)
+        function obj = CAN(h, ax, tau, bfs, ttotal, pat)
         
             assert(strcmp(pat,'d') || strcmp(pat, 'r'), ...
                    'Please input d for discrete and r for rhythmic');
@@ -39,7 +39,7 @@ classdef CAN < handle
             obj.c = zeros(1,bfs);
             obj.h = zeros(1,bfs);
             
-            t_total_guess = 1.0; % guess running time
+            t_total_guess = ttotal; % guess running time
             t = (t_total_guess/(bfs-1)) * ((1:bfs)-1);
             for i = 1:bfs
                 obj.c(i) = exp(-ax * t(i));

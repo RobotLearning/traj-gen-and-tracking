@@ -35,7 +35,7 @@ N = length(t);
 numbf = 50;
 % type of pattern to be generated
 pat = 'r';
-can = CAN(h,ax,tau,numbf,pat);
+can = CAN(h,ax,tau,numbf,tspan(2)-tspan(1),pat);
 
 %% test forced rhythmic DMP
 
@@ -60,8 +60,8 @@ amp2 = 2;
 path2 = ctr2 + amp2 * cos(10*pi*t);
 
 % learn the weights with the usual linear regression
-dmp1.regression(path1(end),path1);
-dmp2.regression(path1(end),path2);
+dmp1.LWR(path1(end),path1);
+dmp2.LWR(path1(end),path2);
 
 [x,y1] = dmp1.evolve(N);
 [~,y2] = dmp2.evolve(N);

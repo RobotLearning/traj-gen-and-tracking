@@ -1,19 +1,11 @@
 TODO List:
 
-- Try zero-phase filtering in SL as a noncausal offline filter. Test in MATLAB first.
+- Check DMP code in MATLAB and then in SL for goal/initial state/temporal variations.
+- Effect of regularizing u,du on learning with Barrett arm model in MATLAB?
+- Test zero-phase filtering in MATLAB first.
 - Review Kalman filter
 - Does aILC work on robot classes? EM algorithm as an extension ?
 - Read some more ILC papers
-
-REAL ROBOT TODO:
-
-- Test without filtering
-- Test LQR and different feedback (LQG?) w/o learning
-- Test different DMPs, with different taus and velocities w/o learning
-- Incorporate extending horizon as worst case for experiments
-
-General TODO (i.e. MATLAB):
-
 - Make MATLAB experiments for generalization: regression, convex hull learning. 
   Are the weights necessary for generalization? 
 - Optimize DMPs with minimum jerk criterion
@@ -21,9 +13,7 @@ General TODO (i.e. MATLAB):
 - Correct paper with SL results, change methodology
 - Implement REPS, PI2 algorithms on MATLAB
 - Check out Yanlong's and Katharina's code
-
-READING TODO:
-
+- Copy kinematics (forward) from SL
 - Read robotics book up to control chapters
 - Read policy search review
 - Read the Barrett WAM inertial specifications

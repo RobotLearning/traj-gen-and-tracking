@@ -13,16 +13,16 @@ dof = 7; % seven degrees of freedom
 scale = 1e-3; % recorded in milliseconds
 Q = cell(length(set),1); % concatenate to huge q and qd matrices
 Qd = cell(length(set),1);
-tcell = cell(length(set),1); % different time profiles
+t_strike = cell(length(set),1); % different time profiles
 
 % load the data
 for i = 1:length(set)
     
-    M = dlmread(['../Desktop/okanKinestheticTeachin_20141210/unifyData', ...
+    Ms = dlmread(['../Desktop/okanKinestheticTeachin_20141210/unifyData', ...
                  int2str(set(i)),'.txt']);
 
     % extract time and the joints - last 14 variables
-    Mq = M(:,end-14:end);
+    Mq = Ms(:,end-14:end);
 
     t = Mq(:,1);
     t = scale * t;
@@ -34,27 +34,31 @@ for i = 1:length(set)
         vel{j} = ['joint\_vel\_', int2str(j)];
         %err{i} = ['err_j_', int2str(i)];
     end
-    % 
-    % qd2 = diff(q)./(repmat(diff(t),1,dof));
-    % qd2 = [qd2; qd2(end,:)];
-    % 
-    % figure;
-    % for j = 1:dof
-    % subplot(7,2,2*j-1);
-    % plot(t,q(:,j));
-    % legend(joints{j});
-    % subplot(7,2,2*j);
-    % plot(t,qd(:,j));
-    % legend(vel{j});
-    % end
+    
+    %{
+    qd2 = diff(q)./(repmat(diff(t),1,dof));
+    qd2 = [qd2; qd2(end,:)];
+    
+    figure;
+    for j = 1:dof
+        subplot(7,2,2*j-1);
+        plot(t,q(:,j));
+        legend(joints{j});
+        subplot(7,2,2*j);
+        plot(t,qd(:,j));
+        legend(vel{j});
+    end
+    %}
 
     %% check whether velocity data matches to differences in one joint
-    % figure;
-    % for j = 1:dof
-    % subplot(7,1,j);
-    % plot(t,qd(:,j),t,qd2(:,j));
-    % legend([vel{j},'\_real'],[vel{j},'\_diff']);
-    % end
+    %{
+    figure;
+    for j = 1:dof
+        subplot(7,1,j);
+        plot(t,qd(:,j),t,qd2(:,j));
+        legend([vel{j},'\_real'],[vel{j},'\_diff']);
+    end
+    %}
 
     %% check trajectory spectrum 
 
@@ -62,22 +66,24 @@ for i = 1:length(set)
     NFFT = 2^nextpow2(L);
     Fs = L/(t(end)-t(1));
     f = Fs/2*linspace(0,1,NFFT/2+1);
-    tLin = linspace(t(1),t(end),L);
-    qLin= interp1(t,q,tLin);
-    qdLin = interp1(t,qd,tLin);
+    tLinStrike = linspace(t(1),t(end),L);
+    qLin= interp1(t,q,tLinStrike);
+    qdLin = interp1(t,qd,tLinStrike);
     qSpecs = fft(qLin,NFFT)/L;
     qdSpecs = fft(qdLin,NFFT)/L;
 
     % plot single-sided amplitude spectrum.
-    % figure;
-    % for j = 1:dof
-    % subplot(7,2,2*j-1);
-    % plot(f,2*abs(qSpecs(1:NFFT/2+1,j)));
-    % legend(['spectra\_',joints{j}]);
-    % subplot(7,2,2*j);
-    % plot(f,2*abs(qdSpecs(1:NFFT/2+1,j)));
-    % legend(['spectra\_',vel{j}]);
-    % end
+    %{
+    figure;
+    for j = 1:dof
+        subplot(7,2,2*j-1);
+        plot(f,2*abs(qSpecs(1:NFFT/2+1,j)));
+        legend(['spectra\_',joints{j}]);
+        subplot(7,2,2*j);
+        plot(f,2*abs(qdSpecs(1:NFFT/2+1,j)));
+        legend(['spectra\_',vel{j}]);
+    end
+    %}
 
     %% Filter the signals
     % fft back the signals
@@ -92,17 +98,19 @@ for i = 1:length(set)
 
     % interpolate back
     %qFil = interp1(tLin,qFilLin,t);
-    qdFil = interp1(tLin,qdFilLin,t);
+    qdFil = interp1(tLinStrike,qdFilLin,t);
 
-    % figure;
-    % for j = 1:dof
-    % %subplot(7,2,2*j-1);
-    % %plot(t,qFil(:,j),t,q(:,j));
-    % %legend([joints{j},'\_filt'], joints{j})
-    % subplot(7,1,j);
-    % plot(t,qdFil(:,j),t,qd(:,j));
-    % legend([vel{j},'\_filt'], vel{j});
-    % end
+    %{
+    figure;
+    for j = 1:dof
+        %subplot(7,2,2*j-1);
+        %plot(t,qFil(:,j),t,q(:,j));
+        %legend([joints{j},'\_filt'], joints{j})
+        subplot(7,1,j);
+        plot(t,qdFil(:,j),t,qd(:,j));
+        legend([vel{j},'\_filt'], vel{j});
+    end
+    %}
 
     % segment motion based on maximum velocity
     % does not work due to artifacts!
@@ -121,62 +129,106 @@ for i = 1:length(set)
     % segment based on position and guess
     % consider the first 3 joints
     % motion takes 1.5 seconds so 0.75 seconds on each side
-    window = 1.5;
+    windowStrike = 1.5;
+    % we assume returning follows immediately after and takes about the
+    % same time duration
+    windowReturn = 1.5;
 
     % take the median index of the maximum of the first 3 joints
     [~,idx] = max(abs(qdFil(:,1:3)));
     idx = median(idx);
-    idxNew = find((t >= t(idx)-window/2) & (t <= t(idx)+window/2));
-    tNew = t(idxNew);
-    tNew = tNew - tNew(1);
-    qdNew = qdFil(idxNew,:);
-    qNew = q(idxNew,:);
+    idxStrike = find((t >= t(idx)-windowStrike/2) & (t <= t(idx)+windowStrike/2));
+    idxReturn = find((t >= t(idx)+windowReturn/2) & (t <= t(idx)+(3*windowReturn/2)));
+    tStrike = t(idxStrike);
+    tStrike = tStrike - tStrike(1);
+    tReturn = t(idxReturn);
+    tReturn = tReturn - tReturn(1);
+    qdStrike = qdFil(idxStrike,:);
+    qdReturn = qdFil(idxReturn,:);
+    qStrike = q(idxStrike,:);
+    qReturn = q(idxReturn,:);
 
-    % figure;
-    % for j = 1:dof
-    % %subplot(7,2,2*j-1);
-    % %plot(t,qFil(:,j),t,q(:,j));
-    % %legend([joints{j},'\_filt'], joints{j})
-    % subplot(7,2,2*j-1);
-    % plot(tNew,qNew(:,j));
-    % legend([joints{j},'\_cut']);
-    % subplot(7,2,2*j);
-    % plot(tNew,qdNew(:,j));
-    % legend([vel{j},'\_cut']);
-    % end
+    %{
+    figure;
+    for j = 1:dof
+        %subplot(7,2,2*j-1);
+        %plot(t,qFil(:,j),t,q(:,j));
+        %legend([joints{j},'\_filt'], joints{j})
+        subplot(7,2,2*j-1);
+        plot(tStrike,qStrike(:,j));
+        legend([joints{j},'\_strike']);
+        subplot(7,2,2*j);
+        plot(tStrike,qdStrike(:,j));
+        legend([vel{j},'\_strike']);
+    end
+    figure;
+    for j = 1:dof
+        %subplot(7,2,2*j-1);
+        %plot(t,qFil(:,j),t,q(:,j));
+        %legend([joints{j},'\_filt'], joints{j})
+        subplot(7,2,2*j-1);
+        plot(tReturn,qReturn(:,j));
+        legend([joints{j},'\_return']);
+        subplot(7,2,2*j);
+        plot(tReturn,qdReturn(:,j));
+        legend([vel{j},'\_return']);
+    end
+    %}
 
-    Q{i} = qNew;
-    Qd{i} = qdNew;
-    tcell{i} = tNew;
+    Q_strike{i} = qStrike;
+    Qd_strike{i} = qdStrike;
+    Q_return{i} = qReturn;
+    Qd_return{i} = qdReturn;
+    t_strike{i} = tStrike;
+    t_return{i} = tReturn;
 
 end
 
 % feed them all to a dmp
-dmps = trainMultiDMPs(tcell,Q,Qd);
+dmpStrike = trainMultiDMPs(t_strike,Q_strike,Qd_strike);
+dmpReturn = trainMultiDMPs(t_return,Q_return,Qd_return);
 
 % evolve dmps and save to a text file
 % put into matrix form
 % t q1 qd1 q2 qd2 ... q7 qd7
-M = [];
+Ms = [];
+Mr = [];
 scale = 500/200; % 500 Hz instead of 200
-tLin = linspace(tNew(1),tNew(end),scale*length(tNew));
-M = tLin(:);
-figure;
+tLinStrike = linspace(tStrike(1),tStrike(end),scale*length(tStrike));
+tLinReturn = linspace(tReturn(1),tReturn(end),scale*length(tReturn));
+Ms = tLinStrike(:);
+Mr = tLinReturn(:);
 
+figure;
 for j = 1:dof
-    [~,q] = dmps(j).evolve();
+    [~,qs] = dmpStrike(j).evolve(length(tLinStrike));
     subplot(7,2,2*j-1);
-    plot(tLin,q(1,:));
-    M = [M, q(1,:)'];
-    legend([joints{j},'\_dmp']);
+    plot(tLinStrike,qs(1,:));
+    Ms = [Ms, qs(1,:)'];
+    legend([joints{j},'\_dmpStrike']);
     subplot(7,2,2*j);
-    plot(tLin,q(2,:));
-    M = [M, q(2,:)'];
-    legend([vel{j},'\_dmp']);
+    plot(tLinStrike,qs(2,:));
+    Ms = [Ms, qs(2,:)'];
+    legend([vel{j},'\_dmpStrike']);
 end
 
-dlmwrite('dmp.txt',M,'delimiter','\t','precision',6);
-save('dmps.mat','dmps');
+figure;
+for j = 1:dof
+    [~,qr] = dmpReturn(j).evolve(length(tLinReturn));
+    subplot(7,2,2*j-1);
+    plot(tLinReturn,qr(1,:));
+    Mr = [Mr, qr(1,:)'];
+    legend([joints{j},'\_dmpReturn']);
+    subplot(7,2,2*j);
+    plot(tLinReturn,qr(2,:));
+    Mr = [Mr, qr(2,:)'];
+    legend([vel{j},'\_dmpReturn']);
+end
+
+dlmwrite('dmp_strike.txt',Ms,'delimiter','\t','precision',6);
+dlmwrite('dmp_return.txt',Mr,'delimiter','\t','precision',6);
+save('dmpStrike.mat','dmpStrike');
+save('dmpReturn.mat','dmpReturn');
 
 
 

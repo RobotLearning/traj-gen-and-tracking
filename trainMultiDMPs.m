@@ -31,16 +31,15 @@ end
 
 % canonical system
 h = 0.005; % 200 Hz recordings
-tau = 1;
-ax = 2;
-nst = length(tf);
+tau = 1; %0.5/tf(end);
+ax = 2; % 25/3
+% number of basis functions
+numbf = 50;
 pat = 'd';
-can = Canonical(h,ax,tau,nst,pat);
+can = CAN(h,ax,tau,numbf,tf(end),pat);
 
 alpha = 15;
 beta = 15/4;
-% number of basis functions
-numbf = 50;
 
 % stack cells 
 q = cell2mat(qLin);
@@ -52,14 +51,12 @@ for i = 1:dof
     % goal and amplitude are initialized here
     goal = goals(:,i);
     % this is not important as dmps can be extended to any yin
-    %yin = [q(1,i);qd(1,i)];
-    yin = [q(1,i); 0];
+    yin = q(1,i);
     % initial states of DMPs
-    dmp(i) = discreteDMP(can,alpha,beta,goal(1),yin,numbf);
+    dmp(i) = DDMP(can,alpha,beta,goal(1),yin);
     dmp(i).regressLive(q(:,i),qd(:,i),qdd(:,i),goal);
     
 end
 
 % scale evolution up to 500 Hz
 dmp(1).can.dt = h/scale; 
-dmp(1).can.N = scale * dmp(i).can.N;
