@@ -2,8 +2,7 @@
 
 function dmp = trainMultiDMPs(t,q,qd)
 
-% scaling up to 500 Hz
-scale = 500/200;
+f = 200; %200 Hz recording
 
 % number of demonstrations
 D = length(q);
@@ -16,6 +15,7 @@ qLin = cell(D,1);
 qdLin = cell(D,1);
 qdd = cell(D,1);
 goals = zeros(D,dof);
+inits = zeros(D,dof);
 
 for i = 1:D
 
@@ -27,36 +27,44 @@ for i = 1:D
     qdd{i}(end+1,:) = qdd{i}(end,:);
     
     goals(i,:) = qLin{i}(end,:);
+    vels(i,:) = qdLin{i}(end,:);
+    inits(i,:) = qLin{i}(1,:);
 end
 
 % canonical system
-h = 0.005; % 200 Hz recordings
-tau = 1; %0.5/tf(end);
-ax = 2; % 25/3
+h = 1/f; % 200 Hz recordings
+tau = 1/tf(end);
+alpha = 25;
+beta = alpha/4;
+ax = 1;
 % number of basis functions
 numbf = 50;
 pat = 'd';
 can = CAN(h,ax,tau,numbf,tf(end),pat);
 
-alpha = 15;
-beta = 15/4;
 
 % stack cells 
 q = cell2mat(qLin);
 qd = cell2mat(qdLin);
 qdd = cell2mat(qdd);
 
+g = zeros(1,dof);
+yin = zeros(1,dof);
+
 for i = 1:dof
     
+    % tau is fixed to be one
     % goal and amplitude are initialized here
-    goal = goals(:,i);
-    % this is not important as dmps can be extended to any yin
-    yin = q(1,i);
+    % these are not important as dmps can be extended to any yin and goal
+    yin(i) = inits(1,i);
+    g(i) = goals(1,i);
     % initial states of DMPs
-    dmp(i) = DDMP(can,alpha,beta,goal(1),yin);
-    dmp(i).regressLive(q(:,i),qd(:,i),qdd(:,i),goal);
+    dmp(i) = DDMP(can,alpha,beta,g(i),yin(i));
+    dmp(i).regressLive(q(:,i),qd(:,i),qdd(:,i),goals(:,i));
     
 end
 
-% scale evolution up to 500 Hz
-dmp(1).can.dt = h/scale; 
+disp('Initializing DMP to yin = ');
+disp(yin(:));
+disp('Goal state for DMP, goal = ');
+disp(g(:));

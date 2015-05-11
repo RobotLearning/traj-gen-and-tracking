@@ -25,7 +25,7 @@ Extensions:
 - Minimizing expectation with variance added for ILC to come up with a new update rule
 - Total Least Squares implementation for ILC?
 - Check DDP and explore fully the connection with ILC (and regression?)
-- Recursive pseudoinverse feasible? Connection to IDM?
+- Recursive pseudoinverse feasible? Connection to IDM and to adjoint system?
 - Prove ILC convergence : keep Fk bounded and show that the cost fnc is convex
 - Fast ways to construct, parameterize LQR matrix K or ILC matrix F online?
 - How to take inverse in end-goal learning in Mayer form

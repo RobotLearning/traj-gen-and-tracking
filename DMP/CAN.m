@@ -61,6 +61,11 @@ classdef CAN < handle
             obj.x = 1;
         end
         
+        function changeSamplingTime(obj,h)
+            
+            obj.dt = h;
+        end
+        
         % err is the error coupling term due to feedback error
         % slows down the canonical system 
         % can be used for varying dt as well

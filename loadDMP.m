@@ -112,6 +112,7 @@ for i = 1:length(set)
     end
     %}
 
+    %% Segment the signals
     % segment motion based on maximum velocity
     % does not work due to artifacts!
     velMax = max(abs(qdFil));
@@ -129,12 +130,12 @@ for i = 1:length(set)
     % segment based on position and guess
     % consider the first 3 joints
     % motion takes 1.5 seconds so 0.75 seconds on each side
-    windowStrike = 1.5;
+    windowStrike = 0.5;
     % we assume returning follows immediately after and takes about the
     % same time duration
-    windowReturn = 1.5;
+    windowReturn = 0.5;
 
-    % take the median index of the maximum of the first 3 joints
+    % take the median index of the maximum of the first 3 joint velocities
     [~,idx] = max(abs(qdFil(:,1:3)));
     idx = median(idx);
     idxStrike = find((t >= t(idx)-windowStrike/2) & (t <= t(idx)+windowStrike/2));
@@ -175,6 +176,7 @@ for i = 1:length(set)
     end
     %}
 
+    %close all;
     Q_strike{i} = qStrike;
     Qd_strike{i} = qdStrike;
     Q_return{i} = qReturn;
@@ -188,14 +190,20 @@ end
 dmpStrike = trainMultiDMPs(t_strike,Q_strike,Qd_strike);
 dmpReturn = trainMultiDMPs(t_return,Q_return,Qd_return);
 
+%% Write to text file
+
 % evolve dmps and save to a text file
 % put into matrix form
 % t q1 qd1 q2 qd2 ... q7 qd7
 Ms = [];
 Mr = [];
-scale = 500/200; % 500 Hz instead of 200
+
+% scale up to 500 Hz 
+scale = 500/200;
 tLinStrike = linspace(tStrike(1),tStrike(end),scale*length(tStrike));
 tLinReturn = linspace(tReturn(1),tReturn(end),scale*length(tReturn));
+dmpStrike(1).can.changeSamplingTime(0.002);
+dmpReturn(1).can.changeSamplingTime(0.002);
 Ms = tLinStrike(:);
 Mr = tLinReturn(:);
 
@@ -230,5 +238,22 @@ dlmwrite('dmp_return.txt',Mr,'delimiter','\t','precision',6);
 save('dmpStrike.mat','dmpStrike');
 save('dmpReturn.mat','dmpReturn');
 
+%% see how well we extend to particular demonstrations
 
+i = 5;
+q_act = interp1(t_strike{i},Q_strike{i},tLinStrike,'linear','extrap');
+qd_act = interp1(t_strike{i},Qd_strike{i},tLinStrike,'linear','extrap');
 
+figure;
+for j = 1:dof
+    dmpStrike(j).setGoal(q_act(:,j));
+    dmpStrike(j).setInitState(q_act(1,j));
+    dmpStrike(j).resetStates();
+    [~,qs] = dmpStrike(j).evolve(length(tLinStrike));
+    subplot(7,2,2*j-1);
+    plot(tLinStrike,qs(1,:),tLinStrike,q_act(:,j)');
+    legend([joints{j},'\_dmpStrike'],'actual');
+    subplot(7,2,2*j);
+    plot(tLinStrike,qs(2,:),tLinStrike,qd_act(:,j)');
+    legend([vel{j},'\_dmpStrike'],'actual');
+end
