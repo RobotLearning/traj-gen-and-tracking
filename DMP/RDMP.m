@@ -63,9 +63,12 @@ classdef RDMP < DMP
             % forcing function acts on the accelerations
             B = [0; alpha*beta*g*tauStep + f*tauStep];
 
-            dy = A*obj.y + B;
+            dy = A*obj.y(1:2) + B;
             
-            obj.y = obj.y + dt * dy;
+            % integrate the position and velocity
+            obj.y(1:2) = obj.y(1:2) + dt * dy;
+            % acceleration
+            obj.y(3) = dy(2);
             obj.can.step(err);
         end
         

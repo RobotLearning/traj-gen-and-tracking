@@ -32,13 +32,14 @@ for i = 1:length(set)
     for j = 1:dof
         joints{j} = ['joint\_', int2str(j)];
         vel{j} = ['joint\_vel\_', int2str(j)];
+        acc{j} = ['joint\_acc\_', int2str(j)];
         %err{i} = ['err_j_', int2str(i)];
     end
     
     %{
     qd2 = diff(q)./(repmat(diff(t),1,dof));
     qd2 = [qd2; qd2(end,:)];
-    
+        
     figure;
     for j = 1:dof
         subplot(7,2,2*j-1);
@@ -99,16 +100,22 @@ for i = 1:length(set)
     % interpolate back
     %qFil = interp1(tLin,qFilLin,t);
     qdFil = interp1(tLinStrike,qdFilLin,t);
+    
+    qdd = diff(qdFil)./(repmat(diff(t),1,dof));
+    qdd = [qdd; qdd(end,:)];
 
     %{
     figure;
     for j = 1:dof
-        %subplot(7,2,2*j-1);
-        %plot(t,qFil(:,j),t,q(:,j));
-        %legend([joints{j},'\_filt'], joints{j})
-        subplot(7,1,j);
+        subplot(7,3,3*j-2);
+        plot(t,q(:,j));
+        legend(joints{j})
+        subplot(7,3,3*j-1);
         plot(t,qdFil(:,j),t,qd(:,j));
         legend([vel{j},'\_filt'], vel{j});
+        subplot(7,3,3*j);
+        plot(t,qdd(:,j));
+        legend(acc{j});
     end
     %}
 
@@ -144,6 +151,8 @@ for i = 1:length(set)
     tStrike = tStrike - tStrike(1);
     tReturn = t(idxReturn);
     tReturn = tReturn - tReturn(1);
+    qddStrike = qdd(idxStrike,:);
+    qddReturn = qdd(idxReturn,:);
     qdStrike = qdFil(idxStrike,:);
     qdReturn = qdFil(idxReturn,:);
     qStrike = q(idxStrike,:);
@@ -179,16 +188,18 @@ for i = 1:length(set)
     %close all;
     Q_strike{i} = qStrike;
     Qd_strike{i} = qdStrike;
+    Qdd_strike{i} = qddStrike;
     Q_return{i} = qReturn;
     Qd_return{i} = qdReturn;
+    Qdd_return{i} = qddReturn;
     t_strike{i} = tStrike;
     t_return{i} = tReturn;
 
 end
 
 % feed them all to a dmp
-dmpStrike = trainMultiDMPs(t_strike,Q_strike,Qd_strike);
-dmpReturn = trainMultiDMPs(t_return,Q_return,Qd_return);
+dmpStrike = trainMultiDMPs(t_strike,Q_strike,Qd_strike,Qdd_strike);
+dmpReturn = trainMultiDMPs(t_return,Q_return,Qd_return,Qdd_return);
 
 %% Write to text file
 
@@ -210,27 +221,33 @@ Mr = tLinReturn(:);
 figure;
 for j = 1:dof
     [~,qs] = dmpStrike(j).evolve(length(tLinStrike));
-    subplot(7,2,2*j-1);
+    subplot(7,3,3*j-2);
     plot(tLinStrike,qs(1,:));
     Ms = [Ms, qs(1,:)'];
     legend([joints{j},'\_dmpStrike']);
-    subplot(7,2,2*j);
+    subplot(7,3,3*j-1);
     plot(tLinStrike,qs(2,:));
     Ms = [Ms, qs(2,:)'];
     legend([vel{j},'\_dmpStrike']);
+    subplot(7,3,3*j);
+    plot(tLinStrike,qs(3,:));
+    legend([acc{j},'\_dmpStrike']);
 end
 
 figure;
 for j = 1:dof
     [~,qr] = dmpReturn(j).evolve(length(tLinReturn));
-    subplot(7,2,2*j-1);
+    subplot(7,3,3*j-2);
     plot(tLinReturn,qr(1,:));
     Mr = [Mr, qr(1,:)'];
     legend([joints{j},'\_dmpReturn']);
-    subplot(7,2,2*j);
+    subplot(7,3,3*j-1);
     plot(tLinReturn,qr(2,:));
     Mr = [Mr, qr(2,:)'];
     legend([vel{j},'\_dmpReturn']);
+    subplot(7,3,3*j);
+    plot(tLinReturn,qr(3,:));
+    legend([acc{j},'\_dmpReturn']);
 end
 
 dlmwrite('dmp_strike.txt',Ms,'delimiter','\t','precision',6);
@@ -238,11 +255,19 @@ dlmwrite('dmp_return.txt',Mr,'delimiter','\t','precision',6);
 save('dmpStrike.mat','dmpStrike');
 save('dmpReturn.mat','dmpReturn');
 
+for i = 1:dof,
+    Ws(:,i) = dmpStrike(i).w;
+    Wr(:,i) = dmpReturn(i).w;
+end
+dlmwrite('w_strike.txt',Ws,'delimiter','\t','precision',6);
+dlmwrite('w_return.txt',Wr,'delimiter','\t','precision',6);
+
 %% see how well we extend to particular demonstrations
 
 i = 5;
 q_act = interp1(t_strike{i},Q_strike{i},tLinStrike,'linear','extrap');
 qd_act = interp1(t_strike{i},Qd_strike{i},tLinStrike,'linear','extrap');
+qdd_act = interp1(t_strike{i},Qdd_strike{i},tLinStrike,'linear','extrap');
 
 figure;
 for j = 1:dof
@@ -250,10 +275,13 @@ for j = 1:dof
     dmpStrike(j).setInitState(q_act(1,j));
     dmpStrike(j).resetStates();
     [~,qs] = dmpStrike(j).evolve(length(tLinStrike));
-    subplot(7,2,2*j-1);
+    subplot(7,3,3*j-2);
     plot(tLinStrike,qs(1,:),tLinStrike,q_act(:,j)');
-    legend([joints{j},'\_dmpStrike'],'actual');
-    subplot(7,2,2*j);
+    legend([joints{j},'\_dmpStrike'],'demonstration');
+    subplot(7,3,3*j-1);
     plot(tLinStrike,qs(2,:),tLinStrike,qd_act(:,j)');
-    legend([vel{j},'\_dmpStrike'],'actual');
+    legend([vel{j},'\_dmpStrike'],'demonstration');
+    subplot(7,3,3*j);
+    plot(tLinStrike,qs(3,:),tLinStrike,qdd_act(:,j)');
+    legend([acc{j},'\_dmpStrike'],'demonstration');
 end

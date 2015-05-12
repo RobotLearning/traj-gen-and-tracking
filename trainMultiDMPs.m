@@ -1,6 +1,6 @@
 %% Train multi-dmps
 
-function dmp = trainMultiDMPs(t,q,qd)
+function dmp = trainMultiDMPs(t,q,qd,qdd)
 
 f = 200; %200 Hz recording
 
@@ -13,7 +13,7 @@ tf = t{end};
 tLin = linspace(tf(1),tf(end),length(tf)); 
 qLin = cell(D,1);
 qdLin = cell(D,1);
-qdd = cell(D,1);
+qddLin = cell(D,1);
 goals = zeros(D,dof);
 inits = zeros(D,dof);
 
@@ -21,20 +21,22 @@ for i = 1:D
 
     qLin{i} = interp1(t{i},q{i},tLin,'linear','extrap');
     qdLin{i} = interp1(t{i},qd{i},tLin,'linear','extrap');
+    qddLin{i} = interp1(t{i},qdd{i},tLin,'linear','extrap');
 
-    % take numerical derivative of velocities first
-    qdd{i} = diff(qdLin{i})./(repmat(diff(tLin)',1,dof));
-    qdd{i}(end+1,:) = qdd{i}(end,:);
+    % numerical differentiation of velocities first
+    %qdd{i} = diff(qdLin{i})./(repmat(diff(tLin)',1,dof));
+    %qdd{i}(end+1,:) = qdd{i}(end,:);
     
     goals(i,:) = qLin{i}(end,:);
     vels(i,:) = qdLin{i}(end,:);
+    accs(i,:) = qddLin{i}(end,:);
     inits(i,:) = qLin{i}(1,:);
 end
 
 % canonical system
 h = 1/f; % 200 Hz recordings
 tau = 1/tf(end);
-alpha = 25;
+alpha = 15;
 beta = alpha/4;
 ax = 1;
 % number of basis functions
@@ -46,7 +48,7 @@ can = CAN(h,ax,tau,numbf,tf(end),pat);
 % stack cells 
 q = cell2mat(qLin);
 qd = cell2mat(qdLin);
-qdd = cell2mat(qdd);
+qdd = cell2mat(qddLin);
 
 g = zeros(1,dof);
 yin = zeros(1,dof);

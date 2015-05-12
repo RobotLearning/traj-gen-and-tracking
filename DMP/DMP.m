@@ -36,7 +36,7 @@ classdef (Abstract) DMP < handle
         % feedforward simulation of DMPs
         function [x_roll, Y_roll] = evolve(obj,N)
             
-            Y_roll = zeros(2,N);
+            Y_roll = zeros(3,N);
             x_roll = obj.can.evolve(N);
             obj.resetStates();
             for i = 1:N
@@ -51,7 +51,7 @@ classdef (Abstract) DMP < handle
         % as well as clearing Y values
         function resetStates(obj)
            
-            obj.y = [obj.y0;0];
+            obj.y = [obj.y0;0;0];
             obj.can.reset();
         end
         
@@ -161,7 +161,7 @@ classdef (Abstract) DMP < handle
             C(end-1:end,:) = 0;
             %D = -diag(ones(1,lenw))+diag(ones(1,lenw-1),1);
             %D(end,:) = 0;
-            lambda = 1e2;
+            lambda = 1e1;
             w = ((Psi' * Psi + lambda*C) \ (Psi')) * fd(:);
 
             obj.setWeights(w);

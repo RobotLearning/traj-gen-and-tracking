@@ -47,10 +47,10 @@ classdef DDMP < DMP
         %% basis functions are unscaled gaussians
         function out = basis(obj,x)
             out = exp(-obj.can.h .* (x - obj.can.c).^2);
-        end
+        end        
         
-        %% evolve is the feedforward rollout function        
         
+        %{
         % constructs the matrix Fs, i.e. s = Fs*w + s_free
         % useful function for ILC
         function Fs = constructF(obj,t)
@@ -116,8 +116,8 @@ classdef DDMP < DMP
             Fs = Fs * repmat(eye(M),N,1);
             obj.FORCE.Fs = Fs;
         end
-        %
-        
+        %}
+           
         %% one step of the DMP
         function step(obj,err)
            
@@ -136,9 +136,12 @@ classdef DDMP < DMP
             % forcing function acts on the accelerations
             B = [0; alpha*beta*g*tauStep + amp*f*tauStep];
 
-            dy = A*obj.y + B;
+            dy = A*obj.y(1:2) + B;
             
-            obj.y = obj.y + dt * dy;
+            % integrate the position and velocity
+            obj.y(1:2) = obj.y(1:2) + dt * dy;
+            % acceleration
+            obj.y(3) = dy(2);
             obj.can.step(err);
         end
         
