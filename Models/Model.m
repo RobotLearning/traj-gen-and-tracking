@@ -115,7 +115,8 @@ classdef (Abstract) Model < handle
             fun = @(t,x,u) obj.actual(t,x,u);
             hTraj = traj.t(2) - traj.t(1);
             traj = traj.upsample(hTraj/obj.SIM.h);
-            t = traj.t;
+            t = traj.t;                        
+            N = length(t)-1;
             K = traj.K;
             uff = traj.unom;
             
@@ -126,7 +127,7 @@ classdef (Abstract) Model < handle
             if nargin == 4
                 dmps = varargin{:};
                 for j = 1:length(dmps)
-                    [~,Q] = dmps(j).evolve();
+                    [~,Q] = dmps(j).evolve(N+1);
                     q(j,:) = Q(1,:);
                 end
                 Cbar = obj.C;
@@ -136,14 +137,13 @@ classdef (Abstract) Model < handle
             else
                 sbar = traj.projectBack(obj.C);
             end
-            
-            N = length(t)-1;
+
             x = zeros(length(x0),N+1);
             u = zeros(size(K,1),N);
             x(:,1) = x0;
-            y(:,1) = obj.C * x(:,1) + sigma * randn(length(x0),1);
+            y(:,1) = obj.C * x(:,1) + obj.C * sigma * randn(length(x0),1);
             for i = 1:N
-                x(:,i) = x(:,i) + sigma * randn(length(x0),1);
+                x(:,i) = x(:,i) + obj.C * sigma * randn(length(x0),1);
                 u(:,i) = K(:,:,i)*(x(:,i)-sbar(:,i)) + uff(:,i);
                 x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
                 y(:,i+1) = obj.C * x(:,i+1);
@@ -212,21 +212,20 @@ classdef (Abstract) Model < handle
             % ensure that phase decays
             exponent = 1;
             ax = exponent/(tau*t(end));            
-            can = Canonical(h,ax,tau,N,pat);
+            can = CAN(h,ax,tau,numbf,t(end),pat);
             
             % create different DMPs, one for each dimension
             alpha = 25;
             beta = 25/4;
 
             for i = 1:dim
-                % append zero velocity
-                y0 = [yin(i);0];
+                y0 = yin(i);
                 % create the dmp trajectory
-                dmp(i) = discreteDMP(can,alpha,beta,goal(i),y0,numbf);
+                dmp(i) = DDMP(can,alpha,beta,goal(i),y0);
                 % learn the weights using regression
-                dmp(i).setWeights(ref(i,:));
+                dmp(i).updateWeights(ref(i,:));
                 % evolve the DMP
-                [x,si] = dmp(i).evolve();         
+                [x,si] = dmp(i).evolve(N);         
                 s(i,:) = si(1,:);
                 
                 %figure;

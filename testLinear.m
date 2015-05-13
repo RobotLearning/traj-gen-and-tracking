@@ -171,7 +171,7 @@ lin.plot_outputs(traj);
 % Create an ilc controller
 %ilc = bILC(traj);
 ilc = mILC(lin,traj);
-ilc.u_last = us;
+ilc.inp_last = us;
 num_trials = 1;
 
 for i = 1:num_trials

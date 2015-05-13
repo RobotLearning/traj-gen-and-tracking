@@ -1,10 +1,9 @@
 TODO List:
 
-- Check DMP code in MATLAB and then in SL for goal/initial state/temporal variations.
 - Effect of regularizing u,du on learning with Barrett arm model in MATLAB?
 - Test zero-phase filtering in MATLAB first.
 - Review Kalman filter
-- Does aILC work on robot classes? EM algorithm as an extension ?
+- Does aILC work on robot classes?
 - Read some more ILC papers
 - Make MATLAB experiments for generalization: regression, convex hull learning. 
   Are the weights necessary for generalization? 
@@ -42,3 +41,4 @@ implement the test function in MATLAB that checks for differences
   [maybe R dependence is not correct, index difference?]
 - Effects of error coupling on DMPs?
 - Why does ILC learning with feedback not improve?
+- Check wILC and RDMP

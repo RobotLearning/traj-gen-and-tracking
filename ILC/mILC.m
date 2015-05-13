@@ -189,6 +189,7 @@ classdef mILC < ILC
             y = y(:,idx);            
             dev = y - trj.s;
             dev = dev(:,2:end);                        
+            Sl = 1 * obj.Rl; % we keep du penalty S same as R
             
             % gradient descent
             %u = obj.inp_last(:) - beta * obj.F' * obj.Ql * dev(:);
@@ -198,10 +199,12 @@ classdef mILC < ILC
             % computes very high inverses though
             %u = obj.inp_last(:) - pinv(obj.F) * dev(:);
             % in case F is very large
-            u = obj.inp_last(:) - obj.Finv * dev(:);
-            % LM-type update
-            %Mat = (obj.F' * obj.Ql * obj.F + obj.Rl) \ (obj.F' * obj.Ql);
-            %u = obj.inp_last(:) - Mat * dev(:);
+            %u = obj.inp_last(:) - obj.Finv * dev(:);
+            % Penalize inputs and derivatives (LM-type update)
+            L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
+            %u = obj.inp_last(:) - L * dev(:);
+            Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
+            u = Q * (obj.inp_last(:) - L * dev(:));            
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);

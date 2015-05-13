@@ -66,7 +66,7 @@ lin.plot_outputs(traj);
 % Create an ilc controller
 %ilc = bILC(traj);
 ilc = mILC(lin,traj,1); % learn with feedback
-ilc.u_last = us;
+ilc.inp_last = us;
 num_trials = 2;
 
 for i = 1:num_trials
