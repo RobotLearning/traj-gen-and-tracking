@@ -187,24 +187,28 @@ classdef mILC < ILC
             rate = size(y,2)/N;
             idx = rate * (1:N);
             y = y(:,idx);            
-            dev = y - trj.s;
-            dev = dev(:,2:end);                        
+            e = y - trj.s;
+            e = e(:,2:end);                        
             Sl = 1 * obj.Rl; % we keep du penalty S same as R
+            beta = 1e-10;
             
             % gradient descent
-            %u = obj.inp_last(:) - beta * obj.F' * obj.Ql * dev(:);
+            %u = obj.inp_last(:) - beta * obj.F' * obj.Ql * e(:);
             % model inversion based Newton-Raphson update
-            %u = obj.inp_last(:) - obj.F \ dev(:);
+            %u = obj.inp_last(:) - obj.F \ e(:);
             % more stable inverse based Newton-Raphson update
             % computes very high inverses though
-            %u = obj.inp_last(:) - pinv(obj.F) * dev(:);
+            %u = obj.inp_last(:) - pinv(obj.F) * e(:);
             % in case F is very large
-            %u = obj.inp_last(:) - obj.Finv * dev(:);
+            %u = obj.inp_last(:) - obj.Finv * e(:);
             % Penalize inputs and derivatives (LM-type update)
-            L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
-            %u = obj.inp_last(:) - L * dev(:);
             Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
-            u = Q * (obj.inp_last(:) - L * dev(:));            
+            L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
+            u = obj.inp_last(:) - L * e(:);                        
+            %u = Q * (obj.inp_last(:) - L * e(:));      
+            % Iterative Method with Conjugate gradient
+            %A = obj.F' * obj.Ql * obj.F + Sl;
+            %u = obj.inp_last(:) - cgs(A,obj.F'*obj.Ql*e(:));
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);
@@ -236,7 +240,7 @@ classdef mILC < ILC
             D(end+1:end+2*dimu,:) = D(end-2*dimu+1:end,:);
             Ql = obj.Ql * D;
             
-            Mat = (obj.F' * Ql' * obj.F)\(obj.F' * Ql);
+            Mat = pinv(obj.F' * Ql' * obj.F) * (obj.F' * Ql);
             u = obj.inp_last(:) - Mat * e(:);
             
             % revert from lifted vector from back to normal form

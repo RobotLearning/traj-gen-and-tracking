@@ -1,19 +1,20 @@
 % Class for calculating linear feedback law
-% TODO: include Kalman filter for LQG
 %
-% Discrete time finite horizon linear quadratic regulator
+% Discrete time linear quadratic regulator
 % lqr function gives the optimal linear feedback law
 %
 % Inputs:
 % Q,R - Weight matrices
-% A,B - Matrices of the differential equation
+% Qf - Penalty of final state
+% A,B - Matrices of the system differential equation
+% C - Observation matrix
+% 
 % Functions - Infinite horizon or finite horizon, as well as time
 % varying/invariant
 %
 % Outputs:
 % K - Feedback gain
 %
-% TODO: Qf can be also input 
 
 classdef LQR 
 
@@ -45,10 +46,9 @@ classdef LQR
             obj.N = N;
             obj.h = h;
             % construct Q2 - matrix of nonoutput states
-            dimy = size(Q,1);
+            dimy = size(C,1);
             dimx = size(B,1);
             % all nonoutput states should go to zero
-            % TODO: this can be modified
             Q2 = diag([zeros(1,dimy), ones(1,dimx-dimy)]);
             Cbar = eye(dimx) - C'*((C*C')\C);
             obj.Q = Cbar'*Q2*Cbar + C'*Q*C;
@@ -102,8 +102,8 @@ classdef LQR
             
         end
         
-        %% assumed to be LTI
-        function K = computeInfHorizonLTI(obj)
+        %% Infinite Horizon Regulator, assumed to be LTI
+        function K = computeInfHorizon(obj)
             
             % inf horizon
             dimu = size(obj.Bd,2);
@@ -154,7 +154,7 @@ classdef LQR
             end
         end
         
-        %% LTV for finite horizon (inf. horizon case?)
+        %% LTV for finite horizon
         function K = computeFinHorizonLTV(obj)
             
             % Arrays A and B hold time-varying matrices
@@ -218,7 +218,7 @@ classdef LQR
             
         end
         
-        %% Get the error form of the finite horizon LQR law, i.e.
+        % Get the error form of the finite horizon LQR law, i.e.
         %
         % u = -K(x-s) + uff
         %
@@ -234,7 +234,7 @@ classdef LQR
             
         end
         
-        %% discrete-time finite-horizon trajectory tracking
+        % discrete-time finite-horizon trajectory tracking
         % 
         % Outputs:
         % Kbar is K and uff combined in a n+1 x n+1 feedback/feedforward

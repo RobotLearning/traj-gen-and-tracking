@@ -98,17 +98,18 @@ classdef BarrettWAM < Robot
         end
         
         % provides actual model
-        function x_dot = actual(obj,~,x,u)
+        function x_dot = actual(obj,t,x,u)
             
             % differential equation of the inverse dynamics
-            % x_dot = A(x)x + B(x)u + C(x)
+            % x_dot = A(x) + B(x)u
             
             % load actual values
             loadActualBarrettValues;
             par = obj.PAR;
             par.link0 = link0;
             par.links = links;
-            x_dot = barrettWamDynamicsArt(x,u,par,false);
+            d = @(t) 0.0; %0.2 + 0.5 * sin(10*t);
+            x_dot = barrettWamDynamicsArt(x,u,par,false) + d(t);
             
             
         end

@@ -1,6 +1,5 @@
 TODO List:
 
-- Effect of regularizing u,du on learning with Barrett arm model in MATLAB?
 - Test zero-phase filtering in MATLAB first.
 - Review Kalman filter
 - Does aILC work on robot classes?

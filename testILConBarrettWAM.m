@@ -141,13 +141,13 @@ q0 = ref(:,1);
 traj.addPerformance(ufull,qact,wam.COST,'ID + FB');
 
 % Plot the controls and animate the robot arm
-wam.plot_inputs(traj);
+%wam.plot_inputs(traj);
 wam.plot_outputs(traj);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
 
 %% Start learning with ILC
 
-num_trials = 10;
+num_trials = 5;
 ilc = mILC(wam,traj);
 
 for i = 1:num_trials
@@ -165,6 +165,6 @@ for i = 1:num_trials
 end
 
 % Plot the controls and animate the robot arm
-wam.plot_inputs(traj);
+%wam.plot_inputs(traj);
 wam.plot_outputs(traj);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
