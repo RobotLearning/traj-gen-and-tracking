@@ -203,8 +203,9 @@ classdef RR < Robot
             animateRR(x1,x2,s);
         end
         
-        % unused function for now only aILC may use it
-        % get lifted model constraints
+        
+        %% get lifted model constraints
+        % now only aILC may use it
         function [umin,umax,L,q] = lift_constraints(obj,trj,ilc)
             
             h = obj.SIM.h;

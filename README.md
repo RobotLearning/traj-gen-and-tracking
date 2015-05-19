@@ -1,24 +1,21 @@
 TODO List:
 
-- Test zero-phase filtering in MATLAB first.
-- Review Kalman filter
+- Copy kinematics (forward) from SL
 - Does aILC work on robot classes?
-- Read some more ILC papers
+- Test inverse dynamics and fb on dmp_task after ensuring dmps work.
 - Make MATLAB experiments for generalization: regression, convex hull learning. 
   Are the weights necessary for generalization? 
-- Optimize DMPs with minimum jerk criterion
 - Test LQG on MATLAB 
 - Correct paper with SL results, change methodology
 - Implement REPS, PI2 algorithms on MATLAB
 - Check out Yanlong's and Katharina's code
-- Copy kinematics (forward) from SL
-- Read robotics book up to control chapters
-- Read policy search review
-- Read the Barrett WAM inertial specifications
-- Read maximum principle chapter
+- Derive Kalman filter from minimum variance
+- Correct initial conditions of zero-phase filtering.
+- Load constraints umin and umax, joint limits from file and include in lift_constraints
 
 Extensions:
 
+- Optimize DMPs with minimum jerk criterion
 - Evolving DMPs based on current position, as an oracle 
 - Minimizing expectation with variance added for ILC to come up with a new update rule
 - Total Least Squares implementation for ILC?
@@ -41,3 +38,10 @@ implement the test function in MATLAB that checks for differences
 - Effects of error coupling on DMPs?
 - Why does ILC learning with feedback not improve?
 - Check wILC and RDMP
+
+Reading:
+- Read some more ILC papers
+- Read robotics book up to control chapters
+- Read policy search review
+- Read the Barrett WAM inertial specifications
+- Read maximum principle chapter

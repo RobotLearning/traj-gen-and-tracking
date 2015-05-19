@@ -50,7 +50,7 @@ classdef mILC < ILC
             obj.color = 'm';
             obj.name = 'Model-based ILC';
             obj.error = 0;
-            obj.downsample = 10;
+            obj.downsample = 1;
             
             trj = trj.downsample(obj.downsample);
             
@@ -200,11 +200,11 @@ classdef mILC < ILC
             % computes very high inverses though
             %u = obj.inp_last(:) - pinv(obj.F) * e(:);
             % in case F is very large
-            %u = obj.inp_last(:) - obj.Finv * e(:);
+            u = obj.inp_last(:) - obj.Finv * e(:);
             % Penalize inputs and derivatives (LM-type update)
-            Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
-            L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
-            u = obj.inp_last(:) - L * e(:);                        
+            %Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
+            %L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
+            %u = obj.inp_last(:) - L * e(:);                        
             %u = Q * (obj.inp_last(:) - L * e(:));      
             % Iterative Method with Conjugate gradient
             %A = obj.F' * obj.Ql * obj.F + Sl;
@@ -238,9 +238,9 @@ classdef mILC < ILC
             D2 = [-diag(ones(1,lend1-2*dimu)),zeros(lend1-2*dimu,2*dimu)];
             D = D1 + D2;
             D(end+1:end+2*dimu,:) = D(end-2*dimu+1:end,:);
-            Ql = obj.Ql * D;
+            M = obj.Ql * D + D'*obj.Ql;
             
-            Mat = pinv(obj.F' * Ql' * obj.F) * (obj.F' * Ql);
+            Mat = (obj.F' * M * obj.F) \ (obj.F' * M);
             u = obj.inp_last(:) - Mat * e(:);
             
             % revert from lifted vector from back to normal form

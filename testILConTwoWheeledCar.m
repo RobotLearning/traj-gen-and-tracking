@@ -99,13 +99,13 @@ twc.animate(y,s(1:2,:));
 %% Iterative Learning Control
 
 num_trials = 5;
-%ilc = aILC(twc,traj);
-ilc = mILC(twc,traj);
+ilc = aILC(twc,traj);
+%ilc = mILC(twc,traj);
 
 for i = 1:num_trials
     
-    u = ilc.feedforward(traj,y);
-    % u = ilc.feedforward(traj,TW,y);    
+    %u = ilc.feedforward(traj,y);
+    u = ilc.feedforward(traj,twc,y);    
     % get error (observed trajectory deviation)
     y = twc.observe(t,x0,u);
     traj.addPerformance(u,y,twc.COST,ilc);

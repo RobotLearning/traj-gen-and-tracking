@@ -173,8 +173,9 @@ classdef TwoWheeledCar < Model
             Traj = Trajectory(t,Cout*x_des,unom,[]);
         end
         
+        
+        %% get lifted model constraints
         % unused except for aILC
-        % get lifted model constraints
         function [umin,umax,L,q] = lift_constraints(obj,trj,ilc)
             
             h = obj.SIM.h;

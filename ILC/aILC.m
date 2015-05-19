@@ -1,7 +1,6 @@
-% Iterative Learning Control using Angela's Kalman-filtering
-% approach
+% Iterative Learning Control using Kalman-filtering
+% approach (see Angela Schoellig's paper)
 %
-% TODO: Is this class still working?
 
 classdef aILC < ILC
     
@@ -25,16 +24,10 @@ classdef aILC < ILC
         G
         % Lifted state matrix H
         H
-        % Lifted state inequalities
-        umin
-        umax
     end
     
     % fields that are particular to this implementation
     properties
-        % L and q are (convex) objective function penalties
-        L
-        q
         % scaling matrix 
         S
         % scale for the process/output covariance
@@ -65,13 +58,13 @@ classdef aILC < ILC
             obj.G = eye(N*dim_y, N*dim_x);
             obj.H = zeros(N*dim_y,N*dim_u); 
             obj.eps = model.SIM.eps;
-            obj.eps_d = model.SIM.eps_d;
+            obj.eps_d = max(1e-6,model.SIM.eps);
             obj.inp_last = trj.unom(:,1:N);
             
             obj.lift(model,trj);
             % initialize Kalman filter
             mats.M = obj.eps * eye(N*dim_y); % covariance of process x measurement noise
-            mats.Omega = obj.eps_d * eye(N*dim_x); % initial covariance of d noise
+            mats.O = obj.eps_d * eye(N*dim_x); % initial covariance of d noise
             mats.A = eye(N*dim_x);
             mats.B = zeros(N*dim_x,N*dim_u);
             mats.C = obj.G;
@@ -85,23 +78,46 @@ classdef aILC < ILC
         function obj = lift(obj,model,trj)
             
             N = trj.N - 1;
+            dim_y = model.SIM.dimy;
             dim_x = model.SIM.dimx;
             dim_u = model.SIM.dimu;
             
-            % get linear time variant matrices around trajectory
-            [A,B] = model.linearize(trj);
+            if isa(model,'Linear')
             
-            % construct lifted domain matrix F
-            for l = 1:N
-                for m = 1:N
-                    vec_x = (l-1)*dim_x + 1:l*dim_x;
-                    vec_u = (m-1)*dim_u + 1:m*dim_u;
-                    if m <= l
-                        mat = eye(dim_x);
-                        for i = m+1:l
-                            mat = mat * A(:,:,i);
+                Ad = model.Ad;
+                Bd = model.Bd;
+                % construct lifted domain matrix F
+                % TODO: this can be computed much more efficiently
+                % for linear systems
+                for i = 1:N
+                    for j = 1:i
+                        vec_x = (i-1)*dim_x + 1:i*dim_x;
+                        vec_u = (j-1)*dim_u + 1:j*dim_u;
+                        mat = Bd;
+                        for k = j+1:i
+                            mat = Ad * mat;
                         end
-                        obj.F(vec_x,vec_u) = mat * B(:,:,m); % on diagonals only B(:,m)
+                        obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                    end
+                end
+                
+            else
+            
+                % get linear time variant matrices around trajectory
+                [Ad,Bd] = model.linearize(trj);
+
+                % construct lifted domain matrix F
+                for l = 1:N
+                    for m = 1:N
+                        vec_x = (l-1)*dim_x + 1:l*dim_x;
+                        vec_u = (m-1)*dim_u + 1:m*dim_u;
+                        if m <= l
+                            mat = eye(dim_x);
+                            for i = m+1:l
+                                mat = mat * Ad(:,:,i);
+                            end
+                            obj.F(vec_x,vec_u) = mat * Bd(:,:,m); % on diagonals only B(:,m)
+                        end
                     end
                 end
             end
@@ -109,7 +125,10 @@ classdef aILC < ILC
             % construct scaling matrix S
             Sx = eye(dim_x);
             % weighing trajectory deviation by these values
-            Sw = sqrt(model.COST.Q);
+            % all nonoutput states should go to zero
+            Q2 = diag([zeros(1,dim_y), ones(1,dim_x-dim_y)]);
+            Cbar = eye(dim_x) - model.C'*((model.C*model.C')\model.C);
+            Sw = Cbar'*Q2*Cbar + model.C'*model.COST.Q*model.C;
             Tw = eye(dim_x);
             obj.S = cell(1,N);
             % Sx: scaling matrix that scales different state dimensions
@@ -121,19 +140,17 @@ classdef aILC < ILC
         end
         
         %% Main ILC function
-        function unext = feedforward(obj,trj,model,y)
+        function unext = feedforward(obj,traj,model,y)
                         
-            ydev = y - trj.s;
+            ydev = y - traj.s;
             % deviation vector starts from x(1)
             dev = ydev(:,2:end);
             
-            F = obj.F;
-            S = obj.S;
-            Nu = trj.N - 1;            
+            Nu = traj.N - 1;            
             dim_u = model.SIM.dimu;
             h = model.SIM.h;
             % get u from last applied input
-            u = obj.inp_last - trj.unom(:,1:Nu);
+            u = obj.inp_last - traj.unom(:,1:Nu);
             
             % Filter to estimate disturbance
             obj.filter.predict(u(:));
@@ -143,14 +160,14 @@ classdef aILC < ILC
             % Constraints and penalty matrices
             % construct umin and umax
             % extract constraints
-            [obj.umin,obj.umax,obj.L,obj.q] = model.lift_constraints(trj,obj);
-            
             % arrange in format Lu <= q
             % call the particular constraints-generating code
-            L = obj.L; 
-            q = obj.q;
-            umin = obj.umin(:);
-            umax = obj.umax(:);
+            if ismethod(model,'lift_constraints')
+                [umin,umax,L,q] = model.lift_constraints(traj,obj);
+            else
+                umin = []; umax = [];
+            end           
+
     
             % input deviation penalty matrix D
             D0 = eye(dim_u*Nu); 
@@ -164,9 +181,12 @@ classdef aILC < ILC
     
             % solve with quadprog
             options = optimset('Display', 'iter', 'Algorithm', 'interior-point-convex');
-            u = quadprog(2*(F'*S')*S*F + 2*a2*(D2'*D2), 2*F'*S'*d, [], [], [], [], umin, umax, [], options);
+            M0 = obj.S*obj.F;
+            M = (M0'*M0) + a2*(D2'*D2);
+            v = obj.F'*obj.S'*d;
+            u = quadprog(M, v, [], [], [], [], umin, umax, [], options);
             
-            unext = trj.unom(:,1:Nu) + reshape(u,dim_u,Nu);
+            unext = traj.unom(:,1:Nu) + reshape(u,dim_u,Nu);
            
             
         end

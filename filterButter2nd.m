@@ -2,23 +2,25 @@
 
 function y = filterButter2nd(x,w)
 
+    [B,A] = myButter2ndOrder(w);
+
+    % initial conditions of the filter
+    rows = [1, 2, 2, 1];
+    cols = [1, 1, 2, 2];
+    vals = [1+A(2), A(3), 1, -1];
+    rhs  = B(2:3) - B(1)*A(2:3);
+    zi   = [0;0]; %sparse(rows,cols,vals) \ rhs(:);
+    
+    y = x;
     % set previous values to the starting value
-    x1 = x(1); 
-    x2 = x(1);
-    y1 = 0;
-    y2 = 0;
+    x1 = y(1); 
+    x2 = y(1);
+    y1 = zi(2)*y(1);
+    y2 = zi(1)*y(1);
 
-    [B,A] = butter(2,w);
-    %[B,A] = myButter2ndOrder(w);
-    %y = fftfilt(B,x);
-    y = filtfilt(B,A,x);
-
-    %{
-    y = zeros(1,length(x));
     for i = 1:length(x)
         [y(i),y1,y2,x1,x2] = filterNext(A,B,x(i),x1,x2,y1,y2);
     end
-    %}
 end
 
 % get next filtered value

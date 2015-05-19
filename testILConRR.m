@@ -82,7 +82,14 @@ PAR.link2.motor.gear_ratio = r_2;
 PAR.C = eye(SIM.dimy,SIM.dimx);
 
 % form constraints
-CON = [];
+CON.link1.u.min = -Inf;
+CON.link1.u.max = Inf;
+CON.link2.u.min = -Inf;
+CON.link2.u.max = Inf;
+CON.link1.udot.min = -Inf;
+CON.link1.udot.max = Inf;
+CON.link2.udot.min = -Inf;
+CON.link2.udot.max = Inf;
 
 % cost structure
 % only penalize positions
@@ -163,12 +170,14 @@ rr.plot_outputs(traj);
 
 num_trials = 10;
 
-ilc = mILC(rr,traj); 
+ilc = aILC(rr,traj);
+%ilc = mILC(rr,traj); 
 %ilc.inp_last = traj.unom;
 
 for i = 1:num_trials
     
-    us = ilc.feedforward(traj,qact);     
+    us = ilc.feedforward(traj,rr,qact);
+    %us = ilc.feedforward(traj,qact);     
     traj.unom = us;
     % get the measurements
     [qact,ufull] = rr.observeWithFeedbackErrorForm(traj,q0);

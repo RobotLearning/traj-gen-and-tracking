@@ -79,7 +79,6 @@ classdef Linear < Model
     methods
         
         % constructor for convenience
-        % TODO: divide into several methods?
         function obj = Linear(par,con,cost,sim)
             
             obj.SIM = sim;

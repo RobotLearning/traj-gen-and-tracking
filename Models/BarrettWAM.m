@@ -70,7 +70,6 @@ classdef BarrettWAM < Robot
     methods
         
         % constructor for convenience
-        % TODO: divide into several methods?
         function obj = BarrettWAM(par,con,cost,sim)
             
             obj.SIM = sim;            

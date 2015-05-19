@@ -163,14 +163,16 @@ COST.Q = Q;
 COST.R = R;
 lin = Linear(PAR,CON,COST,SIM);
 % create the model based ilc
-ilc = mILC(lin,trj);
+%ilc = mILC(lin,trj);
+ilc = aILC(lin,trj);
 ilc.inp_last = u;
-num_trials = 1;
+num_trials = 10;
 
 % Perform ILC updates
 for i = 1:num_trials
     % Update the controls
-    u = ilc.feedforward(trj,y);
+    %u = ilc.feedforward(trj,y);
+    u = ilc.feedforward(trj,lin,y);
     % Evolve system with both ILC inputs
     for j = 1:N
         x(:,j+1) = Ad*x(:,j) + Bd*u(:,j);

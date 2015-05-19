@@ -17,7 +17,7 @@ classdef Filter < handle
         % D matrix from inputs to output
         D
         % process noise covariance
-        Omega
+        O
         % observation noise covariance
         M
     end
@@ -37,7 +37,7 @@ classdef Filter < handle
             obj.D = mats.D;
             
             % initialize covariances
-            obj.Omega = mats.Omega;
+            obj.O = mats.O;
             obj.M = mats.M;
             
         end
@@ -46,7 +46,7 @@ classdef Filter < handle
         function predict(obj,u)
             
             obj.x = obj.A * obj.x + obj.B * u;
-            obj.P = obj.A * obj.P * obj.A + obj.Omega;
+            obj.P = obj.A * obj.P * obj.A + obj.O;
         end
         
         %% update Kalman filter variance
