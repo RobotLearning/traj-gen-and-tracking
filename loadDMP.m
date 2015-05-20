@@ -87,18 +87,24 @@ for i = 1:length(set)
     %}
 
     %% Filter the signals
-    % fft back the signals
+    % TODO: fft back the signals problematic - some joints lose DC value!
     %
-    % TODO: joint angles loses DC value!
 
-    cutoff = 5;
-    %qSpecsZeroed = [qSpecs(f < cutoff,:); zeros(sum(f >= cutoff),dof)];
+    cutoff = 50;
+    %{
+    qSpecsZeroed = [qSpecs(f < cutoff,:); zeros(sum(f >= cutoff),dof)];
     qdSpecsZeroed = [qdSpecs(f < cutoff,:); zeros(sum(f >= cutoff),dof)];
-    %qFilLin = real(ifft(qSpecsZeroed,NFFT)*2*L);
+    qFilLin = real(ifft(qSpecsZeroed,NFFT)*2*L);
     qdFilLin = real(ifft(qdSpecsZeroed,NFFT)*2*L);
-
+    %}
+    w_nyquist = floor(length(t)/2);
+    w_cut = cutoff/w_nyquist;
+    [B,A] = butter(2,w_cut);
+    qFilLin = filtfilt(B,A,qLin);
+    qdFilLin = filtfilt(B,A,qdLin);
+    
     % interpolate back
-    %qFil = interp1(tLin,qFilLin,t);
+    qFil = interp1(tLinStrike,qFilLin,t);
     qdFil = interp1(tLinStrike,qdFilLin,t);
     
     qdd = diff(qdFil)./(repmat(diff(t),1,dof));
@@ -108,8 +114,8 @@ for i = 1:length(set)
     figure;
     for j = 1:dof
         subplot(7,3,3*j-2);
-        plot(t,q(:,j));
-        legend(joints{j})
+        plot(t,qFil(:,j),t,q(:,j));
+        legend([joints{j},'\_filt'], joints{j})
         subplot(7,3,3*j-1);
         plot(t,qdFil(:,j),t,qd(:,j));
         legend([vel{j},'\_filt'], vel{j});
@@ -264,7 +270,7 @@ dlmwrite('w_return.txt',Wr,'delimiter','\t','precision',6);
 
 %% see how well we extend to particular demonstrations
 
-i = 5;
+i = 10;
 q_act = interp1(t_strike{i},Q_strike{i},tLinStrike,'linear','extrap');
 qd_act = interp1(t_strike{i},Qd_strike{i},tLinStrike,'linear','extrap');
 qdd_act = interp1(t_strike{i},Qdd_strike{i},tLinStrike,'linear','extrap');
@@ -284,4 +290,26 @@ for j = 1:dof
     subplot(7,3,3*j);
     plot(tLinStrike,qs(3,:),tLinStrike,qdd_act(:,j)');
     legend([acc{j},'\_dmpStrike'],'demonstration');
+end
+
+i = 5;
+q_act = interp1(t_return{i},Q_return{i},tLinReturn,'linear','extrap');
+qd_act = interp1(t_return{i},Qd_return{i},tLinReturn,'linear','extrap');
+qdd_act = interp1(t_return{i},Qdd_return{i},tLinReturn,'linear','extrap');
+
+figure;
+for j = 1:dof
+    dmpReturn(j).setGoal(q_act(:,j));
+    dmpReturn(j).setInitState(q_act(1,j));
+    dmpReturn(j).resetStates();
+    [~,qs] = dmpReturn(j).evolve(length(tLinReturn));
+    subplot(7,3,3*j-2);
+    plot(tLinReturn,qs(1,:),tLinReturn,q_act(:,j)');
+    legend([joints{j},'\_dmpReturn'],'demonstration');
+    subplot(7,3,3*j-1);
+    plot(tLinReturn,qs(2,:),tLinReturn,qd_act(:,j)');
+    legend([vel{j},'\_dmpReturn'],'demonstration');
+    subplot(7,3,3*j);
+    plot(tLinReturn,qs(3,:),tLinReturn,qdd_act(:,j)');
+    legend([acc{j},'\_dmpReturn'],'demonstration');
 end

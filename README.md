@@ -1,8 +1,8 @@
 TODO List:
 
-- Copy kinematics (forward) from SL
-- Does aILC work on robot classes?
 - Test inverse dynamics and fb on dmp_task after ensuring dmps work.
+- Merge Guilherme's PMP idea with this folder
+- Copy kinematics (forward) from SL
 - Make MATLAB experiments for generalization: regression, convex hull learning. 
   Are the weights necessary for generalization? 
 - Test LQG on MATLAB 
@@ -12,6 +12,7 @@ TODO List:
 - Derive Kalman filter from minimum variance
 - Correct initial conditions of zero-phase filtering.
 - Load constraints umin and umax, joint limits from file and include in lift_constraints
+- Can we make aILC work on robot classes?
 
 Extensions:
 
