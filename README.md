@@ -33,7 +33,6 @@ Technical Issues:
 - Articulate inverse dynamics in MATLAB does not match to SL! [in SL it is as good as NE]
 implement the test function in MATLAB that checks for differences
 - Symplectic Euler causes problems for convergence in RR
-- Why does the width (h) of the basis functions matter?
 - Why are two tracking LQRs not exactly the same (at the end)? 
   [maybe R dependence is not correct, index difference?]
 - Effects of error coupling on DMPs?
