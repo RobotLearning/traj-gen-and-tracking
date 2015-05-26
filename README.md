@@ -1,6 +1,6 @@
 TODO List:
 
-- Test inverse dynamics and fb.
+- Test inverse dynamics and fb. Include friction?
 - test end-goal learning in Mayer form
 - Total Least Squares implementation for ILC?
 - Does wILC work better with the new dmp?
@@ -13,7 +13,7 @@ TODO List:
 - Implement REPS, PI2 algorithms on MATLAB
 - Derive Kalman filter from minimum variance
 - Correct initial conditions of zero-phase filtering.
-- Load constraints umin and umax, joint limits from file and include in lift_constraints
+- Load constraints umin and umax, joint limits from sensor offsets file and include in lift_constraints
 - Test LQG on MATLAB 
 - Clean-up: Check out Yanlong's and Katharina's code.
 

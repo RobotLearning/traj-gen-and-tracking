@@ -1,5 +1,4 @@
 %% Load nominal robot dynamics parameters
-% Values taken from Barrett WAM booklet
 
 % definitions
 ZSFE  =  0.346;              %!< z height of SAA axis above ground
@@ -10,7 +9,11 @@ YWR  = -0.045;              %!< elbow y offset (back to forewarm)
 ZWR  =  0.045;              %!< elbow z offset (back to forearm)
 ZWFE  =  0.255;              %!< forearm length (minus 4.5cm)
 
+%% Values taken from Barrett WAM booklet:
+% shared/barrett/math/WAM_InertialSpecifications_AC-02.pdf
 % link 0 is the base
+
+%{
 link0.m = 9.9706;
 link0.mcm(1) = link0.m * -0.02017671;
 link0.mcm(2) = link0.m * -0.26604706;
@@ -98,7 +101,13 @@ links(7).inertia(1,3) = 0.00000002;
 links(7).inertia(2,2) = 0.00003878; 
 links(7).inertia(2,3) = -0.00000004;  
 links(7).inertia(3,3) = 0.00007408;
+%}
 
+%% Load nominal robot dynamics parameters from wam.conf.flt
+
+
+
+%% Organize values
 % make sure inertia matrices are symmetric
 for i = 1:7
     for j = 1:3
