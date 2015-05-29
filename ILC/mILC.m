@@ -42,8 +42,6 @@ classdef mILC < ILC
     methods
         
         %% Constructor for model-based ILC
-        % varargin1 is for learning with feedback
-        % varargin2 is for loading Finv vectorized from a text file
         function obj = mILC(model,trj,varargin)
                         
             obj.episode = 0;
@@ -51,6 +49,10 @@ classdef mILC < ILC
             obj.name = 'Model-based ILC';
             obj.error = 0;
             obj.downsample = 1;
+            
+            if nargin == 3
+                obj.downsample = min(varargin{1},10);
+            end
             
             trj = trj.downsample(obj.downsample);
             
@@ -224,6 +226,7 @@ classdef mILC < ILC
         function u = feedforwardMayer(obj,trj,y)
             
             trj = trj.downsample(obj.downsample);
+            h = trj.t(2) - trj.t(1);
             dimu = size(obj.inp_last,1);
             Nu = size(obj.inp_last,2);
             N = Nu + 1;
@@ -238,9 +241,11 @@ classdef mILC < ILC
             D2 = [-diag(ones(1,lend1-2*dimu)),zeros(lend1-2*dimu,2*dimu)];
             D = D1 + D2;
             D(end+1:end+2*dimu,:) = D(end-2*dimu+1:end,:);
+            D = D/h;
             M = obj.Ql * D + D'*obj.Ql;
+            Sl = 0 * obj.Rl; % we keep du penalty S same as R
             
-            Mat = (obj.F' * M * obj.F) \ (obj.F' * M);
+            Mat = (obj.F' * M * obj.F + Sl) \ (obj.F' * M);
             u = obj.inp_last(:) - Mat * e(:);
             
             % revert from lifted vector from back to normal form

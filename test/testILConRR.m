@@ -34,8 +34,8 @@ SIM.dimu = 2;
 % time step h 
 SIM.h = 0.01;
 % noise and initial error
-SIM.eps = 3e-10;
-SIM.eps_d = 3e-10;
+SIM.eps = 0e-10;
+SIM.eps_d = 0e-10;
 % integration method
 SIM.int = 'Euler';
 % trajectory in joint space?
@@ -170,14 +170,14 @@ rr.plot_outputs(traj);
 
 num_trials = 10;
 
-ilc = aILC(rr,traj);
-%ilc = mILC(rr,traj); 
+%ilc = aILC(rr,traj);
+ilc = mILC(rr,traj); 
 %ilc.inp_last = traj.unom;
 
 for i = 1:num_trials
     
-    us = ilc.feedforward(traj,rr,qact);
-    %us = ilc.feedforward(traj,qact);     
+    %us = ilc.feedforward(traj,rr,qact);
+    us = ilc.feedforward(traj,qact);     
     traj.unom = us;
     % get the measurements
     [qact,ufull] = rr.observeWithFeedbackErrorForm(traj,q0);

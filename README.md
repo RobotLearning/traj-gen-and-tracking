@@ -1,5 +1,8 @@
 TODO List:
 
+- Test different filter settings. Why is joint_raw_state 0?
+- Why does LQR blow up in Robot computer? Replace LQR in task with PD. 
+  Back to normal?
 - Test inverse dynamics and fb. Include friction?
 - test end-goal learning in Mayer form
 - Total Least Squares implementation for ILC?
@@ -18,6 +21,7 @@ TODO List:
 - Clean-up: Check out Yanlong's and Katharina's code.
 
 Extensions:
+- Can we compute one K for all smooth robot trajectories?
 - Optimize DMPs with minimum jerk criterion
 - Evolving DMPs based on current position, as an oracle 
 - Minimizing expectation with variance added for ILC to come up with a new update rule
