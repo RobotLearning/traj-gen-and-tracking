@@ -4,21 +4,17 @@ Paper List:
 - Regression on different trajectories?
 - Include wILC ?
 - Include new update laws? Mayer form and total least squares?
-- What plots to include for real robot experiments?
-
 
 Real Robot Notes:
 
-- How to bring it back to q0 precisely with less than 1e-4 error? Is it related to fb?
-- Test 0.5 sec trajectory. Error much less?
-- Test different PD feedback.
 - Test bILC with p = 0.1.
 - How to test mILC? maybe keep line search with beta < 1?
+- Test 0.5 sec trajectory. Error much less?
 
 SL Notes:
 
 - Can we run traj again after f and st without problems?
-- Why does LQR blow up in Robot computer? Replace LQR in task with PD. Back to normal?
+- Why does task servo feedback blow up in Robot computer?
 - Check dmp_task. Why are there oscillations? 
 - Clean-up: Check out Yanlong's and Katharina's code.
 

@@ -15,6 +15,8 @@ classdef aILC < ILC
         name
         % costs incurred (Q-SSE)
         error
+        % downsampling to speed things up
+        downsample
         
         % ILC's Last input sequence
         inp_last
@@ -42,12 +44,19 @@ classdef aILC < ILC
     methods
         
         %% Constructor for convex optim + Kalman filter based ILC
-        function obj = aILC(model,trj)
+        function obj = aILC(model,trj,varargin)
                         
             obj.episode = 0;
             obj.color = 'k';
             obj.name = 'Kalman filter based ILC';
             obj.error = 0;
+            obj.downsample = 1;
+            
+            if nargin == 3
+                obj.downsample = min(varargin{1},10);
+            end
+            
+            trj = trj.downsample(obj.downsample);
             
             N = trj.N - 1;
             dim_x = model.SIM.dimx;
@@ -140,21 +149,26 @@ classdef aILC < ILC
         end
         
         %% Main ILC function
-        function unext = feedforward(obj,traj,model,y)
+        function unext = feedforward(obj,trj,y,varargin)
                         
-            ydev = y - traj.s;
-            % deviation vector starts from x(1)
-            dev = ydev(:,2:end);
+            trj = trj.downsample(obj.downsample);
+            dimu = size(obj.inp_last,1);
+            Nu = size(obj.inp_last,2);
+            N = Nu + 1;
+            rate = size(y,2)/N;
+            idx = rate * (1:N);
+            y = y(:,idx);            
+            e = y - trj.s;
+            e = e(:,2:end);  
             
-            Nu = traj.N - 1;            
-            dim_u = model.SIM.dimu;
-            h = model.SIM.h;
+            Nu = trj.N - 1;            
+            h = trj.t(2) - trj.t(1);
             % get u from last applied input
-            u = obj.inp_last - traj.unom(:,1:Nu);
+            u = obj.inp_last - trj.unom(:,1:Nu);
             
             % Filter to estimate disturbance
             obj.filter.predict(u(:));
-            obj.filter.update(dev(:),u(:));
+            obj.filter.update(e(:),u(:));
             d = obj.filter.x;
 
             % Constraints and penalty matrices
@@ -162,20 +176,23 @@ classdef aILC < ILC
             % extract constraints
             % arrange in format Lu <= q
             % call the particular constraints-generating code
-            if ismethod(model,'lift_constraints')
-                [umin,umax,L,q] = model.lift_constraints(traj,obj);
+            
+            if nargin > 3
+                model = varargin{1};
+                if ismethod(model,'lift_constraints')
+                    [umin,umax,L,q] = model.lift_constraints(trj,obj);
+                end
             else
                 umin = []; umax = [];
-            end           
-
+            end
     
             % input deviation penalty matrix D
-            D0 = eye(dim_u*Nu); 
-            D1 = (diag(ones(1,dim_u*(Nu-1)),dim_u) - eye(dim_u*Nu))/h;
-            D1 = D1(1:end-dim_u,:); % D1 is (Nu-1)*nu x Nu*nu dimensional
-            D2 = (diag(ones(1,dim_u*(Nu-2)),2*dim_u) - ... 
-                 2*diag(ones(1,dim_u*(Nu-1)),dim_u) + eye(dim_u*Nu))/(h^2);
-            D2 = D2(1:end-2*dim_u,:); % D2 is (Nu-2)*nu x Nu*nu dimensional
+            D0 = eye(dimu*Nu); 
+            D1 = (diag(ones(1,dimu*(Nu-1)),dimu) - eye(dimu*Nu))/h;
+            D1 = D1(1:end-dimu,:); % D1 is (Nu-1)*nu x Nu*nu dimensional
+            D2 = (diag(ones(1,dimu*(Nu-2)),2*dimu) - ... 
+                 2*diag(ones(1,dimu*(Nu-1)),dimu) + eye(dimu*Nu))/(h^2);
+            D2 = D2(1:end-2*dimu,:); % D2 is (Nu-2)*nu x Nu*nu dimensional
             % penalty scale
             a0 = 5e-5; a1 = 5e-5; a2 = 5e-5;
     
@@ -186,7 +203,11 @@ classdef aILC < ILC
             v = obj.F'*obj.S'*d;
             u = quadprog(M, v, [], [], [], [], umin, umax, [], options);
             
-            unext = traj.unom(:,1:Nu) + reshape(u,dim_u,Nu);
+            unext = trj.unom(:,1:Nu) + reshape(u,dimu,Nu);
+            
+            trj.unom = unext;
+            trj = trj.upsample(obj.downsample);
+            unext = trj.unom;
            
             
         end

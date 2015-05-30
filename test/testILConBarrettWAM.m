@@ -118,10 +118,10 @@ traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 % Load feedback in case trajectory is very large
 %load('LQR.mat','FB');
 % load initial LQR (LQR0)
-%load('LQR0.txt','LQR0');
-%for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
+load('LQR0.txt','LQR0');
+for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
-for i = 1:traj.N-1, FB(:,:,i) = -K; end;
+%for i = 1:traj.N-1, FB(:,:,i) = -K; end;
 traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
@@ -147,14 +147,14 @@ wam.plot_outputs(traj);
 
 %% Start learning with ILC
 
-num_trials = 7;
-%ilc = aILC(wam,traj);
-ilc = mILC(wam,traj,10); %downsample 10
+num_trials = 20;
+ilc = aILC(wam,traj,10);
+%ilc = mILC(wam,traj,10); %downsample 10
 
 for i = 1:num_trials
     % get next inputs
-    u = ilc.feedforwardMayer(traj,qact);
-    %u = ilc.feedforward(traj,qact);
+    %u = ilc.feedforwardMayer(traj,qact);
+    u = ilc.feedforward(traj,qact);
     % evolve system
     %qact = wam.evolve(t,q0,u);
     % evolve system with feedback
