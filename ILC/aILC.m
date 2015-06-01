@@ -186,6 +186,7 @@ classdef aILC < ILC
                 umin = []; umax = [];
             end
     
+            
             % input deviation penalty matrix D
             D0 = eye(dimu*Nu); 
             D1 = (diag(ones(1,dimu*(Nu-1)),dimu) - eye(dimu*Nu))/h;
@@ -194,18 +195,20 @@ classdef aILC < ILC
                  2*diag(ones(1,dimu*(Nu-1)),dimu) + eye(dimu*Nu))/(h^2);
             D2 = D2(1:end-2*dimu,:); % D2 is (Nu-2)*nu x Nu*nu dimensional
             % penalty scale
-            a0 = 5e-5; a1 = 5e-5; a2 = 5e-5;
+            a0 = 1e-5; a1 = 5e-5; a2 = 1e-5;
     
             % solve with quadprog
             options = optimset('Display', 'iter', 'Algorithm', 'interior-point-convex');
             M0 = obj.S*obj.F;
-            M = (M0'*M0) + a2*(D2'*D2);
+            M = (M0'*M0) + a1*(D1'*D1);
             v = obj.F'*obj.S'*d;
             u = quadprog(M, v, [], [], [], [], umin, umax, [], options);
             
-            unext = trj.unom(:,1:Nu) + reshape(u,dimu,Nu);
+            u = trj.unom(:,1:Nu) + reshape(u,dimu,Nu);           
+                  
             
-            trj.unom = unext;
+            u = reshape(u,dimu,Nu);
+            trj.unom = u;
             trj = trj.upsample(obj.downsample);
             unext = trj.unom;
            

@@ -1,15 +1,15 @@
 Paper List:
 
+- Include new update laws: Mayer form and total least squares.
 - Compare mILC with different parameters, aILC, bILC and only feedback-based ILC (current iteration)
 - Regression on different trajectories?
 - Include wILC ?
-- Include new update laws? Mayer form and total least squares?
 
 Real Robot Notes:
 
-- Test bILC with p = 0.1.
-- How to test mILC? maybe keep line search with beta < 1?
-- Test 0.5 sec trajectory. Error much less?
+- We can test the initialization problem with polynomials.
+- Test with f and goto_posture.
+- Test bILC with p = 0.1. Test mILC with line search with beta < 1?
 
 SL Notes:
 
@@ -20,9 +20,7 @@ SL Notes:
 
 Matlab Notes:
 
-- Can we make aILC work on robot classes?
-- Include stable differentiation for end-goal learning in Mayer form
-- Total Least Squares implementation for ILC?
+- How does the mayerFormILC perform with/out Kalman filter with/out Convex Opt. with/out TLS?
 - Does wILC work better with the new dmp?
 - Make MATLAB experiments for generalization: regression, convex hull learning. 
   Are the weights necessary for generalization? 

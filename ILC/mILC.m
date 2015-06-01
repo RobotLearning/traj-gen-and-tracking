@@ -211,6 +211,8 @@ classdef mILC < ILC
             % Iterative Method with Conjugate gradient
             %A = obj.F' * obj.Ql * obj.F + Sl;
             %u = obj.inp_last(:) - cgs(A,obj.F'*obj.Ql*e(:));
+            % Total Least Squares
+            %u = obj.inp_last(:) - tls(obj.F,e(:),0.05);
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);
@@ -236,16 +238,16 @@ classdef mILC < ILC
             e = y - trj.s;  
             e = e(:,2:end);
             
-            lend1 = length(obj.Ql);
-            D1 = [zeros(lend1-2*dimu,2*dimu),diag(ones(1,lend1-2*dimu))];
-            D2 = [-diag(ones(1,lend1-2*dimu)),zeros(lend1-2*dimu,2*dimu)];
-            D = D1 + D2;
-            D(end+1:end+2*dimu,:) = D(end-2*dimu+1:end,:);
-            D = D/h;
+            len_d1 = length(obj.Ql);
+            D0 = [-eye(2*dimu),eye(2*dimu),zeros(2*dimu,len_d1-(4*dimu))];
+            D1 = [-eye(2*dimu*(Nu-2)),zeros(2*dimu*(Nu-2),4*dimu)];
+            D1 = D1 + [zeros(2*dimu*(Nu-2),4*dimu),eye(2*dimu*(Nu-2))];
+            D2 = [zeros(2*dimu,len_d1-(4*dimu)),-eye(2*dimu),eye(2*dimu)];
+            D = [D0;D1;D2];
             M = obj.Ql * D + D'*obj.Ql;
             Sl = 0 * obj.Rl; % we keep du penalty S same as R
             
-            Mat = (obj.F' * M * obj.F + Sl) \ (obj.F' * M);
+            Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
             u = obj.inp_last(:) - Mat * e(:);
             
             % revert from lifted vector from back to normal form
