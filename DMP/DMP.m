@@ -40,7 +40,7 @@ classdef (Abstract) DMP < handle
             x_roll = obj.can.evolve(N);
             obj.resetStates();
             for i = 1:N
-                Y_roll(:,i) = obj.y;
+                Y_roll(:,i) = obj.y(:);
                 obj.step(1);
             end            
         end
@@ -51,7 +51,7 @@ classdef (Abstract) DMP < handle
         % as well as clearing Y values
         function resetStates(obj)
            
-            obj.y = [obj.y0;0;0];
+            obj.y = obj.y0;
             obj.can.reset();
         end
         
@@ -83,6 +83,7 @@ classdef (Abstract) DMP < handle
         % set the initial state of the DMP
         function setInitState(obj,yin)
             
+            assert(length(yin)==3,'please provide initial vel and acc');
             obj.y0 = yin;
         end
         

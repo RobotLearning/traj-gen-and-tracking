@@ -5,8 +5,6 @@
 % 1. tau is moved to the right-hand side as opposed to original
 %    convention
 % 2. yd now is the second dimension, as opposed to first
-%    
-% TODO: exponent of the heights make a difference in regression!
 %
 classdef DDMP < DMP
     
@@ -20,7 +18,7 @@ classdef DDMP < DMP
         alpha_g, beta_g
         % goal state
         goal
-        % initial y,yd values
+        % initial y,yd,ydd values
         y0
         % weights of the DMP
         w
@@ -37,6 +35,7 @@ classdef DDMP < DMP
             obj.alpha_g = alpha;
             obj.beta_g = beta;
             obj.goal = goal;
+            assert(length(yin)==3,'please provide initial vel and acc');
             obj.y0 = yin;
             obj.w = zeros(1,obj.can.nbf);
             % reset all states and phases

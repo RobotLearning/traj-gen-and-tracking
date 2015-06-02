@@ -109,7 +109,7 @@ bfs = 100;
 %save dmp weights for later use
 w_origin = zeros(length(dmp),bfs);
 for i = 1:length(dmp)
-    w_origin(i,:) = dmp(i).FORCE.w;
+    w_origin(i,:) = dmp(i).w;
 end
 
 % Generate feedback with LQR

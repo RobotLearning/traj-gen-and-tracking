@@ -202,7 +202,7 @@ classdef mILC < ILC
             % computes very high inverses though
             %u = obj.inp_last(:) - pinv(obj.F) * e(:);
             % in case F is very large
-            u = obj.inp_last(:) - obj.Finv * e(:);
+            %u = obj.inp_last(:) - obj.Finv * e(:);
             % Penalize inputs and derivatives (LM-type update)
             %Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
             %L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
@@ -212,7 +212,7 @@ classdef mILC < ILC
             %A = obj.F' * obj.Ql * obj.F + Sl;
             %u = obj.inp_last(:) - cgs(A,obj.F'*obj.Ql*e(:));
             % Total Least Squares
-            %u = obj.inp_last(:) - tls(obj.F,e(:),0.05);
+            u = obj.inp_last(:) - tls(obj.F,e(:),0.05);
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);
@@ -238,6 +238,7 @@ classdef mILC < ILC
             e = y - trj.s;  
             e = e(:,2:end);
             
+            %%{
             len_d1 = length(obj.Ql);
             D0 = [-eye(2*dimu),eye(2*dimu),zeros(2*dimu,len_d1-(4*dimu))];
             D1 = [-eye(2*dimu*(Nu-2)),zeros(2*dimu*(Nu-2),4*dimu)];
@@ -249,6 +250,13 @@ classdef mILC < ILC
             
             Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
             u = obj.inp_last(:) - Mat * e(:);
+            %}
+            
+            %{
+            elast = e(:,end);
+            Fend = obj.F(end-2*dimu+1:end,:);
+            u = obj.inp_last(:) - pinv(Fend)*elast;
+            %}
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);

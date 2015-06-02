@@ -1,5 +1,6 @@
 Matlab Notes:
 
+
 - Does wILC work better with the new dmp?
 - Make MATLAB experiments for generalization: regression, convex hull learning. 
   Are the weights necessary for generalization? 
@@ -12,18 +13,18 @@ Paper List:
 - Regression on different trajectories?
 - Include wILC ?
 
+Real Robot Notes:
+
+- Check the initialization pos/vel/acc errors with PID/PD and different filter values.
+- Test with f and goto_posture.
+- Test bILC with p = 0.1. Test mILC with line search with beta < 1?
+
 SL Notes:
 
 - Can we run traj again after f and st without problems?
 - Why does task servo feedback blow up in Robot computer?
 - Check dmp_task. Why are there oscillations? 
 - Clean-up: Check out Yanlong's and Katharina's code.
-
-Real Robot Notes:
-
-- Check the initialization pos/vel/acc errors with PID/PD and different filter values.
-- Test with f and goto_posture.
-- Test bILC with p = 0.1. Test mILC with line search with beta < 1?
 
 Minor:
 - Correct initial conditions of zero-phase filtering.
