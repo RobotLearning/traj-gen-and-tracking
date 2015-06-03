@@ -14,6 +14,8 @@ classdef (Abstract) DMP < handle
         alpha_g, beta_g
         % goal state
         goal
+        % regularization constant when regressing
+        lambda
     end
     
     methods (Abstract)
@@ -162,8 +164,8 @@ classdef (Abstract) DMP < handle
             C(end-1:end,:) = 0;
             %D = -diag(ones(1,lenw))+diag(ones(1,lenw-1),1);
             %D(end,:) = 0;
-            lambda = 1e1;
-            w = ((Psi' * Psi + lambda*C) \ (Psi')) * fd(:);
+            %lambda = 1e1;
+            w = ((Psi' * Psi + obj.lambda*C) \ (Psi')) * fd(:);
 
             obj.setWeights(w);
 

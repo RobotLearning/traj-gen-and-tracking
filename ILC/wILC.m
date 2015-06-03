@@ -25,6 +25,8 @@ classdef wILC < ILC
         name
         % costs incurred (Q-SSE)
         error
+        % downsampling to speed things up
+        downsample
         
         % update method
         upd_meth
@@ -50,6 +52,13 @@ classdef wILC < ILC
             obj.color = 'k';
             obj.name = 'wILC';
             obj.error = 0;
+            obj.downsample = 1;
+            
+            if nargin == 4
+                obj.downsample = min(10,varargin{2});
+            end
+            
+            traj = traj.downsample(obj.downsample);
             
             N = traj.N - 1;
             h = traj.t(2) - traj.t(1);
@@ -336,7 +345,7 @@ classdef wILC < ILC
             qdd(:,end+1) = qdd(:,end);
     
             goals = q(:,end);
-            y0 = [q(:,1),qd(:,1)];
+            y0 = [q(:,1),qd(:,1),zeros(size(Cout,1),1)];
 
             for i = 1:length(dmp)
 
@@ -344,6 +353,8 @@ classdef wILC < ILC
                 dmp(i).setInitState(y0(i,:)');
                 % initial states of DMPs
                 dmp(i).setGoal(goals(i));
+                % dont regularize
+                dmp(i).lambda = 0;
                 %dmp(i) = discreteDMP(can,alpha,beta,goal(1),yin,numbf);
                 dmp(i).regressLive(q(i,:)',qd(i,:)',qdd(i,:)',goals(i));
 
@@ -362,14 +373,22 @@ classdef wILC < ILC
         function out = feedforward(obj,traj,dmps,y)
         
             update_method = obj.upd_meth;
+            traj = traj.downsample(obj.downsample);
+            N = traj.N;
+            rate = size(y,2)/N;
+            idx = rate * (1:N);
+            y = y(:,idx);        
             
             switch update_method 
                 case 't'
-                    out = obj.updateTraj(traj,y);
+                    trj = obj.updateTraj(traj,y);
+                    out = trj.upsample(obj.downsample);
                 case 'w'
-                    out = obj.updateWeights(traj,y);
+                    trj = obj.updateWeights(traj,y);
+                    out = trj.upsample(obj.downsample);
                 case 'wd'
-                    out = obj.updateDerivativeWeights(traj,y);
+                    trj = obj.updateDerivativeWeights(traj,y);
+                    out = trj.upsample(obj.downsample);
                 otherwise %updates dmp weights
                     out = obj.updateDMP(dmps,traj,y);
                     

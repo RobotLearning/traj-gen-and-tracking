@@ -22,6 +22,8 @@ classdef DDMP < DMP
         y0
         % weights of the DMP
         w
+        % regularization constant when regressing
+        lambda
     end
     
     methods
@@ -35,6 +37,7 @@ classdef DDMP < DMP
             obj.alpha_g = alpha;
             obj.beta_g = beta;
             obj.goal = goal;
+            obj.lambda = 1e-1;
             assert(length(yin)==3,'please provide initial vel and acc');
             obj.y0 = yin;
             obj.w = zeros(1,obj.can.nbf);

@@ -1,5 +1,5 @@
 % Adapts reference DMPs to a new goal position
-function [dmpNew,s] = adaptDMP(yin,goal,dmpOrigin,wOrigin)
+function [dmpNew,s] = adaptDMP(yin,goal,dmpOrigin,wOrigin,steps)
 
     dim = length(dmpOrigin);
     can = dmpOrigin(1).can;
@@ -10,13 +10,13 @@ function [dmpNew,s] = adaptDMP(yin,goal,dmpOrigin,wOrigin)
 
     for i = 1:dim
         % append zero velocity
-        y0 = [yin(i);0];
+        y0 = [yin(i);0;0];
         % create the dmp trajectory
-        dmpNew(i) = discreteDMP(can,alpha,beta,goal(i),y0,numbf);
+        dmpNew(i) = DDMP(can,alpha,beta,goal(i),y0,numbf);
         % set the original weights
-        dmpNew(i).FORCE.w = wOrigin(i,:);
+        dmpNew(i).w = wOrigin(i,:);
         % evolve the DMP
-        [x,si] = dmpNew(i).evolve();         
+        [x,si] = dmpNew(i).evolve(steps);         
         s(i,:) = si(1,:);
 
     end 

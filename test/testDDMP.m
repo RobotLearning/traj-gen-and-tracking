@@ -116,8 +116,8 @@ dmp2.regression(0,path2);
 % initial states of DMPs
 %yin1 = [1;0];
 %yin2 = [0;2*pi];
-yin1 = 1;
-yin2 = 0;
+yin1 = [1;0;0];
+yin2 = [0;0;0];
 dmp1.setInitState(yin1);
 dmp1.setGoal(path1);
 dmp1.resetStates();
@@ -237,8 +237,8 @@ dmp1.regression(path1(end),path1);
 dmp2.regression(path2(end),path2);
 
 % initial states of DMPs
-yin1 = 0;
-yin2 = 1;
+yin1 = [0;0;0];
+yin2 = [1;0;0];
 dmp1.setInitState(yin1);
 dmp1.setGoal(path1);
 dmp1.resetStates();

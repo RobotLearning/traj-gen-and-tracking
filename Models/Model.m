@@ -219,7 +219,7 @@ classdef (Abstract) Model < handle
             beta = 25/4;
 
             for i = 1:dim
-                y0 = yin(i);
+                y0 = [yin(i);0;0];
                 % create the dmp trajectory
                 dmp(i) = DDMP(can,alpha,beta,goal(i),y0);
                 % learn the weights using regression

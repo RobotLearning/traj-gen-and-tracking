@@ -13,6 +13,8 @@ classdef bILC < ILC
         name
         % costs incurred (Q-SSE)
         error
+        % downsampling to speed things up
+        downsample
         
         % ILC's Last input sequence
         inp_last
@@ -27,6 +29,7 @@ classdef bILC < ILC
             obj.color = 'b';
             obj.name = 'Arimoto type ILC';
             obj.error = 0;
+            obj.downsample = 1;
             
             N = traj.N - 1;
             if ~isempty(traj.unom)

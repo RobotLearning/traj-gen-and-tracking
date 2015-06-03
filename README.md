@@ -1,6 +1,5 @@
 Matlab Notes:
 
-- Does wILC work better with the new dmp?
 - Make MATLAB experiments for generalization: regression, convex hull learning. 
   Are the weights necessary for generalization? 
 - Merge Guilherme's PMP idea with this folder.
@@ -10,7 +9,6 @@ Paper List:
 - Compare different mILC with aILC, bILC and only feedback-based ILC (current iteration)
 - Include new update laws: Mayer form and total least squares.
 - Regression on different trajectories?
-- Include wILC ?
 
 SL Notes:
 

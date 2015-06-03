@@ -23,6 +23,8 @@ classdef RDMP < DMP
         y0
         % weights
         w
+        % regularization constant when regressing
+        lambda
     end
     
     methods
@@ -35,6 +37,7 @@ classdef RDMP < DMP
             obj.can = canonical;
             obj.alpha_g = alpha;
             obj.beta_g = beta;
+            obj.lambda = 1e-1;
             obj.goal = [goal; amplitude];
             obj.y0 = yin;
             obj.w = zeros(1,obj.can.nbf);

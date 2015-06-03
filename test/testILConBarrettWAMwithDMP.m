@@ -42,150 +42,13 @@ SIM.h = 0.002; % 500 Hz recorded data
 SIM.eps = 3e-10;
 SIM.eps_d = 3e-10;
 % integration method
-SIM.int = 'Euler';
+SIM.int = 'Symplectic Euler';
 % reference trajectory in joint space?
 SIM.jref = true;
 
-% definitions
-ZSFE  =  0.346;              %!< z height of SAA axis above ground
-ZHR  =  0.505;              %!< length of upper arm until 4.5cm before elbow link
-YEB  =  0.045;              %!< elbow y offset
-ZEB  =  0.045;              %!< elbow z offset
-YWR  = -0.045;              %!< elbow y offset (back to forewarm)
-ZWR  =  0.045;              %!< elbow z offset (back to forearm)
-ZWFE  =  0.255;              %!< forearm length (minus 4.5cm)
-
-% link 0 is the base
-link0.m = 0.0;
-link0.mcm(1) = 0.0;
-link0.mcm(2) = 0.0;
-link0.mcm(3) = 0.0;
-link0.inertia(1,1) = 0.0; 
-link0.inertia(1,2) = 0.0; 
-link0.inertia(1,3) = 0.0; 
-link0.inertia(2,2) = 0.0;   
-link0.inertia(2,3) = 0.0;  
-link0.inertia(3,3) = 0.0;  
-
-% End effector parameters
-eff(1).m = 0.0;
-eff(1).mcm(1) = 0.0;
-eff(1).mcm(2) = 0.0;
-eff(1).mcm(3) = 0.0;
-eff(1).x(1)  = 0.0;
-eff(1).x(2)  = 0.0;
-eff(1).x(3)  = 0.06; 
-eff(1).a(1)  = 0.0;
-eff(1).a(2)  = 0.0;
-eff(1).a(3)  = 0.0;
-
-% External forces
-for j = 1:3
-    % I guess this is the external force to the base
-    uex0.f(j) = 0.0;
-    uex0.t(j) = 0.0;
-    for i = 1:7
-        uex(i).f(j) = 0.0;
-        uex(i).t(j) = 0.0;
-    end
-end
-
-% SFE joint
-links(1).m = 0.00000; 
-links(1).mcm(1) = -0.00000;
-links(1).mcm(2) = 0.00000;
-links(1).mcm(3) = -0.00000;  
-links(1).inertia(1,1) = 0.00000; 
-links(1).inertia(1,2) = -0.00000; 
-links(1).inertia(1,3) = -0.00000; 
-links(1).inertia(2,2) = 0.00000;   
-links(1).inertia(2,3) = 0.00000;  
-links(1).inertia(3,3) = 0.00000;  
-% SAA joint
-links(2).m = 0.00000;  
-links(2).mcm(1) = 0.43430; 
-links(2).mcm(2) = -0.00495;
-links(2).mcm(3) = -0.00000;
-links(2).inertia(1,1) = 0.24768;  
-links(2).inertia(1,2) = 0.00364;
-links(2).inertia(1,3) = 0.17270;  
-links(2).inertia(2,2) = 0.53601; 
-links(2).inertia(2,3) = -0.02929; 
-links(2).inertia(3,3) =  0.12406;  
-% HR joint    
-links(3).m = 3.53923; 
-links(3).mcm(1) = -0.00889;
-links(3).mcm(2) = -0.02148;
-links(3).mcm(3) = -1.70741;
-links(3).inertia(1,1) = 0.82985;
-links(3).inertia(1,2) = -0.01520;
-links(3).inertia(1,3) = -0.00612;
-links(3).inertia(2,2) = 0.86182;
-links(3).inertia(2,3) = -0.00575;
-links(3).inertia(3,3) = 0.00071;
-% EB joint (elbow)
-links(4).m = 1.03409;
-links(4).mcm(1) = 0.14089;
-links(4).mcm(2) = -0.05914;
-links(4).mcm(3) = -0.00270;
-links(4).inertia(1,1) = 0.01276;
-links(4).inertia(1,2) = 0.00340;
-links(4).inertia(1,3) = -0.00229;
-links(4).inertia(2,2) = 0.02157;
-links(4).inertia(2,3) = 0.00032;
-links(4).inertia(3,3) = 0.03718;
-% WR joint (wrist 1)
-links(5).m = 2.28843;
-links(5).mcm(1) = 0.00709;
-links(5).mcm(2) = 0.00194; 
-links(5).mcm(3) = 0.22347; 
-links(5).inertia(1,1) = 0.02182;
-links(5).inertia(1,2) = -0.00001;
-links(5).inertia(1,3) = -0.00069;
-links(5).inertia(2,2) = 0.02184;
-links(5).inertia(2,3) = -0.00019;
-links(5).inertia(3,3) = 0.00002;
-% WFE joint (wrist 2)
-links(6).m = 0.25655; 
-links(6).mcm(1) = 0.03462; 
-links(6).mcm(2) = -0.00415;  
-links(6).mcm(3) = 0.00121; 
-links(6).inertia(1,1) = 0.00167; 
-links(6).inertia(1,2) = 0.00079; 
-links(6).inertia(1,3) = -0.00009; 
-links(6).inertia(2,2) = 0.00483; 
-links(6).inertia(2,3) = -0.00084;
-links(6).inertia(3,3) = 0.01101;
-% WAA joint (wrist 3)
-links(7).m = 0.63285; 
-links(7).mcm(1) = -0.00157;  
-links(7).mcm(2) = 0.00019;  
-links(7).mcm(3) = 0.08286;  
-links(7).inertia(1,1) = 0.01129; 
-links(7).inertia(1,2) = -0.00006;
-links(7).inertia(1,3) = -0.00006;  
-links(7).inertia(2,2) = 0.01086; 
-links(7).inertia(2,3) = 0.00001;  
-links(7).inertia(3,3) = 0.00016;
-
-% make sure inertia matrices are symmetric
-for i = 1:7
-    for j = 1:3
-        for k = j:3
-            links(i).inertia(k,j) = links(i).inertia(j,k);
-        end
-    end
-end
-
-% base cartesian position and orientation (quaternion)
-basec.x  = [0.0,0.0,0.0];
-basec.xd = [0.0,0.0,0.0];
-basec.xdd = [0.0,0.0,0.0];
-baseo.q = [0.0,1.0,0.0,0.0];
-baseo.qd = [0.0,0.0,0.0,0.0];
-baseo.qdd = [0.0,0.0,0.0,0.0];
-baseo.ad = [0.0,0.0,0.0];
-baseo.add = [0.0,0.0,0.0];
+% load (nominal) parameter values for robot dynamics
+%loadActualBarrettValues;
+loadNominalBarrettValues;
 
 % We observe all joints and all joint velocities
 PAR.links = links;
@@ -220,9 +83,9 @@ K(7,14) = 0.075;
 
 % cost structure
 % only penalize positions
-Q1 = 1*diag([ones(1,4),0.1*ones(1,3),0*ones(1,4),0*ones(1,3)]);
+Q1 = 1*diag([ones(1,4),1*ones(1,3),1*ones(1,4),1*ones(1,3)]);
 Q2 = 1*diag([ones(1,4),1*ones(1,3),0.1*ones(1,4),0.1*ones(1,3)]);
-COST.Q = Q2;
+COST.Q = Q1;
 COST.R = 0.01 * eye(SIM.dimu);
 
 % initialize model
@@ -257,10 +120,10 @@ bfs = 50;
 %file = [prefs_folder,'dmp_strike.txt'];
 file = 'dmp.txt';
 M = dlmread(file);
-perc = 0.5; % learning on whole traj can be unstable unless LQR is used
+perc = 1.0; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
 M = M(1:(len * perc),:);
-t = M(:,1); t = t';
+t = SIM.h * (1:perc*len);
 % order for refs in file: q1 qd1, ...
 % switching to order: q1 ... q7, qd1, ..., qd7
 q = M(:,2:2:2*N_DOFS);
@@ -272,12 +135,19 @@ ref = [q';qd'];
 
 [traj,dmp] = wam.generateInputsWithDMP(t,bfs,ref); % trajectory generated in joint space
 
+% downsample reference
+%traj = traj.downsample(10);
+
 % Generate feedback with LQR
-wam.generateFeedback(traj);
+%wam.generateFeedback(traj);
+% Load feedback in case trajectory is very large
+%load('LQR.mat','FB');
+% load initial LQR (LQR0)
+load('LQR0.txt','LQR0');
+for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
-%N = length(t) - 1;
-%for i = 1:N, FB(:,:,i) = -K; end
-%traj.K = FB;
+%for i = 1:traj.N-1, FB(:,:,i) = -K; end;
+traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
@@ -300,8 +170,9 @@ wam.plot_outputs(traj);
 %% Start learning with ILC
 
 num_trials = 5;
-ilc = wILC(traj,wam,'t');
-%ilc = wILC(traj,wam,'dmp');
+ilc = wILC(traj,wam,'t',10);
+%ilc = wILC(traj,wam,'dmp',10);
+%dmp(1).can.dt = 10 * SIM.h;
 
 for i = 1:num_trials
     % get next inputs

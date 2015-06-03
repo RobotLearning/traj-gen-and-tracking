@@ -212,7 +212,7 @@ classdef mILC < ILC
             %A = obj.F' * obj.Ql * obj.F + Sl;
             %u = obj.inp_last(:) - cgs(A,obj.F'*obj.Ql*e(:));
             % Total Least Squares
-            u = obj.inp_last(:) - tls(obj.F,e(:),0.05);
+            u = obj.inp_last(:) - 0 * tls(obj.F,e(:),0.05);
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);

@@ -14,6 +14,8 @@ classdef (Abstract) ILC < handle
         name
         % costs incurred (Q-SSE)
         error
+        % downsampling to speed things up
+        downsample
         
         % ILC's Last input sequence
         inp_last
@@ -37,9 +39,9 @@ classdef (Abstract) ILC < handle
         end
         
         % downsampling function to speed things up
-        function downsample(obj,inp_applied)
-            %TODO
-        end
+        %function downsample(obj,inp_applied)
+        %    %TODO
+        %end
         
     end
     

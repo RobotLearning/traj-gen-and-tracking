@@ -154,6 +154,7 @@ rr.animateArm(qact(1:2,:),ref);
 
 %% Change the hitting point slightly and see how the robot is doing
 
+%{
 % new reference in joint space
 %rr.flag_ref_jsp = true;
 % center of the region
@@ -162,7 +163,7 @@ g0 = traj.s(:,end);
 r = 0.05;
 % sample a point from that region
 g = g0 + [r;r;0;0];
-[dmpNew,jNew] = adaptDMP(q0,g,dmp,w_origin);
+[dmpNew,jNew] = adaptDMP(q0,g,dmp,w_origin,length(t));
 [~,refNew] = rr.kinematics(jNew);
 
 trajNew = rr.generateInputs(t,refNew);
@@ -221,3 +222,5 @@ end
 % Plot the controls and animate the robot arm
 rr.plot_outputs(trajNew);
 rr.animateArm(qact(1:2,:),refNew);
+
+%}
