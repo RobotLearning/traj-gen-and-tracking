@@ -74,7 +74,7 @@ beta = 25/4;
 % goal and amplitude are initialized here
 goal = 1;
 % initial states of DMPs
-yin = 0;
+yin = [0;0;0];
 dmp1 = DDMP(can,alpha,beta,goal,yin);
 dmp2 = DDMP(can,alpha,beta,goal,yin);
 

@@ -44,7 +44,6 @@ numbf = 50;
 pat = 'd';
 can = CAN(h,ax,tau,numbf,tf(end),pat);
 
-
 % stack cells 
 q = cell2mat(qLin);
 qd = cell2mat(qdLin);
@@ -58,7 +57,7 @@ for i = 1:dof
     % tau is fixed to be one
     % goal and amplitude are initialized here
     % these are not important as dmps can be extended to any yin and goal
-    yin(i) = inits(1,i);
+    yin(i) = [inits(1,i);0;0];
     g(i) = goals(1,i);
     % initial states of DMPs
     dmp(i) = DDMP(can,alpha,beta,g(i),yin(i));
