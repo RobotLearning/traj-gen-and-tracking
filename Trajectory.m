@@ -126,7 +126,7 @@ classdef Trajectory < handle
             N = round(obj.N * rate);
             t = linspace(obj.t(1)/rate,obj.t(end),N);
             s = interp1(obj.t,obj.s',t,obj.upsampling,'extrap')';
-            unom = interp1(obj.t(1:end-1),obj.unom',t,obj.upsampling,'extrap')';
+            unom = interp1(obj.t(1:end-1),obj.unom',t(1:end-1),obj.upsampling,'extrap')';
             
             if ~isempty(obj.K)
                 % form 2d K

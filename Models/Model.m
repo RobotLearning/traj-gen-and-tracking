@@ -200,11 +200,20 @@ classdef (Abstract) Model < handle
         %% Creates a dmp trajectory
         % numbf: number of basis functions to use
         function [dmp,s] = dmpTrajectory(obj,t,numbf,goal,yin,ref)
-            
+                                    
             h = obj.SIM.h;
-            dim = size(ref,1);
             N = length(t);
-            s = zeros(dim,N);
+            
+            % robot state space is of the form [q1,...,qn,qd1,...,qdn];
+            if isa(obj,'Robot')
+                dim = size(ref,1)/2;
+                s = zeros(2*dim,N);
+            else
+            % for linear models we generate dmps for all the states
+                dim = size(ref,1);
+                s = zeros(dim,N);
+            end
+            
             % make a DMP that smoothens x_des
             pat = 'd';
             % scaling
@@ -219,14 +228,19 @@ classdef (Abstract) Model < handle
             beta = 25/4;
 
             for i = 1:dim
-                y0 = [yin(i);0;0];
+                y0 = [yin(i,:)';0];
                 % create the dmp trajectory
                 dmp(i) = DDMP(can,alpha,beta,goal(i),y0);
                 % learn the weights using regression
                 dmp(i).updateWeights(ref(i,:));
                 % evolve the DMP
-                [x,si] = dmp(i).evolve(N);         
-                s(i,:) = si(1,:);
+                [x,si] = dmp(i).evolve(N);
+                if isa(obj,'Robot')
+                    s(i,:) = si(1,:);
+                    s(i+dim,:) = si(2,:);
+                else
+                    s(i,:) = si(1,:);
+                end
                 
                 %figure;
                 %plot(t,ref(i,:),'-',t,s(i,:),'-.',t,x);
@@ -287,7 +301,7 @@ classdef (Abstract) Model < handle
                 t = trj.t(1:end-1);
             else
                 u = trj.unom;
-                t = trj.t;
+                t = trj.t(1:end-1);
             end
             
             num_inp = size(u,1);

@@ -94,8 +94,8 @@ lin = Linear(PAR,CON,COST,SIM);
 ref = 1./(1+exp(-(100*t-20)/10));
 
 % initialize states and inputs
-x0 = [ref(1);ref(1)];
-y0 = C * x0;
+x0 = [ref(1),ref(1)];
+y0 = C * x0(:);
 % create yin with zero velocity
 yin = [ref(1);0];   
 
@@ -176,7 +176,7 @@ ref = t.^2;
 %ref = [ref; 0, 2*ones(1,length(t)-1)];
 x0 = zeros(dimx,1);
 y0 = C * x0;     
-yin = y0;
+yin = [y0,0];
 
 % create DMP trajectory and execute LQR
 [traj,dmp] = lin.generateDMP(t,yin,ref);

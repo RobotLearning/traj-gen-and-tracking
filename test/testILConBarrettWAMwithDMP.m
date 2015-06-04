@@ -93,29 +93,6 @@ wam = BarrettWAM(PAR,CON,COST,SIM);
 
 %% Generate inputs for a desired trajectory
 
-% basis functions of DMPs
-bfs = 50;
-% % load imitation-learned DMPs from MAT file
-% load('dmps.mat','dmps');
-% 
-% % save dmp weights for later use
-% w_origin = zeros(length(dmps),bfs);
-% for i = 1:length(dmps)
-%     w_origin(i,:) = dmps(i).FORCE.w;
-% end
-% 
-% % center of the region
-% t = 0.005:0.005:1.500;
-% q0 = [1.8; -0.0011;	-0.106;	1.89; -1.58; 0.149;	0.246];
-% g0 = [1.5172; 0.0637; -0.7906; 2.1683; -2.2159; -0.5760; 0.3933];
-% 
-% [dmp,ref] = adaptDMP(q0,g0,dmps,w_origin);
-% % get derivatives of dmps
-% [ddmp,dref] = diffDMP(zeros(7,1),zeros(7,1),dmp);
-% % combine them
-% for i = 1:N_DOFS,dmp(N_DOFS+i) = ddmp(i); end
-% ref = [ref; dref];
-
 % load percentage of trajectory from dmp file 
 %file = [prefs_folder,'dmp_strike.txt'];
 file = 'dmp.txt';
@@ -133,6 +110,8 @@ ref = [q';qd'];
 % generate u_ff inputs with inverse dynamics
 %traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
+% basis functions of DMPs
+bfs = 50;
 [traj,dmp] = wam.generateInputsWithDMP(t,bfs,ref); % trajectory generated in joint space
 
 % downsample reference
@@ -166,27 +145,32 @@ traj.addPerformance(ufull,qact,wam.COST,'ID + FB');
 wam.plot_inputs(traj);
 wam.plot_outputs(traj);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
+trajNew = Trajectory(traj.t,traj.s,traj.unom,traj.K);
 
 %% Start learning with ILC
 
-num_trials = 5;
-ilc = wILC(traj,wam,'t',10);
-%ilc = wILC(traj,wam,'dmp',10);
-%dmp(1).can.dt = 10 * SIM.h;
+num_trials = 10;
+ilc = mILC(wam,traj,10);
 
 for i = 1:num_trials
-    % get next inputs
-    traj2 = ilc.feedforward(traj,[],qact);   
-    %dmp = ilc.feedforward(traj,dmp,qact);  
-    % get the measurements
-    qact = wam.observeWithFeedbackErrorForm(traj2,q0);
-    %qact = wam.observeWithFeedbackErrorForm(traj,q0,dmp);
-    traj.addPerformance([],qact,wam.COST,ilc);
+    % adapt the dmps accordingly
+    % get the next inputs normally as in standard ILC
+    u = ilc.feedforward(trajNew,qact);
+    % adjust for the IDM change
+    u = u - trajNew.unom;
+    % change initial condition slightly
+    q0new = q0 + 0.0 * randn(length(q0),1);
+    trajModified = wam.generateInputsWithDMP(t,bfs,ref,q0new);
+    trajNew = Trajectory(traj.t,trajModified.s,trajModified.unom,traj.K);
+    % adjust for the IDM change
+    trajNew.unom = u + trajNew.unom;
+    [qact,ufull] = wam.observeWithFeedbackErrorForm(trajNew,q0new);
+    traj.addPerformance(ufull,qact,wam.COST,ilc);
     % Plot the controls and animate the robot arm
     %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
 end
 
 % Plot the controls and animate the robot arm
-wam.plot_inputs(traj);
-wam.plot_outputs(traj);
+wam.plot_inputs(trajNew);
+wam.plot_outputs(trajNew);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);

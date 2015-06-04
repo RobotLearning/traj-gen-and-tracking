@@ -86,7 +86,8 @@ classdef (Abstract) Robot < Model
         end     
         
         %% Method useful when modifying DMPs directly
-        function [Traj,dmps] = generateInputsWithDMP(obj,t,numbf,ref)
+        % varargin is for different initial conditions
+        function [Traj,dmps] = generateInputsWithDMP(obj,t,numbf,ref,varargin)
 
             h = obj.SIM.h;
             dim = obj.SIM.dimx / 2;
@@ -108,8 +109,16 @@ classdef (Abstract) Robot < Model
             end
             
             % make DMPs that smoothens reference, one for each output
+            
+            % this is quite unnecessary as velocities are always zero in
+            % goal positions
             goal = [qdes(:,end);qddes(:,end)];
-            yin = [qdes(:,1);qddes(:,1)];     
+            if nargin > 4
+                yin = varargin{1};
+                yin = reshape(yin,dim,2);
+            else
+                yin = [qdes(:,1),qddes(:,1)];     
+            end
             [dmps,s] = obj.dmpTrajectory(t,numbf,goal,yin,[qdes;qddes]);
             
             q = s(1:dim,:);
