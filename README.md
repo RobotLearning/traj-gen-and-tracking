@@ -1,13 +1,23 @@
+Theoretical TODO:
+
+- Derive again the tracking LQR. Why is cost function quadratic function of x0?
+- Derive Kalman filter from minimum variance and derive seperation principle.
+- Read some more ILC papers
+- Read robotics book up to control chapters
+- Read policy search review
+- Read the Barrett WAM inertial specifications
+- Read maximum principle chapter
+
 Matlab Notes:
 
-- Test using DMPs with different initial conditions and ILC.
+- Why does ILC learning with feedback not improve?
 - genILConRR: Make MATLAB experiments for generalization with regression.
 - Merge Guilherme's PMP idea with this folder.
 
 Paper List:
 
 - Compare different mILC with aILC, bILC and only feedback-based ILC (current iteration)
-- Include new update laws: Mayer form and total least squares.
+- Include new update laws: goal based update
 - Regression on different trajectories?
 
 SL Notes:
@@ -34,17 +44,7 @@ Minor:
 implement the test function in MATLAB that checks for differences
 - Why are two tracking LQRs not exactly the same (at the end)? 
   [maybe R dependence is not correct, index difference?]
-- Why does ILC learning with feedback not improve?
 - Check RDMP
-
-Theoretical TODO:
-
-- Derive Kalman filter from minimum variance.
-- Read some more ILC papers
-- Read robotics book up to control chapters
-- Read policy search review
-- Read the Barrett WAM inertial specifications
-- Read maximum principle chapter
 
 Extensions:
 - Can we compute one K for all smooth robot trajectories?

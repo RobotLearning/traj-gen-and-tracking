@@ -239,9 +239,9 @@ classdef mILC < ILC
             Sl = 0 * obj.Rl; % we keep du penalty S same as R
             
             % usual MILC
-            %u = ulast(:) - obj.Finv * e(:);
+            u = ulast(:) - obj.Finv * e(:);
             
-            %%{
+            %{
             len_d1 = length(obj.Ql);
             D0 = [-eye(2*dimu),eye(2*dimu),zeros(2*dimu,len_d1-(4*dimu))];
             D1 = [-eye(2*dimu*(Nu-2)),zeros(2*dimu*(Nu-2),4*dimu)];

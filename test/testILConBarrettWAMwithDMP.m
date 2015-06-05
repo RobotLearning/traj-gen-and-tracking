@@ -151,14 +151,14 @@ trajNew = Trajectory(traj.t,traj.s,traj.unom,traj.K);
 
 num_trials = 10;
 ilc = mILC(wam,traj,10);
-uadd = 0 .* traj.unom;
+uadd = zeros(size(traj.unom));
 
 for i = 1:num_trials
     % adapt the dmps accordingly
     % get the next inputs normally as in standard ILC
     uadd = ilc.feedforwardDMP(trajNew,qact,uadd);
     % change initial condition slightly
-    q0new = q0 + 0.5 * randn(length(q0),1);
+    q0new = q0 + 0.1 * randn(length(q0),1);
     trajModified = wam.generateInputsWithDMP(t,bfs,ref,q0new);
     trajNew = Trajectory(traj.t,trajModified.s,trajModified.unom,traj.K);
     % adjust for the IDM change

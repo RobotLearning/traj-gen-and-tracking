@@ -1,0 +1,139 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[letterpaper, 10 pt, conference]{ieeeconf}  % Comment this line out if you need a4paper
+
+%\documentclass[a4paper, 10pt, conference]{ieeeconf}      % Use this line for a4 paper
+
+\IEEEoverridecommandlockouts % This command is only needed if you want to use the \thanks command
+
+\overrideIEEEmargins % Needed to meet printer requirements.
+
+% See the \addtolength command later in the file to balance the column lengths
+% on the last page of the document
+
+\usepackage[latin1]{inputenc}
+\usepackage{pgfplots}
+\usepackage{tikzscale}
+\usepackage{epstopdf}
+\usepackage{amsmath}
+%\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{subfig}
+\usetikzlibrary{plotmarks}
+%\usepackage{hyperref}
+
+% theorem environment
+\newtheorem{prop}{Proposition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{prop2}{Proposition}
+\newtheorem{lem}{Lemma}
+\newtheorem{ex}{Example}
+
+% For algorithms
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% custom commands
+\newcommand{\boldvec}[1]{\boldsymbol{\mathrm{#1}}}
+\let\vec\boldvec
+\newcommand\at[2]{\left.#1\right|_{#2}} % the at differential sign
+\newcommand\scalemath[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}} % scaling matrices
+
+%% custom macros
+\newcommand{\todo}{\textcolor{red}{TODO}} % TODO!
+\newcommand{\kin}{\mathcal{T}} % used to denote inverse kinematics
+\newcommand{\invKin}{\mathcal{T}^{-1}} % used to denote inverse kinematics
+
+\newcommand{\joint}{\vec{q}} % used to denote robot state in joint space
+\newcommand{\state}{\vec{y}} % denotes the generalized coordinates - joint space and velocity coordinates
+\newcommand{\dmp}{\vec{s}} % used to denote the dmp trajectory states
+\newcommand{\error}{\vec{e}} % difference between state and reference
+\newcommand{\traj}{\vec{r}} % used to denote the points on the trajectory to be tracked
+
+\newcommand{\dist}{\vec{\epsilon}} % denotes the disturbances acting on the rigid body dynamics
+\newcommand{\linDist}{\vec{d}} % denotes the disturbances on the LTV model
+
+\newcommand{\sysInput}{\vec{u}} % used to denote the system inputs
+\newcommand{\linInput}{\tilde{\sysInput}} % denotes the LTV inputs
+\newcommand{\trjInput}{\sysInput_{\mathrm{IDM}}} % denotes the inputs on the trajectory (calculated using IDM)
+
+
+% % % % DMP terminology % % % %
+\newcommand{\fullvec}{\vec{\psi}} % full vector for state-ref-dmp-goal
+\newcommand{\goal}{\vec{g}} % goal state
+\newcommand{\force}{\vec{f}} % forcing term of the dmps
+\newcommand{\phase}{x} % phase of the dmp
+\newcommand{\weights}{\vec{w}} % weights of the dmp
+\newcommand{\basis}{\vec{\Phi}} % basis functions of the dmp as a matrix
+
+% % % % ILC terminology % % % %
+\newcommand{\qmatrix}{\vec{\Gamma}} % denotes the filtering qmatrix term of Bristow et al.
+\newcommand{\lmatrix}{\vec{L}} % denotes the learning matrix of Bristow et al.
+
+\newcommand{\dynamics}{\vec{f}}
+\newcommand{\dynamicsNominal}{\dynamics_{\mathrm{nom}}}
+\newcommand{\policy}{\vec{\pi}}
+\newcommand{\ValueFunction}{J}
+\newcommand{\episode}{k} % used for episode number
+
+\newcommand{\totalTime}{T} % total time duration 
+\newcommand{\numSteps}{N} % total number of time steps
+\newcommand{\numepisode}{K} % total number of episodes
+
+\newcommand{\threshold}{\epsilon}
+\newcommand{\alg}{\emph{gILC}}
+\newcommand{\dataset}{E}
+
+% Set the paths where all figures are taken from:
+\graphicspath{{Pictures/}}
+\mathtoolsset{showonlyrefs} 
+\newcommand{\includesvg}[1]{%
+% \executeiffilenewer{#1.svg}{#1.pdf}%
+% {inkscape -z -D --file=#1.svg %
+% --export-pdf=#1.pdf --export-latex}%
+ \input{#1.pdf_tex}%
+}
+
+\title{\LARGE \bf
+Optimizing Robot Striking Movement Primitives with Iterative Learning Control
+}
+
+\author{Okan Ko\c c$^{1}$, Guilherme Maeda$^{2}$, Gerhard Neumann${^2}$, Jan Peters$^{1,2}$% <-this % stops a space 
+\\
+{\tt\small \{okan.koc, jan.peters\}@tuebingen.mpg.de}%
+\thanks{$^{1}$Max Planck Institute for Intelligent Systems,
+        Spemannstr. 38, 72076 Tuebingen, Germany}
+\thanks{$^{2}$Technische Universitaet Darmstadt, FG Intelligente Autonome Systeme
+        Hochschulstr. 10, 64289 Darmstadt, Germany}
+}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\pagestyle{empty}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+
+Complex robot motor skills can be represented efficiently with a sequence of movement primitives. However, in order to perform the task effectively, the robot needs to be able to execute the corresponding primitives well. To achieve accurate tracking, we investigate two related Iterative Learning Control update laws and present a variant suited to tracking movement primitives. The resulting algorithm generalizes well to different initial conditions. We evaluate the performance of our approach in a simulated putting task as well as in a real robotic table tennis platform, where we show how the striking performance of a seven degree of freedom anthropomorphic arm can be optimized. Our final implemented algorithm compares favorably with two state-of-the-art approaches.
+
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{introduction}
+\input{method}
+\input{experiments}
+\input{conclusion}
+
+\bibliographystyle{plain}
+%\bibliographystyle{./IEEEtran}
+%\bibliography{./IEEEabrv,./iros2015Ref}
+\bibliography{./humanoids2015Ref}
+
+\end{document}
