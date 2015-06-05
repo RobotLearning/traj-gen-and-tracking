@@ -151,20 +151,21 @@ trajNew = Trajectory(traj.t,traj.s,traj.unom,traj.K);
 
 num_trials = 10;
 ilc = mILC(wam,traj,10);
+uadd = 0 .* traj.unom;
 
 for i = 1:num_trials
     % adapt the dmps accordingly
     % get the next inputs normally as in standard ILC
-    u = ilc.feedforward(trajNew,qact);
-    % adjust for the IDM change
-    u = u - trajNew.unom;
+    uadd = ilc.feedforwardDMP(trajNew,qact,uadd);
     % change initial condition slightly
-    q0new = q0 + 0.0 * randn(length(q0),1);
+    q0new = q0 + 0.5 * randn(length(q0),1);
     trajModified = wam.generateInputsWithDMP(t,bfs,ref,q0new);
     trajNew = Trajectory(traj.t,trajModified.s,trajModified.unom,traj.K);
     % adjust for the IDM change
-    trajNew.unom = u + trajNew.unom;
+    trajNew.unom = uadd + trajNew.unom;
     [qact,ufull] = wam.observeWithFeedbackErrorForm(trajNew,q0new);
+    % current iteration part of ILC
+    uadd = ufull - trajNew.unom + uadd;
     traj.addPerformance(ufull,qact,wam.COST,ilc);
     % Plot the controls and animate the robot arm
     %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);

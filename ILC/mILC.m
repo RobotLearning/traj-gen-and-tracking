@@ -223,6 +223,46 @@ classdef mILC < ILC
             
         end
         
+        %% Feedforward with DMP with different I.C.
+        function u = feedforwardDMP(obj,trj,y,ulast)
+            
+            trj = trj.downsample(obj.downsample);
+            dimu = size(obj.inp_last,1);
+            Nu = size(obj.inp_last,2);
+            N = Nu + 1;
+            rate = size(y,2)/N;
+            idx = rate * (1:N);
+            y = y(:,idx);
+            ulast = ulast(:,idx(1:end-1));
+            e = y - trj.s;
+            e = e(:,2:end);                        
+            Sl = 0 * obj.Rl; % we keep du penalty S same as R
+            
+            % usual MILC
+            %u = ulast(:) - obj.Finv * e(:);
+            
+            %%{
+            len_d1 = length(obj.Ql);
+            D0 = [-eye(2*dimu),eye(2*dimu),zeros(2*dimu,len_d1-(4*dimu))];
+            D1 = [-eye(2*dimu*(Nu-2)),zeros(2*dimu*(Nu-2),4*dimu)];
+            D1 = D1 + [zeros(2*dimu*(Nu-2),4*dimu),eye(2*dimu*(Nu-2))];
+            D2 = [zeros(2*dimu,len_d1-(4*dimu)),-eye(2*dimu),eye(2*dimu)];
+            D = [D0;D1;D2];
+            M = obj.Ql * D + D'*obj.Ql;
+            
+            Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
+            u = ulast(:) - Mat * e(:);
+            %}
+            
+            % revert from lifted vector from back to normal form
+            u = reshape(u,dimu,Nu);
+            
+            trj.unom = u;
+            trj = trj.upsample(obj.downsample);
+            u = trj.unom;
+            
+        end
+        
         %% Testing end point learning (Mayer form ILC)
         
         function u = feedforwardMayer(obj,trj,y)

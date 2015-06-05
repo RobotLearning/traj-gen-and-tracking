@@ -1,7 +1,7 @@
 Matlab Notes:
 
-- Make MATLAB experiments for generalization: regression, convex hull learning. 
-  Are the weights necessary for generalization? 
+- Test using DMPs with different initial conditions and ILC.
+- genILConRR: Make MATLAB experiments for generalization with regression.
 - Merge Guilherme's PMP idea with this folder.
 
 Paper List:
@@ -35,7 +35,7 @@ implement the test function in MATLAB that checks for differences
 - Why are two tracking LQRs not exactly the same (at the end)? 
   [maybe R dependence is not correct, index difference?]
 - Why does ILC learning with feedback not improve?
-- Check wILC and RDMP
+- Check RDMP
 
 Theoretical TODO:
 
