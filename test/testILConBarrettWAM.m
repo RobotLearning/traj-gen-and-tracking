@@ -147,7 +147,7 @@ wam.plot_outputs(traj);
 
 %% Start learning with ILC
 
-num_trials = 20;
+num_trials = 10;
 %ilc = aILC(wam,traj,10);
 ilc = mILC(wam,traj,10); %downsample 10
 %ilc = bILC(traj);

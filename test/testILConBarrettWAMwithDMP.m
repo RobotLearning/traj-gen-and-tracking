@@ -126,7 +126,7 @@ load('LQR0.txt','LQR0');
 for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
 %for i = 1:traj.N-1, FB(:,:,i) = -K; end;
-traj.K = FB;
+%traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 

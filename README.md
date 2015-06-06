@@ -8,9 +8,10 @@ Theoretical TODO:
 - Read the Barrett WAM inertial specifications
 - Read maximum principle chapter
 
-Matlab Notes:
+Matlab List:
 
-- Why does ILC learning with feedback not improve?
+- check total least squares on the ball prediction dataset
+- Why does ILC learning with feedback generate zero Finv?
 - genILConRR: Make MATLAB experiments for generalization with regression.
 - Merge Guilherme's PMP idea with this folder.
 
