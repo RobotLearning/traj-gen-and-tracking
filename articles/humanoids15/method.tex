@@ -71,7 +71,7 @@ Most ILC update laws can be put in the following form
 \end{aligned}
 \end{equation*}
 
-\noindent Using this \emph{input-to-output matrix} $\vec{F}$ we can analyze the effects of the feedforward inputs $\sysInput_L = [\linInput_1, \linInput_2, \ldots, \linInput_{\numSteps}]^{\mathrm{T}}$ on the errors $\error_L = [\error(1),\error(2),\ldots,\error(\numSteps)]^{\mathrm{T}}$ and compensate for the disturbances $\linDist_L$ with ILC.
+\noindent Using this \emph{input-to-output matrix} $\vec{F}$ we can analyze the effects of the feedforward inputs $\sysInput_L = \vect(\linInput)$ on the errors $\error_L = \vect(\error)$ and compensate for the disturbances $\linDist_L$ with ILC.
 
 %\noindent If the disturbances are repeating every iteration, i.e. $\frac{\partial{\linDist_L}}{\partial{\sysInput_L}} = 0$, using \eqref{liftedLTV},
 
@@ -93,7 +93,7 @@ Most ILC update laws can be put in the following form
 \label{costFunctional}
 \end{equation}
 
-\noindent where $\vec{Q}_L \in \mathbb{R}^{2Nn \times 2Nn}$ (similarly for $\vec{R}_L$) is of the following form
+\noindent where the symmetric positive definite matrix $\vec{Q}_L \in \mathbb{R}^{2Nn \times 2Nn}$ ($\vec{R}_L$ is defined analogously) is of the following form
 %
 \begin{equation*}
 \begin{aligned}
@@ -106,121 +106,107 @@ Most ILC update laws can be put in the following form
  \end{bmatrix}.
 \end{aligned}
 \end{equation*}
-
-\noindent Using Gauss-Newton we can optimize iteratively for $\sysInput_L$
-
-\begin{equation}
-\begin{aligned}
-\sysInput_{k+1} &= \sysInput_k - \Big(\frac{\partial^{2}\ValueFunction_L}{\partial\sysInput^{2}_L}\Big)^{-1}\at{\frac{\partial{\ValueFunction_L}}{\partial{\sysInput_L}}}{\sysInput_k} \\
-\frac{\partial^{2}\ValueFunction_L}{\partial\sysInput^{2}_L} &= \frac{\partial}{\partial\sysInput_L}\{F^{\mathrm{T}}Q_L\error_L\} = F^{\mathrm{T}}Q_LF \\
-\sysInput_{k+1} &= \sysInput_k - \beta_kF^{\dagger}\error_k
-\end{aligned}
-\label{ILCnewtonsMethod}
-\end{equation}
-
-\noindent ILC update law can be related to Newton's method if we consider the Hessian of the cost functional \eqref{cost2}
+%
+\noindent Using Newton's method we can optimize iteratively for $\sysInput_L$
 %
 \begin{equation}
 \begin{aligned}
-\weights_{k+1} &= \weights_k - \beta_k\Big(\frac{\partial^{2}\ValueFunction}{\partial\weights^{2}}\Big)^{-1}\at{\frac{\partial{\ValueFunction}}{\partial{\weights}}}{\weights_k}, \\
-\frac{\partial^{2}\ValueFunction}{\partial\weights^{2}} &= \frac{\partial}{\partial\weights}\{\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\error_L + \vec{R}_w\weights\} = \vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{\weights}, \\
-\weights_{k+1} &= \qmatrix\weights_k - \beta_k(\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{w})^{-1}\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\error_k,
+\sysInput_{k+1} &= \sysInput_k - \Big(\frac{\partial^{2}\ValueFunction_L}{\partial\sysInput^{2}_L}\Big)^{-1}\at{\frac{\partial{\ValueFunction_L}}{\partial{\sysInput_L}}}{\sysInput_k}, \\
+\frac{1}{2}\frac{\partial^{2}\ValueFunction_L}{\partial\sysInput^{2}_L} &= \frac{\partial}{\partial\sysInput_L}\{\vec{F}^{\mathrm{T}}\vec{Q}_L\error_L + \vec{R}_L\sysInput_L\} = \vec{F}^{\mathrm{T}}\vec{Q}_L\vec{F} + \vec{R}_L, \\
+\sysInput_{k+1} &= \sysInput_k - (\vec{F}^{\mathrm{T}}\vec{Q}_L\vec{F} + \vec{R}_L)^{-1}(\vec{F}^{\mathrm{T}}\vec{Q}_L\error_k + \vec{R}_L\sysInput_k).
 \end{aligned}
-\label{ILCWeightsNewtonsMethod}
+\label{ILCNewtonsMethod}
 \end{equation}
 %
-\noindent where the filtering matrix is $\qmatrix = \beta_k(\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{w})^{-1}\vec{R}_{w}$. 
-
-Note the connection of \eqref{ILCWeightsNewtonsMethod} to plant inversion methods~\cite{Bristow06}: taking $\vec{Q}_L = \vec{I}, \vec{R}_{w} = \vec{0}, \beta = 1,$ \eqref{ILCWeightsNewtonsMethod} becomes
+\noindent Organizing \eqref{ILCNewtonsMethod} and comparing to \eqref{ILCupdateForm} we see that the filtering matrix $\qmatrix$ and the learning matrix $\lmatrix$ can be written as:
 %
 \begin{equation}
 \begin{aligned}
-\weights_{k+1} &= \weights_k - \vec{F}_{w}^{\dagger}\error_k.
+\qmatrix &= (\vec{F}^{\mathrm{T}}\vec{Q}_L\vec{F} + \vec{R}_L)^{-1}(\vec{F}^{\mathrm{T}}\vec{Q}_L\vec{F}),\\
+\lmatrix &= (\vec{F}^{\mathrm{T}}\vec{Q}_L\vec{F})^{-1}(\vec{F}^{\mathrm{T}}\vec{Q}_L).
+\end{aligned}
+\label{qAndlMatrices}
+\end{equation}
+%
+\noindent These matrices modulate the dependency between the inputs $\sysInput_k$ and the errors $\error_k$. Based on these two matrices, the ILC update law \eqref{ILCNewtonsMethod} is noncausal (i.e. predictive). See \cite{Amann95,Gunnarsson01} for the case where input derivative penalties are also considered. Note the connection of \eqref{ILCNewtonsMethod} to plant inversion methods~\cite{Bristow06}: taking $\vec{Q}_L = \vec{I}, \vec{R}_{L} = \vec{0},$ \eqref{ILCNewtonsMethod} becomes
+%
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} &= \sysInput_k - \vec{F}^{\dagger}\error_k.
 \end{aligned}
 \label{ILCPlantInversion}
 \end{equation}
 %
 % However this can be very unstable in practice, especially in nonminimum phase systems. Having a small, but nonzero weighting matrix R makes it much more stable.
 %
-\noindent Notice also the connection of \eqref{ILCRegression} with the online regression methods performed on the DMP weights \cite{Ijspeert13}. We can rewrite \eqref{ILCWeightsNewtonsMethod} as
+\noindent A more intuitive way to understand ILC is to consider \eqref{ILCPlantInversion} as least squares regression on the disturbances estimated using the previous trial
 %
 \begin{equation}
 \begin{aligned}
-\weights_{k+1} &= \weights_k - \beta_k(\vec{\Psi}^{\mathrm{T}}\vec{W}\vec{\Psi} + \vec{R}_{w})^{-1}\vec{\Psi}^{\mathrm{T}}\vec{W}\error_k, \\
-\vec{\Psi} &= \begin{bmatrix}
-  \basis_1^{T} & \basis_2^{T} & \ldots & \basis_N^{T}
- \end{bmatrix}^{T}.
+\vec{F}\sysInput_{k+1} &\approx -\linDist_{k+1},\\
+\sysInput_{k+1} &= \vec{F}^{\dagger}(\vec{F}\sysInput_{k} - \error_k),
 \end{aligned}
-\label{ILCRegression}
+\label{ILCasRegression}
 \end{equation}
 %
-%
-% online regression methods? are they discussed in the given reference?
-In model-free approaches the weighting matrix $\vec{W}(t)$ is taken as the identity matrix. In our case the model-based assumptions of our approach appear in the form of a nondiagonal covariance matrix. We perform generalized least-squares regression by taking advantage of the linearized model in~\eqref{fullTransition} to form the right correlations between states. Compared with the \emph{credit-assignment} issues of RL algorithms, we see that ILC, equipped with our linearized models, offers us a more principled way to assign errors to the weights of the movement primitives.
+\noindent which is equivalent to \eqref{ILCPlantInversion} if $\vec{F}$ is of full column rank. We perform least-squares regression by taking advantage of the linearized model in~\eqref{discreteLTV} to form the right correlations between the errors and the feedforward compensations. Compared with the \emph{credit-assignment} issues of RL algorithms, we see that this brand of ILC, equipped with our linearized models for prediction, offers us a more principled way to assign errors to the control inputs.
 
+% mention where the names of these forms are coming from
+% are they appropriate? maybe give new names: final cost minimization
 \subsubsection{Mayer form}
+
+In some applications, the trajectory is only an intermediary and does not need to be precisely tracked. Hitting primitives and strokes in table tennis are examples of such a scenario, where the task performance depends only on reaching the goal state (i.e. desired position and velocity at the right time). In optimal control literature~\cite{Liberzon11} optimization criteria that consider only the final state cost are said to be in Mayer form, as opposed to the usual Lagrange form that considers the intermediate steps as well.
+
+Taking the quadratic final cost, we can optimize it iteratively in a stable way by performing the transformation back to Lagrange form:
+%
+\begin{equation}
+\begin{aligned}
+\ValueFunction(\state_0) &= \frac{1}{2}\error_{T}^{\mathrm{T}}\vec{Q}\error_{T}, \\
+&= \frac{1}{2}\error_{0}^{\mathrm{T}}\vec{Q}\error_{0} + \int_{0}^{T} \error^{\mathrm{T}}\vec{Q}\dot{\error} \, \mathrm{d}t.
+\end{aligned}
+\label{finalCost}
+\end{equation}
+%
+\noindent which when discretized and stacked in lifted vector form can be written as 
+%
+\begin{equation}
+\begin{aligned}
+\ValueFunction_L &= \frac{1}{2}\error_{0}^{\mathrm{T}}\vec{Q}\error_{0} + \error_L^{\mathrm{T}}\vec{Q}_L\vec{D}\error_L.
+\end{aligned}
+\label{costFinalFunctional}
+\end{equation}
+%
+\noindent where $\vec{D}$ is a stable difference operator, e.g.
+%
+\begin{equation*}
+\begin{aligned}
+ \vec{D} &= 
+ \begin{bmatrix}
+  -\vec{I} & \vec{I} & \vec{0} & \cdots & \vec{0} \\
+  -\vec{I} & \vec{0} & \vec{I} & \cdots & \vec{0} \\
+  \vdots  & \ddots  & \vdots & \ddots & \vdots  \\
+  \vec{0} & \cdots & -\vec{I} & \vec{0} & \vec{I} \\
+  \vec{0} & \cdots & \vec{0} & -\vec{I} & \vec{I}
+ \end{bmatrix}.
+\end{aligned}
+\end{equation*}
+%
+\noindent Using Newton's method again we reach a different ILC update law
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} &= \sysInput_k - (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}\error_k,\\
+\vec{M} &= \vec{Q}_L \vec{D} + \vec{D}^{\mathrm{T}} \vec{Q}_L.
+\end{aligned}
+\label{ILCmayerForm}
+\end{equation}
+
 
 \subsection{Iterative Learning Control for Movement Primitives}\label{ilcOnDMP} 
 
-For the linearization of the robot dynamics \eqref{dynamics} under a given linear feedback law $\linInput(t) = -\vec{K}(t)(\state - \dmp)$ we consider the addition of the movement primitive dynamics to \eqref{LTV} 
-%
-\begin{equation}
-\begin{aligned}
-\dot{\fullvec} &= \vec{A}_{\fullvec}\fullvec(t) + \vec{B}_{\fullvec} \weights + \linDist(t,\weights),
-\label{fullTransition}
-\end{aligned}
-\end{equation}
-%
-\noindent where for the enlarged vector $\fullvec = [\error,\dmp]^{\mathrm{T}}$ the transition matrices are 
-%
-\begin{IEEEeqnarray}{rCl}
-%\footnotesize
-\arraycolsep=3pt
-\medmuskip = 1mu
-\begin{aligned}
- \vec{A}_{\fullvec} &= \begin{bmatrix}
-  \vec{A}(t) - \vec{B}(t)\vec{K}(t) & \vec{B}(t)\vec{K}(t) \\
-  \vec{0} & \vec{A}_s
- \end{bmatrix}, \\
- \vec{B}_{\fullvec} &= \begin{bmatrix}
-    \vec{0} \\
-    \vec{\basis}(\phase)
-   \end{bmatrix}. 
-\end{aligned}
-\label{fullMatrices}
-\end{IEEEeqnarray}
-%
-\noindent The system matrices $\vec{A}$ and $\vec{B}$ ensure the coupling of the DMP to the states. 
-%Reference trajectory $\traj(t)$ moves with a given velocity $\nu(t)$.
+Starting from different initial conditions $\state_0 = [\joint^{\intercal}_0,\dot{\joint}^{\intercal}_0]^{\mathrm{T}}$ we can consider a movement primitive as in \eqref{dmp} to give a smooth and feasible interpolating trajectory that is similar to the demonstrations.
+For such movement primitives we consider the Mayer form ILC update \eqref{ILCmayerForm} to be the natural candidate since in each trial the DMPs generate different trajectories. Trying to track these varying trajectories with an ILC update law as in \eqref{ILCNewtonsMethod} can make learning unstable.
 
-By detaching the reference trajectory $\traj(t)$ from the feedback law and hence from the dynamics \eqref{fullTransition} we can consider applying ILC techniques to the movement primitives $\dmp$. If we introduce the following cost functional as our optimality criterion
-%
-% We don't need the continous form!
-%
-\begin{IEEEeqnarray}{rCl}
-\begin{aligned}
-J(\weights) =& \int_{0}^{T} \error^{\mathrm{T}}\vec{Q}\error + \weights^{\mathrm{T}}\vec{R}_w \weights \ \mathrm{d}t \ \scalebox{0.9}[1]{\( + \)} \, (\state_T\scalebox{0.85}[1.0]{\( - \)}\goal)^{\mathrm{T}}\vec{Q}_{T}(\state_T\scalebox{0.85}[1.0]{\( - \)}\goal),
-\end{aligned}
-\label{cost2}
-\end{IEEEeqnarray}
-%
-\noindent we can apply a weight-update form of the ILC update law~\cite{Bristow06}
-%
-\begin{equation}
-\begin{aligned}
-\weights_{k+1} = \qmatrix(\weights_{k} - \lmatrix\error_{k}),
-\end{aligned}
-\label{ILCupdateFormWeights}
-\end{equation}
-%
-\noindent to minimize \eqref{cost2}. The index $k = 0, 1, \ldots$ denotes the iteration number. The matrices $\qmatrix$ and $\lmatrix$ are the filtering and learning matrices respectively~\cite{Bristow06}. They modulate the dependency between the inputs $\weights$ and the errors $\error$. Depending on these two matrices, the ILC update law \eqref{ILCupdateFormWeights} can be designed to be noncausal (i.e. predictive) and iteration-dependent. In order to reach the weight update law \eqref{ILCupdateFormWeights} we first discretize \eqref{cost2} and \eqref{fullTransition}. Then we stack the vectors together and get the following lifted-vector representation \cite{Bristow06}, \cite{Schoellig12}
-%
-\begin{equation}
-\begin{aligned}
-\ValueFunction &= \error_L^{\mathrm{T}}\vec{Q}_L\error_L + \weights^{\mathrm{T}}\vec{R}_{w}\weights,
-\end{aligned}
-\label{costFunctionalWeights}
-\end{equation}
+
 
 
 \subsection{Algorithm \& Implementation}\label{algorithm}

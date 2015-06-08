@@ -10,6 +10,7 @@ Theoretical TODO:
 
 Matlab List:
 
+- check power implementation 
 - check total least squares on the ball prediction dataset
 - Why does ILC learning with feedback generate zero Finv?
 - genILConRR: Make MATLAB experiments for generalization with regression.
