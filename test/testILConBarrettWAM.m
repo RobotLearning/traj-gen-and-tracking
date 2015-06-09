@@ -154,9 +154,9 @@ ilc = mILC(wam,traj,10); %downsample 10
 
 for i = 1:num_trials
     % get next inputs
-    %u = ilc.feedforwardMayer(traj,qact);
+    %u = ilc.feedforwardQN(traj,qact);
     u = ilc.feedforward(traj,qact);
-    %u = ilc.feedforwardRobot(traj,qact);
+    %u = ilc.feedforwardRobot(traj,qact); % this is for bILC
     % evolve system
     %qact = wam.evolve(t,q0,u);
     % evolve system with feedback

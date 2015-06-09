@@ -1,6 +1,5 @@
 Theoretical TODO:
 
-- Derive again the tracking LQR. Why is cost function quadratic function of x0?
 - Derive Kalman filter from minimum variance and derive seperation principle.
 - Read some more ILC papers
 - Read robotics book up to control chapters
@@ -13,14 +12,11 @@ Matlab List:
 - check power implementation 
 - check total least squares on the ball prediction dataset
 - Why does ILC learning with feedback generate zero Finv?
-- genILConRR: Make MATLAB experiments for generalization with regression.
 - Merge Guilherme's PMP idea with this folder.
 
 Paper List:
 
 - Compare different mILC with aILC, bILC and only feedback-based ILC (current iteration)
-- Include new update laws: goal based update
-- Regression on different trajectories?
 
 SL Notes:
 

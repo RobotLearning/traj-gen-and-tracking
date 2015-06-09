@@ -4,10 +4,8 @@
 % and L is the learning matrix of the ILC update i.e.
 % unext = ulast - L*error;
 %
-% L = pinv(F), a model-based ILC update rule
+% Ideally L = pinv(F), a model-based ILC update rule
 %
-% TODO: learning with feedback construction of F matrix
-%       offers no improvement!
 
 classdef mILC < ILC
     
@@ -37,6 +35,8 @@ classdef mILC < ILC
         Rl
         % holding Finv in case F matrix is very big
         Finv
+        % holding hessian of inv(F'*F) for quasi Newton
+        H
     end
     
     methods
@@ -81,6 +81,7 @@ classdef mILC < ILC
             %L = 0.5 * eye(size(obj.F,2));
             %obj.Finv = (obj.F' * obj.F + L)\(obj.F');
             obj.Finv = pinv(obj.F); % takes much more time!
+            obj.H = pinv(obj.F'*obj.Ql*obj.F);
             
         end
         
@@ -179,7 +180,7 @@ classdef mILC < ILC
             
         end
         
-        %% Main ILC function
+        %% Main ILC function applying Newton's method typically
         function u = feedforward(obj,trj,y)
             
             trj = trj.downsample(obj.downsample);
@@ -192,22 +193,26 @@ classdef mILC < ILC
             e = y - trj.s;
             e = e(:,2:end);                        
             Sl = 1 * obj.Rl; % we keep du penalty S same as R
-            beta = 1e-10;
             
             % gradient descent
-            %u = obj.inp_last(:) - beta * obj.F' * obj.Ql * e(:);
+            %u = obj.inp_last(:) - 1e-10 * obj.F' * obj.Ql * e(:);
             % model inversion based Newton-Raphson update
             %u = obj.inp_last(:) - obj.F \ e(:);
             % more stable inverse based Newton-Raphson update
             % computes very high inverses though
             %u = obj.inp_last(:) - pinv(obj.F) * e(:);
             % in case F is very large
-            u = obj.inp_last(:) - obj.Finv * e(:);
+            %u = obj.inp_last(:) - obj.Finv * e(:);
             % Penalize inputs and derivatives (LM-type update)
             %Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
             %L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
             %u = obj.inp_last(:) - L * e(:);                        
-            %u = Q * (obj.inp_last(:) - L * e(:));      
+            %u = Q * (obj.inp_last(:) - L * e(:));
+            % Mayer form
+            M = zeros(size(obj.Ql));
+            M(end-2*dimu+1:end,end-2*dimu+1:end) = 1;
+            Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
+            u = obj.inp_last(:) - Mat * e(:);
             % Iterative Method with Conjugate gradient
             %A = obj.F' * obj.Ql * obj.F + Sl;
             %u = obj.inp_last(:) - cgs(A,obj.F'*obj.Ql*e(:));
@@ -263,40 +268,24 @@ classdef mILC < ILC
             
         end
         
-        %% Testing end point learning (Mayer form ILC)
-        
-        function u = feedforwardMayer(obj,trj,y)
+        %% Testing quasi-Newton
+        % TODO: implement Broyden/BFGS as well as least squares here
+        function u = feedforwardQN(obj,trj,y)
             
             trj = trj.downsample(obj.downsample);
-            h = trj.t(2) - trj.t(1);
             dimu = size(obj.inp_last,1);
             Nu = size(obj.inp_last,2);
             N = Nu + 1;
             rate = size(y,2)/N;
             idx = rate * (1:N);
             y = y(:,idx);            
-            e = y - trj.s;  
-            e = e(:,2:end);
+            e = y - trj.s;
+            e = e(:,2:end);        
+
             
-            %%{
-            len_d1 = length(obj.Ql);
-            D0 = [-eye(2*dimu),eye(2*dimu),zeros(2*dimu,len_d1-(4*dimu))];
-            D1 = [-eye(2*dimu*(Nu-2)),zeros(2*dimu*(Nu-2),4*dimu)];
-            D1 = D1 + [zeros(2*dimu*(Nu-2),4*dimu),eye(2*dimu*(Nu-2))];
-            D2 = [zeros(2*dimu,len_d1-(4*dimu)),-eye(2*dimu),eye(2*dimu)];
-            D = [D0;D1;D2];
-            M = obj.Ql * D + D'*obj.Ql;
-            Sl = 0 * obj.Rl; % we keep du penalty S same as R
+            L = obj.H * (obj.F' * obj.Ql);            
             
-            Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
-            u = obj.inp_last(:) - Mat * e(:);
-            %}
-            
-            %{
-            elast = e(:,end);
-            Fend = obj.F(end-2*dimu+1:end,:);
-            u = obj.inp_last(:) - pinv(Fend)*elast;
-            %}
+            u = obj.inp_last(:) - L * e(:);
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);
@@ -306,6 +295,9 @@ classdef mILC < ILC
             u = trj.unom;
             
         end
+           
+        
+
         
     end
     
