@@ -6,6 +6,7 @@ Theoretical TODO:
 - Read policy search review
 - Read the Barrett WAM inertial specifications
 - Read maximum principle chapter
+- Read system identification survey
 
 Matlab List:
 
@@ -13,6 +14,7 @@ Matlab List:
 - check total least squares on the ball prediction dataset
 - Why does ILC learning with feedback generate zero Finv?
 - Merge Guilherme's PMP idea with this folder.
+- Test quasi-Newton and system identification/ (recursive) least squares idea.
 
 Paper List:
 

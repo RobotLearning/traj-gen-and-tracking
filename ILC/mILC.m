@@ -35,7 +35,7 @@ classdef mILC < ILC
         Rl
         % holding Finv in case F matrix is very big
         Finv
-        % holding hessian of inv(F'*F) for quasi Newton
+        % holding response of initial error
         H
     end
     
@@ -70,6 +70,7 @@ classdef mILC < ILC
             end
             
             obj.F = zeros(N*dim_x, N*dim_u);
+            obj.H = zeros(N*dim_x, dim_x);
             obj.G = zeros(N*dim_y, N*dim_x);
             obj.Ql = zeros(N*dim_y, N*dim_y);
             obj.Rl = zeros(N*dim_u, N*dim_u);
@@ -81,7 +82,6 @@ classdef mILC < ILC
             %L = 0.5 * eye(size(obj.F,2));
             %obj.Finv = (obj.F' * obj.F + L)\(obj.F');
             obj.Finv = pinv(obj.F); % takes much more time!
-            obj.H = pinv(obj.F'*obj.Ql*obj.F);
             
         end
         
@@ -107,76 +107,48 @@ classdef mILC < ILC
             obj.Rl = blkdiag(obj.Rl{:});
             
             if isa(model,'Linear')
-            
+                % K = trj.K;
                 Ad = model.Ad;
                 Bd = model.Bd;
-                if ~obj.FLAG.learn_fb
-                    % construct lifted domain matrix F
-                    % TODO: this can be computed much more efficiently
-                    % for linear systems
-                    for i = 1:N
-                        for j = 1:i
-                            vec_x = (i-1)*dim_x + 1:i*dim_x;
-                            vec_u = (j-1)*dim_u + 1:j*dim_u;
-                            mat = Bd;
-                            for k = j+1:i
-                                mat = Ad * mat;
-                            end
-                            obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                % construct lifted domain matrix F
+                % TODO: this can be computed much more efficiently
+                % for linear systems
+                for i = 1:N
+                    vec_x = (i-1)*dim_x + 1:i*dim_x;
+                    for j = 1:i                            
+                        vec_u = (j-1)*dim_u + 1:j*dim_u;
+                        mat = Bd;
+                        for k = j+1:i
+                            mat = Ad * mat; % (Ad + Bd * K(:,:,k)) * mat;
                         end
+                        obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
                     end
-                else % learn with feedback
-                    K = trj.K;
-                    % construct lifted domain matrix F
-                    % TODO: this can be computed much more efficiently
-                    % for linear systems
-                    for i = 1:N
-                        for j = 1:i
-                            vec_x = (i-1)*dim_x + 1:i*dim_x;
-                            vec_u = (j-1)*dim_u + 1:j*dim_u;
-                            mat = Bd;
-                            for k = j+1:i
-                                mat = (Ad + Bd * K(:,:,k)) * mat;
-                            end
-                            obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
-                        end
-                    end
-                end
+                    obj.H(vec_x,:) = Ad ^ i;
+                end                
             else
                 % get linear time variant matrices around trajectory
                 [Ad,Bd] = model.linearize(trj);
-                
-                if ~obj.FLAG.learn_fb
-                    % construct lifted domain matrix F
-                    for i = 1:N
-                        for j = 1:i
-                            vec_x = (i-1)*dim_x + 1:i*dim_x;
-                            vec_u = (j-1)*dim_u + 1:j*dim_u;
-                            mat = Bd(:,:,j);
-                            for k = j+1:i
-                                mat = Ad(:,:,k) * mat;
-                            end
-                            obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
+                % K = trj.K;
+                % construct lifted domain matrix F
+                for i = 1:N
+                    vec_x = (i-1)*dim_x + 1:i*dim_x;
+                    matH = eye(dim_x);
+                    for j = 1:i                            
+                        vec_u = (j-1)*dim_u + 1:j*dim_u;
+                        matH = matH * Ad(:,:,j);
+                        mat = Bd(:,:,j);
+                        for k = j+1:i
+                            mat = Ad(:,:,k) * mat; % (Ad(:,:,k) + Bd(:,:,k)*K(:,:,k)) * mat;
                         end
+                        obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
                     end
-                else % learn with feedback
-                    K = trj.K;
-                    % construct lifted domain matrix F
-                    for i = 1:N
-                        for j = 1:i
-                            vec_x = (i-1)*dim_x + 1:i*dim_x;
-                            vec_u = (j-1)*dim_u + 1:j*dim_u;
-                            mat = Bd(:,:,j);
-                            for k = j+1:i
-                                mat = (Ad(:,:,k) + Bd(:,:,k)*K(:,:,k)) * mat;
-                            end
-                            obj.F(vec_x,vec_u) = mat; % on diagonals only B(:,m)
-                        end
-                    end
+                    obj.H(vec_x,:) = matH;
+
                 end
             end
             
             obj.F = obj.G * obj.F;
+            obj.H = obj.G * obj.H;
             
         end
         
@@ -229,7 +201,7 @@ classdef mILC < ILC
         end
         
         %% Feedforward with DMP with different I.C.
-        function u = feedforwardDMP(obj,trj,y,ulast)
+        function u = feedforwardDMP(obj,trj,y,ulast,e0diff)
             
             trj = trj.downsample(obj.downsample);
             dimu = size(obj.inp_last,1);
@@ -240,24 +212,24 @@ classdef mILC < ILC
             y = y(:,idx);
             ulast = ulast(:,idx(1:end-1));
             e = y - trj.s;
-            e = e(:,2:end);                        
+            e = e(:,2:end);        
             Sl = 0 * obj.Rl; % we keep du penalty S same as R
             
+            % correct for e0            
+            err = e(:) + obj.H * e0diff;
+            %err = e(:);
+            
             % usual MILC
-            u = ulast(:) - obj.Finv * e(:);
+            %u = ulast(:) - obj.Finv * err;
             
-            %{
-            len_d1 = length(obj.Ql);
-            D0 = [-eye(2*dimu),eye(2*dimu),zeros(2*dimu,len_d1-(4*dimu))];
-            D1 = [-eye(2*dimu*(Nu-2)),zeros(2*dimu*(Nu-2),4*dimu)];
-            D1 = D1 + [zeros(2*dimu*(Nu-2),4*dimu),eye(2*dimu*(Nu-2))];
-            D2 = [zeros(2*dimu,len_d1-(4*dimu)),-eye(2*dimu),eye(2*dimu)];
-            D = [D0;D1;D2];
-            M = obj.Ql * D + D'*obj.Ql;
-            
+            %%{
+            % Mayer form
+            M = zeros(size(obj.Ql));
+            M(end-2*dimu+1:end,end-2*dimu+1:end) = 1;
             Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
-            u = ulast(:) - Mat * e(:);
+            u = ulast(:) - Mat * err;
             %}
+            
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);

@@ -39,8 +39,8 @@ SIM.dimu = N_DOFS;
 % time step h 
 SIM.h = 0.002; % 500 Hz recorded data
 % noise and initial error
-SIM.eps = 3e-10;
-SIM.eps_d = 3e-10;
+SIM.eps = 0; %3e-10;
+SIM.eps_d = 0; %3e-10;
 % integration method
 SIM.int = 'Symplectic Euler';
 % reference trajectory in joint space?
@@ -126,7 +126,7 @@ load('LQR0.txt','LQR0');
 for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
 %for i = 1:traj.N-1, FB(:,:,i) = -K; end;
-%traj.K = FB;
+traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
@@ -152,15 +152,19 @@ trajNew = Trajectory(traj.t,traj.s,traj.unom,traj.K);
 num_trials = 10;
 ilc = mILC(wam,traj,10);
 uadd = zeros(size(traj.unom));
+e0diff = zeros(size(q0));
+q0new = q0;
 
 for i = 1:num_trials
-    % adapt the dmps accordingly
-    % get the next inputs normally as in standard ILC
-    uadd = ilc.feedforwardDMP(trajNew,qact,uadd);
     % change initial condition slightly
-    q0new = q0 + 0.1 * randn(length(q0),1);
+    q0last = q0new;
+    q0new = q0 + 0.5 * randn(length(q0),1);
     trajModified = wam.generateInputsWithDMP(t,bfs,ref,q0new);
     trajNew = Trajectory(traj.t,trajModified.s,trajModified.unom,traj.K);
+    % adapt the dmps accordingly
+    % get the next inputs normally as in standard ILC
+    e0diff =  q0last - q0new;
+    uadd = ilc.feedforwardDMP(trajNew,qact,uadd,e0diff);
     % adjust for the IDM change
     trajNew.unom = uadd + trajNew.unom;
     [qact,ufull] = wam.observeWithFeedbackErrorForm(trajNew,q0new);
@@ -173,5 +177,5 @@ end
 
 % Plot the controls and animate the robot arm
 wam.plot_inputs(trajNew);
-wam.plot_outputs(trajNew);
+wam.plot_outputs(traj);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);

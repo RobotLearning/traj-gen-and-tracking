@@ -60,7 +60,7 @@ Most ILC update laws can be put in the following form
 
 \noindent where the submatrices of $\vec{F}$ are
 
-\begin{equation*}
+\begin{equation}
 \begin{aligned}
 \vec{F}_{(i,j)} &= \left \{
 \begin{array}{cc}
@@ -69,7 +69,8 @@ Most ILC update laws can be put in the following form
 \vec{0}, & j > i. 
 \end{array} \right.
 \end{aligned}
-\end{equation*}
+\label{Fmatrix}
+\end{equation}
 
 \noindent Using this \emph{input-to-output matrix} $\vec{F}$ we can analyze the effects of the feedforward inputs $\sysInput_L = \vect(\linInput)$ on the errors $\error_L = \vect(\error)$ and compensate for the disturbances $\linDist_L$ with ILC.
 
@@ -79,7 +80,7 @@ Most ILC update laws can be put in the following form
 
 \begin{equation}
 \begin{aligned}
-\ValueFunction(\state_0) &= \int_{0}^{T} \error^{\mathrm{T}}\vec{Q}\error + \linInput^{\mathrm{T}}\vec{R}\linInput \ \mathrm{d}t + \error_{T}^{\mathrm{T}}\vec{Q}_{T}\error_{T},
+\ValueFunction(\linInput) &= \int_{0}^{T} \error^{\mathrm{T}}\vec{Q}\error + \linInput^{\mathrm{T}}\vec{R}\linInput \ \mathrm{d}t + \error_{T}^{\mathrm{T}}\vec{Q}_{T}\error_{T},
 \end{aligned}
 \label{cost}
 \end{equation}
@@ -95,7 +96,7 @@ Most ILC update laws can be put in the following form
 
 \noindent where the symmetric positive definite matrix $\vec{Q}_L \in \mathbb{R}^{2Nn \times 2Nn}$ ($\vec{R}_L$ is defined analogously) is of the following form
 %
-\begin{equation*}
+\begin{equation}
 \begin{aligned}
  \vec{Q}_L &= 
  \begin{bmatrix}
@@ -105,7 +106,8 @@ Most ILC update laws can be put in the following form
   \vec{0} & \vec{0} & \cdots & \vec{Q}_T
  \end{bmatrix}.
 \end{aligned}
-\end{equation*}
+\label{Qmatrix}
+\end{equation}
 %
 \noindent Using Newton's method we can optimize iteratively for $\sysInput_L$
 %
@@ -143,7 +145,7 @@ Most ILC update laws can be put in the following form
 %
 \begin{equation}
 \begin{aligned}
-\vec{F}\sysInput_{k+1} &\approx -\linDist_{k+1},\\
+\vec{F}\sysInput_{k+1} &\approx -\linDist_{k},\\
 \sysInput_{k+1} &= \vec{F}^{\dagger}(\vec{F}\sysInput_{k} - \error_k),
 \end{aligned}
 \label{ILCasRegression}
@@ -157,48 +159,37 @@ Most ILC update laws can be put in the following form
 
 In some applications, the trajectory is only an intermediary and does not need to be precisely tracked. Hitting primitives and strokes in table tennis are examples of such a scenario, where the task performance depends only on reaching the goal state (i.e. desired position and velocity at the right time). In optimal control literature~\cite{Liberzon11} optimization criteria that consider only the final state cost are said to be in Mayer form, as opposed to the usual Lagrange form that considers the intermediate steps as well.
 
-Taking the quadratic final cost, we can optimize it iteratively in a stable way by performing the transformation back to Lagrange form:
+Taking the quadratic final cost, we can relate it to the feedforward corrections $\sysInput_L$ using our linearized model \eqref{liftedLTV}
 %
 \begin{equation}
 \begin{aligned}
-\ValueFunction(\state_0) &= \frac{1}{2}\error_{T}^{\mathrm{T}}\vec{Q}\error_{T}, \\
-&= \frac{1}{2}\error_{0}^{\mathrm{T}}\vec{Q}\error_{0} + \int_{0}^{T} \error^{\mathrm{T}}\vec{Q}\dot{\error} \, \mathrm{d}t.
+\ValueFunction(\sysInput_L) &= \error_{N}^{\mathrm{T}}\vec{Q}\error_{N}, \\
+&= (\vec{F}_N\sysInput_L + \linDist_N)^{\mathrm{T}}\vec{Q}(\vec{F}_N\sysInput_L + \linDist_N).
 \end{aligned}
 \label{finalCost}
 \end{equation}
 %
-\noindent which when discretized and stacked in lifted vector form can be written as 
-%
-\begin{equation}
-\begin{aligned}
-\ValueFunction_L &= \frac{1}{2}\error_{0}^{\mathrm{T}}\vec{Q}\error_{0} + \error_L^{\mathrm{T}}\vec{Q}_L\vec{D}\error_L.
-\end{aligned}
-\label{costFinalFunctional}
-\end{equation}
-%
-\noindent where $\vec{D}$ is a stable difference operator, e.g.
+\noindent where $\vec{F}_N$ is the last block row of $\vec{F}$ in \eqref{Fmatrix}
 %
 \begin{equation*}
 \begin{aligned}
- \vec{D} &= 
+ \vec{F}_N &= 
  \begin{bmatrix}
-  -\vec{I} & \vec{I} & \vec{0} & \cdots & \vec{0} \\
-  -\vec{I} & \vec{0} & \vec{I} & \cdots & \vec{0} \\
-  \vdots  & \ddots  & \vdots & \ddots & \vdots  \\
-  \vec{0} & \cdots & -\vec{I} & \vec{0} & \vec{I} \\
-  \vec{0} & \cdots & \vec{0} & -\vec{I} & \vec{I}
+  \vec{A}_{N-1} \ldots \vec{A}_2 \vec{B}_1 & \cdots & \vec{B}_N 
  \end{bmatrix}.
 \end{aligned}
 \end{equation*}
 %
-\noindent Using Newton's method again we reach a different ILC update law
+\noindent Using Newton's method again we reach the reweighted form of \eqref{ILCPlantInversion}
+%
 \begin{equation}
 \begin{aligned}
 \sysInput_{k+1} &= \sysInput_k - (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}\error_k,\\
-\vec{M} &= \vec{Q}_L \vec{D} + \vec{D}^{\mathrm{T}} \vec{Q}_L.
 \end{aligned}
 \label{ILCmayerForm}
 \end{equation}
+%
+\noindent here $\vec{M}$ is \eqref{Qmatrix} with $\vec{Q} = \vec{0}$.
 
 
 \subsection{Iterative Learning Control for Movement Primitives}\label{ilcOnDMP} 
@@ -206,31 +197,57 @@ Taking the quadratic final cost, we can optimize it iteratively in a stable way 
 Starting from different initial conditions $\state_0 = [\joint^{\intercal}_0,\dot{\joint}^{\intercal}_0]^{\mathrm{T}}$ we can consider a movement primitive as in \eqref{dmp} to give a smooth and feasible interpolating trajectory that is similar to the demonstrations.
 For such movement primitives we consider the Mayer form ILC update \eqref{ILCmayerForm} to be the natural candidate since in each trial the DMPs generate different trajectories. Trying to track these varying trajectories with an ILC update law as in \eqref{ILCNewtonsMethod} can make learning unstable.
 
-
-
+To compensate for the varying initial conditions we make a correction in the reference control input $\trjInput$ based on the nominal inverse dynamics model. For additional stability we consider the effects of the initial errors on the final error by adjusting our linearized model
+%
+\begin{equation}
+\begin{aligned}
+\error_N &= \vec{F}_N\sysInput_L + \vec{H}_N\error_0 + \linDist_N, \\
+\end{aligned}
+\label{adjustedLiftedLTV}
+\end{equation}
+%
+\noindent where $\vec{H}_N = \begin{bmatrix} \vec{A}_{N-1} \ldots \vec{A}_2 \vec{A}_1 \end{bmatrix}$ is the last block row of the free response $\vec{H}$ to the initial error $\error_0$. With this correction the regression model \eqref{ILCasRegression} takes a particular form
+%
+\begin{equation}
+\begin{aligned}
+\vec{F}\sysInput_{k+1} &= -\linDist_{k+1} - \vec{H}\vec{\delta}_{k+1},\\
+\vec{F}\sysInput_{k+1} &\approx \vec{F}\sysInput_{k} - \error_k + \vec{H}\vec{\delta}_{k} - \vec{H}\vec{\delta}_{k+1}.
+\end{aligned}
+\label{ILCregressionWithe0}
+\end{equation}
+%
+\noindent Here the initial errors are denoted as $\vec{\delta}_k$ to emphasize its iteration dependence. Combining \eqref{ILCregressionWithe0} with \eqref{ILCmayerForm} we get the final form of the ILC update
+%
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} &= \sysInput_k - (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}(\error_k + \vec{H}(\vec{\delta}_{k} - \vec{\delta}_{k+1})).\\
+\end{aligned}
+\label{ILCfinalForm}
+\end{equation}
 
 \subsection{Algorithm \& Implementation}\label{algorithm}
 
-We use the update law derived in \eqref{ILCWeightsNewtonsMethod} in our algorithm, given in Algorithm~\ref{alg1}. This update law enables us to take advantage of the superlinear order of convergence property of Newton's method based descent methods while ensuring with $\qmatrix$ some degree of robustness on the nonrepeating disturbances in \eqref{fullTransition} arising from model mismatch and other unpredictable environmental conditions. Depending on the task and models available, weighting matrices $\vec{Q}_{L}$ and $\vec{R}_{w}$ can be varied as desired. Iteration dependent matrices will ensure that performance does not degrade, as one can reduce the weight matrix $\vec{R}_{w}$ as the errors get smaller. We discuss this additional degree of freedom of the algorithm in more detail in section \ref{experiments}.
+We use the update law derived in \eqref{ILCfinalForm} in our algorithm, given in Algorithm~\ref{alg1}. This update law enables us to take advantage of the superlinear order of convergence property of Newton's method based descent methods while ensuring robustness on the variations in initial conditions. Depending on the task and models available, weighting matrices $\vec{M}$ and $\vec{R}$ can be varied as desired. Iteration dependent matrices will ensure that performance does not degrade, as one can reduce the weight matrix $\vec{R}$ as the errors get smaller. $\vec{M}$ can also be made inversely proportional to the phase of the movement primitive. We discuss the additional degrees of freedom of the algorithm in more detail in section \ref{experiments}.
 
 %We initialize the algorithm $\alg$ with the necessary weighting and transition matrices. The transition matrix $A_{\fullvec}$ is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using regression on the reference trajectory.
 
 % maybe reference needed
-Notice the stability of the approach compared to iLQR methods where the reference trajectory $\traj(t)$ and the nominal inputs $\sysInput_{\mathrm{IDM}}$ are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative optimal control approaches. However under high mismatch cases where the weight-to-output matrix $\vec{F}_{w}$ is not accurate, the descent direction might not be estimated and exploration in joint space might be necessary. We leave the extension of our work to such difficult settings for future work.
+Notice the stability of the approach compared to iLQR methods where the reference trajectory $\traj(t)$ and the nominal inputs $\sysInput_{\mathrm{IDM}}$ are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative optimal control approaches. However under high mismatch cases where the input-to-output matrix $\vec{F}$ is not accurate, the descent direction might not be estimated and exploration in joint space might be necessary. We leave the extension of ILC to such adaptive settings for future work.
 
 \begin{algorithm}[tb]
    \caption{\alg}
    \label{alg1}
 \begin{algorithmic}
-   \STATE {\bfseries Input:} $\threshold > 0$, $\beta_k > 0$, $\vec{Q}_L, \vec{R}_{w} \succeq 0$, $\vec{A}_{\fullvec}$, $\ \traj = (\traj_1, \traj_2, \ldots, \traj_N)$, $\ \sysInput_{\mathrm{IDM}} = (\nu_1, \nu_2, \ldots, \nu_N)$
-   \STATE Initialize $k = 1$, $\dmp(\weights) = \dmp(\weights_0)$
+   \STATE {\bfseries Input:} $\threshold > 0$, $\vec{Q}, \vec{R} \succeq 0$, $\dmp$ 
+   \STATE Form $\vec{F}$ using $\vec{A}$, $\vec{B}$ matrices
+   \STATE Initialize $k = 1$, $\ilcInput = \vec{0}$
    \REPEAT 
- 	   \STATE Run controller $\ddot{\joint} = \dynamics(\joint,\dot{\joint},\sysInput)$ %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
- 	   \STATE Observe $\error_k = \state_k - \traj$
- 	   \STATE Compute $\ValueFunction_k$ = $\error_k^{\mathrm{T}}\vec{Q}_L\error_k + \weights^{\mathrm{T}}\vec{R}_w\weights$
- 	   \STATE Form $\vec{F}_w$ using $\vec{A}_{\fullvec}$, $\vec{Q}_L$, $\vec{R}_{w}$
- 	   \STATE Update $\weights \leftarrow \weights - \beta_k(\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\vec{F}_{w} + \vec{R}_{w})^{-1}\vec{F}_{w}^{\mathrm{T}}\vec{Q}_L\error_k$
- 	   \STATE $k \leftarrow k + 1$
+   	   \STATE Rollout $\dmp$ from $\state_0 + \vec{\delta}_k$ 
+   	   \STATE Compute $\trjInput$ with inverse dynamics
+ 	   \STATE Apply controls $\sysInput = \trjInput + \ilcInput$ to $\ddot{\joint} = \dynamics(\joint,\dot{\joint},\sysInput)$ %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
+ 	   \STATE Observe $\error_k = \state_k - \dmp$
+ 	   \STATE Compute $\ValueFunction_k$ = $\error_N^{\mathrm{T}}\vec{Q}\error_N$
+ 	   \STATE Update $\ilcInput \leftarrow \ilcInput - (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}(\error_k + \vec{H}(\vec{\delta}_k - \vec{\delta}_{k+1}))$
    \UNTIL{$\ValueFunction_k < \threshold$}
 \end{algorithmic}
 \end{algorithm}
