@@ -3,7 +3,7 @@
 % is this necessary?
 %\subsection{Experimental Setup}
 
-In this section, we demonstrate the effectiveness of the algorithm presented in Section~\ref{algorithm} for optimal striking motions. We consider two hitting tasks: putting in golf and table tennis strokes. In the first task the trajectory and the extracted movement primitives are assigned in operational, i.e. Cartesian space, whereas for the second task we generate these primitives in joint space, one for each joint of the robot. A low-gain feedback law is calculated in both cases using LQR with the linearized dynamics \eqref{discreteLTV} which stabilizes the open-loop system $\dynamics$. The robustness that comes with the LQR feedback law and the DMP framework is an asset that strengthens the industrial applicability of our approach outside of the tested platforms.
+In this section, we demonstrate the effectiveness of the ILC algorithms presented in Section~\ref{method} for optimal striking motions. We consider two hitting tasks: putting in golf and table tennis strokes. In each task the trajectories and the extracted movement primitives are assigned in joint space, one for each joint of the robot. A low-gain feedback law is calculated in the second case using LQR with the linearized dynamics \eqref{discreteLTV} which stabilizes the open-loop system $\dynamics$. The robustness that comes with the LQR feedback law and the DMP framework is an asset that strengthens the industrial applicability of our approach outside of the tested platforms.
 
 In ILC one normally assumes that the reference trajectories are \emph{feasible}, i.e. that it is possible to follow them arbitrarily well. Even in cases where this assumption does not hold, we can improve tracking performance with the Mayer form ILC: deviations from an infeasible trajectory are not punished this way.
 
@@ -14,37 +14,39 @@ In ILC one normally assumes that the reference trajectories are \emph{feasible},
 
 Putting is a simple and natural domain for testing ILC algorithms, in particular we consider it as a scalable interface to more complex hitting tasks with high DoF robots. We illustrate in Figure~\ref{putting1} a simplified simulation of a two-link planar arm with two revolute joints hitting a golf ball on the ground. We can imagine that a golf stick is attached to the end-effector at the second joint. We assume that we have available a circular reference trajectory that intercepts the ball with a desired velocity of $1.8$ m/s. This lets us account for the masses of the arm and the ball as well as a simulated kinetic friction of $\mu = 0.6$ between the golf ball and the ground. Good putting trajectories can be shown easily by expert humans or recorded via kinesthetic teach-in. 
 
-In order to simulate learning with ILC, we assume that there is a model mismatch due to the motor inertia of both joints. We give the motor inertia a Gaussian distributed disturbance with zero mean and a variance of $0.05$, while the actual values of the motor inertia are $0.15$ and $0.12$ respectively. With these random disturbances we can construct error bars for $\alg$ and also test for the robustness of the proposed method.
+In order to simulate learning with ILC, we assume that there is a model mismatch due to the motor inertia of both joints. We give the motor inertia a Gaussian distributed disturbance with zero mean and a variance of $0.05$, while the actual values of the motor inertia are $0.15$ and $0.12$ respectively. With these random disturbances we can construct error bars for different ILC algorithms and also test for their robustness.
 
 \begin{figure}[ht]
 \centering
 \subfloat[Initial attempt]{%
-\includegraphics[width=0.5\linewidth]{putting0.eps}
+\includegraphics[width=0.4\linewidth]{putting0.eps}
 \label{fig:subfig1}}
 \subfloat[Final trajectory]{%
-\includegraphics[width=0.5\linewidth]{putting1.eps}
+\includegraphics[width=0.7\linewidth]{puttingLastTraj.pdf}
 \label{fig:subfig2}}
-\caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The reference trajectory is shown as a blue dashed curve. We can see in Fig.~\ref{fig:subfig1} that the initial attempt falls short of the reference trajectory. ILC then modifies the control inputs to compensate for the modeling errors. In Fig.~\ref{fig:subfig2} the reference trajectory is executed perfectly. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
+\caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The reference trajectory in Cartesian space is shown as a blue dashed curve. We can see in Fig.~\ref{fig:subfig1} that the initial attempt falls short of the reference trajectory. ILC then modifies the control inputs to compensate for the modeling errors. In the last attempt shown in Fig.~\ref{fig:subfig2} the reference trajectory is executed almost perfectly. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
 \label{putting1} 
 \end{figure}
 
-The iterations of $\alg$ are shown in Figure~\ref{ILCTrajectoryPutting}. Learning takes place in the joint space of the robot, since the matrix $\vec{F}$ is constructed using the nominal dynamics model \eqref{dynamics} in joint space. The full dynamics $\dynamics(\joint,\dot{\joint},\sysInput)$ involves the nonlinear effects from both links. We can see how initially the inertial disturbances of the motors prevent the end-effector from following the trajectory precisely. The following iterations show how ILC compensates for such an effect and in the last iteration the ball is given the desired velocity to reach the hole. We compare the approach with \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{ILCTrajectoryPutting} by plotting the RMS-error of the iterations with each algorithm. The error bars indicate one standard deviation within $10$ trials with different inertial mismatches. Notice that these stochastic approaches take much longer to converge.
+The first and last iterations of ILC are also shown in Figure~\ref{putting1}. Learning takes place in the joint space of the robot, since the matrix $\vec{F}$ is constructed using the nominal dynamics model \eqref{dynamics} in joint space. The full dynamics $\dynamics(\joint,\dot{\joint},\sysInput)$ involves the nonlinear effects from both links. We can see how initially the inertial disturbances of the motors prevent the end-effector from following the trajectory precisely. The iterations show how ILC compensates for such an effect and in the last iteration the ball is given the desired velocity to reach the hole. 
 
-% Compare alternative methods, gradient descent, etc.
-% table shows that $R = 0$, $Q = I$ appears to be optimal in this case.
+We compare the approach with two other ILC approaches by plotting the root-mean-squared (RMS) errors of each algorithm in Figure~\ref{ILCTrajectoryPutting}. Kalman-filter based convex optimization approach \cite{Schoellig12} using no regularization is labeled as \emph{aILC} and the finely-tuned \emph{Arimoto-style} \cite{Arimoto84} model-free ILC using a basic PD-type update is labeled as \emph{bILC}. These are compared with the \emph{mILC} using Newton-Raphson based update \eqref{ILCNewtonsMethod} with $\vec{R} = \vec{0}$. The error bars indicate one standard deviation within $10$ trials with different inertial mismatches. Notice that the other two approaches take much longer to converge. The results of these experiments motivated us to try an extension of \emph{mILC} for tracking movement primitives with different initial conditions.
 
 \begin{figure}
-\center
-%\includegraphics[scale=0.50]{comparison.eps}
-\newlength\figureheight 
-\newlength\figurewidth 
-\setlength\figureheight{6cm}  
-\setlength\figurewidth{6cm} 
-\scalebox{1.0}{\input{Pictures/wILC.tikz}}
-\caption{Convergence of $\alg$ to the reference putting trajectory. Convergence is quadratic for the simulated scenario where we have unknown inertial disturbances acting on the motors. Note the slow and unstable performance of the other stochastic RL algorithms.}
+\centering
+\includegraphics[scale=0.40]{ilc_putting_comp.eps}
+%\newlength\figureheight 
+%\newlength\figurewidth 
+%\setlength\figureheight{6cm}  
+%\setlength\figurewidth{6cm} 
+%\scalebox{0.3}{\input{Pictures/putting1.tikz}}
+\caption{Convergence of model based ILC to the reference putting trajectory is shown in blue. Convergence is quadratic for the simulated scenario where we have unknown inertial disturbances acting on the motors. Note the slower performance of the other two ILC approaches.}
 \label{ILCTrajectoryPutting}
 \end{figure}
 
+
+% mention downsampling since F is so large
+% is the probabilistic model p(w|yb) interesting?
 \subsection{Application in Table Tennis}
 
 % hitting is not at the end of the trajectory
@@ -58,25 +60,25 @@ After the visual system predicts a ball trajectory that coincides with the feasi
 % maybe work on this kinesthetic teach-in paragraph more
 Demonstrations from kinesthetic teach-in allow us to generate successful hitting motions, i.e. those that are guaranteed to return the ball to the opponent's court if executed well. In runtime, in order to generate feasible reference trajectories that account for the variations in incoming ball position and velocities, we adapt the goal states of the extracted movement primitives based on the predicted ball trajectory. We start these DMPs from the initial posture of the robot provided by the sensors.
 
-Using the successful examples we trained a probabilistic model $p(\weights|\state_b)$ given ball positions $\state_b$ using weighted regression. Weighting can be put in various ways and we opted for a weighting which put a higher reward on the fast strikes that landed on the edges. The generated DMPs of the model are guaranteed to be safe because these movements lie within the convex combination of demonstrations. 
-% Katharina - Hence, the system will not encounter joint limits or hit the table.
+Using successful demonstrations we trained a probabilistic model $p(\weights|\state_b)$ given ball positions $\state_b$ using weighted regression. Weighting can be put in various ways and we opted for a weighting which put a higher reward on the fast strikes that landed on the edges. The generated DMPs of the model are guaranteed to be safe because these movements lie within the convex combination of demonstrations. 
+% Hence, the system will not encounter joint limits or hit the table.
 
-% scale dmps if provided with better estimation data of ball position and velocity. dmps as opposed to control inputs or even trajectories can be easily extended to allow for this. 
+% scale dmps if provided with better estimation data of ball position and velocity. 
 
 % From Katharina's paper:
 %the position, velocity and orientation of the racket can be computed analytically based on the state of the system and the target on the opponents court.
 %These task space parameters can also be converted into joint space parameters using inverse kinematics
 
-The attached video shows the improvement achieved after using our algorithm $\alg$. In order to apply our method to a given reference trajectory, we use the mode of the empirical distribution $p(\weights,\state_b) = p(\weights|\state_b)p(\state_b)$ as the weights of our initial movement primitive. The convergence of the trajectories over the iteration domain are shown in Cartesian space in Figure~\ref{wILCTrajectoryTTCartesian}. Hard-to-model dynamical effects such as friction and stiction forces can be learned easily with our approach.
+The attached video shows the improvement achieved after using our algorithm $\alg$. In order to apply our method to a given reference trajectory, we use the mode of the empirical distribution $p(\weights,\state_b) = p(\weights|\state_b)p(\state_b)$ as the weights of our initial movement primitive. The convergence of the trajectories over the iteration domain are shown in Cartesian space in Figure~\ref{ILCTrajectoryTTCartesian}. Hard-to-model dynamical effects such as friction and stiction forces is easily compensated for in ILC.
 
-Comparisons to episodic-RL algorithms \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{ttComparison} illustrate the benefits of our approach, especially the faster convergence and increased accuracy of the proposed method. Some examples of the generated trajectories for the joints 5, 6 and 7 are given in Figure~\ref{wILCTrajectoryTT}. 
+Comparisons to episodic-RL algorithms \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{ttComparison} illustrate the benefits of our approach, especially the faster convergence and increased accuracy of the proposed method. Some examples of the generated trajectories in Figure~\ref{ILCTrajectoryTT}. 
 
 \begin{figure}
 \center
 %\includegraphics[scale=0.50]{comparison.eps}
 \scalebox{1.0}{\input{Pictures/ilc.tikz}}
 \caption{Convergence of $\alg$ to the reference table tennis trajectory in Cartesian space.}
-\label{wILCTrajectoryTTCartesian}
+\label{ILCTrajectoryTTCartesian}
 \end{figure}
 
 \begin{figure}
@@ -84,7 +86,7 @@ Comparisons to episodic-RL algorithms \emph{REPS} and \emph{PI$^{2}$} in Figure~
 %\includegraphics[scale=0.50]{comparison.eps}
 \scalebox{1.0}{\input{Pictures/ilc.tikz}}
 \caption{Convergence of $\alg$ to the reference table tennis trajectory for the joints 5, 6 and 7}
-\label{wILCTrajectoryTT}
+\label{ILCTrajectoryTT}
 \end{figure}
 
 \begin{figure}
@@ -92,6 +94,6 @@ Comparisons to episodic-RL algorithms \emph{REPS} and \emph{PI$^{2}$} in Figure~
 %\tikzset{every picture/.style={scale=0.8}}%
 \scalebox{0.5}{\input{comparisonPutting.tex}}
 \endgroup
-\caption{The log-scale plot of convergence of \emph{wILC}. Note the slow convergence of the other stochastic RL algorithms.}
+\caption{The log-scale plot of convergence of $\alg$. Note the slow convergence of the other stochastic RL algorithms.}
 \label{ttComparison}
 \end{figure}

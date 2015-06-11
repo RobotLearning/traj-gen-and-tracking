@@ -174,17 +174,19 @@ classdef mILC < ILC
             % computes very high inverses though
             %u = obj.inp_last(:) - pinv(obj.F) * e(:);
             % in case F is very large
-            %u = obj.inp_last(:) - obj.Finv * e(:);
+            u = obj.inp_last(:) - obj.Finv * e(:);
             % Penalize inputs and derivatives (LM-type update)
             %Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
             %L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
             %u = obj.inp_last(:) - L * e(:);                        
             %u = Q * (obj.inp_last(:) - L * e(:));
             % Mayer form
+            %{
             M = zeros(size(obj.Ql));
             M(end-2*dimu+1:end,end-2*dimu+1:end) = 1;
             Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
             u = obj.inp_last(:) - Mat * e(:);
+            %}
             % Iterative Method with Conjugate gradient
             %A = obj.F' * obj.Ql * obj.F + Sl;
             %u = obj.inp_last(:) - cgs(A,obj.F'*obj.Ql*e(:));
@@ -213,7 +215,7 @@ classdef mILC < ILC
             ulast = ulast(:,idx(1:end-1));
             e = y - trj.s;
             e = e(:,2:end);        
-            Sl = 0 * obj.Rl; % we keep du penalty S same as R
+            Sl = 0.0000001 * obj.Rl; % we keep du penalty S same as R
             
             % correct for e0            
             err = e(:) + obj.H * e0diff;
@@ -226,7 +228,9 @@ classdef mILC < ILC
             % Mayer form
             M = zeros(size(obj.Ql));
             M(end-2*dimu+1:end,end-2*dimu+1:end) = 1;
+            %Mat = (obj.F' * M * obj.F + Sl) \ (obj.F' * M);
             Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
+            %Mat = obj.F' * M;
             u = ulast(:) - Mat * err;
             %}
             

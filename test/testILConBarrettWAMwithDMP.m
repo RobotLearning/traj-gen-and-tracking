@@ -170,12 +170,12 @@ for i = 1:num_trials
     [qact,ufull] = wam.observeWithFeedbackErrorForm(trajNew,q0new);
     % current iteration part of ILC
     uadd = ufull - trajNew.unom + uadd;
-    traj.addPerformance(ufull,qact,wam.COST,ilc);
+    trajNew.addPerformance(ufull,qact,wam.COST,ilc);
     % Plot the controls and animate the robot arm
     %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
 end
 
 % Plot the controls and animate the robot arm
 wam.plot_inputs(trajNew);
-wam.plot_outputs(traj);
+wam.plot_outputs(trajNew);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);

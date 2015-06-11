@@ -71,7 +71,7 @@ classdef Trajectory < handle
             sse = sum(obj.PERF(i+1).cost);
             finCost = costfun.fnc(y(:,end),obj.s(:,end));
             rms = sqrt(sse/obj.N);
-            fprintf('%d. trial: \nRMS for %s is %f \n', i+1, name, rms);
+            fprintf('RMS for %s is %f \n', name, rms);
             fprintf('Final cost is %f \n', finCost);
             
             if ~ischar(controller) && ~isempty(u)
@@ -80,7 +80,7 @@ classdef Trajectory < handle
                     idx = ds * (1:obj.N/ds);
                     u = u(:,idx(1:end-1));
                 end
-                controller.record(u,sse);
+                controller.record(u,rms);
             end
             
         end
@@ -97,6 +97,8 @@ classdef Trajectory < handle
             
             if rate == 1
                 trajDown = obj;
+                %trajDown = Trajectory(obj.t,obj.s,obj.unom,obj.K);
+                %trajDown.PERF = obj.PERF;
                 return;
             end
             
@@ -119,7 +121,8 @@ classdef Trajectory < handle
         function trajUp = upsample(obj,rate)
             
             if rate == 1
-                trajUp = obj;
+                trajUp = Trajectory(obj.t,obj.s,obj.unom,obj.K);
+                trajUp.PERF = obj.PERF;
                 return;
             end
             

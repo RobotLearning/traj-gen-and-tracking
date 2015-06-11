@@ -1,6 +1,6 @@
 %% Test Putting with full actuated RR arm
 
-clc; clear; close all;
+%clc; clear; close all;
 
 %% Define constants and parameters
 
@@ -18,8 +18,8 @@ SIM.dimu = 2;
 % time step h 
 SIM.h = 0.01;
 % noise and initial error
-SIM.eps = 3e-10;
-SIM.eps_d = 3e-10;
+SIM.eps = 0; %3e-10;
+SIM.eps_d = 0; %3e-10;
 % integration method
 SIM.int = 'Euler';
 % trajectory in joint space?
@@ -93,16 +93,12 @@ vf = m_b * vin / (m1 + m2);
 
 %% Generate inputs for a desired trajectory
 
-% TODO: implement Jacobian and inverse computations of
-% q, qd, qdd from x, xd, xdd
-% Put Jacobian in Kinematics
-
 h = SIM.h;
 tin = 0; tfin = 1;
 t = tin:h:tfin;
 amp = pi/6;
 sigma = 0.5;
-mean = 0.5;
+mean = (tfin + tin)/2;
 % trajectory consists of a compact gaussian
 theta = amp * exp(-0.5*((t-mean).^2)/(sigma^2));
 theta = theta - theta(1);
@@ -123,7 +119,10 @@ SIM.h = h;
 rr = RR(PAR,CON,COST,SIM);
 
 % create trajectory in cartesian space
-traj = rr.generateInputs(t,ref);
+%traj = rr.generateInputs(t,ref);
+bfs = 100;
+% trajectory generated in joint space
+[traj,dmp] = rr.generateInputsWithDMP(t,bfs,ref); 
 
 %% Evolve system dynamics and animate the robot arm
 
@@ -138,14 +137,21 @@ traj.addPerformance(traj.unom,qact,rr.COST,'Computed Torque - IDM');
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
-rr.animateArm(qact(1:2,:),ref);
+%rr.animateArm(qact(1:2,:),ref);
 
 %% Start learning with ILC
 
 num_trials = 10;
 
+ilc = mILC(rr,traj);
 %ilc = aILC(rr,traj);
-ilc = mILC(rr,traj); 
+if exist('ilcClass','var')
+    if strcmp(ilcClass,'bILC')
+        ilc = eval([ilcClass,'(traj,rr)']);
+    else
+        ilc = eval([ilcClass,'(rr,traj)']);
+    end
+end
 
 for i = 1:num_trials
     % get next inputs
@@ -161,24 +167,55 @@ end
 % Plot the controls and animate the robot arm
 rr.plot_inputs(traj);
 rr.plot_outputs(traj);
-rr.animateArm(qact(1:2,:),ref);
+%rr.animateArm(qact(1:2,:),ref);
+
+%% ILC interaction with DMP
+
+% num_trials = 10;
+% ilc = mILC(rr,traj);
+% uadd = zeros(size(traj.unom));
+% e0diff = zeros(size(q0));
+% q0new = q0;
+% 
+% for i = 1:num_trials
+%     % change initial condition slightly
+%     q0last = q0new;
+%     q0new = q0 + 0.0 * randn(length(q0),1);
+%     trajModified = rr.generateInputsWithDMP(t,bfs,ref,q0new);
+%     trajNew = Trajectory(traj.t,trajModified.s,trajModified.unom,traj.K);
+%     % adapt the dmps accordingly
+%     % get the next inputs normally as in standard ILC
+%     e0diff =  q0last - q0new;
+%     uadd = ilc.feedforwardDMP(trajNew,qact,uadd,e0diff);
+%     % adjust for the IDM change
+%     trajNew.unom = uadd + trajNew.unom;
+%     qact = rr.evolve(t,q0new,trajNew.unom);
+%     trajNew.addPerformance(trajNew.unom,qact,rr.COST,ilc);
+%     % Plot the controls and animate the robot arm
+%     %rr.animateArm(qact(1:2,:),ref);
+% end
+% 
+% % Plot the controls and animate the robot arm
+% rr.plot_inputs(trajNew);
+% rr.plot_outputs(trajNew);
+% rr.animateArm(qact(1:2,:),ref);
 
 %% Modify the animation
-
-y = rr.kinematics(qact);
-shift = [0; 0.5];
-R = [0 1; -1 0];
-width = 0.025;
-% initial position of the ball
-ball = R * (y(1:2,end) + [0;width]);
-h1 = scatter(ball(1,1)+shift(1),ball(2,1)+shift(2),100,[.6 .6 .6],'filled','LineWidth',4);
-% % trajectory of the ball
-% balltrj_x = [y(1,end)+width y(1,end)+width];
-% balltrj_y = [y(2,end)+width/2 y(2,end) + l];
-% h2 = line(balltrj_x, balltrj_y, 'LineStyle', '-.', 'color', [.4 .4 .4],'LineWidth',1);
-% position the hole
-hole = [y(1,end)+width/2 y(1,end)+width/2; y(2,end)+l-hole_rad y(2,end)+l+hole_rad];
-hole = R * hole;
-h3 = line(hole(1,:)+shift(1), hole(2,:)+shift(2), 'LineStyle', '-', 'color', [0 0 0],'LineWidth',4);
-% print as grayscale eps 
-% print(gcf,'-depsc','putting.eps');
+% 
+% y = rr.kinematics(qact);
+% shift = [0; 0.5];
+% R = [0 1; -1 0];
+% width = 0.025;
+% % initial position of the ball
+% ball = R * (y(1:2,end) + [0;width]);
+% h1 = scatter(ball(1,1)+shift(1),ball(2,1)+shift(2),100,[.6 .6 .6],'filled','LineWidth',4);
+% % % trajectory of the ball
+% % balltrj_x = [y(1,end)+width y(1,end)+width];
+% % balltrj_y = [y(2,end)+width/2 y(2,end) + l];
+% % h2 = line(balltrj_x, balltrj_y, 'LineStyle', '-.', 'color', [.4 .4 .4],'LineWidth',1);
+% % position the hole
+% hole = [y(1,end)+width/2 y(1,end)+width/2; y(2,end)+l-hole_rad y(2,end)+l+hole_rad];
+% hole = R * hole;
+% h3 = line(hole(1,:)+shift(1), hole(2,:)+shift(2), 'LineStyle', '-', 'color', [0 0 0],'LineWidth',4);
+% % print as grayscale eps 
+% % print(gcf,'-depsc','putting.eps');
