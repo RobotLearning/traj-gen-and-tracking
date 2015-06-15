@@ -33,9 +33,8 @@ SIM.dimy = 4;
 SIM.dimu = 2;
 % time step h 
 SIM.h = 0.01;
-% noise and initial error
-SIM.eps = 3e-10;
-SIM.eps_d = 3e-10;
+% measurement noise covariance
+SIM.eps_m = 3e-10;
 % integration method
 SIM.int = 'Euler';
 % trajectory in joint space?

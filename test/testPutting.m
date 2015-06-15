@@ -17,9 +17,8 @@ SIM.dimy = 4;
 SIM.dimu = 2;
 % time step h 
 SIM.h = 0.01;
-% noise and initial error
-SIM.eps = 0; %3e-10;
-SIM.eps_d = 0; %3e-10;
+% measurement noise covariance
+SIM.eps_m = 3e-5;
 % integration method
 SIM.int = 'Euler';
 % trajectory in joint space?
@@ -130,7 +129,7 @@ q0 = traj.s(:,1);
 % add nonzero velocity
 %q0(3:4) = q0(3:4) + 0.1*rand(2,1);
 % observe output
-qact = rr.evolve(t,q0,traj.unom);
+qact = rr.observe(t,q0,traj.unom);
 % add performance to trajectory
 traj.addPerformance(traj.unom,qact,rr.COST,'Computed Torque - IDM');
 
@@ -157,7 +156,7 @@ for i = 1:num_trials
     % get next inputs
     u = ilc.feedforward(traj,qact);
     % evolve complete system
-    qact = rr.evolve(t,q0,u);
+    qact = rr.observe(t,q0,u);
     % add performance to trajectory
     traj.addPerformance(u,qact,rr.COST,ilc);
     % Plot the controls and animate the robot arm

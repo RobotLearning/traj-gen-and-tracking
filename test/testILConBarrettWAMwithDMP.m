@@ -38,9 +38,8 @@ SIM.dimy = 2*N_DOFS;
 SIM.dimu = N_DOFS;
 % time step h 
 SIM.h = 0.002; % 500 Hz recorded data
-% noise and initial error
-SIM.eps = 0; %3e-10;
-SIM.eps_d = 0; %3e-10;
+% measurement noise covariance
+SIM.eps_m = 0; %3e-10;
 % integration method
 SIM.int = 'Symplectic Euler';
 % reference trajectory in joint space?

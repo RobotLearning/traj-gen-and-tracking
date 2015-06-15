@@ -66,8 +66,8 @@ classdef aILC < ILC
             obj.F = zeros(N*dim_x, N*dim_u);
             obj.G = eye(N*dim_y, N*dim_x);
             obj.H = zeros(N*dim_y,N*dim_u); 
-            obj.eps = model.SIM.eps;
-            obj.eps_d = max(1e-6,model.SIM.eps);
+            obj.eps = model.SIM.eps_m;
+            obj.eps_d = max(1e-6,model.SIM.eps_m);
             obj.inp_last = trj.unom(:,1:N);
             
             obj.lift(model,trj);

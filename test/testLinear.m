@@ -33,7 +33,7 @@ SIM.dimu = 1;
 % time step h 
 SIM.h = 1;
 % measurement noise 
-SIM.eps = 0;
+SIM.eps_m = 0;
 % integration method if continous model is given
 SIM.int = 'Euler';
 
@@ -136,7 +136,7 @@ SIM.dimx = dimx;
 SIM.dimu = dimu;
 SIM.dimy = dimy;
 SIM.h = h;
-SIM.eps = 0;
+SIM.eps_m = 0;
 SIM.int = 'Euler';
 PAR.A = A;
 PAR.B = B;

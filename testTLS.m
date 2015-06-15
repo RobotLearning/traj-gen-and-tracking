@@ -1,5 +1,6 @@
 %% Testing total least squares
 
+
 num_data = 500;
 num_param = 10;
 % design matrix

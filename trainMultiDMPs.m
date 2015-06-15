@@ -50,22 +50,22 @@ qd = cell2mat(qdLin);
 qdd = cell2mat(qddLin);
 
 g = zeros(1,dof);
-yin = zeros(1,dof);
+yin = zeros(3,dof);
 
 for i = 1:dof
     
     % tau is fixed to be one
     % goal and amplitude are initialized here
     % these are not important as dmps can be extended to any yin and goal
-    yin(i) = [inits(1,i);0;0];
+    yin(:,i) = [inits(1,i);0;0];
     g(i) = goals(1,i);
     % initial states of DMPs
-    dmp(i) = DDMP(can,alpha,beta,g(i),yin(i));
+    dmp(i) = DDMP(can,alpha,beta,g(i),yin(:,i));
     dmp(i).regressLive(q(:,i),qd(:,i),qdd(:,i),goals(:,i));
     
 end
 
 disp('Initializing DMP to yin = ');
-disp(yin(:));
+disp(yin(1,:)');
 disp('Goal state for DMP, goal = ');
 disp(g(:));

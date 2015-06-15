@@ -9,7 +9,7 @@ function y = filterButter2nd(x,w)
     cols = [1, 1, 2, 2];
     vals = [1+A(2), A(3), 1, -1];
     rhs  = B(2:3) - B(1)*A(2:3);
-    zi   = [0;0]; %sparse(rows,cols,vals) \ rhs(:);
+    zi   = sparse(rows,cols,vals) \ rhs(:);
     
     y = x;
     % set previous values to the starting value

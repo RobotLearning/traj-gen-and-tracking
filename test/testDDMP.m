@@ -1,4 +1,4 @@
-%% test script for rhythmic DMP
+%% test script for discrete DMP
 
 %# store breakpoints
 tmp = dbstatus;

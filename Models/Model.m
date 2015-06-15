@@ -108,7 +108,6 @@ classdef (Abstract) Model < handle
             end
         end
         
-        % useful to propagate tILC
         % LQR-calculated K has to be in error-feedback form!
         % DMP can be supplied as an additional argument
         function [y,u] = observeWithFeedbackErrorForm(obj,traj,x0,varargin)
@@ -121,7 +120,7 @@ classdef (Abstract) Model < handle
             uff = traj.unom;
             
             % process and measurement noise same for now
-            sigma = obj.SIM.eps ^(1/2);
+            sigma = obj.SIM.eps_m ^(1/2);
 
             % in case dmp is supplied
             if nargin == 4
@@ -143,10 +142,9 @@ classdef (Abstract) Model < handle
             x(:,1) = x0;
             y(:,1) = obj.C * x(:,1) + obj.C * sigma * randn(length(x0),1);
             for i = 1:N
-                x(:,i) = x(:,i) + obj.C * sigma * randn(length(x0),1);
                 u(:,i) = K(:,:,i)*(x(:,i)-sbar(:,i)) + uff(:,i);
                 x(:,i+1) = step(obj,t(i),x(:,i),u(:,i),fun);
-                y(:,i+1) = obj.C * x(:,i+1);
+                y(:,i+1) = obj.C * x(:,i+1) + obj.C * sigma * randn(length(x0),1);
                 % no constraint checking
             end
         end
@@ -177,7 +175,7 @@ classdef (Abstract) Model < handle
             N = length(t);
             dimx = obj.SIM.dimx;
             dimy = size(obj.C,1);
-            eps = obj.SIM.eps; % covariance of process x measurement noise
+            eps = obj.SIM.eps_m; % covariance of measurement noise
             M = eps * eye(N*dimx);
             Cs = cell(1,N);
             [Cs{:}] = deal(obj.C);

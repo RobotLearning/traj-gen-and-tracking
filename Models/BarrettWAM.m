@@ -49,7 +49,7 @@ classdef BarrettWAM < Robot
             obj.SIM.dimy = sim.dimy;
             obj.SIM.dimu = sim.dimu;
             obj.SIM.h = sim.h;
-            obj.SIM.eps = sim.eps;
+            obj.SIM.eps_m = sim.eps_m;
             %assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
             %       'Please input Euler or RK4 as integration method');
             obj.SIM.int = sim.int;
@@ -114,9 +114,15 @@ classdef BarrettWAM < Robot
         end
         
         % run kinematics using an external function
-        function [x1,x2] = kinematics(obj,q)
+        function x = kinematics(obj,q)
             
-            %TODO:
+            lenq = size(q,2);
+            x = zeros(3,lenq);
+            for i = 1:lenq
+                linkPos = barrettWamKinematics(q(:,i),obj.PAR);
+                finPos = linkPos(6,:);
+                x(:,i) = finPos(:);
+            end
         end
         
         % call inverse kinematics from outside

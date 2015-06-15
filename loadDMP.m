@@ -91,17 +91,18 @@ for i = 1:length(set)
     %
 
     cutoff = 50;
-    %{
-    qSpecsZeroed = [qSpecs(f < cutoff,:); zeros(sum(f >= cutoff),dof)];
-    qdSpecsZeroed = [qdSpecs(f < cutoff,:); zeros(sum(f >= cutoff),dof)];
-    qFilLin = real(ifft(qSpecsZeroed,NFFT)*2*L);
-    qdFilLin = real(ifft(qdSpecsZeroed,NFFT)*2*L);
-    %}
-    w_nyquist = floor(length(t)/2);
-    w_cut = cutoff/w_nyquist;
-    [B,A] = butter(2,w_cut);
-    qFilLin = filtfilt(B,A,qLin);
-    qdFilLin = filtfilt(B,A,qdLin);
+    if ~exist('filtfilt')
+        qSpecsZeroed = [qSpecs(f < cutoff,:); zeros(sum(f >= cutoff),dof)];
+        qdSpecsZeroed = [qdSpecs(f < cutoff,:); zeros(sum(f >= cutoff),dof)];
+        qFilLin = real(ifft(qSpecsZeroed,NFFT)*2*L);
+        qdFilLin = real(ifft(qdSpecsZeroed,NFFT)*2*L);
+    else
+        w_nyquist = floor(length(t)/2);
+        w_cut = cutoff/w_nyquist;
+        [B,A] = butter(2,w_cut);
+        qFilLin = filtfilt(B,A,qLin);
+        qdFilLin = filtfilt(B,A,qdLin);
+    end
     
     % interpolate back
     qFil = interp1(tLinStrike,qFilLin,t);
@@ -268,19 +269,24 @@ end
 dlmwrite('w_strike.txt',Ws,'delimiter','\t','precision',6);
 dlmwrite('w_return.txt',Wr,'delimiter','\t','precision',6);
 
-%% see how well we extend to particular demonstrations
+%% See how well we extend to particular demonstrations
 
-i = 10;
-q_act = interp1(t_strike{i},Q_strike{i},tLinStrike,'linear','extrap');
-qd_act = interp1(t_strike{i},Qd_strike{i},tLinStrike,'linear','extrap');
-qdd_act = interp1(t_strike{i},Qdd_strike{i},tLinStrike,'linear','extrap');
+iS = 10;
+q_act = interp1(t_strike{iS},Q_strike{iS},tLinStrike,'linear','extrap');
+qd_act = interp1(t_strike{iS},Qd_strike{iS},tLinStrike,'linear','extrap');
+qdd_act = interp1(t_strike{iS},Qdd_strike{iS},tLinStrike,'linear','extrap');
+
+Qdmp = zeros(2*dof,length(tLinStrike));
+Qexample = [q_act,qd_act]';
 
 figure;
 for j = 1:dof
     dmpStrike(j).setGoal(q_act(:,j));
-    dmpStrike(j).setInitState(q_act(1,j));
+    dmpStrike(j).setInitState([q_act(1,j);0;0]);
     dmpStrike(j).resetStates();
     [~,qs] = dmpStrike(j).evolve(length(tLinStrike));
+    Qdmp(j,:) = qs(1,:);
+    Qdmp(j+dof,:) = qs(2,:);
     subplot(7,3,3*j-2);
     plot(tLinStrike,qs(1,:),tLinStrike,q_act(:,j)');
     legend([joints{j},'\_dmpStrike'],'demonstration');
@@ -292,15 +298,15 @@ for j = 1:dof
     legend([acc{j},'\_dmpStrike'],'demonstration');
 end
 
-i = 5;
-q_act = interp1(t_return{i},Q_return{i},tLinReturn,'linear','extrap');
-qd_act = interp1(t_return{i},Qd_return{i},tLinReturn,'linear','extrap');
-qdd_act = interp1(t_return{i},Qdd_return{i},tLinReturn,'linear','extrap');
+iR = 5;
+q_act = interp1(t_return{iR},Q_return{iR},tLinReturn,'linear','extrap');
+qd_act = interp1(t_return{iR},Qd_return{iR},tLinReturn,'linear','extrap');
+qdd_act = interp1(t_return{iR},Qdd_return{iR},tLinReturn,'linear','extrap');
 
 figure;
 for j = 1:dof
     dmpReturn(j).setGoal(q_act(:,j));
-    dmpReturn(j).setInitState(q_act(1,j));
+    dmpReturn(j).setInitState([q_act(1,j);0;0]);
     dmpReturn(j).resetStates();
     [~,qs] = dmpReturn(j).evolve(length(tLinReturn));
     subplot(7,3,3*j-2);
@@ -313,3 +319,16 @@ for j = 1:dof
     plot(tLinReturn,qs(3,:),tLinReturn,qdd_act(:,j)');
     legend([acc{j},'\_dmpReturn'],'demonstration');
 end
+
+%% Plot DMP and demonstrations in Cartesian space
+
+initializeWAM;
+xdmp = wam.kinematics(Qdmp);
+xexample = wam.kinematics(Qexample);
+
+figure;
+plot3(xdmp(1,:),xdmp(2,:),xdmp(3,:),'--r');
+hold on;
+plot3(xexample(1,:),xexample(2,:),xexample(3,:),'-b');
+grid on;
+legend('dmp',['demo ',num2str(iS)]);
