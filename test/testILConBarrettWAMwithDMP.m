@@ -18,7 +18,7 @@ clear tmp
 delete('tmp.mat')
 
 % folder that stores all data
-prefs_folder = '../robolab/barrett/prefs/';
+save_folder = '../robolab/barrett/saveData/';
 % folder that stores all config files, link parameters, etc.
 config_folder = '../robolab/barrett/config/';
 
@@ -93,8 +93,8 @@ wam = BarrettWAM(PAR,CON,COST,SIM);
 %% Generate inputs for a desired trajectory
 
 % load percentage of trajectory from dmp file 
-%file = [prefs_folder,'dmp_strike.txt'];
-file = 'dmp.txt';
+file = [save_folder,'dmp_strike.txt'];
+%file = 'dmp.txt';
 M = dlmread(file);
 perc = 1.0; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
@@ -105,6 +105,9 @@ t = SIM.h * (1:perc*len);
 q = M(:,2:2:2*N_DOFS);
 qd = M(:,3:2:2*N_DOFS+1);
 ref = [q';qd'];
+
+% test the kinematics from SL
+cart_ref = wam.kinematics(ref);
 
 % generate u_ff inputs with inverse dynamics
 %traj = wam.generateInputs(t,ref); % trajectory generated in joint space

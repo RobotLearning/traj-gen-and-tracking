@@ -202,7 +202,7 @@ classdef mILC < ILC
             
         end
         
-        %% Feedforward with DMP with different I.C.
+        %% Feedforward compensation for DMP with different I.C.
         function u = feedforwardDMP(obj,trj,y,ulast,e0diff)
             
             trj = trj.downsample(obj.downsample);

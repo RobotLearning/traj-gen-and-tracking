@@ -19,10 +19,10 @@ In order to simulate learning with ILC, we assume that there is a model mismatch
 \begin{figure}[ht]
 \centering
 \subfloat[Initial attempt]{%
-\includegraphics[width=0.4\linewidth]{putting0.eps}
+\includegraphics[width=0.45\linewidth]{putting0.eps}
 \label{fig:subfig1}}
 \subfloat[Final trajectory]{%
-\includegraphics[width=0.7\linewidth]{puttingLastTraj.pdf}
+\includegraphics[width=0.7\linewidth]{puttingLastTraj.eps}
 \label{fig:subfig2}}
 \caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The reference trajectory in Cartesian space is shown as a blue dashed curve. We can see in Fig.~\ref{fig:subfig1} that the initial attempt falls short of the reference trajectory. ILC then modifies the control inputs to compensate for the modeling errors. In the last attempt shown in Fig.~\ref{fig:subfig2} the reference trajectory is executed almost perfectly. The ball will then approach the hole, shown as a thick blue line at a distance of 0.5 meters, with approximately zero velocity.} 
 \label{putting1} 

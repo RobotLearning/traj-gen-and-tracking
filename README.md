@@ -1,8 +1,11 @@
 Humanoids TODO list:
 
-- Run results for 0.5 sec traj with 5 different goal points
+- Compare gILC with mILC with bILC and only feedback-based ILC
+  Run results for 0.5 sec traj averaged over 10 different goal points/init cond.
+- Check RDMP and formulate rhythmic DMP approach for striking
+- Plot some dmps in Cart space and include in paper.
+
 - Correct initial conditions of zero-phase filtering.
-- Compare different mILC with aILC, bILC and only feedback-based ILC (current iteration)
 - Analyze the index problem for dmp trajectories. Why +1?
 - Can we run traj again after f and st without problems?
 - Why does task servo feedback blow up in Robot computer?
@@ -25,7 +28,7 @@ Notes:
 implement the test function in MATLAB that checks for differences
 - Why are two tracking LQRs not exactly the same (at the end)? 
   [maybe R dependence is not correct, index difference?]
-- Check RDMP
+
 
 Theoretical:
 
@@ -43,7 +46,7 @@ Theoretical:
 Extensions:
 - Using quasi-Newton and system identification/ (recursive) least squares idea.
 - Can we compute one K for all smooth robot trajectories?
-- Can we couple the DMPs and 
+- Can we couple the DMPs
 - Evolving DMPs based on current position, as an oracle. Effects of error coupling on DMPs?
 - Minimizing expectation with variance added for ILC to come up with a new update rule
 - Check DDP and explore fully the connection with ILC (and regression?)

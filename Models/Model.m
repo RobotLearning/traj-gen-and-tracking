@@ -328,19 +328,31 @@ classdef (Abstract) Model < handle
                 error('Performance not added!');
             end
             num_out = size(y,1);
-            figure;
+            figure; % draw joint outputs
             
-            if isa(obj,'BarrettWAM') % too many joints       
+            if isa(obj,'Robot') % joint angles and velocities    
                 for i = 1:num_out/2
                     subplot(num_out/2,2,2*i-1);
-                    plot(t,y(2*i-1,:),'.-',t,y_des(2*i-1,:),'-');
+                    plot(t,y(i,:),'.-',t,y_des(i,:),'--');
                     subplot(num_out/2,2,2*i);
-                    plot(t,y(2*i,:),'.-',t,y_des(2*i,:),'-');
+                    plot(t,y(i+num_out/2,:),'.-',t,y_des(i+num_out/2,:),'--');
                     %legend(name,'Reference');
                     %title(strcat(num2str(i),'. state'));
                     %xlabel('Time (s)');
                     %ylabel(strcat('State x',num2str(i)));
                 end
+                
+                figure; % draw Cartesian output
+                yCart = obj.kinematics(y);
+                yDesCart = obj.kinematics(y_des);
+                plot3(yDesCart(1,:),yDesCart(2,:),yDesCart(3,:),'r-');
+                hold on;
+                grid on;
+                plot3(yCart(1,:),yCart(2,:),yCart(3,:),'b-');
+                legend('desired','actual');
+                hold off;
+                
+                
             else % other models            
                 for i = 1:num_out
                     subplot(num_out,1,i);
