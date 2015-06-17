@@ -20,11 +20,10 @@ classdef mILC < ILC
         name
         % costs incurred (Q-SSE)
         error
-        % flags
-        FLAG
         % downsampling to speed things up
         downsample
-        
+        % final cost
+        finalCost
         % ILC's Last input sequence
         inp_last
         % Lifted state matrix F (input-state) and G (state-output)
@@ -37,6 +36,9 @@ classdef mILC < ILC
         Finv
         % holding response of initial error
         H
+        
+        % flag for simulation method
+        flagMethod
     end
     
     methods
@@ -49,9 +51,14 @@ classdef mILC < ILC
             obj.name = 'Model-based ILC';
             obj.error = 0;
             obj.downsample = 1;
+            obj.flagMethod = 1;
             
-            if nargin == 3
+            if nargin >= 3
                 obj.downsample = min(varargin{1},10);
+            end
+            
+            if nargin == 4
+                obj.flagMethod = varargin{2};
             end
             
             trj = trj.downsample(obj.downsample);
@@ -74,9 +81,6 @@ classdef mILC < ILC
             obj.G = zeros(N*dim_y, N*dim_x);
             obj.Ql = zeros(N*dim_y, N*dim_y);
             obj.Rl = zeros(N*dim_u, N*dim_u);
-            
-            % learn model with feedback?
-            obj.FLAG.learn_fb = false;
             
             obj.lift(model,trj);
             %L = 0.5 * eye(size(obj.F,2));
@@ -215,24 +219,29 @@ classdef mILC < ILC
             ulast = ulast(:,idx(1:end-1));
             e = y - trj.s;
             e = e(:,2:end);        
-            Sl = 0.0000001 * obj.Rl; % we keep du penalty S same as R
+            % we keep du penalty S proportional to R
             
-            % correct for e0            
-            err = e(:) + obj.H * e0diff;
-            %err = e(:);
-            
-            % usual MILC
-            %u = ulast(:) - obj.Finv * err;
-            
-            %%{
-            % Mayer form
-            M = zeros(size(obj.Ql));
-            M(end-2*dimu+1:end,end-2*dimu+1:end) = 1;
-            %Mat = (obj.F' * M * obj.F + Sl) \ (obj.F' * M);
-            Mat = pinv(obj.F' * M * obj.F + Sl) * (obj.F' * M);
-            %Mat = obj.F' * M;
-            u = ulast(:) - Mat * err;
-            %}
+            switch obj.flagMethod
+                
+                case 1
+                    % usual MILC
+                    Sl = obj.Rl;
+                    %u = ulast(:) - obj.Finv * e(:);
+                    L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
+                    u = obj.inp_last(:) - L * e(:);
+                case 2
+                    % correct for e0            
+                    err = e(:) + obj.H * e0diff;
+                    % Mayer form
+                    M = zeros(size(obj.Ql));
+                    M(end-2*dimu+1:end,end-2*dimu+1:end) = 1;
+                    %Mat = (obj.F' * M * obj.F + Sl) \ (obj.F' * M);
+                    Mat = pinv(obj.F' * M * obj.F) * (obj.F' * M);
+                    %Mat = obj.F' * M;
+                    u = ulast(:) - Mat * err;
+                otherwise
+                    u = ulast(:);
+            end
             
             
             % revert from lifted vector from back to normal form

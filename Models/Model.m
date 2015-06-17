@@ -330,7 +330,7 @@ classdef (Abstract) Model < handle
             num_out = size(y,1);
             figure; % draw joint outputs
             
-            if isa(obj,'Robot') % joint angles and velocities    
+            if isa(obj,'BarrettWAM') % joint angles and velocities    
                 for i = 1:num_out/2
                     subplot(num_out/2,2,2*i-1);
                     plot(t,y(i,:),'.-',t,y_des(i,:),'--');
@@ -350,6 +350,20 @@ classdef (Abstract) Model < handle
                 grid on;
                 plot3(yCart(1,:),yCart(2,:),yCart(3,:),'b-');
                 legend('desired','actual');
+                
+                % include time labels on Cart. traj.
+                drawTimeIter = 20;
+                tLabel = t(1:drawTimeIter:end);
+                precision = 4;
+                tLabelCell = num2cell(tLabel,precision);
+                for i = 1:length(tLabelCell)
+                    tLabelCell{i} = num2str(tLabelCell{i});
+                end
+                % annotate some of the ball positions
+                xDraw = yDesCart(1,1:drawTimeIter:end);
+                yDraw = yDesCart(2,1:drawTimeIter:end);
+                zDraw = yDesCart(3,1:drawTimeIter:end);
+                text(xDraw,yDraw,zDraw,tLabelCell);
                 hold off;
                 
                 

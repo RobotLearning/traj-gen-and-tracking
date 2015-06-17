@@ -69,31 +69,26 @@ Using successful demonstrations we trained a probabilistic model $p(\weights|\st
 %the position, velocity and orientation of the racket can be computed analytically based on the state of the system and the target on the opponents court.
 %These task space parameters can also be converted into joint space parameters using inverse kinematics
 
-The attached video shows the improvement achieved after using our algorithm $\alg$. In order to apply our method to a given reference trajectory, we use the mode of the empirical distribution $p(\weights,\state_b) = p(\weights|\state_b)p(\state_b)$ as the weights of our initial movement primitive. The convergence of the trajectories over the iteration domain are shown in Cartesian space in Figure~\ref{ILCTrajectoryTTCartesian}. Hard-to-model dynamical effects such as friction and stiction forces is easily compensated for in ILC.
+%The attached video shows the improvement achieved after using our algorithm $\alg$.
+In order to show the applicability of our approach, we sample from the model $p(\weights|\state_b)$ the weights of our movement primitive.  Comparisons to two baselines in Figure~\ref{ILCTrajectoryTT} illustrate the benefits of our approach, especially the faster convergence and increased accuracy of the proposed method. Notice that the update  \eqref{ILCNewtonsMethod} shown in black considers the full cost over a static reference trajectory and hence can become easily unstable in our extended setting. The second baseline shown in red is the conservative case where we add the feedback inputs to the feedforward inputs to the next iteration
+%
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} &= \sysInput_k - \vec{K}_{LQR}\error_{k}.\\
+\end{aligned}
+\label{fbILC}
+\end{equation}
+%
+\noindent We find that this additional adjustment of feedforward inputs makes learning more robust when LQR is used for feedback. We add this compensation also in the two other approaches in Figure~\ref{ILCTrajectoryTT}.
 
-Comparisons to episodic-RL algorithms \emph{REPS} and \emph{PI$^{2}$} in Figure~\ref{ttComparison} illustrate the benefits of our approach, especially the faster convergence and increased accuracy of the proposed method. Some examples of the generated trajectories in Figure~\ref{ILCTrajectoryTT}. 
+%Some examples of the generated trajectories are in Figure~\ref{ILCTrajectoryTT}. 
+
+%The convergence of the trajectories over the iteration domain are shown in Cartesian space in Figure~\ref{ILCTrajectoryTTCartesian}. Hard-to-model dynamical effects such as friction and stiction forces is easily compensated for in ILC.
 
 \begin{figure}
 \center
-%\includegraphics[scale=0.50]{comparison.eps}
-\scalebox{1.0}{\input{Pictures/ilc.tikz}}
-\caption{Convergence of $\alg$ to the reference table tennis trajectory in Cartesian space.}
-\label{ILCTrajectoryTTCartesian}
-\end{figure}
-
-\begin{figure}
-\center
-%\includegraphics[scale=0.50]{comparison.eps}
-\scalebox{1.0}{\input{Pictures/ilc.tikz}}
-\caption{Convergence of $\alg$ to the reference table tennis trajectory for the joints 5, 6 and 7}
+\includegraphics[scale=0.40]{tt0.eps}
+%\scalebox{1.0}{\input{Pictures/ilc.tikz}}
+\caption{Convergence of our new goal-based ILC approach, which we call $\alg$ to the goal position and velocity of the striking movement primitive is shown in blue. Note the unstable performance of \emph{mILC} which considers the full cost. This is because the initial starting conditions of the movement primitive are varying every iteration.}
 \label{ILCTrajectoryTT}
-\end{figure}
-
-\begin{figure}
-\begingroup
-%\tikzset{every picture/.style={scale=0.8}}%
-\scalebox{0.5}{\input{comparisonPutting.tex}}
-\endgroup
-\caption{The log-scale plot of convergence of $\alg$. Note the slow convergence of the other stochastic RL algorithms.}
-\label{ttComparison}
 \end{figure}

@@ -23,15 +23,17 @@ classdef wILC < ILC
         color
         % name of the particular controller
         name
-        % costs incurred (Q-SSE)
+        % RMS error incurred along the trajectory
         error
+        % final cost
+        finalCost
         % downsampling to speed things up
-        downsample
+        downsample        
+        % ILC's Last input sequence
+        inp_last
         
         % update method
         upd_meth
-        % last input - trj, or weights
-        inp_last
         % output matrix
         C
         % Psi matrix used for weight updates

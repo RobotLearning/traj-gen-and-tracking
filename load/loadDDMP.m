@@ -1,5 +1,5 @@
-%% Loads DMPs from kinesthetic teach-in data
-%
+%% Loads demonstrations to form discrete DMPs (strike & return) 
+% using kinesthetic teach-in data
 
 clc; clear; close all
 

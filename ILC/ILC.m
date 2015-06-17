@@ -12,11 +12,12 @@ classdef (Abstract) ILC < handle
         color
         % name of the particular controller
         name
-        % costs incurred (Q-SSE)
+        % RMS error incurred along the trajectory
         error
+        % final cost
+        finalCost
         % downsampling to speed things up
-        downsample
-        
+        downsample        
         % ILC's Last input sequence
         inp_last
         
@@ -32,10 +33,11 @@ classdef (Abstract) ILC < handle
     methods
         
         % get sse costs for the controller
-        function record(obj,inp_applied,cost)            
+        function record(obj,inp_applied,err,finCost)            
             obj.episode = obj.episode + 1;
             obj.inp_last = inp_applied;
-            obj.error(obj.episode) = cost;            
+            obj.error(obj.episode) = err;          
+            obj.finalCost(obj.episode) = finCost;
         end
         
         % downsampling function to speed things up

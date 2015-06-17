@@ -85,7 +85,7 @@ classdef (Abstract) Robot < Model
             end            
         end     
         
-        %% Method useful when modifying DMPs directly
+        % Method useful when modifying DMPs directly
         % varargin is for different initial conditions
         function [Traj,dmps] = generateInputsWithDMP(obj,t,numbf,ref,varargin)
 
@@ -143,6 +143,50 @@ classdef (Abstract) Robot < Model
                 xd = diff(x')'/h;
                 xd(:,end+1) = xd(:,end);
                 Traj = Trajectory(t,Cout*[x;xd],uff,[]);
+            end            
+        end
+        
+        % Create inputs and trajectory class from a DMP
+        % DMP is assumed to be in joint space
+        function traj = generateInputsForDMP(obj,dmp,N)
+
+            h = obj.SIM.h;
+            dim = obj.SIM.dimx / 2;
+            dimu = obj.SIM.dimu;
+            Cout = obj.C;
+            t = h * (1:N);
+            assert(dmp(1).can.dt == obj.SIM.h, 'Time steps should be equal!');
+            assert(size(Cout,2)==obj.SIM.dimx,...
+                'Currently works only for full observation');
+            
+            q = zeros(dim,N);
+            qd = zeros(dim,N);
+            for i = 1:length(dmp)
+                [~,si] = dmp(i).evolve(N);
+                q(i,:) = si(1,:);
+                qd(i,:) = si(2,:);
+            end
+       
+            qdd = diff(qd')' / h; 
+            % assume you end with same acceleration as before
+            qdd(:,end+1) = qdd(:,end);
+
+            % get the desired inputs
+            Nu = length(t) - 1;
+            uff = zeros(dimu,Nu);
+            for i = 1:Nu
+                uff(:,i) = obj.invDynamics(q(:,i),qd(:,i),qdd(:,i));
+            end
+            
+            % check for joint space representation
+            if obj.flag_jspace == 1
+                traj = Trajectory(t,Cout*[q;qd],uff,[]);
+            else
+                %xd = obj.jac * qd;
+                x =  ref;
+                xd = diff(x')'/h;
+                xd(:,end+1) = xd(:,end);
+                traj = Trajectory(t,Cout*[x;xd],uff,[]);
             end            
         end
         

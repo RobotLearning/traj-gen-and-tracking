@@ -24,78 +24,14 @@ config_folder = '../robolab/barrett/config/';
 
 %% Define constants and parameters
 
-N_DOFS = 7;
-% Simulation Values 
-% system is continous
-SIM.discrete = false;
-% learn in cartesian space
-SIM.cartesian = false;
-% dimension of the x vector
-SIM.dimx = 2*N_DOFS;
-% dimension of the output y
-SIM.dimy = 2*N_DOFS;
-% dimension of the control input
-SIM.dimu = N_DOFS;
-% time step h 
-SIM.h = 0.002; % 500 Hz recorded data
-% measurement noise covariance
-SIM.eps_m = 0e-10;
-% integration method
-SIM.int = 'Symplectic Euler';
-% reference trajectory in joint space?
-SIM.jref = true;
-
-% load (nominal) parameter values for robot dynamics
-%loadActualBarrettValues;
-loadNominalBarrettValues;
-
-% We observe all joints and all joint velocities
-PAR.links = links;
-PAR.link0 = link0;
-PAR.eff = eff;
-PAR.basec = basec;
-PAR.baseo = baseo;
-PAR.uex = uex;
-PAR.uex0 = uex0;
-PAR.C = eye(SIM.dimy,SIM.dimx);
-
-% form constraints
-CON = [];
-
-% Set FB gains yourself - e.g. PD control
-% loading from the gains.cf file 
-K(1,1) = 200.0;
-K(1,8) = 7.0;
-K(2,2) = 300.0;
-K(2,9) = 15.0;
-K(3,3) = 100.0;
-K(3,10) = 5.0;
-K(4,4) = 50.0;
-K(4,11) = 2.5;
-K(5,5) = 10.0;
-K(5,12) = 0.3;
-K(6,6) = 10.0;
-K(6,13) = 0.3;
-K(7,7) = 2.5;
-K(7,14) = 0.075;
-% TODO: load also u_max limits!
-
-% cost structure
-% only penalize positions
-Q1 = 1*diag([ones(1,4),1*ones(1,3),1*ones(1,4),1*ones(1,3)]);
-Q2 = 1*diag([ones(1,4),1*ones(1,3),0.1*ones(1,4),0.1*ones(1,3)]);
-COST.Q = Q1;
-COST.R = 0.01 * eye(SIM.dimu);
-
-% initialize model
-wam = BarrettWAM(PAR,CON,COST,SIM);
+initializeWAM;
 
 %% Generate inputs for a desired trajectory
 
 % load percentage of trajectory from dmp file 
 %file = [save_folder,'dmp_strike.txt'];
-file = 'dmp_strike.txt';
-%file = 'dmp.txt';
+%file = 'dmp_strike.txt';
+file = 'dmp.txt';
 M = dlmread(file);
 perc = 1.0; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);

@@ -13,11 +13,12 @@ classdef aILC < ILC
         color
         % name of the particular controller
         name
-        % costs incurred (Q-SSE)
+        % RMS error incurred along the trajectory
         error
+        % final cost
+        finalCost
         % downsampling to speed things up
-        downsample
-        
+        downsample        
         % ILC's Last input sequence
         inp_last
         % Lifted state matrix F

@@ -69,10 +69,10 @@ classdef Trajectory < handle
 
             % display SSE error
             sse = sum(obj.PERF(i+1).cost);
-            finCost = costfun.fnc(y(:,end),obj.s(:,end));
+            fincost = costfun.fnc(y(:,end),obj.s(:,end));
             rms = sqrt(sse/obj.N);
             fprintf('RMS for %s is %f \n', name, rms);
-            fprintf('Final cost is %f \n', finCost);
+            fprintf('Final cost is %f \n', fincost);
             
             if ~ischar(controller) && ~isempty(u)
                 if length(u) ~= length(controller.inp_last)
@@ -80,7 +80,7 @@ classdef Trajectory < handle
                     idx = ds * (1:obj.N/ds);
                     u = u(:,idx(1:end-1));
                 end
-                controller.record(u,rms);
+                controller.record(u,rms,fincost);
             end
             
         end

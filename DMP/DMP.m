@@ -14,6 +14,10 @@ classdef (Abstract) DMP < handle
         alpha_g, beta_g
         % goal state
         goal
+        % initial y,yd,ydd values
+        y0
+        % weights
+        w
         % regularization constant when regressing
         lambda
     end
