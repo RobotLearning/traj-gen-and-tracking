@@ -1,7 +1,5 @@
 Humanoids TODO list:
 
-- Compare gILC with mILC with bILC and only feedback-based ILC
-  Run results for 0.5 sec traj averaged over 10 different goal points/init cond.
 - Check RDMP and formulate rhythmic DMP approach for striking
 - Plot some dmps in Cart space and include in paper.
 

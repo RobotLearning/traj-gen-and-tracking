@@ -1,4 +1,4 @@
-%% ILC on BarrettWAM dynamics modifying DMPs now
+%% ILC on BarrettWAM dynamics modifying discrete DMPs now
 
 %clc; clear; close all;
 

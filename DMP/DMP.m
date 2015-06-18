@@ -70,7 +70,7 @@ classdef (Abstract) DMP < handle
                 scale = g - obj.y0(1);
             else            
                 % goal state is the center
-                obj.goal(1) = min(path) + max(path) / 2;
+                obj.goal(1) = (min(path) + max(path)) / 2;
                 % amplitude is the difference
                 obj.goal(2) = max(path) - obj.goal(1);
 
@@ -101,13 +101,13 @@ classdef (Abstract) DMP < handle
             if strcmp(obj.can.pattern,'d')
                 g = path(end);
             else
-                g = min(path) + max(path) / 2;
+                g = (min(path) + max(path)) / 2;
             end
                 
             % learn the weights with locally weighted regression
-            obj.LWR(g,path);
+            %obj.LWR(g,path);
             % or with linear regression
-            %obj.regression(g,path);
+            obj.regression(g,path);
             
             
         end
@@ -230,10 +230,9 @@ classdef (Abstract) DMP < handle
             Psi = Psi .* scale;
             
             %w = pinv(Psi) * fd(:);
-            w = Psi \ fd(:);
+            %w = Psi \ fd(:);
             % add lambda to smoothen inverse
-            %lambda = 1e-6;
-            %w = ((Psi' * Psi + lambda*eye(lenw)) \ (Psi')) * fd(:);
+            w = ((Psi' * Psi + obj.lambda*eye(lenw)) \ (Psi')) * fd(:);
             
             obj.setWeights(w);
 

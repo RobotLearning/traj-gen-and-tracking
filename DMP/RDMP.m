@@ -37,10 +37,10 @@ classdef RDMP < DMP
             obj.can = canonical;
             obj.alpha_g = alpha;
             obj.beta_g = beta;
-            obj.lambda = 1e-1;
+            obj.lambda = 5e-1;
             obj.goal = [goal; amplitude];
-            obj.y0 = yin;
-            obj.w = zeros(1,obj.can.nbf);
+            obj.setInitState(yin);
+            obj.setWeights(zeros(1,obj.can.nbf));
             obj.resetStates();
         end
         
@@ -62,7 +62,7 @@ classdef RDMP < DMP
             A = [0, tauStep;
                 -alpha*beta*tauStep, -alpha*tauStep];
 
-            f = obj.forcing();
+            f = obj.forcing();% * amp;
             % forcing function acts on the accelerations
             B = [0; alpha*beta*g*tauStep + f*tauStep];
 

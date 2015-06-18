@@ -27,7 +27,8 @@ ax = 1;
 % temporal scaling factor
 tau = 1;
 % time evolution
-tspan = [0 1];
+T = 5;
+tspan = [0 T];
 % number of points
 t = tspan(1):h:tspan(2);
 N = length(t);
@@ -35,7 +36,7 @@ N = length(t);
 numbf = 50;
 % type of pattern to be generated
 pat = 'r';
-can = CAN(h,ax,tau,numbf,tspan(2)-tspan(1),pat);
+can = CAN(h,ax,tau,numbf,T,pat);
 
 %% test forced rhythmic DMP
 
@@ -46,35 +47,40 @@ beta = 25/4;
 goal = 1;
 amp = 1;
 % initial states of DMPs
-yin1 = 0;
-yin2 = 0;
+yin1 = [0;0;0];
+yin2 = [0;0;0];
 dmp1 = RDMP(can,alpha,beta,goal,amp,yin1);
 dmp2 = RDMP(can,alpha,beta,goal,amp,yin2);
 
 % create two paths
 ctr1 = 5; % center 
-amp1 = 2; % amplitude
-path1 = ctr1 + amp1 * sin(10*pi*t);
-ctr2 = 1;
-amp2 = 2;
-path2 = ctr2 + amp2 * cos(10*pi*t);
+amp1 = 3; % amplitude
+path1 = ctr1 + amp1 * sin(2*pi*t);
+ctr2 = 7;
+amp2 = 10;
+path2 = ctr2 + amp2 * cos(2*pi*t);
 
 % learn the weights with the usual linear regression
-dmp1.LWR(path1(end),path1);
-dmp2.LWR(path1(end),path2);
+dmp1.setGoal(path1);
+dmp2.setGoal(path2);
+dmp1.updateWeights(path1);
+dmp2.updateWeights(path2);
 
 [x,y1] = dmp1.evolve(N);
 [~,y2] = dmp2.evolve(N);
 
 % plotting each dmp trajectory
-y = y1(1,:);
+y1 = y1(1,:);
 figure(3);
-plot(t,path1,'-',t,y,'-.',t,sin(x));
+plot(t,path1,'-',t,y1,'-.',t,sin(x));
 legend('desired trajectory','state y','sin of phase');
 title('Followed trajectory for DMP1');
 
-y = y2(1,:);
+y2 = y2(1,:);
 figure(4);
-plot(t,path2,'-',t,y,'-.',t,sin(x));
+plot(t,path2,'-',t,y2,'-.',t,sin(x));
 legend('desired trajectory','state y','sin of phase');
 title('Followed trajectory for DMP2');
+
+plot(path1,path2,'-',y1,y2,'-.');
+legend('path','dmp');
