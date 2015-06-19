@@ -51,7 +51,6 @@
 
 \newcommand{\joint}{\vec{q}} % used to denote robot state in joint space
 \newcommand{\state}{\vec{y}} % denotes the generalized coordinates - joint space and velocity coordinates
-\newcommand{\dmp}{\vec{s}} % used to denote the dmp trajectory states
 \newcommand{\error}{\vec{e}} % difference between state and reference
 \newcommand{\traj}{\vec{r}} % used to denote the points on the trajectory to be tracked
 
@@ -65,12 +64,15 @@
 
 
 % % % % DMP terminology % % % %
-\newcommand{\fullvec}{\vec{\psi}} % full vector for state-ref-dmp-goal
-\newcommand{\goal}{\vec{g}} % goal state
-\newcommand{\force}{\vec{f}} % forcing term of the dmps
-\newcommand{\phase}{x} % phase of the dmp
-\newcommand{\weights}{\vec{w}} % weights of the dmp
-\newcommand{\basis}{\vec{\Phi}} % basis functions of the dmp as a matrix
+\newcommand{\dmp}{s} % used to denote the dmp trajectory states
+\newcommand{\goal}{g} % goal state
+\newcommand{\force}{\mathit{f}} % forcing term of the dmps
+\newcommand{\phase}{\phi} % phase of the dmp
+\newcommand{\weights}{w} % weights of the dmp
+\newcommand{\basis}{\Psi} % basis functions of the dmp as a matrix
+\newcommand{\amp}{A} %amplitude of the rhythmic dmp
+\newcommand{\basisHeight}{h} % basis fnc parameters
+\newcommand{\basisCenter}{c}
 
 % % % % ILC terminology % % % %
 \newcommand{\qmatrix}{\vec{\Gamma}} % denotes the filtering qmatrix term of Bristow et al.
@@ -122,7 +124,11 @@ Optimizing Robot Striking Movement Primitives with Iterative Learning Control
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 
-Complex robot motor skills can be represented efficiently with a sequence of movement primitives. However, in order to perform the task effectively, the robot needs to be able to execute the corresponding primitives well. To achieve accurate tracking, we investigate two related Iterative Learning Control update laws and present a variant suited to tracking movement primitives. The resulting algorithm generalizes well to different initial conditions. We evaluate the performance of our approach in a simulated putting task as well as in a real robotic table tennis platform, where we show how the striking performance of a seven degree of freedom anthropomorphic arm can be optimized. Our final implemented algorithm compares favorably with two state-of-the-art approaches.
+Complex robot motor skills can be represented efficiently with a sequence of movement primitives. However, in order to perform the task effectively, the robot needs to be able to execute the corresponding primitives well. To achieve accurate tracking, we investigate two related Iterative Learning Control update laws and present a variant suited to tracking movement primitives. The resulting algorithm generalizes well to different initial conditions. We evaluate the performance of our approach in a simulated putting task as well as in 
+%a real 
+robotic table tennis,
+% platform
+where we show how the striking performance of a seven degree of freedom anthropomorphic arm can be optimized. Our final implemented algorithm compares favorably with two state-of-the-art approaches.
 
 \end{abstract}
 

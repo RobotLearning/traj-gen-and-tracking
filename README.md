@@ -1,6 +1,5 @@
 Humanoids TODO list:
 
-- Check RDMP and formulate rhythmic DMP approach for striking
 - Plot some dmps in Cart space and include in paper.
 
 - Correct initial conditions of zero-phase filtering.
