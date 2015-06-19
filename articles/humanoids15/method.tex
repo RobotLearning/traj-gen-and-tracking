@@ -244,17 +244,17 @@ Notice the stability of the approach compared to iLQR methods where the referenc
    \caption{\alg}
    \label{alg1}
 \begin{algorithmic}
-   \STATE {\bfseries Input:} $\threshold > 0$, $\vec{Q}, \vec{R} \succeq 0$, $\dmp$ 
+   \STATE {\bfseries Input:} $\threshold > 0$, $\vec{Q}, \vec{R} \succeq 0$, $\vec{\dmp}$ 
    \STATE Form $\vec{F}$ using $\vec{A}$, $\vec{B}$ matrices
    \STATE Initialize $k = 1$, $\ilcInput = \vec{0}$
    \REPEAT 
-   	   \STATE Rollout $\dmp$ from $\state_0 + \vec{\delta}_k$ 
+   	   \STATE Rollout $\vec{\dmp}$ from $\state_0 + \vec{\delta}_k$ 
    	   \STATE Compute $\trjInput$ with inverse dynamics
  	   \STATE Strike with controls $\sysInput = \trjInput + \ilcInput$  %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
  	   \STATE Observe $\error_k = \state_k - \dmp$ from $\ddot{\joint} = \dynamics(\joint,\dot{\joint},\sysInput)$
  	   \STATE Compute $\ValueFunction_k$ = $\error_N^{\mathrm{T}}\vec{Q}\error_N$
  	   \STATE Update $\ilcInput \leftarrow \ilcInput - (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}(\error_k + \vec{H}(\vec{\delta}_k - \vec{\delta}_{k+1}))$
- 	   \STATE Follow $\dmp$ and try to return to $\state_0$
+ 	   \STATE Follow $\vec{\dmp}$ to $\state_0$
    \UNTIL{$\ValueFunction_k < \threshold$}
 \end{algorithmic}
 \end{algorithm}
