@@ -1,0 +1,82 @@
+%\documentclass{beamer}
+\documentclass[handout]{beamer}
+\usetheme{boxes} 
+%\usetheme{default}
+
+%math fonts
+%\renewcommand\mathfamilydefault{\rmdefault}
+
+%page numbers
+\setbeamertemplate{footline}[page number]
+\setbeamertemplate{section in head/foot}{\hfill\insertsectionheadnumber.~\insertsectionhead}
+\setbeamertemplate{section in head/foot shaded}{\color{structure!50}\hfill\insertsectionheadnumber.~\insertsectionhead}
+\setbeamertemplate{section in toc}{\inserttocsectionnumber.~\inserttocsection}
+
+\setbeamercovered{invisible}
+\setbeamertemplate{navigation symbols}{} 
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{epstopdf}
+\usepackage{color}
+\usepackage{hyperref}
+
+\title{Total Least Squares and applications in Table Tennis}
+\author{Okan Ko\c{c}}
+\institute[IAS]
+{
+MPI for Intelligent Systems, T\"ubingen \\
+Robot Learning Lab \\
+\medskip
+{\emph{okan.koc@tuebingen.mpg.de}}
+}
+\date{\today}
+
+% Set the paths where all figures are taken from:
+\graphicspath{{Pictures/}}
+\mathtoolsset{showonlyrefs} 
+\newcommand{\includesvg}[1]{%
+% \executeiffilenewer{#1.svg}{#1.pdf}%
+% {inkscape -z -D --file=#1.svg %
+% --export-pdf=#1.pdf --export-latex}%
+ \input{#1.pdf_tex}%
+}
+\AtBeginSection{\frame{\sectionpage}}
+
+\begin{document}
+%
+\begin{frame}
+\titlepage
+\end{frame}
+%
+\begin{frame}
+\frametitle{Table of Contents}
+\tableofcontents
+\end{frame}
+%
+\section{Least Squares}
+%
+\begin{frame}{Thought Experiment}
+\begin{itemize}
+\item The Chinese room is a thought experiment presented by John Searle to challenge \emph{strong AI}.
+
+\item Searle's argument first appeared in his paper ``Minds, Brains, and Programs'', published in Behavioral and Brain Sciences in 1980. 
+\end{itemize}
+
+%\begin{figure}
+%\center
+%\includegraphics[scale=0.2, angle= 0]{searle.jpg}			
+%\caption{John Searle (1932 - )}
+%\end{figure}
+\end{frame}
+
+\section{References}
+\begin{frame}[allowframebreaks]{References}
+\nocite{*}
+\def\newblock{\hskip .11em plus .33em minus .07em}
+\bibliographystyle{alpha}
+\bibliography{myReferences} % file name of the bibtex
+\end{frame}
+%
+
+\end{document} 
