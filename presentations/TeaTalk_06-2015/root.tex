@@ -78,7 +78,7 @@ Robot Learning Lab \\
 \begin{frame}{General Linear Model}
 \begin{itemize}
 \item Recast as $XB \approx Y$, $Y \in \mathbb{R}_{m \times k}$
-\item $R = Y - XB$ are the residuals matrix
+\item $R = Y - XB$ is the residuals matrix
 \item Same normal equations with Frobenius norm:
 \begin{equation}
 \begin{aligned}
@@ -116,12 +116,12 @@ Robot Learning Lab \\
 \begin{aligned}
 X = \begin{bmatrix}
    1 & 0 \\ 0 & 0
- \end{bmatrix}, \ B = \begin{bmatrix}
+ \end{bmatrix}, \ Y = \begin{bmatrix}
  1 \\ 1
  \end{bmatrix} 
 \end{aligned}
 \end{equation}
-\item For every $\epsilon > 0$, $B \in \text{Range}(X + E_{\epsilon}), \ E_{\epsilon} = \begin{bmatrix} 0 \\ \epsilon \end{bmatrix}$
+\item For every $\epsilon > 0$, $Y \in \text{Range}(X + E_{\epsilon}), \ E_{\epsilon} = \begin{bmatrix} 0 & 0 \\ 0 & \epsilon \end{bmatrix}$
 \end{itemize}
 \end{frame}
 %
@@ -194,7 +194,9 @@ u = -F^{\dagger}d
 \item However robot dynamics may not be known well! Try to take this into account with TLS!
 \begin{equation}
 \begin{aligned}
-u_{TLS}, \ \delta F = \arg\min_{u,\delta F} \|\begin{bmatrix}-\delta F |d+\delta F u\end{bmatrix} \|_{F}
+u_{TLS}, \ \delta F &= \arg\min_{u,\delta F} \|\begin{bmatrix}E & r \end{bmatrix} \|_{F} \\
+E &= \delta F \\
+r &= -d - (F + \delta F)u
 \end{aligned}
 \end{equation}
 \end{itemize}
@@ -231,11 +233,18 @@ u_{TLS}, \ \delta F = \arg\min_{u,\delta F} \|\begin{bmatrix}-\delta F |d+\delta
 \end{itemize}
 \begin{figure}
 \centering
-\includegraphics[width=0.6\textwidth]{ballPrediction.eps}%	
+\includegraphics[width=0.9\textwidth]{ballPrediction.eps}%	
 \caption{Ball rebound trajectory should be estimated robustly so that the robot can intercept the ball and return it at least to the opponent's court.}
 \end{figure}
 \end{frame}
-
+%
+\begin{frame}{Extensions}
+\begin{itemize}
+\item We can use \emph{nonlinear truncated total} least squares for ILC if we linearize the robot dynamics in every iteration.
+\item We know that the structure of the model errors $\delta F$ is block lower diagonal. Can we incorporate it in the weighting? 
+\item \emph{Kernelize all things}: structured nonlinear truncated kernel total least squares!
+\end{itemize}
+\end{frame}
 
 \section{References}
 \begin{frame}[allowframebreaks]{References}
