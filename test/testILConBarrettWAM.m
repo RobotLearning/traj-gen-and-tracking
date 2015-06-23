@@ -58,10 +58,10 @@ traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 % Set initial LQR matrix throughout
 %for i = 2:traj.N-1, traj.K(:,:,i) = traj.K(:,:,1); end
 % load initial LQR (LQR0)
-%load('LQR0.txt','LQR0');
-%for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
+load('LQR0.txt','LQR0');
+for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
-for i = 1:traj.N-1, FB(:,:,i) = -K; end;
+%for i = 1:traj.N-1, FB(:,:,i) = -K; end;
 traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
@@ -89,7 +89,7 @@ wam.plot_outputs(traj);
 
 num_trials = 10;
 %ilc = aILC(wam,traj,10);
-ilc = mILC(wam,traj,2); %downsample 10
+ilc = mILC(wam,traj,10); %downsample 10
 %ilc = bILC(traj);
 
 for i = 1:num_trials

@@ -1,5 +1,4 @@
 function x = tls(A,b,thresh)
-
 % Solves the linear equation Ax=b using
 % truncated total least squares.
 %
@@ -9,7 +8,6 @@ function x = tls(A,b,thresh)
 % A is the matrix
 % b is the RHS vector
 % thresh (optional) is the SVD threshold
-
 [m n] = size(A);
 if sum(size(b)-[m 1])
 error('A, b size mis-match')
