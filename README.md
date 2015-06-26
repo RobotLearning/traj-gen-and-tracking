@@ -1,18 +1,14 @@
 Humanoids TODO list:
 
 - Plot some dmps in Cart space and include in paper.
-
+- Implement RDMP
 - Correct initial conditions of zero-phase filtering.
 - Analyze the index problem for dmp trajectories. Why +1?
-- Can we run traj again after f and st without problems?
 - Why does task servo feedback blow up in Robot computer?
-- Check dmp_task. Why are there oscillations? 
-- adapt power implementation for trajectory tracking?
-- Check the initialization pos/vel/acc errors with PID/PD and different filter values.
-- Test with f and goto_posture.
-- Test bILC with p = 0.1. Test mILC with line search with beta < 1?
 
 Notes:
+- why doesn't ball and robot trajectory coincide in simulations? check kinematics in MATLAB
+- test performance of Fact and tls version on 0.5 sec trajectory
 - check total least squares on the ball prediction dataset
 - Why does ILC learning with feedback generate zero Finv?
 - Merge Guilherme's PMP idea with this folder.

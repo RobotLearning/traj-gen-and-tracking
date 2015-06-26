@@ -47,14 +47,14 @@ beta = 25/4;
 goal = 1;
 amp = 1;
 % initial states of DMPs
-yin1 = [0;0;0];
-yin2 = [0;0;0];
+yin1 = [5;0;0];
+yin2 = [16;0;0];
 dmp1 = RDMP(can,alpha,beta,goal,amp,yin1);
 dmp2 = RDMP(can,alpha,beta,goal,amp,yin2);
 
 % create two paths
 ctr1 = 5; % center 
-amp1 = 3; % amplitude
+amp1 = 5; % amplitude
 path1 = ctr1 + amp1 * sin(2*pi*t);
 ctr2 = 7;
 amp2 = 10;
@@ -71,16 +71,17 @@ dmp2.updateWeights(path2);
 
 % plotting each dmp trajectory
 y1 = y1(1,:);
-figure(3);
+figure(1);
 plot(t,path1,'-',t,y1,'-.',t,sin(x));
 legend('desired trajectory','state y','sin of phase');
 title('Followed trajectory for DMP1');
 
 y2 = y2(1,:);
-figure(4);
+figure(2);
 plot(t,path2,'-',t,y2,'-.',t,sin(x));
 legend('desired trajectory','state y','sin of phase');
 title('Followed trajectory for DMP2');
 
+figure(3);
 plot(path1,path2,'-',y1,y2,'-.');
 legend('path','dmp');

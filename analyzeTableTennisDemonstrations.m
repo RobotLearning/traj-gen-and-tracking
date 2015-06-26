@@ -8,6 +8,7 @@ initializeWAM;
 
 %% Load table values, ball and robot data
 
+demoFolder = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
 set = 15:65; % dataset of demonstrations
 dropSet = [17,20,22,23,24,29,56]; % bad recordings
 for i = 1:length(dropSet)
@@ -16,15 +17,21 @@ end
 
 dof = 7; % seven degrees of freedom 
 scale = 1e-3; % recorded in milliseconds
-Q = cell(length(set),1); % concatenate to huge q and qd matrices
-Qd = cell(length(set),1);
-t_strike = cell(length(set),1); % different time profiles
+
+% put everything in a structure
+demo = struct();
 
 % load the data
-i = 20;
-    
-Ms = dlmread(['../Desktop/okanKinestheticTeachin_20141210/unifyData', ...
-             int2str(set(i)),'.txt']);
+for i = 1:length(set)
+    demo(i).name = ['demo ',int2str(set(i))];
+    demo(i).raw = dlmread([demoFolder,int2str(set(i)),'.txt']);
+    % extract time and the joints - last 14 variables
+    robot = demo(i).raw(:,end-14:end);
+    q = robot(:,2:dof+1);
+    qd = robot(:,dof+2:end);
+    demo(i).t = scale * robot(:,1);
+    demo(i).Q = [q';qd'];
+end
 
 %% Load table values
 
@@ -64,33 +71,70 @@ net4 = [table_center - table_x;
 
 net = [net1,net2,net3,net4]';
 
-%% Extract joint positions and reliable ball positions
+%% Extract reliable ball positions and estimate striking time
 
-% extract time and the joints - last 14 variables
-Mq = Ms(:,end-14:end);
+for i = 1:length(set)
 
-t = Mq(:,1);
-t = scale * t;
-q = Mq(:,2:dof+1);
-qd = Mq(:,dof+2:end);
-Q = [q';qd'];
+    M = demo(i).raw;
+    Q = demo(i).Q;
+    t = demo(i).t;
+    
+    zMax = 0.5;
+    % camera 1 time indices for reliable observations
+    idxCam1 = find(M(:,2) == 1 & M(:,5) >= table_z & M(:,5) < zMax);
+    tCam1 = t(idxCam1);
+    Mball1 = M(:,3:5);
+    bx1 = Mball1(idxCam1,1);
+    by1 = Mball1(idxCam1,2);
+    bz1 = Mball1(idxCam1,3);
 
-zMax = 0.5;
-% camera 1 time indices for reliable observations
-idxCam1 = find(Ms(:,2) == 1 & Ms(:,5) >= table_z & Ms(:,5) < zMax);
-tCam1 = t(idxCam1);
-Mb1 = Ms(:,3:5);
-bx1 = Mb1(idxCam1,1);
-by1 = Mb1(idxCam1,2);
-bz1 = Mb1(idxCam1,3);
+    % camera 3 time indices for reliable observations
+    idxCam3 = find(M(:,7) == 1 & M(:,10) >= table_z & M(:,10) < zMax);
+    tCam3 = t(idxCam3);
+    Mball3 = M(:,8:10);
+    bx3 = Mball3(idxCam3,1);
+    by3 = Mball3(idxCam3,2);
+    bz3 = Mball3(idxCam3,3);
 
-% camera 3 time indices for reliable observations
-idxCam3 = find(Ms(:,7) == 1 & Ms(:,10) >= table_z & Ms(:,10) < zMax);
-tCam3 = t(idxCam3);
-Mb3 = Ms(:,8:10);
-bx3 = Mb3(idxCam3,1);
-by3 = Mb3(idxCam3,2);
-bz3 = Mb3(idxCam3,3);
+    % Estimate striking time
+
+    % Get cartesian coordinates of robot trajectory
+    x = wam.kinematics(Q);
+
+    camInfo = [tCam1,bx1,by1,bz1;
+                tCam3,bx3,by3,bz3];
+
+    % find closest points in space as a first estimate
+    distBallRobot = [sqrt((bx1-x(1,idxCam1)').^2 + (by1-x(2,idxCam1)').^2 + (bz1-x(3,idxCam1)').^2);
+                     sqrt((bx3-x(1,idxCam3)').^2 + (by3-x(2,idxCam3)').^2 + (bz3-x(3,idxCam3)').^2)];
+    [minDist,idx] = min(distBallRobot);
+    tStrike = camInfo(idx,1);
+    fprintf('Rough estimate of striking time for demo %d: %f\n',set(i),tStrike);
+
+    %% Segment the signals
+    duration = 0.6; % total duration in sec
+    strikeDuration = 0.5;
+    idxT = find(t >= (tStrike - strikeDuration) & t <= (tStrike + duration - strikeDuration));
+    tCutStrike = t(idxT);
+    
+    % for discrete DMPs
+    demo(i).t_strike = tCutStrike;
+    demo(i).x_strike = x(:,idxT);
+    demo(i).Q_strike = Q(:,idxT);
+    
+    % for rhythmic DMPs we need to segment differently
+    % based on velocity
+    
+    % first filter q,qd,qdd
+    idxR = find(t >= (tStrike - duration) & t <= (tStrike + duration));
+    tStrikeReturn = t(idxR);    
+    
+    demo(i).t_rdmp = tStrikeReturn;
+    demo(i).Q_rdmp = Q(:,idxR);
+
+end
+
+%% Plot cartesian coordinates of robot ball interaction for last data
 
 % draw ball every Xth estimate
 drawBallIter = 20;
@@ -113,46 +157,10 @@ bx3Draw = bx3(1:drawBallIter:end);
 by3Draw = by3(1:drawBallIter:end);
 bz3Draw = bz3(1:drawBallIter:end);
 
-%% Plot cartesian coordinates of robot trajectory
-
-x = wam.kinematics(Q);
-
-for j = 1:3
-    joints{j} = ['cart\_', int2str(j)];
-    vel{j} = ['cart\_vel\_', int2str(j)];
-    acc{j} = ['cart\_acc\_', int2str(j)];
-    %err{i} = ['err_j_', int2str(i)];
-end
-
-figure;
-for j = 1:3
-    s(j) = subplot(3,1,j);
-    plot(t,x(j,:));
-    legend(joints{j});
-end
-title(s(1),'Robot cartesian trajectory x-y-z vs. t');
-
-%% Estimate striking time
-
-trajBall = [tCam1,bx1,by1,bz1;
-            tCam3,bx3,by3,bz3];
-
-% find closest points in space as a first estimate
-distBallRobot = [sqrt((bx1-x(1,idxCam1)').^2 + (by1-x(2,idxCam1)').^2 + (bz1-x(3,idxCam1)').^2);
-                 sqrt((bx3-x(1,idxCam3)').^2 + (by3-x(2,idxCam3)').^2 + (bz3-x(3,idxCam3)').^2)];
-[minDist,idx] = min(distBallRobot);
-tStrike = trajBall(idx,1);
-disp('Rough estimate of striking time:');
-disp(tStrike);
-
-Ttot = 3.0; % total duration in sec
-idxT = find(t >= (tStrike - Ttot/2) & t <= (tStrike + Ttot/2));
-tCut = t(idxT);
-trajRobot = [t,x(1,:)',x(2,:)',x(3,:)'];
 % draw joint every Xth estimate
 drawRobotIter = 40;
 
-tRobotDraw = tCut(1:drawRobotIter:end);
+tRobotDraw = tCutStrike(1:drawRobotIter:end);
 precision = 4;
 tRobotCell = num2cell(tRobotDraw,precision);
 for i = 1:length(tRobotCell)
@@ -163,10 +171,22 @@ rxDraw = x(1,idxT(1:drawRobotIter:end));
 ryDraw = x(2,idxT(1:drawRobotIter:end));
 rzDraw = x(3,idxT(1:drawRobotIter:end));
 
+for j = 1:3
+    cartpos{j} = ['cart\_', int2str(j)];
+    cartvel{j} = ['cart\_vel\_', int2str(j)];
+    cartacc{j} = ['cart\_acc\_', int2str(j)];
+    %err{i} = ['err_j_', int2str(i)];
+end
 
-%% Plot cartesian coordinates of robot ball interaction
+figure(1);
+for j = 1:3
+    s(j) = subplot(3,1,j);
+    plot(t,x(j,:));
+    legend(cartpos{j});
+end
+title(s(1),'Robot cartesian trajectory x-y-z vs. t');
 
-figure; 
+figure(2);
 scatter3(bx1,by1,bz1,'r');
 hold on;
 text(bx1Draw,by1Draw,bz1Draw,tCam1Cell);
