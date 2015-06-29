@@ -1,6 +1,8 @@
 % Dynamic motor primitive superclass
 % rhythmic and discrete DMPs inherit from this class
 %
+% TODO: regression should include tau^2 and tau in the forcing function
+% extraction
 
 classdef (Abstract) DMP < handle
     

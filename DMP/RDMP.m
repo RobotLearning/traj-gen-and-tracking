@@ -37,7 +37,7 @@ classdef RDMP < DMP
             obj.can = canonical;
             obj.alpha_g = alpha;
             obj.beta_g = beta;
-            obj.lambda = 5e-1;
+            obj.lambda = 1e-1;
             obj.goal = [goal; amplitude];
             obj.setInitState(yin);
             obj.setWeights(zeros(1,obj.can.nbf));

@@ -11,12 +11,12 @@ function y = filterButter2nd(x,w)
     rhs  = B(2:3) - B(1)*A(2:3);
     zi   = sparse(rows,cols,vals) \ rhs(:);
     
-    y = x;
+    zi = A(2:3) \ (sum(B) - A(1));
     % set previous values to the starting value
-    x1 = y(1); 
-    x2 = y(1);
-    y1 = zi(2)*y(1);
-    y2 = zi(1)*y(1);
+    x1 = x(1); 
+    x2 = x(1);
+    y1 = zi(1)*x(1);
+    y2 = zi(2)*x(1);
 
     for i = 1:length(x)
         [y(i),y1,y2,x1,x2] = filterNext(A,B,x(i),x1,x2,y1,y2);
@@ -26,7 +26,7 @@ end
 % get next filtered value
 function [y,y1,y2,x1,x2] = filterNext(A,B,x,x1,x2,y1,y2)
 
-    y = (B(1)*x + B(2)*x1 + B(3)*x2 ) - (A(2)*y1 + A(3)*y2);
+    y = ((B(1)*x + B(2)*x1 + B(3)*x2 ) - (A(2)*y1 + A(3)*y2)) / A(1);
     x2 = x1;
     x1 = x;
     y2 = y1;

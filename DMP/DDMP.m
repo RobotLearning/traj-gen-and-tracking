@@ -20,6 +20,8 @@ classdef DDMP < DMP
         goal
         % initial y,yd,ydd values
         y0
+        % unscaled states
+        z,zd
         % weights of the DMP
         w
         % regularization constant when regressing
@@ -41,6 +43,8 @@ classdef DDMP < DMP
             assert(length(yin)==3,'please provide initial vel and acc');
             obj.setInitState(yin);
             obj.setWeights(zeros(1,obj.can.nbf));
+            obj.z = 0;
+            obj.zd = 0;
             % reset all states and phases
             obj.resetStates();
         end
@@ -60,22 +64,31 @@ classdef DDMP < DMP
             g = obj.goal;            
             amp = 1;
             %amp = g - obj.y0;
-            tauStep = obj.can.tau;
+            tau = obj.can.tau;
             dt = obj.can.dt;
+            
+%             f = obj.forcing();
+%             obj.zd = (alpha	* (beta * (g - obj.y(1)) - obj.z) + amp * f) * tau;
+%         	obj.y(2) = obj.z * tau;
+%             obj.y(3) = obj.zd * tau;
+% 
+%             obj.z = obj.z + dt * obj.zd;
+%             obj.y(1) = obj.y(1) + dt * obj.y(2);
 
-            A = [0, tauStep;
-                -alpha*beta*tauStep, -alpha*tauStep];
+            A =  [0, 1;
+                -alpha*beta*(tau^2), -alpha*tau];
 
             f = obj.forcing();
             % forcing function acts on the accelerations
-            B = [0; alpha*beta*g*tauStep + amp*f*tauStep];
+            B = tau * tau * [0; alpha*beta*g + amp*f];
 
-            dy = A*obj.y(1:2) + B;
+            ydot = A*obj.y(1:2) + B;
             
             % integrate the position and velocity
-            obj.y(1:2) = obj.y(1:2) + dt * dy;
+            obj.y(1) = obj.y(1) + dt * ydot(1);
+            obj.y(2) = obj.y(2) + dt * ydot(2);
             % acceleration
-            obj.y(3) = dy(2);
+            obj.y(3) = ydot(2);
             obj.can.step(err);
         end
         

@@ -6,8 +6,8 @@ signal = 5*sin(10*t) + 10*cos(5*t);
 noise = 0.3 * randn(1,N);
 
 x = signal + noise;
-w = 25; % cutoff freq
-w_perc = 25/floor(N/2);
+w = 15; % cutoff freq
+w_perc = w/floor(N/2);
 
 % filter, reverse data, filter again, and reverse data again
 y1 = filterButter2nd(x,w_perc);

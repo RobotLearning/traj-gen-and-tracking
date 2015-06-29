@@ -65,9 +65,9 @@ for i = 1:dof
     amp(i) = 1;
     % initial states of DMPs
     if strcmp(pat,'d')
-        dmp(i) = DDMP(can,alpha,beta,g(i),amp(i),yin(:,i));
+        dmp(i) = DDMP(can,alpha,beta,g(i),yin(:,i));
     else
-        dmp(i) = RDMP(can,alpha,beta,g(i),yin(:,i));
+        dmp(i) = RDMP(can,alpha,beta,g(i),amp(i),yin(:,i));
     end
     dmp(i).regressLive(q(:,i),qd(:,i),qdd(:,i),goals(:,i));
     

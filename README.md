@@ -1,5 +1,6 @@
 Humanoids TODO list:
 
+- test pd in task loop in robot computer
 - Plot some dmps in Cart space and include in paper.
 - Implement RDMP
 - Correct initial conditions of zero-phase filtering.
@@ -7,6 +8,7 @@ Humanoids TODO list:
 - Why does task servo feedback blow up in Robot computer?
 
 Notes:
+- test performance of ILC with linearization at each iteration
 - why doesn't ball and robot trajectory coincide in simulations? check kinematics in MATLAB
 - test performance of Fact and tls version on 0.5 sec trajectory
 - check total least squares on the ball prediction dataset

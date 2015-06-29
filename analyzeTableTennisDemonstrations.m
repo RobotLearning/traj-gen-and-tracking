@@ -109,25 +109,27 @@ for i = 1:length(set)
                      sqrt((bx3-x(1,idxCam3)').^2 + (by3-x(2,idxCam3)').^2 + (bz3-x(3,idxCam3)').^2)];
     [minDist,idx] = min(distBallRobot);
     tStrike = camInfo(idx,1);
-    fprintf('Rough estimate of striking time for demo %d: %f\n',set(i),tStrike);
+    fprintf('Striking time est. for demo %d: %f\n',set(i),tStrike);
 
     %% Segment the signals
     duration = 0.6; % total duration in sec
     strikeDuration = 0.5;
-    idxT = find(t >= (tStrike - strikeDuration) & t <= (tStrike + duration - strikeDuration));
-    tCutStrike = t(idxT);
+    idxD = find(t >= (tStrike - strikeDuration) & t <= (tStrike + duration - strikeDuration));
+    tCutStrike = t(idxD);
     
     % for discrete DMPs
     demo(i).t_strike = tCutStrike;
-    demo(i).x_strike = x(:,idxT);
-    demo(i).Q_strike = Q(:,idxT);
+    demo(i).x_strike = x(:,idxD);
+    demo(i).Q_strike = Q(:,idxD);
     
     % for rhythmic DMPs we need to segment differently
-    % based on velocity
-    
-    % first filter q,qd,qdd
-    idxR = find(t >= (tStrike - duration) & t <= (tStrike + duration));
-    tStrikeReturn = t(idxR);    
+    Treturn = t(end) - tStrike;
+    idxStrike = find(t >= (tStrike - duration) & t <= tStrike);
+    jump = floor(Treturn / duration);
+    idxReturn = idxStrike(end)+jump:jump:length(t);
+    idxR = [idxStrike', idxReturn];
+    idxStrikeReturn = [idxStrike',idxStrike(end)+1:idxStrike(end)+length(idxReturn)];
+    tStrikeReturn = t(idxStrikeReturn);
     
     demo(i).t_rdmp = tStrikeReturn;
     demo(i).Q_rdmp = Q(:,idxR);
@@ -167,9 +169,9 @@ for i = 1:length(tRobotCell)
     tRobotCell{i} = num2str(tRobotCell{i});
 end
 % annotate some of the ball positions
-rxDraw = x(1,idxT(1:drawRobotIter:end));
-ryDraw = x(2,idxT(1:drawRobotIter:end));
-rzDraw = x(3,idxT(1:drawRobotIter:end));
+rxDraw = x(1,idxD(1:drawRobotIter:end));
+ryDraw = x(2,idxD(1:drawRobotIter:end));
+rzDraw = x(3,idxD(1:drawRobotIter:end));
 
 for j = 1:3
     cartpos{j} = ['cart\_', int2str(j)];
@@ -192,7 +194,7 @@ hold on;
 text(bx1Draw,by1Draw,bz1Draw,tCam1Cell);
 scatter3(bx3,by3,bz3,'b');
 text(bx3Draw,by3Draw,bz3Draw,tCam3Cell);
-scatter3(x(1,idxT),x(2,idxT),x(3,idxT),'k');
+scatter3(x(1,idxD),x(2,idxD),x(3,idxD),'k');
 text(rxDraw,ryDraw,rzDraw,tRobotCell);
 title('Robot and Ball cartesian trajectories');
 grid on;
