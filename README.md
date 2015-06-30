@@ -1,13 +1,17 @@
 Humanoids TODO list:
 
+- Make sure we're using same trajectory and same F in robot/MATLAB on a 1 sec traj.
+- Test also nominal F
 - Correct initial conditions of zero-phase filtering.
-- Analyze the index problem for dmp trajectories. Why +1?
+- Implement/Learn RDMP first in MATLAB and then in SL
+- Analyze the index problem for dmp trajectories. Why +1 in robot computer vs. mine?
+- Analyze the PD problem in the robot
 - Why does task servo feedback blow up in Robot computer?
 
 Notes:
 - test performance of ILC with linearization at each iteration
 - why doesn't ball and robot trajectory coincide in simulations? check kinematics in MATLAB
-- test performance of Fact and tls version on 0.5 sec trajectory
+- test performance of Fact and tls version on 0.5 sec trajectory to 1.5 sec traj.
 - check total least squares on the ball prediction dataset
 - Why does ILC learning with feedback generate zero Finv?
 - Merge Guilherme's PMP idea with this folder.
@@ -36,6 +40,7 @@ Theoretical:
 
 
 Extensions:
+- Metronome Learning: how to define cost function?
 - Using quasi-Newton and system identification/ (recursive) least squares idea.
 - Can we compute one K for all smooth robot trajectories?
 - Can we couple the DMPs
