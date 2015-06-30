@@ -49,6 +49,7 @@ traj.addPerformance(ufull,qact,wam.COST,'ID + FB');
 %% Start learning with ILC
 
 num_trials = 5;
+ilcClass = 'gILC';
 switch ilcClass
     
     case 'mILC'

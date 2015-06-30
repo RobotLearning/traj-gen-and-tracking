@@ -1,8 +1,5 @@
 Humanoids TODO list:
 
-- test pd in task loop in robot computer
-- Plot some dmps in Cart space and include in paper.
-- Implement RDMP
 - Correct initial conditions of zero-phase filtering.
 - Analyze the index problem for dmp trajectories. Why +1?
 - Why does task servo feedback blow up in Robot computer?

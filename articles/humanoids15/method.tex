@@ -1,6 +1,6 @@
 \section{Iterative Learning Control with Movement Primitives}\label{method}
 
-In a complex task such as robot table tennis, one often needs to consider an extension of the standard trajectory tracking task. Based on the varying initial positions and velocities of the robot arm and the trajectory of the incoming ball, in each table tennis stroke the robot arm needs to track different trajectories that start from different initial conditions and end with different goal states of the arm. Moreover these trajectories need to be scaled in time to intercept the ball. Dynamic Movement Primitives (DMP) are especially useful for representing such a variety of movement patterns.
+In a highly dynamic and complex task such as robot table tennis, one often needs to consider an extension of the standard trajectory tracking task. Based on the varying initial positions and velocities of the robot arm and the trajectory of the incoming ball, in each table tennis stroke the robot arm needs to track different trajectories that start from different initial conditions and end with different goal states of the arm. Moreover these trajectories need to be scaled in time to intercept the ball. Dynamic Movement Primitives (DMP) are especially useful for representing such a variety of movement patterns.
 % reference needed? revise.
 
 %Sometimes for safety reasons, for instance when interacting with external objects or under unforeseen perturbations \cite{Schaal07}, a \emph{low-gain} feedback law operating on the inputs may be fine-tuned to be compliant. As another practical restriction, one may not even be allowed to modify the low-level controller of the industrial robot \cite{Longman2000}. In such cases, it is not possible to modify the input signals $\sysInput$ directly. Instead one can modify the reference trajectories that are provided to the low-level controllers. It can be shown that this is an equivalent approach to modifying the feedforward control inputs \cite{Bristow06}.
@@ -9,7 +9,7 @@ Based on these considerations, in this paper we focus on learning to track DMPs 
 
 \subsection{Movement Primitive Formulation}
 
-Striking movement primitives suited to table tennis have been proposed in \cite{Kober10} and \cite{Muelling13} as an extension of discrete DMPs. Unlike the original formulation~\cite{Ijspeert02}, these extensions allow for an arbitrary velocity profile to be attached to the primitives around hitting time. However, these \emph{ad hoc} approaches are unnecessarily cluttered and involve additional tuning parameters. Arguably they are also against the philosophy behind the discrete primitive: the motion converges necessarily to a goal state with zero velocity. We propose here instead to use rhythmic DMPs that allow for a limit cycle attractor, which is inevitable if we want to maintain the striking motion through goal state. After the striking is completed the DMP can be used to return back to initial state or it can be terminated by setting the forcing terms to zero.
+Striking movement primitives suited to table tennis have been proposed in \cite{Kober10} and \cite{Muelling13} as an extension of discrete DMPs. Unlike the original formulation~\cite{Ijspeert02}, these extensions allow for an arbitrary velocity profile to be attached to the primitives around hitting time. However, these \emph{ad hoc} approaches are unnecessarily cluttered and involve additional tuning parameters. Arguably they are also against the philosophy behind the discrete primitive: the motion converges necessarily to a goal state with zero velocity. We propose here instead to use rhythmic DMPs that allow for a limit cycle attractor, which is inevitable if we want to maintain the striking motion through goal state. After the striking is completed the DMP can be used to return back to initial state or it can be terminated by setting the forcing terms to zero. An example is shown in Figure~\ref{rdmp}.
 
 The rhythmic movement primitive equations~\cite{Kober08} can each be written as
 %
@@ -18,9 +18,9 @@ The rhythmic movement primitive equations~\cite{Kober08} can each be written as
 \begin{bmatrix}
    \dot{\dmp}_1 \\
    \dot{\dmp}_2
- \end{bmatrix} = \tau \begin{bmatrix}
+ \end{bmatrix} = \begin{bmatrix}
      \dmp_2  \\
-     \alpha_{g} (\beta_{g}(\goal - \dmp_1) - \dmp_2) +  \force(\phase)
+     \alpha_{g} (\beta_{g}\tau^2(\goal - \dmp_1) - \tau\dmp_2) +  \tau^2\force(\phase)
   \end{bmatrix}
 \label{dmp},
 \end{aligned}
@@ -40,9 +40,16 @@ The rhythmic movement primitive equations~\cite{Kober08} can each be written as
 
 The dynamical system \eqref{dmp} describes the motion of each of the desired joint states along a particular periodic path in joint space. The forcing terms determine this path by warping the motion of the spring dynamics. The weights $\weights$ are obtained with regression using demonstration data. The spring constants $\alpha_{g}$ and $\beta_{g}$ ensure that starting from any initial position and velocity $\dmp_0$ the DMP converges to the limit cycle with center $\goal$ and are usually chosen such that the dynamical system is critically damped.
 
-Unlike the discrete DMP, the rhythmic DMP is a linear time-varying system and adaptions of target positions and velocities can be easily performed. Using linear systems theory we prove the feasibility of such adaptations and construct the necessary modifications of the DMP parameters $\goal,\amp$ in the Appendix.
+Unlike the discrete DMP, the rhythmic DMP is a linear time-varying system and adaptions of target positions and velocities can be easily performed. Using linear systems theory one can show the feasibility of such adaptations and construct phase-dependent modifications of the DMP parameters $\goal,\amp$.
 
 % a figure showing convergence from different starting conditions needed here
+\begin{figure}
+\center
+\includegraphics[scale=0.30]{rdmp.pdf}
+%\scalebox{1.0}{\input{Pictures/ilc.tikz}}
+\caption{An example of a striking movement primitive is shown in red. The rhythmic DMP creates a limiting cycle in the workspace of the robot. Executing this movement well will lead to a good hit. Control errors in tracking lead to a poor hitting performance, shown in blue.}
+\label{rdmp}
+\end{figure}
 
 \subsection{Derivation of ILC Updates}
 
@@ -163,7 +170,7 @@ Most ILC update laws can be put in the following form
 % are they appropriate? maybe give new names: final cost minimization
 \subsubsection{Mayer form}
 
-In some applications, the trajectory is only an intermediary and does not need to be precisely tracked. Hitting primitives and strokes in table tennis are examples of such a scenario, where the task performance depends only on reaching the desired position and velocity at the right time. In optimal control literature~\cite{Liberzon11} optimization criteria that consider only the final state cost are said to be in Mayer form, as opposed to the usual Lagrange form that considers the intermediate steps as well.
+In some applications, the trajectory is only an intermediary and does not need to be precisely tracked. Hitting primitives and strokes in table tennis are examples of such a scenario, where the task performance depends only on reaching the desired position and velocity at the right time. In optimal control literature optimization criteria that consider only the final state cost are said to be in Mayer form~\cite{Liberzon11}, as opposed to the usual Lagrange form that considers the intermediate steps as well.
 
 Taking the quadratic final cost, we can relate it to the feedforward corrections $\sysInput_L$ using our linearized model \eqref{liftedLTV}
 %
@@ -238,7 +245,7 @@ We use the update law derived in \eqref{ILCfinalForm} in our algorithm, given in
 %We initialize the algorithm $\alg$ with the necessary weighting and transition matrices. The transition matrix $A_{\fullvec}$ is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using regression on the reference trajectory.
 
 % maybe reference needed
-Notice the stability of the approach compared to iLQR methods where the reference trajectory $\traj(t)$ and the nominal inputs $\sysInput_{\mathrm{IDM}}$ are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative optimal control approaches. However under high mismatch cases where the input-to-output matrix $\vec{F}$ is not accurate, the descent direction might not be estimated and exploration in joint space might be necessary. We leave the extension of ILC to such adaptive settings for future work.
+Notice the stability of the approach compared to iLQR methods where the reference trajectory $\traj(t)$ and the nominal inputs $\sysInput_{\mathrm{IDM}}$ are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative optimal control approaches. However under high mismatch cases where the input-to-output matrix $\vec{F}$ differs from the actual dynamics of the system substantially\footnote{Dynamics mismatch can be quantified with the maximum singular value of the difference.}, the robust convergence criteria~\cite{Bristow06} will not be satisfied and exploration in joint space will be necessary to improve the model and adapt $\vec{F}$. We leave the extension of ILC to such adaptive settings for future work.
 
 \begin{algorithm}[tb]
    \caption{\alg}

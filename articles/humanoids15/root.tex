@@ -102,6 +102,7 @@
  \input{#1.pdf_tex}%
 }
 
+%\addtolength{\topmargin}{50pt}
 \title{\LARGE \bf
 Optimizing Robot Striking Movement Primitives with Iterative Learning Control
 }
@@ -124,7 +125,10 @@ Optimizing Robot Striking Movement Primitives with Iterative Learning Control
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 
-Complex robot motor skills can be represented efficiently with a sequence of movement primitives. However, in order to perform the task effectively, the robot needs to be able to execute the corresponding primitives well. To achieve accurate tracking, we investigate two related Iterative Learning Control update laws and present a variant suited to tracking movement primitives. The resulting algorithm generalizes well to different initial conditions. We evaluate the performance of our approach in a simulated putting task as well as in 
+Highly dynamic tasks that require large accelerations and precise tracking usually rely on precise models and/or high gain feedback. While
+movement primitives allow for the efficient representation of such tasks, the optimization of the required motor commands for systems with inaccurate dynamic models remains an open problem.
+%Complex robot motor skills can be represented efficiently with a sequence of movement primitives. However, in order to perform the task effectively, the robot needs to be able to execute the corresponding primitives well. 
+To achieve accurate tracking for such tasks, we investigate two related Iterative Learning Control update laws and present a variant suited for optimizing hitting movement primitives. The resulting algorithm generalizes well to different initial conditions and naturally addresses striking movements where reaching specific velocities at certain positions is crucial. We evaluate the performance of our approach in a simulated putting task as well as in 
 %a real 
 robotic table tennis,
 % platform
