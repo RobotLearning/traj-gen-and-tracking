@@ -47,3 +47,20 @@ COST.R = 0.01 * eye(SIM.dimu);
 
 % initialize model
 wam = BarrettWAM(PAR,CON,COST,SIM);
+
+% PD control defined here
+PD = zeros(N_DOFS,2*N_DOFS);
+PD(1,1) = -200;
+PD(1,N_DOFS+1) = -7.0;
+PD(2,2) = -300;
+PD(2,N_DOFS+2) = -15.0;
+PD(3,3) = -100;
+PD(3,N_DOFS+3) = -5.0;
+PD(4,4) = -50;
+PD(4,N_DOFS+4) = -2.5;
+PD(5,5) = -10;
+PD(5,N_DOFS+5) = -0.3;
+PD(6,6) = -10;
+PD(6,N_DOFS+6) = -0.3;
+PD(7,7) = -2.5;
+PD(7,N_DOFS+7) = -0.075;

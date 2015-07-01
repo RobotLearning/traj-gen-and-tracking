@@ -5,11 +5,9 @@ function y = filterButter2nd(x,w)
     [B,A] = myButter2ndOrder(w);
 
     % initial conditions of the filter
-    rows = [1, 2, 2, 1];
-    cols = [1, 1, 2, 2];
-    vals = [1+A(2), A(3), 1, -1];
-    rhs  = B(2:3) - B(1)*A(2:3);
-    zi   = sparse(rows,cols,vals) \ rhs(:);
+    %lhs = [1+A(2), -1; A(3), 1];
+    %rhs  = B(2:3) - B(1)*A(2:3);
+    %zi   = lhs \ rhs(:);
     
     zi = A(2:3) \ (sum(B) - A(1));
     % set previous values to the starting value

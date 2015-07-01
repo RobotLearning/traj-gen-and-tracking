@@ -11,7 +11,6 @@ Humanoids TODO list:
 Notes:
 - test performance of ILC with linearization at each iteration
 - why doesn't ball and robot trajectory coincide in simulations? check kinematics in MATLAB
-- test performance of Fact and tls version on 0.5 sec trajectory to 1.5 sec traj.
 - check total least squares on the ball prediction dataset
 - Why does ILC learning with feedback generate zero Finv?
 - Merge Guilherme's PMP idea with this folder.

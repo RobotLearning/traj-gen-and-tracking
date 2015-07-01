@@ -25,50 +25,51 @@ config_folder = '../robolab/barrett/config/';
 %% Define constants and parameters
 
 initializeWAM;
+% load initial LQR (LQR0)
+load('LQR0.txt','LQR0');
+% load initial and final desired positions
+q0 = load('q0.txt');
+qf = load('qf.txt');
+W = load('w_strike.txt');
 
 %% Generate inputs for a desired trajectory
 
-% load percentage of trajectory from dmp file 
-%file = [save_folder,'dmp_strike.txt'];
-%file = 'dmp_strike.txt';
-file = 'dmp.txt';
-M = dlmread(file);
-perc = 1.0; % learning on whole traj can be unstable unless LQR is used
-len = size(M,1);
-M = M(1:(len * perc),:);
-%t = M(:,1); 
-t = SIM.h * (1:perc*len);
-% order for refs in file: q1 qd1, ...
-% switching to order: q1 ... q7, qd1, ..., qd7
-q = M(:,2:2:2*N_DOFS);
-qd = M(:,3:2:2*N_DOFS+1);
-ref = [q';qd'];
+tfin = 0.6;
+h = SIM.h;
+t = h:h:tfin;
+N = length(t);
+% canonical system
+tau = 0.6 * 1/t(end);
+alpha = 25;
+beta = alpha/4;
+ax = 1;
+% number of basis functions
+numbf = 50;
+pat = 'd';
+can = CAN(h,ax,tau,numbf,tfin,pat);
 
-% test the kinematics from SL
-cart_ref = wam.kinematics(ref);
+for i = 1:7
+    dmp(i) = DDMP(can,alpha,beta,qf(i),[q0(i);0;0]);
+    dmp(i).w = W(:,i);
+end
 
-%[traj,dmp] = wam.generateInputsWithDMP(t,50,ref);
-traj = wam.generateInputs(t,ref); % trajectory generated in joint space
-
-% downsample reference
-%traj = traj.downsample(10);
+% Generate inputs for DMP 
+traj = wam.generateInputsForDMP(dmp,N);
 
 % Generate feedback with LQR
 %wam.generateFeedback(traj);
 % Set initial LQR matrix throughout
 %for i = 2:traj.N-1, traj.K(:,:,i) = traj.K(:,:,1); end
-% load initial LQR (LQR0)
-load('LQR0.txt','LQR0');
 for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
 % PD control
-%for i = 1:traj.N-1, FB(:,:,i) = -K; end;
+%for i = 1:traj.N-1, FB(:,:,i) = PD; end;
 traj.K = FB;
 
 %% Evolve system dynamics and animate the robot arm
 
 %q0 = traj.s(:,1);
-q0 = ref(:,1);
-%q0(8:end) = 0.0;
+%q0 = ref(:,1);
+q0(8:14) = 0.0;
 % add disturbances around zero velocity
 %q0(1:7) = q0(1:7) + 1e-3 * randn(7,1);
 %q0(8:end) = 1e-3 * randn(7,1);
@@ -81,7 +82,7 @@ q0 = ref(:,1);
 traj.addPerformance(ufull,qact,wam.COST,'ID + FB');
 
 % Plot the controls and animate the robot arm
-%wam.plot_inputs(traj);
+wam.plot_inputs(traj);
 wam.plot_outputs(traj);
 %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
 
@@ -94,7 +95,6 @@ ilc = mILC(wam,traj,10); %downsample 10
 
 for i = 1:num_trials
     % get next inputs
-    %u = ilc.feedforwardQN(traj,qact);
     u = ilc.feedforward(traj,qact);
     % evolve system
     %qact = wam.evolve(t,q0,u);
@@ -102,6 +102,7 @@ for i = 1:num_trials
     traj.unom = u;
     [qact,ufull] = wam.observeWithFeedbackErrorForm(traj,q0);
     % add performance to trajectory
+    %traj.addPerformance(u,qact,wam.COST,ilc);
     traj.addPerformance(ufull,qact,wam.COST,ilc);
     % Plot the controls and animate the robot arm
     %wam.animateArm(qact(1:2:2*N_DOFS-1,:),ref);
