@@ -1,6 +1,5 @@
 Humanoids TODO list:
 
-- Why does the DMP not reach the goal position in 0.6 sec?
 - Test also nominal F on the robot
 - Correct initial conditions of zero-phase filtering.
 - Implement/Learn RDMP first in MATLAB and then in SL

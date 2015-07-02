@@ -39,7 +39,7 @@ h = SIM.h;
 t = h:h:tfin;
 N = length(t);
 % canonical system
-tau = 0.6 * 1/t(end);
+tau = 1/t(end);
 alpha = 25;
 beta = alpha/4;
 ax = 1;
