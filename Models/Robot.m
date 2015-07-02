@@ -162,6 +162,8 @@ classdef (Abstract) Robot < Model
             q = zeros(dim,N);
             qd = zeros(dim,N);
             for i = 1:length(dmp)
+                % make sure they are reset
+                dmp(i).resetStates();
                 [~,si] = dmp(i).evolve(N);
                 q(i,:) = si(1,:);
                 qd(i,:) = si(2,:);

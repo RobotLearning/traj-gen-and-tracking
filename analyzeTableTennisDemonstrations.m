@@ -168,7 +168,7 @@ tRobotCell = num2cell(tRobotDraw,precision);
 for i = 1:length(tRobotCell)
     tRobotCell{i} = num2str(tRobotCell{i});
 end
-% annotate some of the ball positions
+% annotate some of the robot positions
 rxDraw = x(1,idxD(1:drawRobotIter:end));
 ryDraw = x(2,idxD(1:drawRobotIter:end));
 rzDraw = x(3,idxD(1:drawRobotIter:end));

@@ -90,39 +90,38 @@ end
 % feed them all to a dmp
 dmpStrike = trainMultiDMPs(t_strike,Q_strike,Qd_strike,Qdd_strike,'d');
 
-%% Write to text file
-
-% evolve dmps and save to a text file
-% put into matrix form
-% t q1 qd1 q2 qd2 ... q7 qd7
-Ms = [];
+%% Write weights to text file and plot
 
 % scale up to 500 Hz 
 scale = 500/200;
 tf = t_strike{end};
 tLin = linspace(tf(1),tf(end),scale*length(tf)); 
 dmpStrike(1).can.changeSamplingTime(0.002);
-Ms = tLin(:);
+Qdmp = zeros(2*dof,length(tLin));
 
 figure;
 for j = 1:dof
     [~,qs] = dmpStrike(j).evolve(length(tLin));
     subplot(7,3,3*j-2);
     plot(tLin,qs(1,:));
-    Ms = [Ms, qs(1,:)'];
+    Qdmp(j,:) = qs(1,:);
+    Qdmp(j+dof,:) = qs(2,:);
     legend([joints{j},'\_dmpStrike']);
     subplot(7,3,3*j-1);
     plot(tLin,qs(2,:));
-    Ms = [Ms, qs(2,:)'];
     legend([vel{j},'\_dmpStrike']);
     subplot(7,3,3*j);
     plot(tLin,qs(3,:));
     legend([acc{j},'\_dmpStrike']);
 end
 
-
-dlmwrite('dmp_strike.txt',Ms,'delimiter','\t','precision',6);
-save('dmpStrike.mat','dmpStrike');
+x_dmp = wam.kinematics(Qdmp);
+figure;
+plot3(x_dmp(1,:),x_dmp(2,:),x_dmp(3,:),'--r');
+grid on;
+axis equal;
+xlabel('x');ylabel('y');zlabel('z');
+legend('dmp extracted from demonstrations');
 
 for i = 1:dof,
     Ws(:,i) = dmpStrike(i).w;
@@ -131,7 +130,7 @@ dlmwrite('w_strike.txt',Ws,'delimiter','\t','precision',6);
 
 %% See how well we extend to particular demonstrations
 
-k = 25;
+k = 24;
 q_act = interp1(t_strike{k},Q_strike{k}',tLin,'linear','extrap');
 qd_act = interp1(t_strike{k},Qd_strike{k}',tLin,'linear','extrap');
 qdd_act = interp1(t_strike{k},Qdd_strike{k}',tLin,'linear','extrap');

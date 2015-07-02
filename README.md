@@ -1,7 +1,7 @@
 Humanoids TODO list:
 
-- Make sure we're using same trajectory and same F in robot/MATLAB on a 1 sec traj.
-- Test also nominal F
+- Why does the DMP not reach the goal position in 0.6 sec?
+- Test also nominal F on the robot
 - Correct initial conditions of zero-phase filtering.
 - Implement/Learn RDMP first in MATLAB and then in SL
 - Analyze the index problem for dmp trajectories. Why +1 in robot computer vs. mine?
@@ -9,6 +9,7 @@ Humanoids TODO list:
 - Why does task servo feedback blow up in Robot computer?
 
 Notes:
+- compare kinematics with SL
 - test performance of ILC with linearization at each iteration
 - why doesn't ball and robot trajectory coincide in simulations? check kinematics in MATLAB
 - check total least squares on the ball prediction dataset
