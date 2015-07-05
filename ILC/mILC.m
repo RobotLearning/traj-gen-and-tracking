@@ -178,7 +178,7 @@ classdef mILC < ILC
             % computes very high inverses though
             %u = obj.inp_last(:) - pinv(obj.F,0.05) * e(:);
             % in case F is very large
-            u = obj.inp_last(:) - obj.Finv * e(:);
+            u = obj.inp_last(:) - 0 * obj.Finv * e(:);
             % Penalize inputs and derivatives (LM-type update)
             %Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
             %L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);

@@ -105,6 +105,7 @@ links(7).inertia(3,3) = 0.00007408;
 
 %% Load nominal robot dynamics parameters from wam.conf.flt
 
+%%{
 link0.m = 0.0000;
 link0.mcm(1) = 0.0000;
 link0.mcm(2) = 0.0000;
@@ -192,6 +193,7 @@ links(7).inertia(1,3) = 0.00000000;
 links(7).inertia(2,2) = 0.00003877; 
 links(7).inertia(2,3) = 0.00000000;  
 links(7).inertia(3,3) = 0.00007614;
+%}
 
 %% Organize values
 % make sure inertia matrices are symmetric

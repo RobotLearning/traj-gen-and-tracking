@@ -25,8 +25,8 @@ config_folder = '../robolab/barrett/config/';
 %% Define constants and parameters
 
 initializeWAM;
-% load initial LQR (LQR0)
-load('LQR0.txt','LQR0');
+% load initial LQR
+LQR = load('LQR0.txt');
 % load initial and final desired positions
 q0 = load('q0.txt');
 qf = load('qf.txt');
@@ -34,7 +34,8 @@ W = load('w_strike.txt');
 
 %% Generate inputs for a desired trajectory
 
-tfin = 0.6;
+%%{
+tfin = 0.8;
 h = SIM.h;
 t = h:h:tfin;
 N = length(t);
@@ -55,19 +56,25 @@ end
 
 % Generate inputs for DMP 
 traj = wam.generateInputsForDMP(dmp,N);
+%}
+%loadWAMTrajFromFile; 
 
 % Generate feedback with LQR
 %wam.generateFeedback(traj);
 % Set initial LQR matrix throughout
 %for i = 2:traj.N-1, traj.K(:,:,i) = traj.K(:,:,1); end
-for i = 1:traj.N-1, FB(:,:,i) = LQR0; end;
+% For controlling only based on positions
+% lqrPos = LQR; %traj.K(:,:,1); 
+% lqrPos(:,8:end) = 0.0;
+% for i = 1:traj.N-1, traj.K(:,:,i) = lqrPos; end
+for i = 1:traj.N-1, traj.K(:,:,i) = LQR; end;
 % PD control
-%for i = 1:traj.N-1, FB(:,:,i) = PD; end;
-traj.K = FB;
+%for i = 1:traj.N-1, traj.K(:,:,i) = PD; end;
 
 %% Evolve system dynamics and animate the robot arm
 
-%q0 = traj.s(:,1);
+% when loading traj from file
+q0 = traj.s(:,1);
 %q0 = ref(:,1);
 q0(8:14) = 0.0;
 % add disturbances around zero velocity

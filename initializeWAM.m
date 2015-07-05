@@ -14,7 +14,7 @@ SIM.dimy = 2*N_DOFS;
 SIM.dimu = N_DOFS;
 % time step h 
 SIM.h = 0.002; % 500 Hz recorded data
-% measurement noise covariance
+% measurement noise covariance (eps_m * eye)
 SIM.eps_m = 0e-10;
 % integration method
 SIM.int = 'Symplectic Euler';
@@ -38,12 +38,12 @@ PAR.C = eye(SIM.dimy,SIM.dimx);
 % form constraints
 CON = [];
 
-% cost structure
-% only penalize positions
+% cost struc
 Q1 = 1*diag([ones(1,4),1*ones(1,3),1*ones(1,4),1*ones(1,3)]);
-Q2 = 1*diag([ones(1,4),1*ones(1,3),0.1*ones(1,4),0.1*ones(1,3)]);
+% only penalize positions
+Q2 = 1*diag([ones(1,4),1*ones(1,3),0.0*ones(1,4),0.0*ones(1,3)]);
 COST.Q = Q1;
-COST.R = 0.01 * eye(SIM.dimu);
+COST.R = 0.05 * eye(SIM.dimu);
 
 % initialize model
 wam = BarrettWAM(PAR,CON,COST,SIM);

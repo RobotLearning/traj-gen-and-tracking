@@ -1,11 +1,10 @@
 Humanoids TODO list:
 
+- Test error feedback based weighting and exponential weighting on the Q matrix
 - Test also nominal F on the robot
-- Correct initial conditions of zero-phase filtering.
+- Correct initial conditions of zero-phase filtering and test in MATLAB with ILC
 - Implement/Learn RDMP first in MATLAB and then in SL
 - Analyze the index problem for dmp trajectories. Why +1 in robot computer vs. mine?
-- Analyze the PD problem in the robot
-- Why does task servo feedback blow up in Robot computer?
 
 Notes:
 - compare kinematics with SL
