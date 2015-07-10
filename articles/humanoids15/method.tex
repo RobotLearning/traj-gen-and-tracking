@@ -9,9 +9,19 @@ Based on these considerations, in this paper we focus on learning to track DMPs 
 
 \subsection{Movement Primitive Formulation}
 
-Striking movement primitives suited to table tennis have been proposed in \cite{Kober10} and \cite{Muelling13} as an extension of discrete DMPs. Unlike the original formulation~\cite{Ijspeert02}, these extensions allow for an arbitrary velocity profile to be attached to the primitives around hitting time. However, these \emph{ad hoc} approaches are unnecessarily cluttered and involve additional tuning parameters. Arguably they are also against the philosophy behind the discrete primitive: the motion converges necessarily to a goal state with zero velocity. We propose here instead to use rhythmic DMPs that allow for a limit cycle attractor, which is inevitable if we want to maintain the striking motion through goal state. After the striking is completed the DMP can be used to return back to initial state or it can be terminated by setting the forcing terms to zero. An example is shown in Figure~\ref{rdmp}.
+Striking movement primitives suited to table tennis have been proposed in \cite{Kober10} and \cite{Muelling13} as an extension of discrete DMPs. Unlike the original formulation~\cite{Ijspeert02}, these extensions allow for an arbitrary velocity profile to be attached to the primitives around hitting time. However, these \emph{ad hoc} approaches are unnecessarily cluttered and involve additional tuning parameters. Arguably they are also against the philosophy behind the discrete primitive: the motion converges necessarily to a goal state with zero velocity. This can not only lead to potentially unsafe states at the completion of the primitive execution, but also requires the addition design of a returning trajectory.
 
-The rhythmic movement primitive equations~\cite{Kober08} can each be written as
+We propose here instead to use rhythmic DMPs that allow for a limit cycle attractor, which is inevitable if we want to maintain the striking motion through goal state. After the striking is completed the DMP can be used to return back to initial state or it can be terminated by setting the forcing terms to zero. An example is shown in Figure~\ref{rdmp}.
+
+\begin{figure}[b!]
+\center
+\includegraphics[scale=0.30]{rdmp.pdf}
+%\scalebox{1.0}{\input{Pictures/ilc.tikz}}
+\caption{An example of a striking movement primitive is shown in red. The rhythmic DMP creates a limiting cycle in the workspace of the robot. Executing this movement well will lead to a good hit. Control errors in tracking lead to a poor hitting performance, shown in blue. The tracking errors can be decreased efficiently by applying model-based iterative learning updates.} 
+\label{rdmp}
+\end{figure}
+
+The rhythmic movement primitive differential equations~\cite{Kober08} can be rewritten as
 %
 \begin{equation}
 \begin{aligned}
@@ -19,9 +29,18 @@ The rhythmic movement primitive equations~\cite{Kober08} can each be written as
    \dot{\dmp}_1 \\
    \dot{\dmp}_2
  \end{bmatrix} = \begin{bmatrix}
-     \dmp_2  \\
-     \alpha_{g} (\beta_{g}\tau^2(\goal - \dmp_1) - \tau\dmp_2) +  \tau^2\force(\phase)
-  \end{bmatrix}
+     0 & 1  \\
+     -\tau^2 \alpha_{g} \beta_{g} & - \tau \alpha_{g}  
+  \end{bmatrix}\begin{bmatrix}
+     \dmp_1 \\
+     \dmp_2
+   \end{bmatrix} + 
+\tau^{2}\begin{bmatrix}
+0 & 0 \\
+\alpha_{g} \beta_{g} & \force(\phase)
+\end{bmatrix} \begin{bmatrix}
+g \\ A
+\end{bmatrix}
 \label{dmp},
 \end{aligned}
 \end{equation}
@@ -30,7 +49,7 @@ The rhythmic movement primitive equations~\cite{Kober08} can each be written as
 %
 \begin{equation}
 \begin{aligned}
-\force(\phase,\amp) &= \frac{\sum_{i=1}^{M}\basis_i \weights_i}{\sum_{i=1}^{M}\basis_i}\amp, \\
+\force(\phase) &= \frac{\sum_{i=1}^{M}\basis_i \weights_i}{\sum_{i=1}^{M}\basis_i}, \\
 \basis_i &= \exp(\basisHeight_i (\cos(\phase - \basisCenter_i) - 1)).
 \label{forcing}
 \end{aligned}
@@ -38,18 +57,9 @@ The rhythmic movement primitive equations~\cite{Kober08} can each be written as
 %
 \noindent Here $\amp, \basisHeight_i, \basisCenter_i$ determine the amplitude of the motion, the width and the centers of the basis functions respectively.
 
-The dynamical system \eqref{dmp} describes the motion of each of the desired joint states along a particular periodic path in joint space. The forcing terms determine this path by warping the motion of the spring dynamics. The weights $\weights$ are obtained with regression using demonstration data. The spring constants $\alpha_{g}$ and $\beta_{g}$ ensure that starting from any initial position and velocity $\dmp_0$ the DMP converges to the limit cycle with center $\goal$ and are usually chosen such that the dynamical system is critically damped.
+The dynamical system \eqref{dmp} describes the motion of each of the desired joint states along a particular periodic path in joint space. The forcing term shapes this path by warping the motion of the spring dynamics. The weights $\weights$ are obtained with regression using demonstration data. The spring constants $\alpha_{g}$ and $\beta_{g}$ ensure that starting from any initial position and velocity $\dmp_0$ the DMP converges to the limit cycle with center $\goal$ and are usually chosen such that the dynamical system is critically damped.
 
-Unlike the discrete DMP, the rhythmic DMP is a linear time-varying system and adaptions of target positions and velocities can be easily performed. Using linear systems theory one can show the feasibility of such adaptations and construct phase-dependent modifications of the DMP parameters $\goal,\amp$.
-
-% a figure showing convergence from different starting conditions needed here
-\begin{figure}
-\center
-\includegraphics[scale=0.30]{rdmp.pdf}
-%\scalebox{1.0}{\input{Pictures/ilc.tikz}}
-\caption{An example of a striking movement primitive is shown in red. The rhythmic DMP creates a limiting cycle in the workspace of the robot. Executing this movement well will lead to a good hit. Control errors in tracking lead to a poor hitting performance, shown in blue.}
-\label{rdmp}
-\end{figure}
+Unlike the discrete DMP, the rhythmic DMP is a linear time-varying system and adaptions of target positions and velocities can be easily performed. Using linear systems theory one can show the feasibility of such adaptations and construct phase-dependent modifications of the free parameters $\goal,\amp$.
 
 \subsection{Derivation of ILC Updates}
 
@@ -113,10 +123,10 @@ Most ILC update laws can be put in the following form
 \begin{aligned}
  \vec{Q}_L &= 
  \begin{bmatrix}
-  \vec{Q} & \vec{0} & \cdots & \vec{0} \\
-  \vec{0} & \vec{Q} & \cdots & \vec{0} \\
+  \vec{Q}_1 & \vec{0} & \cdots & \vec{0} \\
+  \vec{0} & \vec{Q}_2 & \cdots & \vec{0} \\
   \vdots  & \vdots  & \ddots & \vdots  \\
-  \vec{0} & \vec{0} & \cdots & \vec{Q}_T
+  \vec{0} & \vec{0} & \cdots & \vec{Q}_N
  \end{bmatrix}.
 \end{aligned}
 \label{Qmatrix}
@@ -133,7 +143,7 @@ Most ILC update laws can be put in the following form
 \label{ILCNewtonsMethod}
 \end{equation}
 %
-\noindent Organizing \eqref{ILCNewtonsMethod} and comparing to \eqref{ILCupdateForm} we see that the filtering matrix $\qmatrix$ and the learning matrix $\lmatrix$ can be written as:
+\noindent The update \eqref{ILCNewtonsMethod} will be referred to as the Newton-based update, or \emph{N-ILC}. Organizing \eqref{ILCNewtonsMethod} and comparing to \eqref{ILCupdateForm} we see that the filtering matrix $\qmatrix$ and the learning matrix $\lmatrix$ can be written as:
 %
 \begin{equation}
 \begin{aligned}
@@ -143,7 +153,7 @@ Most ILC update laws can be put in the following form
 \label{qAndlMatrices}
 \end{equation}
 %
-\noindent These matrices modulate the dependency between the inputs $\sysInput_k$ and the errors $\error_k$. Based on these two matrices, the ILC update law \eqref{ILCNewtonsMethod} is noncausal (i.e. predictive). See \cite{Amann95,Gunnarsson01} for the case where input derivative penalties are also considered. Note the connection of \eqref{ILCNewtonsMethod} to plant inversion methods~\cite{Bristow06}: taking $\vec{Q}_L = \vec{I}, \vec{R}_{L} = \vec{0},$ \eqref{ILCNewtonsMethod} becomes
+\noindent These matrices modulate the dependency between the inputs $\sysInput_k$ and the errors $\error_k$. The ILC update law \eqref{ILCNewtonsMethod} is noncausal (i.e. predictive) since $\lmatrix$ is not block lower-diagonal. See \cite{Amann95,Gunnarsson01} for the case where input derivative penalties are also considered. Note the connection of \eqref{ILCNewtonsMethod} to plant inversion methods~\cite{Bristow06}: taking $\vec{Q}_L = \vec{I}, \vec{R}_{L} = \vec{0},$ \eqref{ILCNewtonsMethod} becomes
 %
 \begin{equation}
 \begin{aligned}
@@ -176,13 +186,13 @@ Taking the quadratic final cost, we can relate it to the feedforward corrections
 %
 \begin{equation}
 \begin{aligned}
-\ValueFunction(\sysInput_L) &= \error_{N}^{\mathrm{T}}\vec{Q}\error_{N}, \\
-&= (\vec{F}_N\sysInput_L + \linDist_N)^{\mathrm{T}}\vec{Q}(\vec{F}_N\sysInput_L + \linDist_N).
+\ValueFunction(\sysInput_L) &= \error_{N}^{\mathrm{T}}\vec{Q}_{N}\error_{N}, \\
+&= (\vec{F}_N\sysInput_L + \linDist_N)^{\mathrm{T}}\vec{Q}_{N}(\vec{F}_N\sysInput_L + \linDist_N).
 \end{aligned}
 \label{finalCost}
 \end{equation}
 %
-\noindent where $\vec{F}_N$ is the last block row of $\vec{F}$ in \eqref{Fmatrix}
+\noindent where $\vec{F}_N$ is the block row entry of $\vec{F}$ in \eqref{Fmatrix} corresponding to the hitting time $t = N$
 %
 \begin{equation*}
 \begin{aligned}
@@ -193,7 +203,7 @@ Taking the quadratic final cost, we can relate it to the feedforward corrections
 \end{aligned}
 \end{equation*}
 %
-\noindent Using Newton's method again we reach the reweighted form of \eqref{ILCPlantInversion}
+\noindent Using Newton's method on \eqref{finalCost} we reach the reweighted form of \eqref{ILCPlantInversion}
 %
 \begin{equation}
 \begin{aligned}
@@ -202,7 +212,7 @@ Taking the quadratic final cost, we can relate it to the feedforward corrections
 \label{ILCmayerForm}
 \end{equation}
 %
-\noindent here $\vec{M}$ is \eqref{Qmatrix} with $\vec{Q} = \vec{0}$.
+\noindent here $\vec{M}$ is defined as the matrix \eqref{Qmatrix} where all the diagonal entries $\vec{Q}_{t}$ are set to zero except for the last block entry $\vec{Q}_{N}$ corresponding to hitting time.
 
 
 \subsection{Iterative Learning Control for Movement Primitives}\label{ilcOnDMP} 
@@ -210,57 +220,46 @@ Taking the quadratic final cost, we can relate it to the feedforward corrections
 Execution errors in tracking the rhythmic DMP prevents us from initializing the robot at each iteration to the same state. Starting from different initial conditions $\state_0 = [\joint^{\intercal}_0,\dot{\joint}^{\intercal}_0]^{\mathrm{T}}$ we can consider a movement primitive as in \eqref{dmp} to give a smooth and feasible interpolating trajectory that is similar to the demonstrations.
 For such movement primitives we consider the Mayer form ILC update \eqref{ILCmayerForm} to be the natural candidate since in each trial the DMPs generate different trajectories. Trying to track these varying trajectories with an ILC update law as in \eqref{ILCNewtonsMethod} can make learning unstable.
 
-To compensate for the varying initial conditions we make a correction in the reference control input $\trjInput$ based on the nominal inverse dynamics model. For additional stability we consider the effects of the initial errors on the final error by adjusting our linearized model
+To compensate for the varying initial conditions we recompute the reference control input $\trjInput$ based on the nominal inverse dynamics model. With this correction the total feedforward control commands $\sysInput_{\mathrm{\,f\,f}}$ at iteration $k+1$ are computed as follows
 %
 \begin{equation}
 \begin{aligned}
-\error_N &= \vec{F}_N\sysInput_L + \vec{H}_N\error_0 + \linDist_N, \\
-\end{aligned}
-\label{adjustedLiftedLTV}
-\end{equation}
-%
-\noindent where $\vec{H}_N = \begin{bmatrix} \vec{A}_{N-1} \ldots \vec{A}_2 \vec{A}_1 \end{bmatrix}$ is the last block row of the free response $\vec{H}$ to the initial error $\error_0$. With this correction the regression model \eqref{ILCasRegression} takes a particular form
-%
-\begin{equation}
-\begin{aligned}
-\vec{F}\sysInput_{k+1} &= -\linDist_{k+1} - \vec{H}\vec{\delta}_{k+1},\\
-\vec{F}\sysInput_{k+1} &\approx \vec{F}\sysInput_{k} - \error_k + \vec{H}\vec{\delta}_{k} - \vec{H}\vec{\delta}_{k+1}.
-\end{aligned}
-\label{ILCregressionWithe0}
-\end{equation}
-%
-\noindent Here the initial errors are denoted as $\vec{\delta}_k$ to emphasize its iteration dependence. Combining \eqref{ILCregressionWithe0} with \eqref{ILCmayerForm} we get the final form of the ILC update
-%
-\begin{equation}
-\begin{aligned}
-\sysInput_{k+1} &= \sysInput_k - (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}(\error_k + \vec{H}(\vec{\delta}_{k} - \vec{\delta}_{k+1})).\\
+\sysInput_{\mathrm{\,f\,f}} &= \trjInput + \sysInput_{k+1}, \\
+\sysInput_{k+1} &= \sysInput_k - (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}\error_k.\\
 \end{aligned}
 \label{ILCfinalForm}
 \end{equation}
+%
+\noindent Equation \eqref{ILCfinalForm} is referred to as the goal based ILC or $\alg$.
+
 
 \subsection{Algorithm \& Implementation}\label{algorithm}
 
-We use the update law derived in \eqref{ILCfinalForm} in our algorithm, given in Algorithm~\ref{alg1}. This update law enables us to take advantage of the superlinear order of convergence property of Newton's method based descent methods while ensuring robustness on the variations in initial conditions. Depending on the task and models available, weighting matrices $\vec{M}$ and $\vec{R}$ can be varied as desired. Iteration dependent matrices will ensure that performance does not degrade, as one can reduce the weight matrix $\vec{R}$ as the errors get smaller. $\vec{M}$ can also be made inversely proportional to the size of the errors in tracking the movement primitive. %We discuss the additional degrees of freedom of the algorithm in more detail in section \ref{experiments}.
+We use the update law derived in \eqref{ILCfinalForm} in our algorithm, given in Algorithm~\ref{alg1}. After the strike is completed, the rhythmic DMP can be further evolved to bring it close to $\state_0$. We consider only the errors on this striking part. This update law enables us to take advantage of the superlinear order of convergence property of Newton's method based descent methods while ensuring robustness on the variations in initial conditions $\vec{\delta}_k$. 
+
+Depending on the task and models available, different weighting matrices $\vec{M}$ and $\vec{R}$ can be incorporated as desired. $\vec{M}$ can be designed to consider not just the hitting state, but a hitting segment of the rhythmic DMP. Iteration dependent $\vec{R}_k$ will ensure that the learning performance does not degrade with additional regularization, and one can reduce the weighting as the errors get smaller. The practitioner can additionally ensure safety by applying a learning rate $\beta$. For simplicity we only show the learning rate in Algorithm~\ref{alg1}.%We discuss the additional degrees of freedom of the algorithm in more detail in section \ref{experiments}.
 
 %We initialize the algorithm $\alg$ with the necessary weighting and transition matrices. The transition matrix $A_{\fullvec}$ is derived by linearizing the nominal robot dynamics around the given reference trajectory $r$. Nominal inputs are acquired using the inverse dynamics model. Weights of the DMPs are initialized for each degree of freedom using regression on the reference trajectory.
 
 % maybe reference needed
-Notice the stability of the approach compared to iLQR methods where the reference trajectory $\traj(t)$ and the nominal inputs $\sysInput_{\mathrm{IDM}}$ are varying at each iteration, contributing to the source of the instabilities often encountered in such iterative optimal control approaches. However under high mismatch cases where the input-to-output matrix $\vec{F}$ differs from the actual dynamics of the system substantially\footnote{Dynamics mismatch can be quantified with the maximum singular value of the difference.}, the robust convergence criteria~\cite{Bristow06} will not be satisfied and exploration in joint space will be necessary to improve the model and adapt $\vec{F}$. We leave the extension of ILC to such adaptive settings for future work.
+Notice that methods based on differential dynamic programming, such as iLQR, show a stronger dependency on model accuracy since they update both the reference trajectory $\traj(t)$ and the nominal inputs $\sysInput_{\mathrm{IDM}}$, often relying on re-computation in short horizons and on efficient simulators~\cite{Tassa08} to account for model inaccuracies. 
+
+Under high mismatch cases where the input-to-output matrix $\vec{F}$ differs from the actual dynamics of the system substantially\footnote{Dynamics mismatch can be quantified with the maximum singular value of the difference.}, the robust convergence criteria~\cite{Bristow06} will not be satisfied and exploration in joint space will be necessary to improve the model and adapt $\vec{F}$. We leave the extension of ILC to such adaptive settings for future work.
 
 \begin{algorithm}[tb]
    \caption{\alg}
    \label{alg1}
 \begin{algorithmic}
-   \STATE {\bfseries Input:} $\threshold > 0$, $\vec{Q}, \vec{R} \succeq 0$, $\vec{\dmp}$ 
+   \STATE {\bfseries Input:} $\threshold > 0$, $\vec{Q}_N, \vec{M} \succeq 0$, $0 < \beta \leq 1$, $\vec{\dmp}$ 
    \STATE Form $\vec{F}$ using $\vec{A}$, $\vec{B}$ matrices
    \STATE Initialize $k = 1$, $\ilcInput = \vec{0}$
    \REPEAT 
    	   \STATE Rollout $\vec{\dmp}$ from $\state_0 + \vec{\delta}_k$ 
    	   \STATE Compute $\trjInput$ with inverse dynamics
- 	   \STATE Strike with controls $\sysInput = \trjInput + \ilcInput$  %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
- 	   \STATE Observe $\error_k = \state_k - \dmp$ from $\ddot{\joint} = \dynamics(\joint,\dot{\joint},\sysInput)$
- 	   \STATE Compute $\ValueFunction_k$ = $\error_N^{\mathrm{T}}\vec{Q}\error_N$
- 	   \STATE Update $\ilcInput \leftarrow \ilcInput - (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}(\error_k + \vec{H}(\vec{\delta}_k - \vec{\delta}_{k+1}))$
+ 	   \STATE Strike with controls $\sysInput_{\mathrm{\,f\,f}} = \trjInput + \ilcInput$  %\sysInput = \nu - K_{\sysInput}(\state - \dmp(\weights)))$
+ 	   \STATE Observe $\error_k = \state_k - \vec{\dmp}$ from $\ddot{\joint} = \dynamics(\joint,\dot{\joint},\sysInput)$
+ 	   \STATE Compute $\ValueFunction_k$ = $\error_N^{\mathrm{T}}\vec{Q}_{N}\error_N$
+ 	   \STATE Update $\ilcInput \leftarrow \ilcInput - \beta (\vec{F}^{\mathrm{T}}\vec{M}\vec{F})^{-1}\vec{F}^{\mathrm{T}}\vec{M}\error_k$
  	   \STATE Follow $\vec{\dmp}$ to $\state_0$
    \UNTIL{$\ValueFunction_k < \threshold$}
 \end{algorithmic}

@@ -1,8 +1,9 @@
 \section{CONCLUSION AND FUTURE WORK}\label{conclusion}
 
-In this paper we presented a novel Iterative Learning Control algorithm that learns to track the goal states of movement primitives. Movement primitives have the advantage that they can start from different initial conditions. The movement primitives (DMPs) are generated in the joint space of the robot and enable the robot to execute optimal striking motions. Control inputs are updated after each trial by using a Newton-Raphson based update rule on the deviations from the goal state of the DMPs.  We show two experiments where we evaluate the performance of the approach: putting in golf and striking in robotic table tennis. 
+In this paper we presented a novel Iterative Learning Control algorithm that learns to track the hitting states of dynamic movement primitives (DMPs). %Dynamic Movement primitives (DMPs) can be easily acquired from human demonstrations. They can be extended to different initial and hitting states in time and space, while retaining the intended shape of the hitting motion. 
+DMPs are generated in the joint space of the robot and enable the robot to execute optimal striking motions. Control inputs are updated after each trial by using a model based update rule that considers the deviations from the hitting state of the DMPs. We show two experiments where we evaluate the performance of the approach: putting in golf and striking in robotic table tennis. 
 
-Movement primitives are used in our approach as a way to end up at a fixed hitting goal state within the desired time period. DMPs can also be extended easily to new goal positions. We are currently evaluating new ways to extend our current framework where we can generalize the learning performance of ILC between DMPs that reach different hitting states.
+Movement primitives are used in our approach as a way to end up at a fixed hitting goal state within the desired time period. DMPs can also be extended easily to new goal positions, while retaining the intended shape of the striking motion. We are currently evaluating new ways to extend our current framework where we can generalize the learning performance of ILC between DMPs that reach different hitting states.
 
 Finally we think that with our method, a stochastic approach to guide exploration is missing, and it is this that restricts the generalization ability of the proposed algorithm. By extending our framework to include the Probabilistic Movement Primitives~\cite{Paraschos13} we hope to increase the generalization ability of ILC and learn to track a whole \emph{distribution} of movement primitives.
 
@@ -10,6 +11,7 @@ Finally we think that with our method, a stochastic approach to guide exploratio
 %
 %Appendixes should appear before the acknowledgment.
 %
-%\section*{ACKNOWLEDGMENT}
-%
-%The preferred spelling of the word ÒacknowledgmentÓ in America is without an ÒeÓ after the ÒgÓ. Avoid the stilted expression, ÒOne of us (R. B. G.) thanks . . .Ó  Instead, try ÒR. B. G. thanksÓ. Put sponsor acknowledgments in the unnumbered footnote on the first page.
+
+\section{Acknowledgments}
+
+Part of the research leading to these results has received funding from the European Community's Seventh Framework Programme (FP7-ICT-2013-10) under grant agreement 610878 (3rdHand).

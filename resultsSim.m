@@ -54,7 +54,7 @@ err = zeros(numAlgs,numTrials,numEpisodes);
 for alg = 1:numAlgs
     for trial = 1:numTrials
         ilcClass = algs{alg};
-        testILConBarrettWAMwithDMP;
+        testILConWAMvaryingQ0;
         % perturb goal position
         perturbGoalDMP(dmp,0.1);
         err(alg,trial,:) = ilc.finalCost;

@@ -66,7 +66,7 @@ uadd = zeros(size(traj.unom));
 
 for i = 1:num_trials
     % change initial condition slightly
-    [q0,e0] = perturbInitCondDMP(dmp,0.1);
+    [q0,e0] = perturbInitCondDMP(dmp,0.3);
     traj = wam.generateInputsForDMP(dmp,traj.N);
     traj.K = FB;
     % adapt the dmps accordingly

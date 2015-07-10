@@ -5,10 +5,13 @@
 %file = 'dmp_strike.txt'; % about half a second dmp striking trajectory 
 file = 'dmp.txt';% another 1.5 sec traj
 M = dlmread(file);
-perc = 1.0; % learning on whole traj can be unstable unless LQR is used
+perc = 0.8; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
-M = M(1:(len * perc),:);
-t = SIM.h * (1:perc*len);
+maxLen = 450;
+%M = M(1:(len * perc),:);
+M = M(1:maxLen,:);
+%t = SIM.h * (1:perc*len);
+t = SIM.h * (1:maxLen);
 % order for refs in file: q1 qd1, ...
 % switching to order: q1 ... q7, qd1, ..., qd7
 q = M(:,2:2:2*N_DOFS);
@@ -19,8 +22,8 @@ ref = [q';qd'];
 cart_ref = wam.kinematics(ref);
 
 % generate u_ff inputs with inverse dynamics
-traj = wam.generateInputs(t,ref); % trajectory generated in joint space
+%traj = wam.generateInputs(t,ref); % trajectory generated in joint space
 
 % basis functions of DMPs
-%bfs = 50;
-%[traj,dmp] = wam.generateInputsWithDMP(t,bfs,ref); % trajectory generated in joint space
+bfs = 50;
+[traj,dmp] = wam.generateInputsWithDMP(t,bfs,ref); % trajectory generated in joint space

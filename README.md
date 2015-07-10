@@ -1,10 +1,9 @@
 Humanoids TODO list:
 
-- Test error feedback based weighting and exponential weighting on the Q matrix
-- Test also nominal F on the robot
+- Test error feedback based weighting on the Q matrix
 - Correct initial conditions of zero-phase filtering and test in MATLAB with ILC
 - Implement/Learn RDMP first in MATLAB and then in SL
-- Analyze the index problem for dmp trajectories. Why +1 in robot computer vs. mine?
+- Wrist problem in robot computer?
 
 Notes:
 - compare kinematics with SL
@@ -38,7 +37,7 @@ Theoretical:
 
 
 Extensions:
-- Metronome Learning: how to define cost function?
+- Metronome Learning: how to define cost function? Semi markov decision process?
 - Using quasi-Newton and system identification/ (recursive) least squares idea.
 - Can we compute one K for all smooth robot trajectories?
 - Can we couple the DMPs
@@ -50,3 +49,4 @@ Extensions:
 - Fast ways to parameterize LQR matrix K or ILC matrix F for different trajectories?
 - Investigate LQR differences for different trajectories.
 - Variational Bayes for estimating noise on positions and velocities?
+- Riemannian statistic as a way to estimate f(x,u) based on learning different Fs (linearization)?

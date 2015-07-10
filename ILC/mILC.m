@@ -24,6 +24,8 @@ classdef mILC < ILC
         downsample
         % final cost
         finalCost
+        % initial error last
+        e0_last
         % ILC's Last input sequence
         inp_last
         % Lifted state matrix F (input-state) and G (state-output)
@@ -81,6 +83,8 @@ classdef mILC < ILC
             obj.G = zeros(N*dim_y, N*dim_x);
             obj.Ql = zeros(N*dim_y, N*dim_y);
             obj.Rl = zeros(N*dim_u, N*dim_u);
+            
+            obj.e0_last = zeros(dim_x,1);
             
             obj.lift(model,trj);
             %L = 0.5 * eye(size(obj.F,2));
@@ -178,7 +182,7 @@ classdef mILC < ILC
             % computes very high inverses though
             %u = obj.inp_last(:) - pinv(obj.F,0.05) * e(:);
             % in case F is very large
-            u = obj.inp_last(:) - 0 * obj.Finv * e(:);
+            u = obj.inp_last(:) - obj.Finv * e(:);
             % Penalize inputs and derivatives (LM-type update)
             %Q = pinv(obj.F' * obj.Ql * obj.F + obj.Rl + Sl) * (obj.F' * obj.Ql * obj.F + Sl);
             %L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
@@ -207,9 +211,10 @@ classdef mILC < ILC
         end
         
         %% Feedforward compensation for DMP with different I.C.
-        function u = feedforwardDMP(obj,trj,y,ulast,e0diff)
+        function u = feedforwardDMP(obj,trj,y,ulast,e0)
             
             trj = trj.downsample(obj.downsample);
+            dimx = size(trj.s,1);
             dimu = size(obj.inp_last,1);
             Nu = size(obj.inp_last,2);
             N = Nu + 1;
@@ -218,6 +223,8 @@ classdef mILC < ILC
             y = y(:,idx);
             ulast = ulast(:,idx(1:end-1));
             e = y - trj.s;
+            e0diff = e0 - obj.e0_last;
+            obj.e0_last = e0;
             e = e(:,2:end);        
             % we keep du penalty S proportional to R
             
@@ -227,16 +234,25 @@ classdef mILC < ILC
                     % usual MILC
                     Sl = obj.Rl;
                     %u = ulast(:) - obj.Finv * e(:);
-                    L = pinv(obj.F' * obj.Ql * obj.F + Sl) * (obj.F' * obj.Ql);
+                    L = pinv(obj.F' * obj.Ql * obj.F + Sl,0.05) * (obj.F' * obj.Ql);
                     u = obj.inp_last(:) - L * e(:);
                 case 2
                     % correct for e0            
-                    err = e(:) + obj.H * e0diff;
+                    err = e(:); % + obj.H * e0diff;
                     % Mayer form
+                    % Exponential weighting does not work for some reason!!
+                    %{
+                    M = 1:Nu; %exp(1:Nu);
+                    M = M/sum(M);
+                    M = repmat(M,dimx,1);
+                    M = M(:);
+                    %M(M < 0.01) = eps;
+                    M = diag(M);
+                    %}
                     M = zeros(size(obj.Ql));
                     M(end-2*dimu+1:end,end-2*dimu+1:end) = 1;
                     %Mat = (obj.F' * M * obj.F + Sl) \ (obj.F' * M);
-                    Mat = pinv(obj.F' * M * obj.F) * (obj.F' * M);
+                    Mat = pinv(obj.F' * M * obj.F,0.05) * (obj.F' * M);
                     %Mat = obj.F' * M;
                     u = ulast(:) - Mat * err;
                 otherwise

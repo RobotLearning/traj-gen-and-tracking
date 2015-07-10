@@ -34,7 +34,7 @@ W = load('w_strike.txt');
 
 %% Generate inputs for a desired trajectory
 
-%%{
+%{
 tfin = 0.8;
 h = SIM.h;
 t = h:h:tfin;
@@ -57,7 +57,7 @@ end
 % Generate inputs for DMP 
 traj = wam.generateInputsForDMP(dmp,N);
 %}
-%loadWAMTrajFromFile; 
+loadWAMTrajFromFile; 
 
 % Generate feedback with LQR
 %wam.generateFeedback(traj);

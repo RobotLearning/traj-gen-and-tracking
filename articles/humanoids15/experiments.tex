@@ -5,7 +5,7 @@
 
 In this section, we demonstrate the effectiveness of the ILC algorithms presented in Section~\ref{method} for optimal striking motions. We consider two hitting tasks: putting in golf and table tennis strokes. In each task the trajectories and the extracted movement primitives are assigned in joint space, one for each joint of the robot. A low-gain feedback law is calculated in the second case using LQR with the linearized dynamics \eqref{discreteLTV} which stabilizes the open-loop system $\dynamics$. The robustness that comes with the LQR feedback law and the DMP framework is an asset that strengthens the industrial applicability of our approach outside of the tested platforms.
 
-In ILC one normally assumes that the reference trajectories are \emph{feasible}, i.e. that it is possible to follow them arbitrarily well. Even in cases where this assumption does not hold, we can improve the hitting performance with the Mayer form ILC: deviations from an infeasible trajectory are not punished this way.
+In ILC one normally assumes that the reference trajectories are \emph{feasible}, i.e. that it is possible to follow them arbitrarily well. Even in cases where this assumption does not hold, we can improve the hitting performance with the Mayer form ILC since only the hitting state, but not deviations during the tracking of a trajectory, are  punished.
 
 \subsection{Verification and Comparisons in Simulated Putting}
 
@@ -16,25 +16,29 @@ Putting is a simple and natural domain for testing ILC algorithms, in particular
 
 In order to simulate learning with ILC, we assume that there is a model mismatch due to the motor inertia of both joints. We give the motor inertia a Gaussian distributed disturbance with zero mean and a variance of $0.05$, while the actual values of the motor inertia are $0.15$ and $0.12$ respectively. With these random disturbances we can construct error bars for different ILC algorithms and also test for their robustness.
 
-\begin{figure}[ht]
+\begin{figure}
 \centering
-\subfloat[Initial attempt]{%
-\includegraphics[width=0.45\linewidth]{putting0.pdf}
-\label{fig:subfig1}}
-\subfloat[Final trajectory]{%
-\includegraphics[width=0.55\linewidth]{puttingLastTraj.pdf}
-\label{fig:subfig2}}
-\caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The reference trajectory in Cartesian space is shown as a blue dashed curve. We can see in Fig.~\ref{fig:subfig1} that the initial attempt falls short of the reference trajectory. ILC then modifies the control inputs to compensate for the modeling errors. In the last attempt shown in Fig.~\ref{fig:subfig2} the reference trajectory is executed almost perfectly. The ball will then approach the hole with approximately zero velocity.} 
+%\subfloat[Initial attempt]{%
+%\includegraphics[width=0.50\linewidth]{putting0.eps}
+%\label{fig:subfig1}}
+%\subfloat[Final trajectory]{%
+%\includegraphics[width=0.50\linewidth]{puttingLastTraj.eps}
+%\label{fig:subfig2}}
+\includegraphics[width=0.995\linewidth]{puttingFull_gjm}
+\caption{Robot arm must follow the assigned reference trajectory precisely in order to hit the ball with a desired velocity at the desired time. The reference trajectory in Cartesian space is shown as a blue dashed curve. We can see in (a) that the initial attempt falls short of the reference trajectory. ILC then modifies the control inputs to compensate for the modeling errors. In the last attempt shown in (b) the reference trajectory is executed almost perfectly. The ball will then approach the hole with approximately zero velocity.} 
 \label{putting1} 
 \end{figure}
 
+
 The first and last iterations of ILC are also shown in Figure~\ref{putting1}. Learning takes place in the joint space of the robot, since the matrix $\vec{F}$ is constructed using the nominal dynamics model \eqref{dynamics} in joint space. The full dynamics $\dynamics(\joint,\dot{\joint},\sysInput)$ involves the nonlinear effects from both links. We can see how initially the inertial disturbances of the motors prevent the end-effector from following the trajectory precisely. The iterations show how ILC compensates for such an effect and in the last iteration the ball is given the desired velocity to reach the hole. 
 
-We compare the approach with two other ILC approaches by plotting the root-mean-squared (RMS) errors of each algorithm in Figure~\ref{ILCTrajectoryPutting}. Kalman-filter based convex optimization approach \cite{Schoellig12} using no regularization is labeled as \emph{KF-ILC} and the finely-tuned \emph{Arimoto-style} \cite{Arimoto84} model-free ILC using a basic PD-type update is labeled as \emph{PD-ILC}. These are compared with the \emph{mILC} using Newton-Raphson based update \eqref{ILCNewtonsMethod} with $\vec{R} = \vec{0}$. The error bars indicate one standard deviation within $10$ trials with different inertial mismatches. Notice that the other two approaches take much longer to converge. The results of these experiments motivated us to try an extension of \emph{mILC} for tracking movement primitives starting from different initial conditions.
+We compare the approach with two other ILC approaches by plotting the root-mean-squared (RMS) errors of each algorithm in Figure~\ref{ILCTrajectoryPutting}. Kalman-filter based convex optimization approach \cite{Schoellig12} using no regularization is labeled as \emph{KF-ILC} and the finely-tuned \emph{Arimoto-style} \cite{Arimoto84} model-free ILC using a basic PD-type update is labeled as \emph{PD-ILC}. These are compared with the \emph{N-ILC} in \eqref{ILCNewtonsMethod} where the control inputs are not penalized, that is $\vec{R} = \vec{0}$. The error bars indicate one standard deviation within $10$ trials with different inertial mismatches. Notice that the other two approaches take much longer to converge. 
+
+The results of these experiments motivated us to try $\alg$, an extension of \emph{N-ILC} for tracking movement primitives starting from different initial conditions, a case commonly encountered in highly dynamic games such as table tennis.
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.25]{ilc_putting_comp.pdf}
+\includegraphics[scale=0.25]{putting1.eps}
 %\newlength\figureheight 
 %\newlength\figurewidth 
 %\setlength\figureheight{6cm}  
@@ -70,7 +74,9 @@ Using successful demonstrations we trained a probabilistic model $p(\vec{\weight
 %These task space parameters can also be converted into joint space parameters using inverse kinematics
 
 %The attached video shows the improvement achieved after using our algorithm $\alg$.
-In order to show the applicability of our approach, we sample from the model $p(\vec{\weights}|\state_b)$ the weights of our movement primitives 5 times and construct error bars in Figure~\ref{ILCTrajectoryTT}. Comparisons to two baselines illustrate the benefits of our approach, especially the faster convergence and increased accuracy of the proposed method. Notice that the update \eqref{ILCNewtonsMethod} shown in black considers the full cost over a static reference trajectory and hence can become easily unstable in our extended setting. The second baseline shown in red is the \emph{current-iteration} ILC where we add the feedback from the previous iteration to the feedforward commands in the next iteration
+In order to show the applicability of our approach, we first compare it with two other approaches in Figure~\ref{ILCTrajectoryTT}. Results in the figure are based on the realistic simulation environment SL~\cite{Schaal06}, which also acts as a real-time interface to Barrett WAM in our experiments. To construct the error bars, we sample from the model $p(\vec{\weights}|\state_b)$ the weights of our movement primitives 5 times. Comparisons to two baselines illustrate the benefits of our approach, especially the faster convergence and increased accuracy of the proposed method. Notice that the update \eqref{ILCNewtonsMethod} shown in black considers the full cost over a static reference trajectory and hence can become easily unstable in our extended setting. In practice the model matrix \eqref{Fmatrix} amplifies the effects of nonrepetitive starting positions\footnote{The initial positioning of the robot is given by a PD controller with high gains on the shoulder joints.} and nonzero velocities, violating the initial condition assumption typical of ILC updates.
+
+The second baseline shown in red is the \emph{current-iteration} ILC (\emph{CI-ILC}) where we add the feedback from the previous iteration to the feedforward commands in the next iteration
 %
 \begin{equation}
 \begin{aligned}
@@ -80,16 +86,22 @@ In order to show the applicability of our approach, we sample from the model $p(
 \end{equation}
 %
 
-\noindent In practice we find that this additional adjustment of feedforward inputs makes learning more robust. We add this compensation also in the two other approaches in Figure~\ref{ILCTrajectoryTT}.
-
-%Some examples of the generated trajectories are in Figure~\ref{ILCTrajectoryTT}. 
+\noindent In practice we find that this additional adjustment of feedforward inputs makes learning more robust. We also observe robustness with respect to nonrepetive initial condition errors. We add this compensation also in the two other approaches in Figure~\ref{ILCTrajectoryTT}. The best result is obtained by $\alg$ which, in addition to performing better, shows much lower variance compared to the other approaches. See the attached video for a trial run in our robotic table tennis setup. Some examples of the generated trajectories are shown in Figure~\ref{actualResultWAM}. \emph{N-ILC} was found to be unstable for this trajectory. For \emph{CI-ILC}, the final cost over $30$ iterations is stable around $0.50$, while the final cost for $\alg$ decreases monotonically to $0.20$. Repeating the experiment for another $10$ iterations, we see that the final cost drops down to $0.13$ for $\alg$.
 
 %The convergence of the trajectories over the iteration domain are shown in Cartesian space in Figure~\ref{ILCTrajectoryTTCartesian}. Hard-to-model dynamical effects such as friction and stiction forces is easily compensated for in ILC.
 
 \begin{figure}
 \center
-\includegraphics[scale=0.40]{tt0.pdf}
+\includegraphics[scale=0.28]{ilcForWAM.eps}
 %\scalebox{1.0}{\input{Pictures/ilc.tikz}}
-\caption{Convergence of our new goal-based ILC approach, which we call $\alg$ to the goal position and velocity of the striking movement primitive is shown in blue. Current-iteration ILC is shown in red. Note the unstable performance of \emph{mILC} which considers the full cost. This is because the initial starting conditions of the movement primitive are varying every iteration.}
+\caption{Simulation results for our new goal-based ILC approach, which we call $\alg$, is shown in blue. Current-iteration ILC, which applies only the update in \eqref{fbILC} is shown in red. Note the unstable performance of \emph{N-ILC} which considers the full cost. This is because the initial starting conditions of the movement primitive are varying every iteration.}
 \label{ILCTrajectoryTT}
+\end{figure}
+
+\begin{figure}
+\center
+\includegraphics[scale=0.28]{actualResult.eps}
+%\scalebox{1.0}{\input{Pictures/ilc.tikz}}
+\caption{Robot experiment results for ILC. The desired trajectory, implemented as a DMP, shown in red. See the attached video for the trial run. Note that here convergence is slower for this trajectory, where we exercise caution by applying a learning rate, $\beta = 0.2$. Final cost goes down to 0.20 in the last iteration.}
+\label{actualResultWAM}
 \end{figure}
