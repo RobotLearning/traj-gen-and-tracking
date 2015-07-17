@@ -53,3 +53,11 @@ Extensions:
   (relation to convexity of \lambda_max?)
 - Fast ways to parameterize LQR matrix K or ILC matrix F for different trajectories?
 - Riemannian statistic as a way to estimate f(x,u) based on learning different Fs (linearization)?
+- Chaos control to induce bifurcation to a stable orbit during learning? Does it apply only to human 
+  motor control?
+- GPUCB to estimate the value function instead of stage costs?
+
+NOT UNDERSTOOD:
+- Duality in Dynamic programming
+- Relation of Kalman filtering to GP 
+- MCMC methods
