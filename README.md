@@ -13,6 +13,7 @@ ROADMAP
 - Read system identification survey
 - Clean-up: Check out Yanlong's and Katharina's code.
 - Derive Kalman filter from minimum variance and derive seperation principle.
+- Derive GP and low rank approximations (see Chapter of Rasmussen's book)
 
 Notes:
 - compare kinematics with SL
@@ -55,6 +56,7 @@ Extensions:
 - Riemannian statistic as a way to estimate f(x,u) based on learning different Fs (linearization)?
 - Chaos control to induce bifurcation to a stable orbit during learning? Does it apply only to human 
   motor control?
+- Reduced rank approximation with Dirichlet process on Gaussian Process
 - GPUCB to estimate the value function instead of stage costs?
 
 NOT UNDERSTOOD:
