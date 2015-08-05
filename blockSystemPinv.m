@@ -32,6 +32,8 @@ M22 = Zg;
 
 Finv = [M11,M12;M21,M22];
 
+end
+
 %% Assuming B is 0
 function TwoByTwoBlockInv(Ainv,Cinv,Dinv)
 
