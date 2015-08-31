@@ -1,9 +1,8 @@
 ROADMAP
 
-- Reading ILC review + paper
+- Reading ILC review + papers
 - Read control chapter of both books
 - Look at last ACC papers on ILC
-- Start writing ACC paper
 - Clean-up: Check out Yanlong's and Katharina's code.
 - Read system identification survey
 - Derive Kalman filter from minimum variance and derive seperation principle.

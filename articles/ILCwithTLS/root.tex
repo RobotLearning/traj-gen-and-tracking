@@ -47,17 +47,20 @@
 
 \newcommand{\sysInput}{\vec{u}} % used to denote the system inputs
 \newcommand{\linInput}{\tilde{\sysInput}} % denotes the LTV inputs
-\newcommand{\trjInput}{\sysInput_{\mathrm{IDM}}} % denotes the inputs on the trajectory (calculated using IDM)
+\newcommand{\trjInput}{\vec{\nu}} % denotes the inputs on the trajectory (calculated using IDM)
 \newcommand{\ilcInput}{\sysInput_{\mathrm{ILC}}}
 
 % % % % TLS terminology % % % %
 \newcommand{\designMat}{\vec{X}} % design matrix
+\newcommand{\latentMat}{\vec{Z}} % latent matrix
 \newcommand{\observations}{\vec{y}} % observations vector
 \newcommand{\param}{\vec{\beta}} % parameter vector
 \newcommand{\residual}{\vec{r}} % residuals
 \newcommand{\weightingMat}{\vec{W}} % weighting the residuals
 \newcommand{\errorMat}{\vec{E}} % error matrix
 \newcommand{\covarRes}{\vec{\Sigma}_{\residual}} % residual covariance
+\newcommand{\leftEigenvector}{\vec{U}} % U of SVD
+\newcommand{\rightEigenvector}{\vec{V}} % V of SVD
 
 % % % % ILC terminology % % % %
 \newcommand{\qmatrix}{\vec{\Gamma}} % denotes the filtering qmatrix term of Bristow et al.
@@ -105,7 +108,7 @@
 
 Iterative Learning Control is a control theoretic learning paradigm that aims to iteratively improve the tracking performance of a repetitive system. Optimization based approaches to ILC assume that a detailed knowledge of the plant to be controlled is available. However, such approaches can diverge terribly due to overconfidence. 
 
-In this paper, we propose a more cautious ILC algorithm using total least squares (TLS), that is robust with respect to modeling uncertainties. Moreover we give a Bayesian interpretation of TLS and build an adaptive routine that can adaptively identify the underlying linearized model. Simulation and real robot results confirm the contributions mentioned.
+In this paper, we propose a more cautious ILC algorithm using total least squares (TLS), that is robust with respect to modeling uncertainties. Moreover we give a Bayesian interpretation of TLS and build an adaptive routine that can adaptively identify the underlying linearized model. Simulation and real robot results confirm the practical significance of our contributions. %incrementally or iteratively identify?
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -170,91 +173,101 @@ Let $\designMat \in \mathbb{R}^{m \times n}$ be the design matrix, $\observation
 In case the design matrix $\designMat$ is numerically rank-deficient (i.e. its condition number is large), ridge regression (i.e. Tikhonov regularization) or truncation methods can be used to regularize (and hence to come up with a numerically stable estimate of) the parameter $\param$ in \eqref{lls}. Truncation can be applied conveniently with the pseudoinverse: invert the large singular values of $\designMat$ above a certain user-specified threshold $\threshold$ and truncate the rest to zero.
 
 \subsection{Total Least Squares: an errors-in-variables model}
+% shall we use multiple right hand sides?
+% include weighting in the derivation?
 
 Total Least Squares (TLS) is an errors-in-variables model that is applicable when the design matrix $\designMat$ is also not precisely known,
-i.e. $(\designMat + \errorMat)\param = \observations + \residual$ for an unknown $\errorMat$ hopefully with small norm. A 2-norm optimization procedure under this model is as follows
+i.e. $(\designMat + \errorMat)\param = \observations + \residual$ for an unknown $\errorMat$ hopefully with small norm. A Frobenius-norm optimization procedure with diagonal weighting matrices $\weightingMat_{L} \in \mathbb{R}^{m \times m}$ and $\weightingMat_{R} \in \mathbb{R}^{n+1 \times n+1}$ is a natural extension of \ref{lls} under this model
 %
 \begin{equation}
 \begin{aligned}
-\text{minimize} &\ \|\begin{bmatrix} \errorMat & \residual \end{bmatrix}\|_{F} \\
-\text{subject to} &\ \observations + \residual \in \text{Range}(\designMat + \errorMat)
+\text{minimize} &\ \| \weightingMat_{L} \begin{bmatrix} \errorMat & \residual \end{bmatrix} \weightingMat_{R} \|_{F}, \\
+\text{subject to} &\ \observations + \residual \in \text{Range}(\designMat + \errorMat).
 \end{aligned}
+\label{tls}
 \end{equation}
 %
-In general TLS fails to have a closed form solution. An example with low-rank design matrix can be found in \cite{Golub80}. % when is it guaranteed to have a closed form solution? What about truncated TLS??
-
-%\begin{equation}
-%\begin{aligned}
-%\designMat = \begin{bmatrix}
-%   1 & 0 \\ 0 & 0
-% \end{bmatrix}, \ Y = \begin{bmatrix}
-% 1 \\ 1
-% \end{bmatrix} 
-%\end{aligned}
-%\end{equation}
-%For every $\epsilon > 0$, $Y \in \text{Range}(\designMat + E_{\epsilon}), \ E_{\epsilon} = \begin{bmatrix} 0 & 0 \\ 0 & \epsilon \end{bmatrix}$
-
-
-An SVD Solution to TLS is also described in \cite{Golub80}. Rewriting $(\designMat + \errorMat)\param = \observations + \residual$ as  
+\noindent The singular-value decomposition (SVD) based solution to \eqref{tls} is described in \cite{Golub80} \footnote{However in general \ref{tls} fails to have a solution. An example with low-rank design matrix can be found in \cite{Golub80}} and relies on the Eckart-Young theorem. We show here for convenience the case where the weighting matrices $\weightingMat_{L}$ and $\weightingMat_{R}$ are identity. Rewriting $(\designMat + \errorMat)\param = \observations + \residual$ as  
 %
 \begin{equation}
 \begin{aligned}
-\begin{bmatrix} \designMat + \errorMat & \observations + \residual \end{bmatrix} \begin{bmatrix} \param \\ -1 \end{bmatrix} = 0 \\
+\begin{bmatrix} \designMat + \errorMat & \observations + \residual \end{bmatrix} \begin{bmatrix} \param \\ -1 \end{bmatrix} = 0, \\
 \end{aligned}
 \end{equation}
 %
-and using the Eckart-Young theorem
-\begin{equation}
-\begin{aligned}
-\begin{bmatrix} \designMat & \observations \end{bmatrix} = \begin{bmatrix} U_{\designMat} & U_{\observations} \end{bmatrix} \begin{bmatrix} \Sigma_{\designMat} & 0 \\ 0 & \Sigma_{\observations} \end{bmatrix} \begin{bmatrix} V_{\designMat \designMat} & V_{\designMat \observations} \\ V_{\observations \designMat} & V_{\observations \observations} \end{bmatrix}^{\mathrm{T}} \\
-\begin{bmatrix} \designMat + \errorMat & \observations + \residual \end{bmatrix} = \begin{bmatrix} U_{\designMat} & U_{\observations} \end{bmatrix} \begin{bmatrix} \Sigma_{\designMat} & 0 \\ 0 & 0 \end{bmatrix} \begin{bmatrix} V_{\designMat \designMat} & V_{\designMat \observations} \\ V_{\observations \designMat} & V_{\observations \observations} \end{bmatrix}^{\mathrm{T}}
-\end{aligned}
-\end{equation}
+\noindent and using the Eckart-Young decomposition for a minimum Frobenius norm matrix $\begin{bmatrix} \hat{\errorMat} & \hat{\residual} \end{bmatrix}$% reference needed 
+%
+
+\begin{align}
+\begin{bmatrix} \designMat & \observations \end{bmatrix} = \begin{bmatrix} \leftEigenvector_{\designMat} & u_{\observations} \end{bmatrix} \begin{bmatrix} \Sigma_{\designMat} & 0 \\ 0 & \sigma_{\observations} \end{bmatrix} \begin{bmatrix} \rightEigenvector_{\designMat \designMat} & \vec{v}_{\designMat \observations}, \\ \vec{v}_{\observations \designMat} & v_{\observations \observations} \end{bmatrix}^{\mathrm{T}}, \label{eckart1}\\
+\begin{bmatrix} \designMat + \hat{\errorMat} & \observations + \hat{\residual} \end{bmatrix} = \begin{bmatrix} \leftEigenvector_{\designMat} & u_{\observations} \end{bmatrix} \begin{bmatrix} \Sigma_{\designMat} & 0 \\ 0 & 0 \end{bmatrix} \begin{bmatrix} \rightEigenvector_{\designMat \designMat} & \vec{v}_{\designMat \observations}, \\ \vec{v}_{\observations \designMat} & v_{\observations \observations} \end{bmatrix}^{\mathrm{T}} \label{eckart2}.
+\end{align}
 % 
-After subtracting and manipulating we get
+\noindent After subtracting \eqref{eckart2} from \eqref{eckart1} and manipulating we get
 %
-\begin{equation}
-\begin{aligned}
-\hat{\param}_{tls} &= -V_{\designMat \observations}V_{\observations \observations}^{-1} \\
-\hat{\errorMat} &= U_{\designMat} \Sigma_{\designMat} V_{\designMat \designMat}^{\mathrm{T}} - \designMat
-\end{aligned}
-\end{equation}
+\begin{align}
+\hat{\param}_{tls} &= -\frac{V_{\designMat \observations}}{v_{\observations \observations}}, \label{tls1} \\
+\hat{\errorMat} &= U_{\designMat} \Sigma_{\designMat} V_{\designMat \designMat}^{\mathrm{T}} - \designMat. \label{tls2}
+\end{align}
 
-Many extensions are available: global, structured, truncated. % citation necessary!
-Truncated total least squares (TTLS) can be written simply as
-%
-\begin{equation}
-\begin{aligned}
-\hat{\param}_{ttls} = -V_{\designMat \observations}V_{\observations \observations}^{\dagger}
-\end{aligned}
-\end{equation}
-%
+\noindent See Figure~\ref{Figure1} for an illustration in one-dimensional regression. The case for multiple right-hand sides (i.e. $\observations \in \mathbb{R}^{n \times k}, k > 1$) and diagonal weighting matrices is given in \cite{Golub96}. Further extensions including partial, global, structured, and truncated TLS can be found in \cite{VanHuffel91}. 
+% more citations are necessary!
+% mention that we are extracting a latent dynamics matrix F_est = F + E!
+Pseudocode for a general structured and truncated total least squares algorithm implementing an SVD solution is given in Algorithm~\ref{alg1}. The latent matrix estimation step is made explicit. % refer to latent matrix estimation (PCA?) literature.
 
 \begin{figure}
 \centering
 \includegraphics[width=0.4\textwidth]{LSvsTLS.jpg}%
-\caption{Total Least Squares minimizes in 1D the sum of the squared perpendicular distances.}
+\caption{Comparison between least squares and total least squares in the one dimensional estimation setting, taken from \cite{Golub80}. Least Squares minimizes the sum of the squared vertical distances from observations to the regression line. Total Least Squares is also known as orthogonal regression in 1D and minimizes instead the sum of the squared perpendicular distances.}
+\label{Figure1}
 \end{figure}
+%
+
+\begin{algorithm}[tb]
+   \caption{Structured Truncated Total Least Squares}
+   \label{alg1}
+\begin{algorithmic}
+   \STATE {\bfseries Input:} $\threshold > 0$, $\designMat$, $\observations$, 
+   \STATE Compute SVD solution to $\begin{bmatrix} \designMat & \observations \end{bmatrix}$
+   \STATE Estimate $\param$
+   \STATE Estimate the latent matrix $\latentMat$ 
+\end{algorithmic}
+\end{algorithm}
+
 %
 \subsection{Iterative Learning Control with Total Least Squares}\label{ilcTLS}
 %
-Linearize nominal robot dynamics $\dot{\state} = \dynamicsNominal(\state,\sysInput)$ around a fixed trajectory $\traj$ to predict the errors incurred along the trajectory $\error = \state - \traj$
+In Iterative Learning Control (ILC) the goal is to drive deviations from a fixed reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ in state space $\state \in S \subset \mathbb{R}^{p}$ to zero when the system to be controlled is subject to unknown repeating disturbances and model mismatch \cite{Bristow06}. As opposed to other adaptive (learning) control approaches, in ILC usually the feedforward control inputs to the system $\sysInput(t)$ are adjusted after each iteration $k$, or episode, is completed and the resulting deviations $\error(t) = \state(t) - \traj(t)$ from the desired trajectory are observed. % references to adaptive control literature?
+
+Consider a general nonlinear dynamical system governed by the differential equation
+%
+\begin{align}
+\dot{\state} &= \dynamics(\state,\sysInput), \label{dynamics} \\
+\dot{\state} &= \dynamicsNominal(\state,\sysInput) + \dist(\state,\sysInput). \label{dynamicsNom}\\
+\end{align}
+%
+% reference to other nonlinear approaches to ILC?
+\noindent Assume that the nominal model $\dynamicsNominal$ is all we know about the system in \eqref{dynamics}. Nonlinear approaches to ILC mostly consider linearizations of \eqref{dynamicsNom} around the trajectory $\traj(t)$ and nominal inputs $\trjInput(t)$. Discretizing and stacking the linear time varying matrices obtained, we get the following \emph{lifted-form} approximation of the underlying dynamics
 %
 \begin{equation}
 \begin{aligned}
 \error \approx \systemMat \sysInput - \linDist.
 \end{aligned}
+\label{approxModel}
 \end{equation}
 %
-ILC using this model computes at every iteration the feedforward compensation signal $\sysInput$ to drive error $\error$ to $\vec{0}$. For example, a pseudo-inverse based ILC computes the updates using
+\noindent Conventional ILC algorithms using such a linearized model compute at each iteration the feedforward compensation signals $\sysInput$ to drive error $\error$ to minimum achievable error (ideally zero). For example, the ILC algorithm utilizing stable plant inversion with truncated pseudoinverse computes the updates using % ref needed
+% in MATLAB the command is pseudoinv(X,eps)
 %
 \begin{equation}
 \begin{aligned}
-\sysInput = \systemMat^{\dagger}\linDist.
+\sysInput = \systemMat^{\dagger}\linDist. 
 \end{aligned}
+\label{pseudoinverseILC}
 \end{equation}
+% add the iteration varying formulation here also
 %
-However robot dynamics may not be known well! We take this into account by using truncated Total Least Squares to come up with a more cautious ILC update
+However, the compensations \eqref{pseudoinverseILC} are computed using the approximate model in \eqref{approxModel} and should be taken with a grain of salt. In particular, for safety purposes one needs to consider the \emph{monotonic stability} of the ILC algorithm~\cite{Bristow06}. We take this into account by using truncated Total Least Squares to come up with a more cautious ILC update
 %
 \begin{equation}
 \begin{aligned}
@@ -262,6 +275,7 @@ However robot dynamics may not be known well! We take this into account by using
 \residual &= \linDist - (\systemMat + \errorMat)\sysInput.
 \end{aligned}
 \end{equation}
+
 %
 \subsection{Adaptive ILC based on Bayesian TLS}\label{adaptiveILC}
 %
