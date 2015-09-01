@@ -243,7 +243,7 @@ Consider a general nonlinear dynamical system governed by the differential equat
 %
 \begin{align}
 \dot{\state} &= \dynamics(\state,\sysInput), \label{dynamics} \\
-\dot{\state} &= \dynamicsNominal(\state,\sysInput) + \dist(\state,\sysInput). \label{dynamicsNom}\\
+\dot{\state} &= \dynamicsNominal(\state,\sysInput) + \dist(\state,\sysInput). \label{dynamicsNom}
 \end{align}
 %
 % reference to other nonlinear approaches to ILC?
@@ -256,60 +256,122 @@ Consider a general nonlinear dynamical system governed by the differential equat
 \label{approxModel}
 \end{equation}
 %
-\noindent Conventional ILC algorithms using such a linearized model compute at each iteration the feedforward compensation signals $\sysInput$ to drive error $\error$ to minimum achievable error (ideally zero). For example, the ILC algorithm utilizing stable plant inversion with truncated pseudoinverse computes the updates using % ref needed
-% in MATLAB the command is pseudoinv(X,eps)
+\noindent where the model matrix $\systemMat$ has a block lower-diagonal structure, and composed of the submatrices
 %
 \begin{equation}
 \begin{aligned}
-\sysInput = \systemMat^{\dagger}\linDist. 
+\vec{F}_{(i,j)} &= \left \{
+\begin{array}{cc}
+\vec{A}_{i-1}\ldots \vec{A}_j \vec{B}_{j-1}, & j < i, \\ 
+\vec{B}_{j-1}, & j = i, \\
+\vec{0}, & j > i. 
+\end{array} \right.
 \end{aligned}
-\label{pseudoinverseILC}
-\end{equation}
-% add the iteration varying formulation here also
-%
-However, the compensations \eqref{pseudoinverseILC} are computed using the approximate model in \eqref{approxModel} and should be taken with a grain of salt. In particular, for safety purposes one needs to consider the \emph{monotonic stability} of the ILC algorithm~\cite{Bristow06}. We take this into account by using truncated Total Least Squares to come up with a more cautious ILC update
-%
-\begin{equation}
-\begin{aligned}
-\sysInput_{TLS}, \ \errorMat &= \arg\min_{\sysInput,\errorMat} \|\begin{bmatrix}\errorMat & \residual \end{bmatrix} \|_{F}, \\
-\residual &= \linDist - (\systemMat + \errorMat)\sysInput.
-\end{aligned}
+\label{Fmatrix}
 \end{equation}
 
+\noindent Matrices $\vec{A}_j$ and $\vec{B}_j$ are linearizations of the nominal model $\dynamicsNominal$ around the discrete trajectory points $\traj_j$ and nominal inputs $\vec{\nu}_j$ respectively. Conventional ILC algorithms using such a linearized model compute at each iteration the feedforward compensation signals $\sysInput = (\sysInput_1^{\mathrm{T}}, \ldots, \sysInput_N^{\mathrm{T}})^{\mathrm{T}}$ to drive error $\error = (\error_1^{\mathrm{T}}, \ldots, \error_N^{\mathrm{T}})^{\mathrm{T}}$ to minimum achievable error (ideally zero). For example, the ILC algorithm utilizing plant inversion with pseudoinverse computes the updates using % ref needed
+% 
 %
+\begin{equation}
+\begin{aligned}
+\sysInput_{k} = \systemMat^{\dagger}\linDist_{k},
+\end{aligned}
+\label{pseudoinverseILC1}
+\end{equation}
+%
+\noindent where $\linDist_{k}$ is estimated using the last iteration $k-1$, i.e. $\linDist_{k} \approx \systemMat \sysInput_{k-1} - \error_{k-1}$. Putting it all together, when the system matrix $\systemMat$ is of full rank, we get the following model-based ILC update law 
+%
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} = \sysInput_{k} - \systemMat^{\dagger}\error_{k}.
+\end{aligned}
+\label{pseudoinverseILC2}
+\end{equation}
+%
+\noindent In MATLAB the command for computing \eqref{pseudoinverseILC2} with truncation parameter $\epsilon$ is \emph{pinv}$(\designMat,\epsilon)$ where any singular values of $\designMat$ less than $\epsilon$ are treated as zero. However, the compensations in \eqref{pseudoinverseILC2} are computed using the approximate model in \eqref{approxModel} and should be instead computed more cautiously. In particular, for safety purposes one needs to consider the \emph{monotonic stability} of the ILC algorithm~\cite{Bristow06}. We take this into account by using Total Least Squares to come up with a more cautious ILC update. Combining \eqref{pseudoinverseILC2} and \eqref{tls} we get $\alg$
+%
+\begin{align}
+\sysInput_{k+1} &= \sysInput_{k} - \delta \sysInput_{k}, \label{tlsilc1} \\ 
+\delta \sysInput_{k}, \ \errorMat_k &= \arg\min \|\begin{bmatrix}\errorMat_k & \residual_k \end{bmatrix} \|_{F}, \label{tlsilc2} \\
+\text{subject to} &\ (\systemMat + \errorMat_k)\delta \sysInput_k = \error_k + \residual_k \label{tlsilc3}.
+\end{align}
+%
+
+\subsection{Monotonic Convergence}\label{monotonic}
+
+In this section we analyze the monotonic convergence of the pseudoinverse-based ILC in \eqref{pseudoinverseILC2} and TLS-based ILC in \eqref{tlsilc2}. Furthermore, we indicate the effects of truncated and structured TLS solutions to convergence and stability. 
+
 \subsection{Adaptive ILC based on Bayesian TLS}\label{adaptiveILC}
-%
-% The prior weighting of the nominal model before starting the adaptive procedure can be based on the number of samples used in the identification of the block Hankel matrix F.
+
+In this section we propose a natural Bayesian extension of the algorithm $\alg$ proposed in Section \ref{ilcTLS}. The resulting algorithm is an adaptive Kalman-filter that filters and adapts the nominal models $\latentMat_k = \systemMat + \errorMat_k$ estimated with TLS in \eqref{tlsilc2}. It is by definition a high-order ILC algorithm that considers all of the iterations, i.e all the deviations $\error_i, \ i = 1, \ldots, k,$ from the reference trajectory. 
+
+%The prior weighting of the nominal model before starting the adaptive procedure can be based on the number of samples used in the identification of the model matrix $\systemMat$.
 
 % Bayesian ILC is by definition a higher order ILC!
 
 \section{Results}\label{results}
 
+In this section, we demonstrate the effectiveness of the ILC algorithms presented in Section~\ref{methodology} for striking motions in table tennis. First we start with a simulation example where we study the performances of our proposed algorithm in detail.
 %
-\subsection{Simulation Results of Seven DOF Barrett Arm}
+\subsection{Simulation Results with Barrett WAM}
+
+In the robotic table-tennis task where an anthropomorphic robot arm plays table-tennis with a human, the requirements for a successful performance are many. First of all, the position and velocity profile of the incoming ball need to be predicted accurately and well in advance of the hitting motion. Then a kinematics or movement primitive based reference trajectory is calculated that will intercept the ball in midair. Finally the robot arm must be controlled well: the right torques need to be found for the particular reference or they need to be acquired through learning.
+
+The trajectories in our case are assigned in joint space, one for each of the seven joints of the simulated robot. A low-gain feedback law is calculated using LQR with the linearized nominal dynamics which stabilizes the open-loop system $\dynamics$. ILC can be applied on top of this closed-loop system, providing learning from one iteration to the next. 
+
 %
-In the simulation results shown below, ILC with pseudoinverse cannot approach trajectory very well, and after 8 iterations starts to diverge.
-\begin{figure}
-\centering
-\includegraphics[width=0.5\textwidth]{beforeILC.eps}%
-\includegraphics[width=0.5\textwidth]{afterILCPseudoInv.eps}		
-\caption{Before and after applying ILC (10 iterations)}
+\begin{figure}[!htb]
+    \centering
+    \begin{minipage}{.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth, height=0.15\textheight]{beforeILC.eps}
+        \caption{(a)}
+        \label{fig1}
+    \end{minipage}%
+    \begin{minipage}{.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth, height=0.15\textheight]{afterILCPseudoInv.eps}
+        \caption{(b)}
+        \label{fig2}
+    \end{minipage}
+    \begin{minipage}{.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth, height=0.15\textheight]{afterILCTLS.eps}
+        \caption{(c)}
+        \label{fig3}
+    \end{minipage}
+    \caption{Results showing the performance of trajectory tracking, before and after applying ILC (10 iterations). Reference trajectory is shown in red. Initially, in Figure~\ref{fig1}, tracking performance is poor. Final performances of pseudoinverse-based ILC and TLS-based ILC after learning are shown in Figures~\ref{fig2} and \ref{fig3} respectively. ILC with truncated pseudoinverse cannot approach the trajectory very well, and after 8 iterations starts to slowly diverge. ILC with truncated total least squares on the other hand approaches the trajectory very well, and shows excellent tracking performance that is also stable.}
+\label{FigureILC}
 \end{figure}
+
+In the simulation results shown in Figure~\ref{FigureILC}, we consider a striking trajectory shown in red. Such ball-hitting trajectories in table tennis are generally composed of three parts: a preparatory phase, a hitting phase, and a relaxation phase. In the preparatory phase, the arm generally accelerates and picks up speed necessary to transfer the right momentum to the ball, intercepted in the hitting phase. The relaxation phase generally decelerates the arm and readies it for the next hitting task. 
+
+ILC with pseudoinverse cannot approach trajectory very well, and after 8 iterations starts to slowly diverge. ILC with TLS on the other hand approaches the trajectory very well, and shows excellent tracking performance. For both methods, to be fair, we used the same truncation parameter, $\epsilon = 0.05$. This enables the pseudoinverse-based ILC to be more stable, i.e. without it ILC can show dangerous oscillations around some trajectories. However, even with truncation the pseudoinverse relies on the exactness of the model, whereas $\alg$ is inherently \emph{agnostic} to its accuracy. 
+
+In practice we find that an additional adjustment in the form of \emph{current-iteration} ILC (\emph{CI-ILC}) 
 %
-ILC with truncated total least squares on the other hand approaches the trajectory very well, and shows excellent tracking performance.
+\begin{equation}
+\begin{aligned}
+\sysInput_{k+1} &= \sysInput_k - \vec{K}_{LQR}\error_{k},\\
+\end{aligned}
+\label{fbILC}
+\end{equation}
 %
-\begin{figure}
-\centering
-\includegraphics[width=0.5\textwidth]{beforeILC.eps}%
-\includegraphics[width=0.5\textwidth]{afterILCTLS.eps}		
-\caption{Before and after applying ILC (10 iterations)}
-\end{figure}
-%
+\noindent where we add the feedback from the previous iteration to the feedforward commands in the next iteration makes learning more robust. We add this current-iteration compensation to both methods in the results shown. 
+
 
 \subsection{Applications in Robotic Table Tennis}
 
+We performed the real robot experiments with a seven degree of freedom (DoF) torque-controlled custom made Barrett WAM arm capable of high speeds and accelerations.
+
 \section{Conclusions and Future Work}\label{conclusions}
 
+In this paper, we proposed a new ILC algorithm using total least squares (TLS), that is robust with respect to modeling uncertainties. Unlike most optimization and model-based approaches, our method is not overconfident. We proved that the proposed algorithm $\alg$ is agnostic to slight model mismatch, i.e. (monotonic) stability margins of ILC algorithms can be raised by using (truncated) TLS. Moreover we gave a Bayesian interpretation of our approach and built an adaptive Kalman-filter based routine that can adaptively identify the underlying latent matrix, and hence the dynamics model. Simulation and real robot results shown confirm the practical significance of our contributions. %incrementally or iteratively identify?
+
+For future work, we would like to pursue the Bayesian interpretation of our algorithm further and in more detail. We believe that this way one can transcend the limitations of ILC and build a reinforcement learning (policy search) algorithm. By building locally and patching the underlying nonlinear dynamics model iteratively, the learning algorithm can learn between different trajectories. We plan to explore along this direction similarities to other model-based approaches and local regression techniques in the future.
+% references needed : DDP and local regression.
+% kernel and/or global TLS? 
 
 \bibliographystyle{plain}
 %\bibliographystyle{./IEEEtran}
