@@ -13,11 +13,14 @@
 \usepackage{hyperref}
 
 % theorem environment
+\theoremstyle{plain}
 \newtheorem{prop}{Proposition}[section]
 \newtheorem{theorem}{Theorem}[section]
-\newtheorem{prop2}{Proposition}
+\newtheorem{cor}{Corollary}[section]
 \newtheorem{lem}{Lemma} 
 \newtheorem{ex}{Example}
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}[section]
 
 % For algorithms
 \usepackage{algorithm}
@@ -54,7 +57,9 @@
 \newcommand{\designMat}{\vec{X}} % design matrix
 \newcommand{\latentMat}{\vec{Z}} % latent matrix
 \newcommand{\observations}{\vec{y}} % observations vector
+\newcommand{\fullObs}{\vec{Y}} % observations matrix
 \newcommand{\param}{\vec{\beta}} % parameter vector
+\newcommand{\fullParam}{\vec{B}} % parameter matrix
 \newcommand{\residual}{\vec{r}} % residuals
 \newcommand{\weightingMat}{\vec{W}} % weighting the residuals
 \newcommand{\errorMat}{\vec{E}} % error matrix
@@ -71,6 +76,8 @@
 \newcommand{\policy}{\vec{\pi}}
 \newcommand{\ValueFunction}{J}
 \newcommand{\episode}{k} % used for episode number
+\newcommand{\projOblique}{\vec{P}_{Z,L}^{\perp}} % used for oblique projection
+\newcommand{\proj}{\vec{P}_{Z}^{\perp}} % used for orthogonal projection
 
 \newcommand{\totalTime}{T} % total time duration 
 \newcommand{\numSteps}{N} % total number of time steps
@@ -108,7 +115,7 @@
 
 Iterative Learning Control is a control theoretic learning paradigm that aims to iteratively improve the tracking performance of a repetitive system. Optimization based approaches to ILC assume that a detailed knowledge of the plant to be controlled is available. However, such approaches can diverge terribly due to overconfidence. 
 
-In this paper, we propose a more cautious ILC algorithm using total least squares (TLS), that is robust with respect to modeling uncertainties. Moreover we give a Bayesian interpretation of TLS and build an adaptive routine that can adaptively identify the underlying linearized model. Simulation and real robot results confirm the practical significance of our contributions. %incrementally or iteratively identify?
+In this paper, we propose a more cautious ILC algorithm using Total Least Squares (TLS), that is robust with respect to modeling uncertainties. We prove that our algorithm is monotonically convergent for a wider variety of nominal models, compared to existing model-based approaches. Moreover we give a Bayesian interpretation of TLS and build an adaptive routine that can adaptively identify the underlying linearized model. Simulation and real robot results confirm the practical significance of our contributions. %incrementally or iteratively identify?
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -117,22 +124,23 @@ In this paper, we propose a more cautious ILC algorithm using total least square
 \section{Introduction}
 
 % RC reference needed
-Learning Control paradigms, and in particular Iterative Learning Control (ILC) \cite{Arimoto84}, \cite{Bristow06} and Repetitive Control (RC), aim to iteratively improve the tracking performance of a control system subject to repetitive tasks. In ILC, these tasks are episodic in nature: follow a desired trajectory for a fixed duration and repeat. In RC, the task is periodic but also continuous, and unlike ILC the system is not reset to a certain initial state. 
+Learning Control paradigms, and in particular Iterative Learning Control (ILC) \cite{Arimoto84}, \cite{Bristow06} and Repetitive Control (RC) \cite{Wang09}, \cite{Longman2000}, aim to iteratively improve the tracking performance of a control system subject to repetitive tasks. In ILC, these tasks are episodic in nature: follow a desired trajectory for a fixed time duration and repeat after resetting to a certain initial state. The feedforward control inputs are adjusted based on the resulting deviations from the reference. In RC, on the other hand, the reference trajectory is periodic and tracked continuously, and unlike ILC, no resetting occurs.
+%In ILC, usually the feedforward control inputs are adjusted after each trial based on the resulting deviations from the reference trajectory. The goal is to drive such deviations to zero. 
 
-Methods that learn to track (periodic or episodic) trajectories need to compensate for modeling uncertainties and other repetitive disturbances acting on the system to be controlled. When all such disturbances are compensated for the system knowledge can be said to be indirectly acquired. However, stable methods that can efficiently and safely learn the dynamics are model-based (e.g. most of optimization-based ILC \cite{Amann95},\cite{Bristow06}) and at least require a global understanding of the dynamics of the system \cite{Kolter09}, \cite{NguyenTuong11}.
+Methods that learn to track (periodic or episodic) trajectories need to compensate for modeling uncertainties and other repetitive disturbances acting on the system to be controlled. However, stable methods that can efficiently and safely learn the dynamics are model-based (e.g. most of optimization-based ILC \cite{Amann95},\cite{Bristow06}) and at least require a global understanding of the dynamics of the system \cite{Kolter09}, \cite{NguyenTuong11}.
+% some more references here, on model based policy search for example?
 
 % refs needed
-When executing model-based learning algorithms on dynamic systems, it is essential for stability and safety to incorporate a notion of model uncertainty. Otherwise the learning algorithms can be overconfident and easily go unstable~\cite{Longman2000}. One way to achieve a more stable performance is to use regularization. For example, in ILC, the inputs or the change in inputs applied to a system can be penalized. These robust methods in ILC are mostly known as Q-filtering~\cite{Bristow06} and typically incur a trade-off between stability and performance: system will often converge to a nonzero steady-state error. % if the learning algorithm is agnostic to the true dynamics of the system, it will fail to converge to zero steady-state error.
+When executing model-based learning algorithms on dynamic systems, it is essential for stability and safety to incorporate a notion of model uncertainty. Otherwise the learning algorithms can be overconfident and quickly go unstable~\cite{Longman2000}. One way to achieve a more stable performance is to use regularization. For example, in ILC, the inputs or the change in inputs applied to a system can be penalized. These robust methods in ILC are mostly known as Q-filtering~\cite{Bristow06} and typically incur a trade-off between stability and performance: system will often converge to a nonzero steady-state error. % if the learning algorithm is agnostic to the true dynamics of the system, it will fail to converge to zero steady-state error.
 
 % is it the stability margin? or simply monotonic convergence?
-In this paper, we introduce another way to increase the stability margins of model-based ILC algorithms that does not incur such a trade-off. We treat the modelling uncertainty issue in an errors-in-variables regression context and use Total Least Squares (TLS) to perform the ILC updates. This way we exercise caution and ensure robustness with respect to model uncertainty. % while at the same time improving the steady-state performance. 
+In this paper, we introduce another way to increase the stability margins of model-based ILC that does not incur such a trade-off. We treat the modelling uncertainty issue in an errors-in-variables regression context and use in particular Total Least Squares (TLS) \cite{Golub80} to perform the ILC updates. By adjusting the feedforward control inputs with the TLS regressor, we exercise caution and ensure robustness with respect to model uncertainty. % while at the same time improving the steady-state performance. 
 
 Our contributions to Learning Control can be summarized as follows:
 
 \begin{itemize}
 \item We form a link between model-based Learning Control methods and errors-in-variables regression models, and analyze in particular Total Least Squares (TLS).
 \item We prove that we increase the stability margins (in the iteration domain) of ILC by incorporating a truncated TLS update rule, and ensure monotonic convergence without sacrificing minimal steady-state error. 
-% is it block Hankel or block lower triangular
 \item We exploit the structure of the block lower triangular matrix estimation problem within TLS and increase its applicability for control problems. Simulation and real robot experimental results are presented.
 \item We show as an extension of our ideas, one way to incorporate a Bayesian update rule within TLS and achieve self-tuning property. 
 % relation to Kalman filter and other methods? Higher order ILC?
@@ -168,7 +176,7 @@ Let $\designMat \in \mathbb{R}^{m \times n}$ be the design matrix, $\observation
 \label{lls}
 \end{equation}
 %
-\noindent The positive definite weight matrix $\weightingMat$ is ideally the inverse of the covariance matrix $\covarRes$ of the residuals. The well-known \emph{normal equations} $\designMat^{\mathrm{T}}\weightingMat\designMat \param = \designMat^{\mathrm{T}} \weightingMat\observations$ is the unique closed-form solution to this problem in case $\designMat$ is of full rank, $\text{rank}(\designMat) = n$. Solution to the normal equations can then be computed in a numerically stable way~\cite{Golub96} using e.g. QR decomposition methods. If the design matrix $\designMat$ is of low rank, pseudoinverse $\designMat^{\dagger}$ finds out of infinitely many solutions the minimum 2-norm solution $\hat{\param}$ and can be computed using SVD. % this should be verified. [see Golub'96]
+\noindent The weight matrix $\weightingMat$ is chosen to be positive definite and ideally should be the inverse of the covariance matrix $\covarRes$ of the residuals. The well-known \emph{normal equations} $\designMat^{\mathrm{T}}\weightingMat\designMat \param = \designMat^{\mathrm{T}} \weightingMat\observations$ provide the unique closed-form solution to this problem in case $\designMat$ is of full rank, $\text{rank}(\designMat) = n$. Solution to the normal equations can then be computed in a numerically stable way~\cite{Golub96} using e.g. QR decomposition methods. If the design matrix $\designMat$ is of low rank, pseudoinverse $\designMat^{\dagger}$ finds out of infinitely many solutions the minimum 2-norm solution $\hat{\param} = \designMat^{\dagger}\observations$ and can be computed using SVD. % this should be verified. [see Golub'96]
 
 In case the design matrix $\designMat$ is numerically rank-deficient (i.e. its condition number is large), ridge regression (i.e. Tikhonov regularization) or truncation methods can be used to regularize (and hence to come up with a numerically stable estimate of) the parameter $\param$ in \eqref{lls}. Truncation can be applied conveniently with the pseudoinverse: invert the large singular values of $\designMat$ above a certain user-specified threshold $\threshold$ and truncate the rest to zero.
 
@@ -199,21 +207,21 @@ i.e. $(\designMat + \errorMat)\param = \observations + \residual$ for an unknown
 %
 
 \begin{align}
-\begin{bmatrix} \designMat & \observations \end{bmatrix} = \begin{bmatrix} \leftEigenvector_{\designMat} & u_{\observations} \end{bmatrix} \begin{bmatrix} \Sigma_{\designMat} & 0 \\ 0 & \sigma_{\observations} \end{bmatrix} \begin{bmatrix} \rightEigenvector_{\designMat \designMat} & \vec{v}_{\designMat \observations}, \\ \vec{v}_{\observations \designMat} & v_{\observations \observations} \end{bmatrix}^{\mathrm{T}}, \label{eckart1}\\
-\begin{bmatrix} \designMat + \hat{\errorMat} & \observations + \hat{\residual} \end{bmatrix} = \begin{bmatrix} \leftEigenvector_{\designMat} & u_{\observations} \end{bmatrix} \begin{bmatrix} \Sigma_{\designMat} & 0 \\ 0 & 0 \end{bmatrix} \begin{bmatrix} \rightEigenvector_{\designMat \designMat} & \vec{v}_{\designMat \observations}, \\ \vec{v}_{\observations \designMat} & v_{\observations \observations} \end{bmatrix}^{\mathrm{T}} \label{eckart2}.
+\begin{bmatrix} \designMat & \observations \end{bmatrix} = \begin{bmatrix} \leftEigenvector_{X} & \vec{u}_{y} \end{bmatrix} \begin{bmatrix} \vec{\Sigma}_{X} & 0 \\ 0 & \sigma_{y} \end{bmatrix} \begin{bmatrix} \rightEigenvector_{XX} & \vec{v}_{Xy} \\ \vec{v}_{yX} & v_{yy} \end{bmatrix}^{\mathrm{T}}, \label{eckart1} \\
+\begin{bmatrix} \designMat + \hat{\errorMat} & \observations + \hat{\residual} \end{bmatrix} = \begin{bmatrix} \leftEigenvector_{X} & \vec{u}_{y} \end{bmatrix} \begin{bmatrix} \vec{\Sigma}_{X} & 0 \\ 0 & 0 \end{bmatrix} \begin{bmatrix} \rightEigenvector_{XX} & \vec{v}_{Xy} \\ \vec{v}_{yX} & v_{yy} \end{bmatrix}^{\mathrm{T}} \label{eckart2}.
 \end{align}
 % 
 \noindent After subtracting \eqref{eckart2} from \eqref{eckart1} and manipulating we get
 %
 \begin{align}
-\hat{\param}_{tls} &= -\frac{V_{\designMat \observations}}{v_{\observations \observations}}, \label{tls1} \\
-\hat{\errorMat} &= U_{\designMat} \Sigma_{\designMat} V_{\designMat \designMat}^{\mathrm{T}} - \designMat. \label{tls2}
+\hat{\param}_{tls} &= -\frac{\vec{v}_{Xy}}{v_{yy}}, \label{tls1} \\
+\hat{\errorMat} &= \leftEigenvector_{X} \vec{\Sigma}_{X} \rightEigenvector_{XX}^{\mathrm{T}} - \designMat. \label{tls2}
 \end{align}
 
-\noindent See Figure~\ref{Figure1} for an illustration in one-dimensional regression. The case for multiple right-hand sides (i.e. $\observations \in \mathbb{R}^{n \times k}, k > 1$) and diagonal weighting matrices is given in \cite{Golub96}. Further extensions including partial, global, structured, and truncated TLS can be found in \cite{VanHuffel91}. 
+\noindent The SVD solution nicely separates the parameter estimate $\hat{\param}$ from the \emph{latent matrix} estimate $\hat{\latentMat} = \designMat + \hat{\errorMat} = \leftEigenvector_{X} \vec{\Sigma}_{X} \rightEigenvector_{XX}^{\mathrm{T}}$. See Figure~\ref{Figure1} for an illustration in one-dimensional regression. The case for multiple right-hand sides (i.e. $\observations \in \mathbb{R}^{n \times k}, k > 1$) and diagonal weighting matrices is given in \cite{Golub96}. Further extensions including partial, global, structured, and truncated TLS can be found in \cite{VanHuffel91}. 
 % more citations are necessary!
 % mention that we are extracting a latent dynamics matrix F_est = F + E!
-Pseudocode for a general structured and truncated total least squares algorithm implementing an SVD solution is given in Algorithm~\ref{alg1}. The latent matrix estimation step is made explicit. % refer to latent matrix estimation (PCA?) literature.
+Pseudocode for a general structured and truncated total least squares algorithm implementing an SVD solution is given in Algorithm~\ref{alg1}. Notation is adapted slightly for the general case. The latent matrix estimation step is made explicit. % refer to latent matrix estimation (PCA?) literature.
 
 \begin{figure}
 \centering
@@ -227,10 +235,10 @@ Pseudocode for a general structured and truncated total least squares algorithm 
    \caption{Structured Truncated Total Least Squares}
    \label{alg1}
 \begin{algorithmic}
-   \STATE {\bfseries Input:} $\threshold > 0$, $\designMat$, $\observations$, 
-   \STATE Compute SVD solution to $\begin{bmatrix} \designMat & \observations \end{bmatrix}$
-   \STATE Estimate $\param$
-   \STATE Estimate the latent matrix $\latentMat$ 
+   \STATE {\bfseries Input:} $\threshold > 0$, $\designMat$, $\fullObs = \begin{bmatrix} \observations_1 & \observations_2 & \ldots & \observations_k \end{bmatrix}$, $\weightingMat_{L}$, $\weightingMat_{R} = \begin{bmatrix} \weightingMat_{R1} & \weightingMat_{R2}\end{bmatrix}$.
+   \STATE Compute SVD solution $\leftEigenvector \vec{\Sigma} \rightEigenvector^{\mathrm{T}} = \weightingMat_{L}\begin{bmatrix} \designMat & \fullObs \end{bmatrix}\weightingMat_{R}$.
+   \STATE Estimate parameter $\hat{\fullParam} = -\weightingMat_{R1}\vec{V}_{XY}\vec{V}_{YY}^{-1}\weightingMat_{R2}^{-1}$.
+   \STATE Estimate latent matrix $\hat{\latentMat} = \leftEigenvector_{X} \vec{\Sigma}_{X} \rightEigenvector_{XX}^{\mathrm{T}}$.
 \end{algorithmic}
 \end{algorithm}
 
@@ -251,12 +259,12 @@ Consider a general nonlinear dynamical system governed by the differential equat
 %
 \begin{equation}
 \begin{aligned}
-\error \approx \systemMat \sysInput - \linDist.
+\error \approx \systemMat \sysInput - \linDist,
 \end{aligned}
 \label{approxModel}
 \end{equation}
 %
-\noindent where the model matrix $\systemMat$ has a block lower-diagonal structure, and composed of the submatrices
+\noindent where the model matrix $\systemMat$ has a block lower-diagonal structure, and is composed of the submatrices
 %
 \begin{equation}
 \begin{aligned}
@@ -270,7 +278,7 @@ Consider a general nonlinear dynamical system governed by the differential equat
 \label{Fmatrix}
 \end{equation}
 
-\noindent Matrices $\vec{A}_j$ and $\vec{B}_j$ are linearizations of the nominal model $\dynamicsNominal$ around the discrete trajectory points $\traj_j$ and nominal inputs $\vec{\nu}_j$ respectively. Conventional ILC algorithms using such a linearized model compute at each iteration the feedforward compensation signals $\sysInput = (\sysInput_1^{\mathrm{T}}, \ldots, \sysInput_N^{\mathrm{T}})^{\mathrm{T}}$ to drive error $\error = (\error_1^{\mathrm{T}}, \ldots, \error_N^{\mathrm{T}})^{\mathrm{T}}$ to minimum achievable error (ideally zero). For example, the ILC algorithm utilizing plant inversion with pseudoinverse computes the updates using % ref needed
+\noindent Matrices $\vec{A}_j$ and $\vec{B}_j$ are linearizations of the nominal model $\dynamicsNominal$ around the discrete trajectory points $\traj_j$ and nominal inputs $\vec{\nu}_j$ respectively. Conventional ILC algorithms using such a linearized model compute at each iteration the feedforward compensation signals $\sysInput = (\sysInput_1^{\mathrm{T}}, \ldots, \sysInput_N^{\mathrm{T}})^{\mathrm{T}}$ and add to nominal input $\trjInput = (\trjInput_1^{\mathrm{T}}, \ldots, \trjInput_N^{\mathrm{T}})^{\mathrm{T}}$ to drive error $\error = (\error_1^{\mathrm{T}}, \ldots, \error_N^{\mathrm{T}})^{\mathrm{T}}$ to minimum achievable error (ideally zero). For example, the ILC algorithm utilizing plant inversion with pseudoinverse computes the updates using % ref needed
 % 
 %
 \begin{equation}
@@ -289,18 +297,91 @@ Consider a general nonlinear dynamical system governed by the differential equat
 \label{pseudoinverseILC2}
 \end{equation}
 %
-\noindent In MATLAB the command for computing \eqref{pseudoinverseILC2} with truncation parameter $\epsilon$ is \emph{pinv}$(\designMat,\epsilon)$ where any singular values of $\designMat$ less than $\epsilon$ are treated as zero. However, the compensations in \eqref{pseudoinverseILC2} are computed using the approximate model in \eqref{approxModel} and should be instead computed more cautiously. In particular, for safety purposes one needs to consider the \emph{monotonic stability} of the ILC algorithm~\cite{Bristow06}. We take this into account by using Total Least Squares to come up with a more cautious ILC update. Combining \eqref{pseudoinverseILC2} and \eqref{tls} we get $\alg$
+\noindent In MATLAB the command for computing \eqref{pseudoinverseILC2} with truncation parameter $\epsilon$ is \emph{pinv}$(\designMat,\epsilon)$ where the singular values of $\designMat$ less than $\epsilon$ are treated as zero. 
+
+The compensations in \eqref{pseudoinverseILC2} are computed using the approximate model in \eqref{approxModel} and should be instead computed more cautiously. In particular, it is not enough to state that the control inputs will eventually converge to a steady-state value, as is often done when proving the \emph{stability} of ILC algorithms. For practical and for safety purposes one needs to also ensure that the errors incurred along the trajectory at each iteration are decreasing, under a particular vector norm. This is studied in the ILC literature as the \emph{monotonic convergence} criterion~\cite{Bristow06}. 
+
+We take the monotonic convergence criterion into account by using Total Least Squares to come up with a more cautious ILC update. Combining \eqref{pseudoinverseILC2} and \eqref{tls} we get $\alg$
 %
 \begin{align}
 \sysInput_{k+1} &= \sysInput_{k} - \delta \sysInput_{k}, \label{tlsilc1} \\ 
-\delta \sysInput_{k}, \ \errorMat_k &= \arg\min \|\begin{bmatrix}\errorMat_k & \residual_k \end{bmatrix} \|_{F}, \label{tlsilc2} \\
+\delta \sysInput_{k}, \ \hat{\errorMat}_k &= \arg\min \|\begin{bmatrix}\errorMat_k & \residual_k \end{bmatrix} \|_{F}, \label{tlsilc2} \\
 \text{subject to} &\ (\systemMat + \errorMat_k)\delta \sysInput_k = \error_k + \residual_k \label{tlsilc3}.
 \end{align}
 %
 
 \subsection{Monotonic Convergence}\label{monotonic}
 
-In this section we analyze the monotonic convergence of the pseudoinverse-based ILC in \eqref{pseudoinverseILC2} and TLS-based ILC in \eqref{tlsilc2}. Furthermore, we indicate the effects of truncated and structured TLS solutions to convergence and stability. 
+In this section we analyze and prove the monotonic convergence of the pseudoinverse-based ILC in \eqref{pseudoinverseILC2} and TLS-based ILC in \eqref{tlsilc2} under certain conditions. These conditions will be seen to be more restrictive for pseudoinverse-based ILC. Furthermore, we indicate the effects of truncated and structured TLS solutions to convergence and stability. For the readers convenience, we will be as self-contained as possible. We consider the usual Euclidian norm, i.e the 2-norm, as our vector norm $\|\cdot\|$. We start by analyzing the conditions for stability in the iteration domain. 
+
+% first order vs. higher order?
+% Q matrix?
+\begin{defn} An ILC update law of the form $\sysInput_{k+1} = \sysInput_{k} - \lmatrix \error_{k}$ with $\lmatrix \in \mathbb{R}^{n \times m}$ operating on the unknown system with response $\error = \latentMat \sysInput + \linDist$ is said to be \emph{asymptotically stable} in the iteration-domain if the control inputs are bounded: $\exists M \in \mathbb{R} \ $ s.t. $\ \|\sysInput_k\| < M, \ \forall k \in \mathbb{Z}^{+}$ and the limit exists: $\lim\limits_{k \to \infty}\sysInput_k = \sysInput_{\infty} \in \mathbb{R}^{n}$. \end{defn}
+%
+We refer to the input-output matrix $\latentMat$ of the unknown system as the \emph{latent matrix} and $\lmatrix$ as the \emph{learning matrix}. Conditions for ensuring asymptotic stability are given below.
+%
+\begin{lem} A system operating under an ILC update law is asymptotically stable if the spectral norm $\rho = |\lambda_{\mathrm{max}}(\vec{I} - \lmatrix\latentMat)| < 1$. \end{lem}
+%
+\begin{proof}
+Taking the dynamics $\error = \latentMat \sysInput + \linDist$ for an arbitrary initial guess $\sysInput_0 \in \mathbb{R}^{n}$
+\begin{align}
+\sysInput_1 &= \sysInput_0 - \lmatrix\error_0 = (\vec{I} - \lmatrix\latentMat)\sysInput_0 - \lmatrix\linDist, \\
+\sysInput_2 &= \sysInput_1 - \lmatrix(\latentMat\sysInput_1 + \linDist) = (\vec{I} - \lmatrix\latentMat)^{2}\sysInput_0 - (\vec{I} - \lmatrix\latentMat)\lmatrix\linDist - \lmatrix\linDist.
+\end{align}
+%
+\noindent Hence for an arbitrary $k \in \mathbb{Z}^{+}$
+%
+\begin{align}
+\sysInput_{k+1} &= (\vec{I} - \lmatrix\latentMat)\sysInput_{k} - \lmatrix\linDist, \\
+\sysInput_k &= (\vec{I} - \lmatrix\latentMat)^{k}\sysInput_0 - \sum_{l=0}^{k-1}(\vec{I} - \lmatrix\latentMat)^{l}\lmatrix\linDist.
+\end{align}
+%
+\noindent The series is bounded and convergent if and only if the spectral norm $\rho(\vec{I} - \lmatrix\latentMat) < 1$. The limit is the fixed point of the series
+%
+\begin{align}
+\sysInput_{\infty} &= (\vec{I} - \lmatrix\latentMat)\sysInput_{\infty} - \lmatrix\linDist, \\
+\sysInput_{\infty} &= -(\lmatrix\latentMat)^{-1}\lmatrix\linDist.
+\end{align}
+%
+\end{proof}
+% requires condition rank(F) = n and rank(L) = n. Otherwise system is not controllable. [show]
+%
+We can now easily show the steady-state error of the ILC law.
+%
+\begin{cor}
+For a system that is asymptotically stable in the iteration-domain, the steady-state error is finite: $\error_{\infty} = (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\linDist$. In particular, $\projOblique = (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)$ is an oblique projection matrix onto $\mathrm{null}(\latentMat^{\mathrm{T}})$ and is orthogonal if and only if $\lmatrix = \latentMat^{\dagger}$.
+\end{cor}
+%
+\begin{proof}
+%
+\begin{align}
+\error_{\infty} &= \latentMat\sysInput_{\infty} + \linDist, \\
+\error_{\infty} &= -\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\linDist + \linDist = (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\linDist.
+\end{align}
+%
+Conditions for the projection matrix can be easily checked.
+\end{proof}
+%
+The corollary states that to get a steady-state error of smallest norm, we would need to know the exact dynamics of the system. However, even without knowing the exact dynamics, conditions for asymptotic stability are easy to satisfy. However, usually the convergence will be \emph{nonmonotonic}.
+%
+\begin{lem} A system operating under an ILC update law is monotonically convergent under the 2-norm if the matrix 2-norm $\sigma_{max} = \|(\vec{I} - \latentMat\lmatrix)\|_2 < 1$. \end{lem}
+%
+\begin{proof}
+Writing again the dynamics equation and iterating with the ILC law we get
+%
+\begin{align}
+\error_{k+1} &= \latentMat(\sysInput_k - \lmatrix\error_k) + \linDist, \\
+\error_{k+1} &= \error_{k} - \latentMat\lmatrix\error_k = (\vec{I} - \latentMat\lmatrix)\error_k.
+\end{align}
+%
+The matrix 2-norm is an induced norm and compatible by definition
+%
+\begin{align}
+\|\error_{k+1}\|_2 \leq \|(\vec{I} - \latentMat\lmatrix)\|_2 \|\error_{k}\|_2 < \|\error_{k}\|_2.
+\end{align}
+\end{proof}
+%
+Monotonically convergent ILC is by definition asymptotically stable. We would like to show that pseudoinverse-based ILC with model mismatch, i.e. $\lmatrix = \systemMat^{\dagger} = (\latentMat + \errorMat)^{\dagger}$ is still monotonically convergent for suitably bounded error matrices, e.g. $\|\errorMat\|_2 < \delta$ for some small $\delta \in \mathbb{R}$. Can these bounds be enlarged with TLS? The answer is yes.
 
 \subsection{Adaptive ILC based on Bayesian TLS}\label{adaptiveILC}
 
