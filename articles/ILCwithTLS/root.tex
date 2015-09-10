@@ -77,7 +77,8 @@
 \newcommand{\ValueFunction}{J}
 \newcommand{\episode}{k} % used for episode number
 \newcommand{\projOblique}{\vec{P}_{Z,L}^{\perp}} % used for oblique projection
-\newcommand{\proj}{\vec{P}_{Z}^{\perp}} % used for orthogonal projection
+\newcommand{\projOrth}{\vec{P}_{Z}^{\perp}} % used for orthogonal projection perp. to ran(Z)
+\newcommand{\proj}{\vec{P}_{Z}} % used for orthogonal projection to ran(Z)
 
 \newcommand{\totalTime}{T} % total time duration 
 \newcommand{\numSteps}{N} % total number of time steps
@@ -349,7 +350,7 @@ Taking the dynamics $\error = \latentMat \sysInput + \linDist$ for an arbitrary 
 We can now easily show the steady-state error of the ILC law.
 %
 \begin{cor}
-For a system that is asymptotically stable in the iteration-domain, the steady-state error is finite: $\error_{\infty} = (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\linDist$. In particular, $\projOblique = (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)$ is an oblique projection matrix onto $\mathrm{null}(\latentMat^{\mathrm{T}})$ and is orthogonal if and only if $\lmatrix = \latentMat^{\dagger}$.
+For a system that is asymptotically stable in the iteration-domain, the steady-state error is finite: $\error_{\infty} = (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\linDist$. In particular, $\projOblique = (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)$ is an oblique projection matrix onto $\mathrm{null}(\latentMat^{\mathrm{T}})$ and is orthogonal if $\lmatrix = \latentMat^{\dagger}$.
 \end{cor}
 %
 \begin{proof}
@@ -364,7 +365,7 @@ Conditions for the projection matrix can be easily checked.
 %
 The corollary states that to get a steady-state error of smallest norm, we would need to know the exact dynamics of the system. However, even without knowing the exact dynamics, conditions for asymptotic stability are easy to satisfy. However, usually the convergence will be \emph{nonmonotonic}.
 %
-\begin{lem} A system operating under an ILC update law is monotonically convergent under the 2-norm if the matrix 2-norm $\sigma_{max} = \|(\vec{I} - \latentMat\lmatrix)\|_2 < 1$. \end{lem}
+\begin{lem} A system operating under an ILC update law is monotonically convergent under the 2-norm if the matrix 2-norm $\sigma_{max} = \|\vec{I} - \latentMat\lmatrix\|_2 < 1$. \end{lem}
 %
 \begin{proof}
 Writing again the dynamics equation and iterating with the ILC law we get
@@ -377,11 +378,22 @@ Writing again the dynamics equation and iterating with the ILC law we get
 The matrix 2-norm is an induced norm and compatible by definition
 %
 \begin{align}
-\|\error_{k+1}\|_2 \leq \|(\vec{I} - \latentMat\lmatrix)\|_2 \|\error_{k}\|_2 < \|\error_{k}\|_2.
+\|\error_{k+1}\|_2 \leq \|\vec{I} - \latentMat\lmatrix\|_2 \|\error_{k}\|_2 < \|\error_{k}\|_2.
 \end{align}
 \end{proof}
 %
 Monotonically convergent ILC is by definition asymptotically stable. We would like to show that pseudoinverse-based ILC with model mismatch, i.e. $\lmatrix = \systemMat^{\dagger} = (\latentMat + \errorMat)^{\dagger}$ is still monotonically convergent for suitably bounded error matrices, e.g. $\|\errorMat\|_2 < \delta$ for some small $\delta \in \mathbb{R}$. Can these bounds be enlarged with TLS? The answer is yes.
+
+\begin{lem}
+The ILC update law of the form $\sysInput_{k+1} = \sysInput_{k} - \lmatrix \error_{k}$ with $\lmatrix = \systemMat^{\dagger}$ operating on the unknown system with response $\error = \latentMat \sysInput + \linDist$ is monotonically convergent if $\latentMat = \systemMat + \errorMat$ with $\|\errorMat\|_2 < \delta$. 
+\end{lem}
+%
+\begin{proof}
+Decomposing the error with $\proj = \latentMat\latentMat^{\dagger}$ to its orthogonal components
+\begin{align}
+\|\error_{k+1}\|_2^2 &= \|\proj\error_{k+1}\|_2^2 + \|\projOrth\error_{k+1}\|_2^2
+\end{align}
+\end{proof}
 
 \subsection{Adaptive ILC based on Bayesian TLS}\label{adaptiveILC}
 
