@@ -321,7 +321,7 @@ In this section we analyze and prove the monotonic convergence of the pseudoinve
 %
 We refer to the input-output matrix $\latentMat$ of the unknown system as the \emph{latent matrix} and $\lmatrix$ as the \emph{learning matrix}. Conditions for ensuring asymptotic stability are given below.
 %
-\begin{lem} A system operating under an ILC update law is asymptotically stable if the spectral norm $\rho = |\lambda_{\mathrm{max}}(\vec{I} - \lmatrix\latentMat)| < 1$. \end{lem}
+\begin{lem} A system operating under an ILC update law is asymptotically stable if the spectral radius $\rho = |\lambda_{\mathrm{max}}(\vec{I} - \lmatrix\latentMat)| < 1$. \end{lem}
 %
 \begin{proof}
 Taking the dynamics $\error = \latentMat \sysInput + \linDist$ for an arbitrary initial guess $\sysInput_0 \in \mathbb{R}^{n}$
@@ -334,10 +334,10 @@ Taking the dynamics $\error = \latentMat \sysInput + \linDist$ for an arbitrary 
 %
 \begin{align}
 \sysInput_{k+1} &= (\vec{I} - \lmatrix\latentMat)\sysInput_{k} - \lmatrix\linDist, \\
-\sysInput_k &= (\vec{I} - \lmatrix\latentMat)^{k}\sysInput_0 - \sum_{l=0}^{k-1}(\vec{I} - \lmatrix\latentMat)^{l}\lmatrix\linDist.
+\sysInput_k &= (\vec{I} - \lmatrix\latentMat)^{k}\sysInput_0 - \Big(\sum_{l=0}^{k-1}(\vec{I} - \lmatrix\latentMat)^{l}\Big)\lmatrix\linDist.
 \end{align}
 %
-\noindent The series is bounded and convergent if and only if the spectral norm $\rho(\vec{I} - \lmatrix\latentMat) < 1$. The limit is the fixed point of the series
+\noindent The series $\{\sysInput_{k}\}_{k=1}^{\infty}$ is bounded and convergent if and only if the spectral radius $\rho < 1$. Moreover the matrix $\lmatrix\latentMat$ is invertible since we can find a matrix norm $\|\cdot\|$ with $\rho \leq \|\vec{I} - \lmatrix\latentMat\| \leq \rho + \delta$ for some $\delta < 1 - \rho$ which implies $(\lmatrix\latentMat)^{-1} = \sum_{l=0}^{\infty}(\vec{I} - \lmatrix\latentMat)^{l}$. The limit is the fixed point of the series
 %
 \begin{align}
 \sysInput_{\infty} &= (\vec{I} - \lmatrix\latentMat)\sysInput_{\infty} - \lmatrix\linDist, \\

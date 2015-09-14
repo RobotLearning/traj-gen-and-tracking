@@ -8,27 +8,29 @@ function x = tls(A,b,thresh)
 % A is the matrix
 % b is the RHS vector
 % thresh (optional) is the SVD threshold
-[m n] = size(A);
+%
+[m, n] = size(A);
 if sum(size(b)-[m 1])
-error('A, b size mis-match')
+    error('A, b size mis-match')
 end
-if nargin==2
-thresh = eps;
+if nargin == 2
+    thresh = eps;
 end
 
 % augmented matrix
 Z = [full(A');b'];
-[V W] = svd(Z);
+[U, S, V] = svd(Z);
 
 % find sing val above
-d = diag(W);
-k = sum(d<thresh);
+d = diag(S);
+k = sum(d < thresh);
 q = n - k + 1;
 
 % proceed to checkout
-V12 = V(1:n,q:end);
-V22 = V(n+1,q:end);
+V12 = U(1:n, q:end);
+V22 = U(n+1, q:end);
 x = -V12 * V22' ./ norm(V22).^2;
+
 end
 
 %{
