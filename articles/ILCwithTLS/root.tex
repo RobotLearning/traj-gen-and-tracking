@@ -116,7 +116,7 @@
 
 Iterative Learning Control is a control theoretic learning paradigm that aims to iteratively improve the tracking performance of a repetitive system. Optimization based approaches to ILC assume that a detailed knowledge of the plant to be controlled is available. However, such approaches can diverge terribly due to overconfidence. 
 
-In this paper, we propose a more cautious ILC algorithm using Total Least Squares (TLS), that is robust with respect to modeling uncertainties. We prove that our algorithm is monotonically convergent for a wider variety of nominal models, compared to existing model-based approaches. Moreover we give a Bayesian interpretation of TLS and build an adaptive routine that can adaptively identify the underlying linearized model. Simulation and real robot results confirm the practical significance of our contributions. %incrementally or iteratively identify?
+In this paper, we propose a more cautious ILC algorithm using Total Least Squares (TLS), that is robust with respect to modeling uncertainties. We prove that our algorithm is monotonically convergent for a wider range of nominal models, compared to existing model-based approaches. Moreover we give a Bayesian interpretation of TLS and build an adaptive routine that can adaptively identify the underlying linearized model. Simulation and real robot results confirm the practical significance of our contributions. %incrementally or iteratively identify?
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -321,7 +321,7 @@ In this section we analyze and prove the monotonic convergence of the pseudoinve
 %
 We refer to the input-output matrix $\latentMat$ of the unknown system as the \emph{latent matrix} and $\lmatrix$ as the \emph{learning matrix}. Conditions for ensuring asymptotic stability are given below.
 %
-\begin{lem} A system operating under an ILC update law is asymptotically stable if the spectral radius $\rho = |\lambda_{\mathrm{max}}(\vec{I} - \lmatrix\latentMat)| < 1$. \end{lem}
+\begin{lem}[AS] \label{AS} A system operating under an ILC update law is asymptotically stable (AS) if the spectral radius $\rho = |\lambda_{\mathrm{max}}(\vec{I} - \lmatrix\latentMat)| < 1$. \end{lem}
 %
 \begin{proof}
 Taking the dynamics $\error = \latentMat \sysInput + \linDist$ for an arbitrary initial guess $\sysInput_0 \in \mathbb{R}^{n}$
@@ -338,6 +338,7 @@ Taking the dynamics $\error = \latentMat \sysInput + \linDist$ for an arbitrary 
 \end{align}
 %
 \noindent The series $\{\sysInput_{k}\}_{k=1}^{\infty}$ is bounded and convergent if and only if the spectral radius $\rho < 1$. Moreover the matrix $\lmatrix\latentMat$ is invertible since we can find a matrix norm $\|\cdot\|$ with $\rho \leq \|\vec{I} - \lmatrix\latentMat\| \leq \rho + \delta$ for some $\delta < 1 - \rho$ which implies $(\lmatrix\latentMat)^{-1} = \sum_{l=0}^{\infty}(\vec{I} - \lmatrix\latentMat)^{l}$. The limit is the fixed point of the series
+% put reference for invertibility
 %
 \begin{align}
 \sysInput_{\infty} &= (\vec{I} - \lmatrix\latentMat)\sysInput_{\infty} - \lmatrix\linDist, \\
@@ -345,7 +346,6 @@ Taking the dynamics $\error = \latentMat \sysInput + \linDist$ for an arbitrary 
 \end{align}
 %
 \end{proof}
-% requires condition rank(F) = n and rank(L) = n. Otherwise system is not controllable. [show]
 %
 We can now easily show the steady-state error of the ILC law.
 %
@@ -363,37 +363,89 @@ For a system that is asymptotically stable in the iteration-domain, the steady-s
 Conditions for the projection matrix can be easily checked.
 \end{proof}
 %
-The corollary states that to get a steady-state error of smallest norm, we would need to know the exact dynamics of the system. However, even without knowing the exact dynamics, conditions for asymptotic stability are easy to satisfy. However, usually the convergence will be \emph{nonmonotonic}.
+The corollary states that to get a steady-state error of smallest norm, we would need to know the exact dynamics of the system. However, even without knowing the exact dynamics, conditions for asymptotic stability are easy to satisfy. %
+With Lemma~\ref{AS} it is difficult to come up with a constructive criterion for AS however. Especially we would like to obtain a more easily checked AS criterion for the pseudoinverse of $\systemMat$ when the underlying system $\latentMat$ is close to $\systemMat$, e.g. $\latentMat = \systemMat + \errorMat$ for some error $\errorMat$ with bounded spectral norm, $\|\errorMat\|_2 < M$, with $M \in \mathbb{R}$ small. We now give such a (sufficient) criterion for AS.
 %
-\begin{lem} A system operating under an ILC update law is monotonically convergent under the 2-norm if the matrix 2-norm $\sigma_{max} = \|\vec{I} - \latentMat\lmatrix\|_2 < 1$. \end{lem}
+\begin{lem}
+A system operating under the pseudoinverse update law \eqref{pseudoinverseILC2} is asymptotically stable (AS) if the matrices $\systemMat$, $\latentMat$ are full rank, i.e. $\mathrm{rank}(\systemMat) = \mathrm{rank}(\latentMat) = n$ and $\|\errorMat\|_2 = \sigma_{max}(\errorMat) < \frac{\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \sigma_{min}(\systemMat)}$, $\mu = \frac{1 + \sqrt{5}}{2}$.
+\end{lem}
+%
+\begin{proof}
+It is sufficient to bound the spectral radius with the spectral norm and show that it is less than one. The fact that $\latentMat$ is of full column rank simplifies things quite significantly. Using $\latentMat^{\dagger}\latentMat = \vec{I}$
+%
+\begin{align}
+\rho(\vec{I} - \lmatrix\latentMat) \leq \|\vec{I} - \lmatrix\latentMat\|_2 = \|\latentMat^{\dagger}\latentMat - \lmatrix\latentMat\|_2\leq \|\latentMat^{\dagger} - \systemMat^{\dagger}\|_{2}\|\latentMat\|_2,
+\end{align}
+%
+We can use e.g. Theorem 4.1 in \cite{Wedin73} since $rank(\systemMat) = rank(\latentMat)$ to bound the term containing the pseudoinverses
+%
+\begin{align}
+\|\latentMat^{\dagger} - \systemMat^{\dagger}\|_{2} \leq \mu \|\systemMat^{\dagger}\|_2 \|\latentMat^{\dagger}\|_2 \|\errorMat\|_2,
+\end{align}
+%
+further $\|\latentMat\|_2 \leq \|\systemMat\|_2 + \|\errorMat\|_2$, and bounding $\|\latentMat^{\dagger}\|_2$ with Lemma 3.1 in \cite{Wedin73} (because $\|\errorMat\|_2 < 1/\|\systemMat^{\dagger}\|_2$) we get
+%
+\begin{align}
+\|\latentMat^{\dagger}\|_2 \leq \frac{\|\systemMat^{\dagger}\|_2}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2}, 
+\end{align}
+%
+and putting it all together
+%
+\begin{align}
+\|\vec{I} - \systemMat^{\dagger}\latentMat\|_2 &\leq \frac{\mu \|\systemMat^{\dagger}\|^{2}\|\errorMat\|_2(\|\systemMat\|_2 + \|\errorMat\|_2)}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2} \\
+&<  \frac{\mu \|\systemMat^{\dagger}\|^{2}\|\errorMat\|_2(\|\systemMat\|_2 + 1/\|\systemMat^{\dagger}\|_2)}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2} \\
+&<1
+\end{align}
+%
+is satisfied when 
+%
+\begin{align}
+\|\errorMat\|_2 &< \frac{1}{\mu\|\systemMat^{\dagger}\|_2^{2}\|\systemMat\|_2 + \mu\|\systemMat^{\dagger}\|_2 + \|\systemMat^{\dagger}\|_2} \\
+&= \frac{\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \sigma_{min}(\systemMat)}.
+\end{align}
+\end{proof}
+%
+In this case the bound we derived is loose enough to guarantee also \emph{monotonicity}.
+%
+\begin{defn}
+An AS system operating under an ILC update law is monotonically convergent with rate $1/\gamma$, $0 < \gamma < 1$, if $\|\error_{k+1} - \error_{\infty}\| < \gamma \|\error_{k} - \error_{\infty}\|$ for all $k \in \mathbb{Z}^{+}$.
+\end{defn}
+%
+\begin{lem} The ILC update law of the form $\sysInput_{k+1} = \sysInput_{k} - \lmatrix \error_{k}$ with $\lmatrix = \systemMat^{\dagger}$ operating on the unknown system with response $\error = \latentMat \sysInput + \linDist$ is monotonically convergent under the spectral norm with rate $1/\gamma$, $\gamma < 1$ if the matrices $\systemMat$, $\latentMat = \systemMat + \errorMat$ are full rank and $\|\errorMat\|_2 = \sigma_{max}(\errorMat) < \frac{\gamma\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \gamma\sigma_{min}(\systemMat)}$, $\mu = \frac{1 + \sqrt{5}}{2}$.  \end{lem}
 %
 \begin{proof}
 Writing again the dynamics equation and iterating with the ILC law we get
 %
 \begin{align}
-\error_{k+1} &= \latentMat(\sysInput_k - \lmatrix\error_k) + \linDist, \\
-\error_{k+1} &= \error_{k} - \latentMat\lmatrix\error_k = (\vec{I} - \latentMat\lmatrix)\error_k.
+&\error_{k+1} = \latentMat(\sysInput_k - \lmatrix\error_k) + \linDist, \\
+&\error_{k+1} = \error_{k} - \latentMat\lmatrix\error_k = (\vec{I} - \latentMat\lmatrix)\error_k, \\
+&\error_{k+1} - \error_{\infty} = (\vec{I} - \latentMat\lmatrix)\error_k - (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
+&\error_{k+1} - \error_{\infty} = (\latentMat\lmatrix - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
+&\error_{k} - \error_{\infty} = \latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k
 \end{align}
 %
-The matrix 2-norm is an induced norm and compatible by definition
+Since the system is AS according to \ref{AS} and the inverse of $\lmatrix\latentMat$ exists, $\vec{I} = \lmatrix\latentMat(\lmatrix\latentMat)^{-1}$ and
 %
 \begin{align}
-\|\error_{k+1}\|_2 \leq \|\vec{I} - \latentMat\lmatrix\|_2 \|\error_{k}\|_2 < \|\error_{k}\|_2.
+\|\error_{k+1} - \error_{\infty}\|_2 &= (\latentMat\lmatrix\latentMat(\lmatrix\latentMat)^{-1}\lmatrix - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
+\|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\lmatrix)\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
+\|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k + \latentMat(\lmatrix - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
+\|\error_{k+1} - \error_{\infty}\|_2 &= \|\latentMat(\systemMat^{\dagger} - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2,
 \end{align}
-\end{proof}
 %
-Monotonically convergent ILC is by definition asymptotically stable. We would like to show that pseudoinverse-based ILC with model mismatch, i.e. $\lmatrix = \systemMat^{\dagger} = (\latentMat + \errorMat)^{\dagger}$ is still monotonically convergent for suitably bounded error matrices, e.g. $\|\errorMat\|_2 < \delta$ for some small $\delta \in \mathbb{R}$. Can these bounds be enlarged with TLS? The answer is yes.
-
-\begin{lem}
-The ILC update law of the form $\sysInput_{k+1} = \sysInput_{k} - \lmatrix \error_{k}$ with $\lmatrix = \systemMat^{\dagger}$ operating on the unknown system with response $\error = \latentMat \sysInput + \linDist$ is monotonically convergent if $\latentMat = \systemMat + \errorMat$ with $\|\errorMat\|_2 < \delta$. 
-\end{lem}
+since $\latentMat\latentMat^{\dagger}\latentMat = \latentMat$. The matrix 2-norm is an induced norm and compatible by definition
 %
-\begin{proof}
-Decomposing the error with $\proj = \latentMat\latentMat^{\dagger}$ to its orthogonal components
 \begin{align}
-\|\error_{k+1}\|_2^2 &= \|\proj\error_{k+1}\|_2^2 + \|\projOrth\error_{k+1}\|_2^2
+\|\error_{k+1} - \error_{\infty}\|_2 &\leq \|\latentMat\|_2\|\systemMat^{\dagger} - \latentMat^{\dagger}\|_2\|\error_{k} - \error_{\infty}\|_2,\\
+\|\error_{k+1} - \error_{\infty}\|_2 &< \gamma\|\error_{k} - \error_{\infty}\|_2,
 \end{align}
+%
+if $\sigma_{max}(\errorMat) < \frac{\gamma\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \gamma\sigma_{min}(\systemMat)}$, as in Lemma~\ref{AS}.
+%
 \end{proof}
+%
+%Monotonically convergent ILC is by definition asymptotically stable. We would like to show that pseudoinverse-based ILC with model mismatch, i.e. $\lmatrix = \systemMat^{\dagger} = (\latentMat + \errorMat)^{\dagger}$ is still monotonically convergent for suitably bounded error matrices, e.g. $\|\errorMat\|_2 < \delta$ for some small $\delta \in \mathbb{R}$. Can these bounds be enlarged with TLS? The answer is yes.
+%
 
 \subsection{Adaptive ILC based on Bayesian TLS}\label{adaptiveILC}
 
