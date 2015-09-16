@@ -367,49 +367,26 @@ The corollary states that to get a steady-state error of smallest norm, we would
 With Lemma~\ref{AS} it is difficult to come up with a constructive criterion for AS however. Especially we would like to obtain a more easily checked AS criterion for the pseudoinverse of $\systemMat$ when the underlying system $\latentMat$ is close to $\systemMat$, e.g. $\latentMat = \systemMat + \errorMat$ for some error $\errorMat$ with bounded spectral norm, $\|\errorMat\|_2 < M$, with $M \in \mathbb{R}$ small. We now give such a (sufficient) criterion for AS.
 %
 \begin{lem}
-A system operating under the pseudoinverse update law \eqref{pseudoinverseILC2} is asymptotically stable (AS) if the matrices $\systemMat$, $\latentMat$ are full rank, i.e. $\mathrm{rank}(\systemMat) = \mathrm{rank}(\latentMat) = n$ and $\|\errorMat\|_2 = \sigma_{max}(\errorMat) < \frac{\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \sigma_{min}(\systemMat)}$, $\mu = \frac{1 + \sqrt{5}}{2}$.
+A system operating under the pseudoinverse update law \eqref{pseudoinverseILC2} is asymptotically stable (AS) if the matrices $\systemMat$, $\latentMat$ are full rank, i.e. $\mathrm{rank}(\systemMat) = \mathrm{rank}(\latentMat) = n$ and $\|\errorMat\|_2 = \sigma_{max}(\errorMat) < \sigma_{min}(\systemMat) = 1/\|\systemMat^{\dagger}\|_2$.
 \end{lem}
 %
 \begin{proof}
-It is sufficient to bound the spectral radius with the spectral norm and show that it is less than one. The fact that $\latentMat$ is of full column rank simplifies things quite significantly. Using $\latentMat^{\dagger}\latentMat = \vec{I}$
+It is sufficient to bound the spectral radius with the spectral norm and show that it is less than one. The fact that $\systemMat$ is of full column rank simplifies things quite significantly. Using $\systemMat^{\dagger}\systemMat = \vec{I}$
 %
 \begin{align}
-\rho(\vec{I} - \lmatrix\latentMat) \leq \|\vec{I} - \lmatrix\latentMat\|_2 = \|\latentMat^{\dagger}\latentMat - \lmatrix\latentMat\|_2\leq \|\latentMat^{\dagger} - \systemMat^{\dagger}\|_{2}\|\latentMat\|_2,
+\rho(\vec{I} - \lmatrix\latentMat) \leq \|\vec{I} - \lmatrix\latentMat\|_2 = \|\vec{I} - \systemMat^{\dagger}(\systemMat + \errorMat)\|_2 =  \|\systemMat^{\dagger}\errorMat\|_2 \leq \|\systemMat^{\dagger}\|_2\|\errorMat\|_2,
 \end{align}
 %
-We can use e.g. Theorem 4.1 in \cite{Wedin73} since $rank(\systemMat) = rank(\latentMat)$ to bound the term containing the pseudoinverses
-%
-\begin{align}
-\|\latentMat^{\dagger} - \systemMat^{\dagger}\|_{2} \leq \mu \|\systemMat^{\dagger}\|_2 \|\latentMat^{\dagger}\|_2 \|\errorMat\|_2,
-\end{align}
-%
-further $\|\latentMat\|_2 \leq \|\systemMat\|_2 + \|\errorMat\|_2$, and bounding $\|\latentMat^{\dagger}\|_2$ with Lemma 3.1 in \cite{Wedin73} (because $\|\errorMat\|_2 < 1/\|\systemMat^{\dagger}\|_2$) we get
-%
-\begin{align}
-\|\latentMat^{\dagger}\|_2 \leq \frac{\|\systemMat^{\dagger}\|_2}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2}, 
-\end{align}
-%
-and putting it all together
-%
-\begin{align}
-\|\vec{I} - \systemMat^{\dagger}\latentMat\|_2 &\leq \frac{\mu \|\systemMat^{\dagger}\|^{2}\|\errorMat\|_2(\|\systemMat\|_2 + \|\errorMat\|_2)}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2} \\
-&<  \frac{\mu \|\systemMat^{\dagger}\|^{2}\|\errorMat\|_2(\|\systemMat\|_2 + 1/\|\systemMat^{\dagger}\|_2)}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2} \\
-&<1
-\end{align}
-%
-is satisfied when 
-%
-\begin{align}
-\|\errorMat\|_2 &< \frac{1}{\mu\|\systemMat^{\dagger}\|_2^{2}\|\systemMat\|_2 + \mu\|\systemMat^{\dagger}\|_2 + \|\systemMat^{\dagger}\|_2} \\
-&= \frac{\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \sigma_{min}(\systemMat)}.
-\end{align}
+which is less than one if $\|\errorMat\|_2 < 1/\|\systemMat^{\dagger}\|_2$.
 \end{proof}
 %
-In this case the bound we derived is loose enough to guarantee also \emph{monotonicity}.
+Generally an asymptotically stable ILC algorithm may not be \emph{monotonic}.
 %
 \begin{defn}
-An AS system operating under an ILC update law is monotonically convergent with rate $1/\gamma$, $0 < \gamma < 1$, if $\|\error_{k+1} - \error_{\infty}\| < \gamma \|\error_{k} - \error_{\infty}\|$ for all $k \in \mathbb{Z}^{+}$.
+An AS system operating under an ILC update law is monotonically convergent (MC) with rate $1/\gamma$, $0 < \gamma < 1$, if $\|\error_{k+1} - \error_{\infty}\| < \gamma \|\error_{k} - \error_{\infty}\|$ for all $k \in \mathbb{Z}^{+}$.
 \end{defn}
+%
+The bounds on the error matrix $\errorMat$ guaranteeing MC are much tighter than bounds for AS.
 %
 \begin{lem} The ILC update law of the form $\sysInput_{k+1} = \sysInput_{k} - \lmatrix \error_{k}$ with $\lmatrix = \systemMat^{\dagger}$ operating on the unknown system with response $\error = \latentMat \sysInput + \linDist$ is monotonically convergent under the spectral norm with rate $1/\gamma$, $\gamma < 1$ if the matrices $\systemMat$, $\latentMat = \systemMat + \errorMat$ are full rank and $\|\errorMat\|_2 = \sigma_{max}(\errorMat) < \frac{\gamma\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \gamma\sigma_{min}(\systemMat)}$, $\mu = \frac{1 + \sqrt{5}}{2}$.  \end{lem}
 %
@@ -421,15 +398,15 @@ Writing again the dynamics equation and iterating with the ILC law we get
 &\error_{k+1} = \error_{k} - \latentMat\lmatrix\error_k = (\vec{I} - \latentMat\lmatrix)\error_k, \\
 &\error_{k+1} - \error_{\infty} = (\vec{I} - \latentMat\lmatrix)\error_k - (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
 &\error_{k+1} - \error_{\infty} = (\latentMat\lmatrix - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
-&\error_{k} - \error_{\infty} = \latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k
+&\error_{k} - \error_{\infty} = \latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k,
 \end{align}
 %
-Since the system is AS according to \ref{AS} and the inverse of $\lmatrix\latentMat$ exists, $\vec{I} = \lmatrix\latentMat(\lmatrix\latentMat)^{-1}$ and
+Since the system is AS according to Lemma~\ref{AS} and the inverse of $\lmatrix\latentMat$ exists, $\vec{I} = \lmatrix\latentMat(\lmatrix\latentMat)^{-1}$ and
 %
 \begin{align}
 \|\error_{k+1} - \error_{\infty}\|_2 &= (\latentMat\lmatrix\latentMat(\lmatrix\latentMat)^{-1}\lmatrix - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
 \|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\lmatrix)\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
-\|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k + \latentMat(\lmatrix - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
+\|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k - \latentMat(\lmatrix - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
 \|\error_{k+1} - \error_{\infty}\|_2 &= \|\latentMat(\systemMat^{\dagger} - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2,
 \end{align}
 %
@@ -437,10 +414,36 @@ since $\latentMat\latentMat^{\dagger}\latentMat = \latentMat$. The matrix 2-norm
 %
 \begin{align}
 \|\error_{k+1} - \error_{\infty}\|_2 &\leq \|\latentMat\|_2\|\systemMat^{\dagger} - \latentMat^{\dagger}\|_2\|\error_{k} - \error_{\infty}\|_2,\\
-\|\error_{k+1} - \error_{\infty}\|_2 &< \gamma\|\error_{k} - \error_{\infty}\|_2,
+%\|\error_{k+1} - \error_{\infty}\|_2 &< \gamma\|\error_{k} - \error_{\infty}\|_2,
 \end{align}
 %
-if $\sigma_{max}(\errorMat) < \frac{\gamma\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \gamma\sigma_{min}(\systemMat)}$, as in Lemma~\ref{AS}.
+We can use e.g. Theorem 4.1 in \cite{Wedin73} since $rank(\systemMat) = rank(\latentMat)$ to bound the term containing the pseudoinverses
+%
+\begin{align}
+\|\latentMat^{\dagger} - \systemMat^{\dagger}\|_{2} \leq \mu \|\systemMat^{\dagger}\|_2 \|\latentMat^{\dagger}\|_2 \|\errorMat\|_2,
+\end{align}
+%
+further $\|\latentMat\|_2 \leq \|\systemMat\|_2 + \|\errorMat\|_2$, and bounding $\|\latentMat^{\dagger}\|_2$ with Lemma 3.1 in \cite{Wedin73} (because $\|\errorMat\|_2 < 1/\|\systemMat^{\dagger}\|_2$) we get
+%
+\begin{align}
+\|\latentMat^{\dagger}\|_2 \leq \frac{\|\systemMat^{\dagger}\|_2}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2}.
+\end{align}
+%
+Putting it all together
+%
+\begin{align}
+\|\error_{k+1} - \error_{\infty}\|_2 &\leq \frac{\mu \|\systemMat^{\dagger}\|^{2}\|\errorMat\|_2(\|\systemMat\|_2 + \|\errorMat\|_2)}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2}\|\error_{k} - \error_{\infty}\|_2 \\
+&<  \frac{\mu \|\systemMat^{\dagger}\|^{2}\|\errorMat\|_2(\|\systemMat\|_2 + 1/\|\systemMat^{\dagger}\|_2)}{1 - \|\systemMat^{\dagger}\|_2\|\errorMat\|_2}\|\error_{k+1} - \error_{\infty}\|_2.
+\end{align}
+%
+Left hand side less than $\gamma$ when
+%
+\begin{align}
+\|\errorMat\|_2 &\leq \frac{\gamma}{\mu\|\systemMat^{\dagger}\|_2^{2}\|\systemMat\|_2 + \mu\|\systemMat^{\dagger}\|_2 + \gamma\|\systemMat^{\dagger}\|_2} \\
+&= \frac{\gamma\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \gamma\sigma_{min}(\systemMat)}.
+\end{align}
+
+%if $\sigma_{max}(\errorMat) < \frac{\gamma\sigma_{min}^{2}(\systemMat)}{\mu\sigma_{max}(\systemMat) + \mu\sigma_{min}(\systemMat) + \gamma\sigma_{min}(\systemMat)}$, as in Lemma~\ref{AS}.
 %
 \end{proof}
 %
