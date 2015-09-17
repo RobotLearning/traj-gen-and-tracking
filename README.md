@@ -33,6 +33,7 @@ Robot list:
 - Wrist problem in robot computer?
 
 Extensions:
+- Total Gaussian Process?
 - Relaxation Learning Control: how to define cost function? Semi markov decision process? Optimal stopping?
   relation to path following? Metronome? Apply monotonic convergence criteria and/or repetitive systems theory
   (Rogers and Owens,1992)?
