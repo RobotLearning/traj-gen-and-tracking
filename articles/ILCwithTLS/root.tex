@@ -397,14 +397,14 @@ Writing again the dynamics equation and iterating with the ILC law we get
 &\error_{k+1} = \latentMat(\sysInput_k - \lmatrix\error_k) + \linDist, \\
 &\error_{k+1} = \error_{k} - \latentMat\lmatrix\error_k = (\vec{I} - \latentMat\lmatrix)\error_k, \\
 &\error_{k+1} - \error_{\infty} = (\vec{I} - \latentMat\lmatrix)\error_k - (\vec{I} - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
-&\error_{k+1} - \error_{\infty} = (\latentMat\lmatrix - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
+&\error_{k+1} - \error_{\infty} = (\latentMat(\lmatrix\latentMat)^{-1}\lmatrix - \latentMat\lmatrix)\error_k, \\
 &\error_{k} - \error_{\infty} = \latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k,
 \end{align}
 %
 Since the system is AS according to Lemma~\ref{AS} and the inverse of $\lmatrix\latentMat$ exists, $\vec{I} = \lmatrix\latentMat(\lmatrix\latentMat)^{-1}$ and
 %
 \begin{align}
-\|\error_{k+1} - \error_{\infty}\|_2 &= (\latentMat\lmatrix\latentMat(\lmatrix\latentMat)^{-1}\lmatrix - \latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
+\|\error_{k+1} - \error_{\infty}\|_2 &= (\latentMat(\lmatrix\latentMat)^{-1}\lmatrix - \latentMat\lmatrix\latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
 \|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\lmatrix)\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
 \|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k - \latentMat(\lmatrix - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
 \|\error_{k+1} - \error_{\infty}\|_2 &= \|\latentMat(\systemMat^{\dagger} - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2,
