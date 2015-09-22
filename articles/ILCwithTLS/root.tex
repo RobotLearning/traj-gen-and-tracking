@@ -404,7 +404,7 @@ Writing again the dynamics equation and iterating with the ILC law we get
 Since the system is AS according to Lemma~\ref{AS} and the inverse of $\lmatrix\latentMat$ exists, $\vec{I} = \lmatrix\latentMat(\lmatrix\latentMat)^{-1}$ and
 %
 \begin{align}
-\|\error_{k+1} - \error_{\infty}\|_2 &= (\latentMat(\lmatrix\latentMat)^{-1}\lmatrix - \latentMat\lmatrix\latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k, \\
+\|\error_{k+1} - \error_{\infty}\|_2 &= \|(\latentMat(\lmatrix\latentMat)^{-1}\lmatrix - \latentMat\lmatrix\latentMat(\lmatrix\latentMat)^{-1}\lmatrix)\error_k\|_2, \\
 \|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\lmatrix)\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
 \|\error_{k+1} - \error_{\infty}\|_2 &= \|(\vec{I} - \latentMat\latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k - \latentMat(\lmatrix - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2, \\
 \|\error_{k+1} - \error_{\infty}\|_2 &= \|\latentMat(\systemMat^{\dagger} - \latentMat^{\dagger})\latentMat(\lmatrix\latentMat)^{-1}\lmatrix\error_k\|_2,
