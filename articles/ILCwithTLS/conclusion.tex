@@ -1,0 +1,7 @@
+\section{Conclusions and Future Work}\label{conclusions}
+
+In this paper, we proposed a new ILC algorithm using total least squares (TLS), that is robust with respect to modeling uncertainties. Unlike most optimization and model-based approaches, our method is not overconfident. We proved that the proposed algorithm $\alg$ is agnostic to slight model mismatch, i.e. (monotonic) stability margins of ILC algorithms can be raised by using (truncated) TLS. Moreover we gave a Bayesian interpretation of our approach and built an adaptive Kalman-filter based routine that can adaptively identify the underlying latent matrix, and hence the dynamics model. Simulation and real robot results shown confirm the practical significance of our contributions. %incrementally or iteratively identify?
+
+For future work, we would like to pursue the Bayesian interpretation of our algorithm further and in more detail. We believe that this way one can transcend the limitations of ILC and build a reinforcement learning (policy search) algorithm. By building locally and patching the underlying nonlinear dynamics model iteratively, the learning algorithm can learn between different trajectories. We plan to explore along this direction similarities to other model-based approaches and local regression techniques in the future.
+% references needed : DDP and local regression.
+% kernel and/or global TLS? 
