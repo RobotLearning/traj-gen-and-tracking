@@ -28,11 +28,12 @@
 \theoremstyle{plain}
 \newtheorem{prop}{Proposition}[section]
 \newtheorem{theorem}{Theorem}[section]
-\newtheorem{cor}{Corollary}[section]
+\newtheorem{cor}{Corollary}
 \newtheorem{lem}{Lemma} 
 \newtheorem{ex}{Example}
+
 \theoremstyle{definition}
-\newtheorem{defn}{Definition}[section]
+\newtheorem{defn}{Definition}
 
 % For algorithms
 \usepackage{algorithm}
@@ -73,9 +74,9 @@
 \newcommand{\param}{\vec{\beta}} % parameter vector
 \newcommand{\fullParam}{\vec{B}} % parameter matrix
 \newcommand{\residual}{\vec{r}} % residuals
-\newcommand{\weightingMat}{\vec{W}} % weighting the residuals
+\newcommand{\weightingMat}{\vec{M}} % weighting the residuals
 \newcommand{\errorMat}{\vec{E}} % error matrix
-\newcommand{\covarRes}{\vec{\Sigma}_{\residual}} % residual covariance
+\newcommand{\covarRes}{\vec{\Sigma}_{r}} % residual covariance
 \newcommand{\leftEigenvector}{\vec{U}} % U of SVD
 \newcommand{\rightEigenvector}{\vec{V}} % V of SVD
 
@@ -147,7 +148,7 @@ In this paper, we propose a more cautious ILC algorithm using Total Least Square
 
 \input{introduction}
 \input{method}
-\input{results}
+\input{analysis}
 \input{experiments}
 \input{conclusion}
 

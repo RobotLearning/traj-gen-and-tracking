@@ -1,5 +1,5 @@
 \section{Introduction}
-
+%
 % RC reference needed
 Learning Control paradigms, and in particular Iterative Learning Control (ILC) \cite{Arimoto84}, \cite{Bristow06} and Repetitive Control (RC) \cite{Wang09}, \cite{Longman2000}, aim to iteratively improve the tracking performance of a control system subject to repetitive tasks. In ILC, these tasks are episodic in nature: follow a desired trajectory for a fixed time duration and repeat after resetting to a certain initial state. The feedforward control inputs are adjusted based on the resulting deviations from the reference. In RC, on the other hand, the reference trajectory is periodic and tracked continuously, and unlike ILC, no resetting occurs.
 %In ILC, usually the feedforward control inputs are adjusted after each trial based on the resulting deviations from the reference trajectory. The goal is to drive such deviations to zero. 
@@ -8,22 +8,19 @@ Methods that learn to track (periodic or episodic) trajectories need to compensa
 % some more references here, on model based policy search for example?
 
 % refs needed
-When executing model-based learning algorithms on dynamic systems, it is essential for stability and safety to incorporate a notion of model uncertainty. Otherwise the learning algorithms can be overconfident and quickly go unstable~\cite{Longman2000}. One way to achieve a more stable performance is to use regularization. For example, in ILC, the inputs or the change in inputs applied to a system can be penalized. These robust methods in ILC are mostly known as Q-filtering~\cite{Bristow06} and typically incur a trade-off between stability and performance: system will often converge to a nonzero steady-state error. % if the learning algorithm is agnostic to the true dynamics of the system, it will fail to converge to zero steady-state error.
+When executing model-based learning algorithms on dynamic systems, it is essential for stability and safety to incorporate a notion of model uncertainty. Otherwise the learning algorithms can be overconfident and quickly go unstable~\cite{Longman2000}. One way to achieve a more stable performance is to filter the high-frequency updates. For example, in ILC, the inputs or the change in inputs applied to a system can be penalized. These robust methods in ILC are mostly known as Q-filtering~\cite{Bristow06} and typically incur a trade-off between stability and performance: system will often fail to converge to minimal steady-state error. % if the learning algorithm is agnostic to the true dynamics of the system, it will fail to converge to minimal steady-state error.
 
 % is it the stability margin? or simply monotonic convergence?
-In this paper, we introduce another way to increase the stability margins of model-based ILC that does not incur such a trade-off. We treat the modelling uncertainty issue in an errors-in-variables regression context and use in particular Total Least Squares (TLS) \cite{Golub80} to perform the ILC updates. By adjusting the feedforward control inputs with the TLS regressor, we exercise caution and ensure robustness with respect to model uncertainty. % while at the same time improving the steady-state performance. 
+In this paper, we introduce another way to increase the stability margins of model-based ILC that does not incur such a trade-off. We treat the modelling uncertainty issue in an errors-in-variables regression context and use in particular Total Least Squares (TLS) \cite{Golub80} to perform the ILC updates. By adjusting the feedforward control inputs with the TLS regressor, we exercise caution and ensure robustness with respect to model uncertainty while at the same time improving the steady-state performance. 
 
-Our contributions to Learning Control can be summarized as follows:
-
-\begin{itemize}
-\item We form a link between model-based Learning Control methods and errors-in-variables regression models, and analyze in particular Total Least Squares (TLS).
-\item We prove that we increase the stability margins (in the iteration domain) of ILC by incorporating a truncated TLS update rule, and ensure monotonic convergence without sacrificing minimal steady-state error. 
-\item We exploit the structure of the block lower triangular matrix estimation problem within TLS and increase its applicability for control problems. Simulation and real robot experimental results are presented.
-\item We show as an extension of our ideas, one way to incorporate a Bayesian update rule within TLS and achieve self-tuning property. 
+% Iterative only or also Repetitive Control?
+To summarize our contributions to Learning Control: we form a link between model-based Learning Control methods and errors-in-variables regression models, and analyze in particular Total Least Squares (TLS). We prove that we increase the stability margins (in the iteration domain) of ILC by incorporating a truncated TLS update rule, and ensure monotonic convergence without sacrificing minimal steady-state error. 
+%We exploit the structure of the block lower triangular matrix estimation problem within TLS and increase its applicability for control problems. 
+Finally we show as an extension of our ideas, one way to incorporate a Bayesian update rule within TLS and achieve self-tuning property. Simulation and real robot experimental results are presented.
 % relation to Kalman filter and other methods? Higher order ILC?
-\end{itemize}
 
-The outline of the paper is as follows: in the next subsection \ref{relatedWork} we give a brief literature review related to our work. In section \ref{methodology} we start by analyzing Total Least Squares. We present truncated structured TLS, along with pseudocode, and show its applicability in Iterative Learning Control. The resulting algorithm $\alg$ with minor modifications can be applied to Repetitive Control (RC) as well. In subsection \ref{ilcTLS} we prove the monotonic convergence and minimal steady state error of $\alg$. An adaptive version of $\alg$ is presented in \ref{adaptiveILC}, simulation results and real robot experiments are given in \ref{results}. Finally, conclusions and brief mention of possible future directions to explore are given in \ref{conclusions}.
+% structured TLS?
+The outline of the paper is as follows: in the next subsection \ref{relatedWork} we give a brief literature review related to our work. In section \ref{methodology} we start by analyzing Total Least Squares. We present truncated TLS, along with pseudocode, and show its applicability in Iterative Learning Control. The resulting algorithm $\alg$ with minor modifications can be applied to Repetitive Control (RC) as well. In section \ref{analysis} we prove the monotonic convergence and minimal steady state error of $\alg$. An adaptive version of $\alg$ is presented in \ref{adaptiveILC}, simulation results and real robot experiments are given in \ref{results}. Finally, conclusions and brief mention of possible future directions to explore are given in \ref{conclusions}.
 
 % references required as always.  
 \subsection{Related Work}\label{relatedWork}
@@ -31,7 +28,7 @@ The outline of the paper is as follows: in the next subsection \ref{relatedWork}
 A thorough investigation of the statistical properties of Total Least Squares (TLS) as well as its extensions such as structured TLS are presented in \cite{VanHuffel91}. For a short overview see \cite{Golub80} or the Appendix in \cite{Golub96}. Literature on TLS is huge and the application areas are growing rapidly. For some of the applications of TLS and errors-in-variables modelling, see the recent book \cite{VanHuffel13}. Truncated total least squares as a regularization method~\cite{Fierro97} is widely used in practice. % ref?
 % relation to PCA? refs?
 
-One of the first papers that introduced Iterative Learning Control (ILC) is \cite{Arimoto84}. For a good survey, see \cite{Bristow06} or \cite{Moore07}. Desirable properties of ILC algorithms include stability and monotonicity, and are discussed, for example, in \cite{Norrloef02} and \cite{Bristow06}. Optimization based ILC is described, for example, in \cite{Amann95}, \cite{Bristow06}, \cite{Moore07}. It seems we are not the first to notice the connection between ILC and TLS: another application of TLS in ILC using Tikhonov regularization~\cite{Golub99} is given in \cite{ZhangBo14}. In this work we use instead truncated total least squares (TTLS).
+One of the first papers that introduced Iterative Learning Control (ILC) is \cite{Arimoto84}. For a good survey, see \cite{Bristow06} or \cite{Moore07}. Desirable properties of ILC algorithms include stability and monotonicity, and are discussed, for example, in \cite{Norrloef02} and \cite{Bristow06}. Optimization based ILC is described, for example, in \cite{Amann95}, \cite{Bristow06}, \cite{Moore07}. It seems we are not the first to notice the connection between ILC and TLS: another application of TLS in ILC using Tikhonov regularization~\cite{Golub99} is given in \cite{ZhangBo14}. In this work we use instead truncated total least squares (TTLS) and analyze its convergence in Learning Control. % Chinese paper focuses on system identification.
 
 % % 2D systems analysis reference?
 % % More applications of TLS? Especially in system identification, modelling, signal processing, etc.

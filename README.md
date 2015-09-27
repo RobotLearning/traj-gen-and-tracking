@@ -11,7 +11,7 @@ ROADMAP
 - Write down robust trajectory generation framework for table tennis
 - (Guilherme) Extrapolating ILC. Boosting ILC with weak learners?
 
-Notes:
+MATLAB/SL list:
 - compare kinematics with SL
 - test performance of ILC with linearization at each iteration
 - why doesn't ball and robot trajectory coincide in simulations? check kinematics in MATLAB
@@ -25,12 +25,11 @@ Notes:
 implement the test function in MATLAB that checks for differences
 - Why are two tracking LQRs not exactly the same (at the end)? 
   [maybe R dependence is not correct, index difference?]
+- Test error feedback based weighting on the Q matrix
 
 Robot list:
-- Test error feedback based weighting on the Q matrix
 - Correct initial conditions of zero-phase filtering and test in MATLAB with ILC
 - Implement/Learn RDMP first in MATLAB and then in SL
-- Wrist problem in robot computer?
 
 Extensions:
 - Total Gaussian Process?
@@ -40,21 +39,19 @@ Extensions:
 - Kernel LQR for robot control? Related to representer theorem and/or scenario approach? 
   constructing a lyapunov function based on data (that upper bounds P?)
 - Effects of error-inverse-covariance estimation on Q matrix and ILC convergence?
-- Transversality conditions for a dmp? Linearization around a dmp?
 - Using quasi-Newton and system identification / (recursive) least squares idea.
 - Can we compute one (stable) K for all smooth robot trajectories? 
   Investigate LQR differences for different trajectories.
-- Can we couple the DMPs
-- Evolving DMPs based on current position, as an oracle. Effects of error coupling on DMPs?
+- Transversality conditions for a dmp? Linearization around a dmp? 
+  Evolving DMPs based on current position, as an oracle. Effects of error coupling on DMPs? 
+  Can we couple the DMPs?
 - Minimizing expectation with variance added for ILC to come up with a new update rule
 - Check DDP and explore fully the connection with ILC (and regression?)
 - Recursive pseudoinverse feasible? Connection to IDM and to adjoint system? 
-  Perturbation of lower triangular block Toeplitz matrix structure with nonlinear models.
-- Prove ILC convergence : keep Fk bounded and show that the cost fnc is convex 
-  (relation to convexity of \lambda_max?)
+- Perturbation of lower triangular block Toeplitz matrix structure with nonlinear models.
 - Fast ways to parameterize LQR matrix K or ILC matrix F for different trajectories?
-- Riemannian statistic as a way to estimate f(x,u) based on learning different Fs (linearization)?
+- Riemannian statistics as a way to estimate f(x,u) based on learning different Fs (linearization)?
+  riemannian singular values?
 - Chaos control to induce bifurcation to a stable orbit during learning? Does it apply only to human 
   motor control?
 - Reduced rank approximation with Dirichlet process on Gaussian Process
-- GPUCB to estimate the value function instead of stage costs?
