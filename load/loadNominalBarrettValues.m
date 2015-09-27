@@ -13,7 +13,7 @@ ZWFE  =  0.255;              %!< forearm length (minus 4.5cm)
 % shared/barrett/math/WAM_InertialSpecifications_AC-02.pdf
 % link 0 is the base
 
-%{
+%%{
 link0.m = 9.9706;
 link0.mcm(1) = link0.m * -0.02017671;
 link0.mcm(2) = link0.m * -0.26604706;
@@ -105,7 +105,7 @@ links(7).inertia(3,3) = 0.00007408;
 
 %% Load nominal robot dynamics parameters from wam.conf.flt
 
-%%{
+%{
 link0.m = 0.0000;
 link0.mcm(1) = 0.0000;
 link0.mcm(2) = 0.0000;
