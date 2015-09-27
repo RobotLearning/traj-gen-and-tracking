@@ -1,5 +1,5 @@
 \section{Methodology}\label{methodology}
-
+%
 In this section we start by fixing the notation that we use for regression. We introduce more control-theoretic notation as we go along.
 %
 \subsection{Linear Least Squares}
@@ -22,17 +22,17 @@ In case the design matrix $\designMat$ is numerically rank-deficient (i.e. its c
 % include weighting in the derivation?
 
 Total Least Squares (TLS) is an errors-in-variables model that is applicable when the design matrix $\designMat$ is also not precisely known,
-i.e. $(\designMat + \errorMat)\param = \observations + \residual$ for an unknown $\errorMat$ hopefully with small norm. A Frobenius-norm optimization procedure with diagonal weighting matrices $\weightingMat_{L} \in \mathbb{R}^{m \times m}$ and $\weightingMat_{R} \in \mathbb{R}^{n+1 \times n+1}$ is a natural extension of \ref{lls} under this model
+i.e., $(\designMat + \errorMat)\param = \observations + \residual$ for an unknown $\errorMat$ hopefully with small norm. An optimization procedure with diagonal weighting matrices $\weightingMat_{L} \in \mathbb{R}^{m \times m}$ and $\weightingMat_{R} \in \mathbb{R}^{n+1 \times n+1}$ minimizing both errors is a natural extension of \eqref{lls} under this model
 %
 \begin{equation}
 \begin{aligned}
-\text{minimize} &\ \| \weightingMat_{L} \begin{bmatrix} \errorMat & \residual \end{bmatrix} \weightingMat_{R} \|_{F}, \\
+\text{minimize} &\ \| \weightingMat_{L} \begin{bmatrix} \errorMat & \residual \end{bmatrix} \weightingMat_{R} \|, \\
 \text{subject to} &\ \observations + \residual \in \text{Range}(\designMat + \errorMat).
 \end{aligned}
 \label{tls}
 \end{equation}
 %
-\noindent The singular-value decomposition (SVD) based solution to \eqref{tls} is described in \cite{Golub80} \footnote{However in general \ref{tls} fails to have a solution. An example with low-rank design matrix can be found in \cite{Golub80}} and relies on the Eckart-Young theorem. We show here for convenience the case where the weighting matrices $\weightingMat_{L}$ and $\weightingMat_{R}$ are identity. Rewriting $(\designMat + \errorMat)\param = \observations + \residual$ as  
+\noindent The singular-value decomposition (SVD) based solution to~\eqref{tls} for the Frobenius norm or the spectral norm is described in \cite{Golub80} \footnote{However in general \ref{tls} fails to have a solution. An example with low-rank design matrix can be found in \cite{Golub80}.} and relies on the Eckart-Young theorem. We show here for convenience the case where the weighting matrices $\weightingMat_{L}$ and $\weightingMat_{R}$ are identity. Rewriting $(\designMat + \errorMat)\param = \observations + \residual$ as  
 %
 \begin{equation}
 \begin{aligned}
@@ -40,7 +40,7 @@ i.e. $(\designMat + \errorMat)\param = \observations + \residual$ for an unknown
 \end{aligned}
 \end{equation}
 %
-\noindent and using the Eckart-Young decomposition for a minimum Frobenius norm matrix $\begin{bmatrix} \hat{\errorMat} & \hat{\residual} \end{bmatrix}$% reference needed 
+\noindent and using the Eckart-Young decomposition for a minimum Frobenius norm or spectral norm matrix $\begin{bmatrix} \hat{\errorMat} & \hat{\residual} \end{bmatrix}$% reference needed 
 %
 
 \begin{align}
@@ -55,11 +55,12 @@ i.e. $(\designMat + \errorMat)\param = \observations + \residual$ for an unknown
 \hat{\errorMat} &= \leftEigenvector_{X} \vec{\Sigma}_{X} \rightEigenvector_{XX}^{\mathrm{T}} - \designMat. \label{tls2}
 \end{align}
 
-\noindent The SVD solution nicely separates the parameter estimate $\hat{\param}$ from the \emph{latent matrix} estimate $\hat{\latentMat} = \designMat + \hat{\errorMat} = \leftEigenvector_{X} \vec{\Sigma}_{X} \rightEigenvector_{XX}^{\mathrm{T}}$. See Figure~\ref{Figure1} for an illustration in one-dimensional regression. The case for multiple right-hand sides (i.e. $\observations \in \mathbb{R}^{n \times k}, k > 1$) and diagonal weighting matrices is given in \cite{Golub96}. Further extensions including partial, global, structured, and truncated TLS can be found in \cite{VanHuffel91}. 
+\noindent The SVD solution nicely separates the parameter estimate $\hat{\param}$ from the \emph{latent matrix} estimate $\hat{\latentMat} = \designMat + \hat{\errorMat} = \leftEigenvector_{X} \vec{\Sigma}_{X} \rightEigenvector_{XX}^{\mathrm{T}}$. See Figure~\ref{Figure1} for an illustration in one-dimensional regression. The case for multiple right-hand sides (i.e. $\observations \in \mathbb{R}^{n \times k}, k > 1$) and diagonal weighting matrices is given in \cite{Golub96}. Further extensions including partial, structured, and truncated TLS can be found in \cite{VanHuffel91}. Note that these extensions often lack a closed-form solution and must be iteratively computed.
+% alternating projections?
 % more citations are necessary!
 % mention that we are extracting a latent dynamics matrix F_est = F + E!
-Pseudocode for a general structured and truncated total least squares algorithm implementing an SVD solution is given in Algorithm~\ref{alg1}. Notation is adapted slightly for the general case. The latent matrix estimation step is made explicit. % refer to latent matrix estimation (PCA?) literature.
-
+Pseudocode for a general truncated total least squares algorithm implementing an SVD solution is given in Algorithm~\ref{alg1}. Notation is adapted slightly for the general case. The latent matrix estimation step is made explicit. % refer to latent matrix estimation (PCA?) literature.
+%
 \begin{figure}
 \centering
 \includegraphics[width=0.4\textwidth]{LSvsTLS.jpg}%
@@ -67,22 +68,22 @@ Pseudocode for a general structured and truncated total least squares algorithm 
 \label{Figure1}
 \end{figure}
 %
-
+%
 \begin{algorithm}[tb]
-   \caption{Structured Truncated Total Least Squares}
+   \caption{Truncated Total Least Squares}
    \label{alg1}
 \begin{algorithmic}
-   \STATE {\bfseries Input:} $\threshold > 0$, $\designMat$, $\fullObs = \begin{bmatrix} \observations_1 & \observations_2 & \ldots & \observations_k \end{bmatrix}$, $\weightingMat_{L}$, $\weightingMat_{R} = \begin{bmatrix} \weightingMat_{R1} & \weightingMat_{R2}\end{bmatrix}$.
-   \STATE Compute SVD solution $\leftEigenvector \vec{\Sigma} \rightEigenvector^{\mathrm{T}} = \weightingMat_{L}\begin{bmatrix} \designMat & \fullObs \end{bmatrix}\weightingMat_{R}$.
-   \STATE Estimate parameter $\hat{\fullParam} = -\weightingMat_{R1}\vec{V}_{XY}\vec{V}_{YY}^{-1}\weightingMat_{R2}^{-1}$.
+   \STATE {\bfseries Input:} $\threshold > 0$, $\designMat$, $\fullObs = \begin{bmatrix} \observations_1 & \observations_2 & \ldots & \observations_k \end{bmatrix}$, diagonal $\weightingMat_{L}$, $\weightingMat_{R} = \begin{bmatrix} \weightingMat_{R1} & \weightingMat_{R2}\end{bmatrix}$.
+   \STATE Compute SVD solution $\leftEigenvector \vec{\Sigma} \rightEigenvector^{\mathrm{T}}$ to $\weightingMat_{L}\begin{bmatrix} \designMat & \fullObs \end{bmatrix}\weightingMat_{R}$.
+   \STATE Estimate parameter $\hat{\fullParam} = -\weightingMat_{R1}\vec{V}_{XY}\vec{V}_{YY}^{\dagger}\weightingMat_{R2}^{-1}$.
    \STATE Estimate latent matrix $\hat{\latentMat} = \leftEigenvector_{X} \vec{\Sigma}_{X} \rightEigenvector_{XX}^{\mathrm{T}}$.
 \end{algorithmic}
 \end{algorithm}
-
+%
 %
 \subsection{Iterative Learning Control with Total Least Squares}\label{ilcTLS}
 %
-In Iterative Learning Control (ILC) the goal is to drive deviations from a fixed reference trajectory $\traj(t), \ 0 \leq t \leq T \ $ in state space $\state \in S \subset \mathbb{R}^{p}$ to zero when the system to be controlled is subject to unknown repeating disturbances and model mismatch \cite{Bristow06}. As opposed to other adaptive (learning) control approaches, in ILC usually the feedforward control inputs to the system $\sysInput(t)$ are adjusted after each iteration $k$, or episode, is completed and the resulting deviations $\error(t) = \state(t) - \traj(t)$ from the desired trajectory are observed. % references to adaptive control literature?
+In Iterative Learning Control (ILC) the goal is to minimize deviations from a fixed reference trajectory $\traj(t), \ 0 \leq t \leq~T$ in state space $\state \in S \subset \mathbb{R}^{p}$ when the system to be controlled is subject to unknown repeating disturbances and model mismatch \cite{Bristow06}. As opposed to other adaptive control or reinforcement learning approaches~\cite{NguyenTuong11} in ILC usually the feedforward control inputs to the system $\sysInput_k(t)$ are adjusted after each iteration $k = 1, 2, \ldots$ is completed and the resulting deviations $\error_k(t) = \state_k(t) - \traj(t)$ from the desired trajectory are observed. % references to adaptive control literature?
 
 Consider a general nonlinear dynamical system governed by the differential equation
 %
@@ -92,11 +93,13 @@ Consider a general nonlinear dynamical system governed by the differential equat
 \end{align}
 %
 % reference to other nonlinear approaches to ILC?
-\noindent Assume that the nominal model $\dynamicsNominal$ is all we know about the system in \eqref{dynamics}. Nonlinear approaches to ILC mostly consider linearizations of \eqref{dynamicsNom} around the trajectory $\traj(t)$ and nominal inputs $\trjInput(t)$. Discretizing and stacking the linear time varying matrices obtained, we get the following \emph{lifted-form} approximation of the underlying dynamics
+\noindent Assume that the nominal model $\dynamicsNominal$ is all we know about the system in \eqref{dynamics}. Nonlinear approaches to ILC mostly consider linearizations of \eqref{dynamicsNom} around the trajectory $\traj(t)$ and nominal inputs $\trjInput(t)$.
+% citation needed
+Discretizing and stacking the linear time varying matrices obtained, we get the following \emph{lifted-form} approximation of the underlying dynamics
 %
 \begin{equation}
 \begin{aligned}
-\error \approx \systemMat \sysInput - \linDist,
+\error_k \approx \systemMat \sysInput_k + \linDist,
 \end{aligned}
 \label{approxModel}
 \end{equation}
@@ -115,17 +118,19 @@ Consider a general nonlinear dynamical system governed by the differential equat
 \label{Fmatrix}
 \end{equation}
 
-\noindent Matrices $\vec{A}_j$ and $\vec{B}_j$ are linearizations of the nominal model $\dynamicsNominal$ around the discrete trajectory points $\traj_j$ and nominal inputs $\vec{\nu}_j$ respectively. Conventional ILC algorithms using such a linearized model compute at each iteration the feedforward compensation signals $\sysInput = (\sysInput_1^{\mathrm{T}}, \ldots, \sysInput_N^{\mathrm{T}})^{\mathrm{T}}$ and add to nominal input $\trjInput = (\trjInput_1^{\mathrm{T}}, \ldots, \trjInput_N^{\mathrm{T}})^{\mathrm{T}}$ to drive error $\error = (\error_1^{\mathrm{T}}, \ldots, \error_N^{\mathrm{T}})^{\mathrm{T}}$ to minimum achievable error (ideally zero). For example, the ILC algorithm utilizing plant inversion with pseudoinverse computes the updates using % ref needed
+\noindent Matrices $\vec{A}_j$ and $\vec{B}_j$ are linearizations of the nominal model $\dynamicsNominal$ around the discrete trajectory points $\traj_j$ and nominal inputs $\vec{\nu}_j$ respectively. Conventional ILC algorithms using such a linearized model compute at each iteration the feedforward compensation signals $\sysInput = (\sysInput_1^{\mathrm{T}}, \ldots, \sysInput_N^{\mathrm{T}})^{\mathrm{T}}$ added to the nominal inputs $\trjInput = (\trjInput_1^{\mathrm{T}}, \ldots, \trjInput_N^{\mathrm{T}})^{\mathrm{T}}$ to drive error $\error = (\error_1^{\mathrm{T}}, \ldots, \error_N^{\mathrm{T}})^{\mathrm{T}}$ to its theoretical minimum (ideally zero). For example, the ILC algorithm utilizing plant inversion with pseudoinverse 
+% reference needed
+computes the updates using % ref needed
 % 
 %
 \begin{equation}
 \begin{aligned}
-\sysInput_{k} = \systemMat^{\dagger}\linDist_{k},
+\sysInput_{k} = -\systemMat^{\dagger}\linDist_{k},
 \end{aligned}
 \label{pseudoinverseILC1}
 \end{equation}
 %
-\noindent where $\linDist_{k}$ is estimated using the last iteration $k-1$, i.e. $\linDist_{k} \approx \systemMat \sysInput_{k-1} - \error_{k-1}$. Putting it all together, when the system matrix $\systemMat$ is of full rank, we get the following model-based ILC update law 
+\noindent where $\linDist_{k}$ is estimated from \eqref{approxModel} using the last iteration $k-1$, i.e., $\linDist_{k} \approx \systemMat \sysInput_{k-1} - \error_{k-1}$. When the system matrix $\systemMat$ is of full rank, we get the following model-based ILC update law 
 %
 \begin{equation}
 \begin{aligned}
@@ -134,15 +139,41 @@ Consider a general nonlinear dynamical system governed by the differential equat
 \label{pseudoinverseILC2}
 \end{equation}
 %
-\noindent In MATLAB the command for computing \eqref{pseudoinverseILC2} with truncation parameter $\epsilon$ is \emph{pinv}$(\designMat,\epsilon)$ where the singular values of $\designMat$ less than $\epsilon$ are treated as zero. 
+\noindent The command for computing the pseudoinverse in MATLAB with truncation parameter $\epsilon$ is \emph{pinv}$(\designMat,\epsilon)$ where the singular values of $\designMat$ less than $\epsilon$ are treated as zero. 
 
-The compensations in \eqref{pseudoinverseILC2} are computed using the approximate model in \eqref{approxModel} and should be instead computed more cautiously. In particular, it is not enough to state that the control inputs will eventually converge to a steady-state value, as is often done when proving the \emph{stability} of ILC algorithms. For practical and for safety purposes one needs to also ensure that the errors incurred along the trajectory at each iteration are decreasing, under a particular vector norm. This is studied in the ILC literature as the \emph{monotonic convergence} criterion~\cite{Bristow06}. 
+The compensations in \eqref{pseudoinverseILC2} are computed using the approximate model in \eqref{approxModel} and should be reconsidered. In particular, it is not enough to state that the control inputs will eventually converge to a steady-state value, as is often done when proving the \emph{stability} of ILC algorithms. For practical and for safety purposes one needs to also ensure that the errors incurred along the trajectory at each iteration are decreasing, under a particular vector norm. This is studied in the ILC literature under \emph{monotonic convergence}~\cite{Bristow06}. 
 
-We take the monotonic convergence criterion into account by using Total Least Squares to come up with a more cautious ILC update. Combining \eqref{pseudoinverseILC2} and \eqref{tls} we get $\alg$
+Satisfying the monotonic convergence criterion when the dynamics involves unknown perturbations 
+%
+\begin{equation}
+\begin{aligned}
+\error_k = (\systemMat + \errorMat_k)\sysInput_k + \linDist_k,
+\end{aligned}
+\label{exactModel}
+\end{equation}
+%
+\noindent requires a more cautious ILC update. Using Total Least Squares, combining \eqref{pseudoinverseILC2} and \eqref{tls} we derive $\alg$
 %
 \begin{align}
 \sysInput_{k+1} &= \sysInput_{k} - \delta \sysInput_{k}, \label{tlsilc1} \\ 
-\delta \sysInput_{k}, \ \hat{\errorMat}_k &= \arg\min \|\begin{bmatrix}\errorMat_k & \residual_k \end{bmatrix} \|_{F}, \label{tlsilc2} \\
+\delta \sysInput_{k}, \ \hat{\errorMat}_k &= \arg\min \|\begin{bmatrix}\errorMat_k & \residual_k \end{bmatrix} \|_{2}, \label{tlsilc2} \\
 \text{subject to} &\ (\systemMat + \errorMat_k)\delta \sysInput_k = \error_k + \residual_k \label{tlsilc3}.
 \end{align}
+%
+\noindent This new ILC law is stated in algorithmic form in Algorithm~\ref{alg2}.
+%
+\begin{algorithm}[tb]
+   \caption{Cautious ILC Algorithm $\alg$}
+   \label{alg2}
+\begin{algorithmic}
+   \STATE {\bfseries Input:} $\threshold > 0$, horizon $\numSteps$, diagonal $\weightingMat_{L}$, $\weightingMat_{R} = \begin{bmatrix} \weightingMat_{R1} & \weightingMat_{R2}\end{bmatrix}$.
+   \STATE Form $\vec{F}$ using $\vec{A}$, $\vec{B}$ matrices up to horizon $\numSteps$
+   \STATE Initialize $k = 0$, $\sysInput_0 = \trjInput$
+   \REPEAT 
+   	   \STATE Apply inputs $\sysInput_{k}$ and observe errors $\error_{k}$
+	   \STATE Compute SVD solution $\leftEigenvector \vec{\Sigma} \rightEigenvector^{\mathrm{T}}$ to $\weightingMat_{L}\begin{bmatrix} \systemMat & \error_k \end{bmatrix}\weightingMat_{R}$.
+	   \STATE Update inputs $\sysInput_{k+1} = \sysInput_{k} - \weightingMat_{R1}\vec{V}_{XY}\vec{V}_{YY}^{\dagger}\weightingMat_{R2}^{-1}$.
+   \UNTIL{$\error_k \leq \error_{\infty} + \threshold$}
+\end{algorithmic}
+\end{algorithm}
 %
