@@ -36,7 +36,7 @@ end
 %% try to estimate Fact
 
 % generate some trials
-trials = 50;
+trials = 5;
 U = rand(N*dimu,trials);
 % get errors
 E = Fact * U;
@@ -67,4 +67,6 @@ FhatVec3(indNonZero) = FhatVecDrop2;
 Fhat4 = reshape(FhatVec3,N*dimx,N*dimu);
 
 err = norm(Fhat1-Fact,'fro')
-
+err2 = norm(Fhat2-Fact,'fro')
+err3 = norm(Fhat3-Fact,'fro')
+err4 = norm(Fhat4-Fact,'fro')
