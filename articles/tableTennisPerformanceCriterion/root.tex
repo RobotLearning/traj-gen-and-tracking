@@ -24,53 +24,43 @@
 \usepackage{algorithmic}
 
 % custom commands
+\newcommand{\boldvec}[1]{\boldsymbol{\mathrm{#1}}}
+\let\vec\boldvec
 \newcommand\at[2]{\left.#1\right|_{#2}} % the at differential sign
 \newcommand\scalemath[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}} % scaling matrices
 
 %% custom macros
+%% Notation for robot
 \newcommand{\todo}{\textcolor{red}{TODO}} % TODO!
 \newcommand{\kin}{\mathcal{T}} % used to denote inverse kinematics
 \newcommand{\invKin}{\mathcal{T}^{-1}} % used to denote inverse kinematics
 
-\newcommand{\joint}{q} % used to denote robot state in joint space
-\newcommand{\state}{\bar{\joint}} % denotes the generalized coordinates - joint space and velocity coordinates
-\newcommand{\dmp}{s} % used to denote the dmp trajectory states
-\newcommand{\error}{e} % difference between state and reference
-\newcommand{\traj}{r} % used to denote the points on the trajectory to be tracked
+\newcommand{\joint}{\vec{q}} % used to denote robot state in joint space
+\newcommand{\state}{\vec{x}} % denotes the generalized coordinates - joint angles and angular velocities
+\newcommand{\error}{\vec{e}} % difference between state and reference
+\newcommand{\traj}{\vec{r}} % used to denote the points on the trajectory to be tracked
 
-\newcommand{\dist}{\epsilon} % denotes the disturbances acting on the rigid body dynamics
-\newcommand{\linDist}{d} % denotes the disturbances on the LTV model
+\newcommand{\dynamics}{\vec{f}}
+\newcommand{\dynamicsNominal}{\dynamics_{\mathrm{nom}}}
+\newcommand{\dist}{\vec{\epsilon}} % denotes the disturbances acting on the rigid body dynamics
 
-\newcommand{\sysInput}{u} % used to denote the system inputs
-\newcommand{\linInput}{\tilde{u}} % denotes the LTV inputs
-\newcommand{\trjInput}{\nu} % denotes the inputs on the trajectory
+\newcommand{\sysInput}{\vec{u}} % used to denote the system inputs
+\newcommand{\trjInput}{\sysInput_{\mathrm{IDM}}} % denotes the inputs on the trajectory (calculated using IDM)
 
-
-% % % % DMP terminology % % % %
-\newcommand{\fullvec}{\psi} % full vector for state-ref-dmp-goal
-\newcommand{\force}{f} % forcing term of the dmps
-\newcommand{\phase}{x} % phase of the dmp
-\newcommand{\weights}{w} % weights of the dmp
-\newcommand{\basis}{\phi} % basis functions of the dmp as a matrix
-
-% % % % ILC terminology % % % %
-\newcommand{\qmatrix}{\Gamma} % denotes the filtering qmatrix term of Bristow et al.
-\newcommand{\lmatrix}{L} % denotes the learning matrix of Bristow et al.
-
-\newcommand{\observations}{\mathbf{y}} % used for the observed output
-\newcommand{\dynamics}{f}
-\newcommand{\dynamicsNominal}{f_{\mathrm{nom}}}
-\newcommand{\policy}{\mathbf{\pi}}
+\newcommand{\policy}{\vec{\pi}}
 \newcommand{\ValueFunction}{J}
 \newcommand{\episode}{k} % used for episode number
-
 \newcommand{\totalTime}{T} % total time duration 
 \newcommand{\numSteps}{N} % total number of time steps
-\newcommand{\numepisode}{K} % total number of episodes
 
 \newcommand{\threshold}{\epsilon}
-\newcommand{\alg}{\emph{wILC}}
+\newcommand{\alg}{\emph{tt}}
 \newcommand{\dataset}{E}
+
+% Notation for the ball and other table tennis jargon
+\newcommand{\court}{\vec{S}} % opponents court
+\newcommand{\net}{\vec{S}} % net
+\newcommand{\wall}{\vec{W}} % wall
 
 % Set the paths where all figures are taken from:
 \graphicspath{{Pictures/}}
@@ -82,51 +72,17 @@
  \input{#1.pdf_tex}%
 }
 
-\author{Okan Ko\c c, Guilherme Maeda, Gerhard Neumann and Jan Peters}
-\title{Optimal Striking Movement Representation \& Execution}
+\author{Okan Ko\c c, Guilherme Maeda, and Jan Peters}
+\title{A New Performance Criterion in Robotic Table Tennis}
 \begin{document}
 \maketitle
 
 
-\section{Robust Control Applications to Table Tennis}
+\section{Introduction}
 
-\subsection{Game Theoretic Analysis}
+The opponent's court in table tennis defines the \emph{stability region} $\court$: the robot will have failed the game if it cannot land the ball in this region.
 
-What actions are available to players? Position and body orientation with racket position and body orientation
-(initial gesture) and hitting motions (trajectories) as dynamic movement primitives.
 
-Timing of the interactions - sequential model. But not always at the same time
-
-What information do different players have when they take actions? 
-They see the opponent's posture always and also their hitting motion. They will also see the incoming ball trajectory - but maybe not everything if it's coming too fast. They may or may not know the spin of the ball.
-Sometimes you have to choose, or take action, before seeing the opponent hit the ball.
-
-What are the payoffs to the various players as a result of the interaction?
-For the players there are no payoffs unless the ball does not touch the table on the other side. In that case, one gets 1 and the other gets 0.
-
-Sensitivity analysis - am I acting strategically enough?
-
-Pure strategies over actions vs. mixed strategies
-
-Dominant strategy - an individual does not have to make any predictions about what other players
-might do, and still has a well-defined best strategy. This adds robustness.
-
-A pure strategy Nash equilibrium only requires that the
-action taken by each agent be best against the actual equilibrium actions taken by the other
-players, and not necessarily against all possible actions of the other players.
-"we have to look for a pair of actions such that neither firm wants
-to change its action given what the other firm has chosen"
-
-A profile of dominant strategies is a Nash equilibrium but not vice versa.
-
-randomized strategies, or what are called mixed strategies, when no pair of pure strategies forms an equilibrium.
-maximize entropy - do not reveal info to the opponent, he shouldn't be able to predict your future behaviour given past samples.
-
-is table tennis an extensive form game? Game tree? backwards induction 
-
-Spring-like dynamics of the game. You throw hoping that it will never come back (zero disturbance from opponent) but if there is enough disturbance then it will come back. 
-
-The table in table tennis defines the stability region of the space. Precise terminology of the stability region?
 
 \bibliographystyle{plain}
 %\bibliographystyle{./IEEEtran}

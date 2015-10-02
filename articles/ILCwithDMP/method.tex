@@ -153,7 +153,7 @@ Most ILC update laws can be put in the following form
 \label{qAndlMatrices}
 \end{equation}
 %
-\noindent These matrices modulate the dependency between the inputs $\sysInput_k$ and the errors $\error_k$. The ILC update law \eqref{ILCNewtonsMethod} is noncausal (i.e. predictive) since $\lmatrix$ is not block lower-diagonal. See \cite{Amann95,Gunnarsson01} for the case where input derivative penalties are also considered. Note the connection of \eqref{ILCNewtonsMethod} to plant inversion methods~\cite{Bristow06}: taking $\vec{Q}_L = \vec{I}, \vec{R}_{L} = \vec{0},$ \eqref{ILCNewtonsMethod} becomes
+\noindent These matrices modulate the dependency between the inputs $\sysInput_k$ and the errors $\error_k$. The ILC update law \eqref{ILCNewtonsMethod} is noncausal (i.e. predictive) since $\lmatrix$ is not block lower-diagonal. See \cite{Amann95,Gunnarsson01} for the case where input derivative penalties are also considered. Note the connection of \eqref{ILCNewtonsMethod} to plant inversion methods~\cite{Ghosh99}: taking $\vec{Q}_L = \vec{I}, \vec{R}_{L} = \vec{0},$ \eqref{ILCNewtonsMethod} becomes
 %
 \begin{equation}
 \begin{aligned}
@@ -164,7 +164,7 @@ Most ILC update laws can be put in the following form
 %
 % However this can be very unstable in practice, especially in nonminimum phase systems. Having a small, but nonzero weighting matrix R makes it much more stable.
 %
-\noindent A more intuitive way to understand ILC is to consider \eqref{ILCPlantInversion} as least squares regression on the disturbances estimated using the previous trial
+\noindent A more intuitive way to understand ILC is to consider \eqref{ILCPlantInversion} as least squares regression on the disturbances estimated using the previous trial~\cite{Schoellig12}
 %
 \begin{equation}
 \begin{aligned}
@@ -220,7 +220,7 @@ Taking the quadratic final cost, we can relate it to the feedforward corrections
 Execution errors in tracking the rhythmic DMP prevents us from initializing the robot at each iteration to the same state. Starting from different initial conditions $\state_0 = [\joint^{\intercal}_0,\dot{\joint}^{\intercal}_0]^{\mathrm{T}}$ we can consider a movement primitive as in \eqref{dmp} to give a smooth and feasible interpolating trajectory that is similar to the demonstrations.
 For such movement primitives we consider the Mayer form ILC update \eqref{ILCmayerForm} to be the natural candidate since in each trial the DMPs generate different trajectories. Trying to track these varying trajectories with an ILC update law as in \eqref{ILCNewtonsMethod} can make learning unstable.
 
-To compensate for the varying initial conditions we recompute the reference control input $\trjInput$ based on the nominal inverse dynamics model. With this correction the total feedforward control commands $\sysInput_{\mathrm{\,f\,f}}$ at iteration $k+1$ are computed as follows
+To compensate for the varying initial conditions we recompute the reference control input $\trjInput$ based on the nominal inverse dynamics model. Results that prove increased robustness with similar compensation methods are given in~\cite{Park00},\cite{Fang03}. With this correction the total feedforward control commands $\sysInput_{\mathrm{\,f\,f}}$ at iteration $k+1$ are computed as follows
 %
 \begin{equation}
 \begin{aligned}

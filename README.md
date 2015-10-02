@@ -1,15 +1,15 @@
 ROADMAP
 
-- Reading ILC review + papers
-- Read control chapter of both books
-- Look at last ACC papers on ILC
+- Write down draft for Table Tennis Performance Criterion
 - Clean-up: Check out Yanlong's and Katharina's code.
-- Read system identification survey
+- Check out Kalman filter in Table Tennis estimation tutorial
 - Derive Kalman filter from minimum variance and derive seperation principle.
-- SL code debugging framework in Eclipse
 - ATLAS/BLAS library integration with SL (wrapper?)
-- Write down robust trajectory generation framework for table tennis
+- Experiment with Ballgun fixed.
 - (Guilherme) Extrapolating ILC. Boosting ILC with weak learners?
+- SL code debugging framework in Eclipse
+- Read system identification survey
+- Read control chapter of both books
 
 MATLAB/SL list:
 - compare kinematics with SL
