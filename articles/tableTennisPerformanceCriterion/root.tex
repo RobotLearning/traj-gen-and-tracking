@@ -80,8 +80,76 @@
 
 \section{Introduction}
 
-The opponent's court in table tennis defines the \emph{stability region} $\court$: the robot will have failed the game if it cannot land the ball in this region.
+% % % % probabilistic modelling for robust trajectory generation % % % %
 
+%1. incoming ball trajectory: as Gaussians indexed with time [e.g. Kalman filter should give us this information with prediction. Parameters/model of a Kalman filter could be fit using ball data (when fitting, innovation of the KF should be minimized as to consist mostly of white noise)]
+%
+%2. Probability of interaction occurring: b(t) for the ball must lie in r(t) + \gamma o_perp(t), where r(t) is the racket centre trajectory, \gamma is less than the radius of the racket, and o_perp(t) is perpendicular to the normal (i.e. orientation) of the racket.
+%
+%3. the interaction (contact) model [maybe a linear model/GP constructed from observations of me hitting the ball, with ball incoming velocity, outgoing velocity, racket velocity and orientation available from data]
+%
+%4. the racket trajectory: this is what we want to generate, more specifically racket positions and orientations over time, could be a Gaussian distribution indexed with time as well.
+%
+%5. the outgoing ball trajectory: should be an integral over the previous Gaussians using the interaction model. If we use GP for (2), then moment matching may be used to estimate the resulting Gaussians [again indexed with time].
+%
+%6. the feasible region: for every point on the robot court, there is a range of feasible outgoing velocities using the flight model [estimated in (1). how to make it probabilistic? could we have a filter running backwards?] such that the ball avoids the net and the wall and lands on the opponents court. Probabilistically could be a uniform distribution over a set.
+%
+%Optimization criterion: find (4) such that the KL-divergence of (5) with the uniform distributions in (6) has minimum l_inf-norm [since it is a function over time]. Other optimization criteria could be used such as: minimize \delta_1 + \delta_2 + \delta_3 such that with probability at least 1-\delta_1 and 1-\delta_2 and 1-\delta_3, ball avoids the net, the wall and lands on the other side, respectively.
+
+% % % % Striking Movement Generation in Humans % % % % %
+% speed-accuracy trade-off [Woodworth 1899, Fitts 1954]
+% variability [Todorov and Jordan, 2002]
+% goal-directed corrections [Elliott et al.]
+% biomechanical redundancy [Bernstein, 1967]
+% cost functions from optimal control [ Bryson and Ho, 1975; Hogan, 1984; Harris and Wolpert, 1998; Todorov and Jordan, 2002]
+% motor program [Henry and Rogers, 1960; Keele, 19658; Schmidt, 1975; Schmidt and Wrisber, 2000, Schmidt, 2003]
+% related: operational timing hypothesis [Tyldesley and Whiting, 1975]
+% tau hypothesis to account for the time-to-contact: tau is specified as the relative inverse rate of dilation of the object image [Lee and Young, 1985; evidence for it: Bootsma and van Wieringen, 1988]
+% stroke timing independent of ball speed [Hubbard and Seng, 1954] 
+% error tolerance [Dagmar Sternad, Hermann Mueller, 2011]
+% funnel-like control with fixed spatio-temporal bandwidth [Bootsma and Peper, 1992; Williams and Starkes, 2002]
+
+% % % % Robotic Table Tennis % % % %
+% virtual hitting point hypothesis
+% vision and trajectory prediction
+% impact time, ball position and velocity
+% time to contact
+% 1. the ballistic flight model
+% air resistance scale factor C 
+% 2. the rebound model with coefficient $\epsilon_T = [\epsilon_{Tx}, \epsilon_{Tx}, -\epsilon_{Tz}]$, $\epsilon_{Tx}$ is the coefficient of friction
+% air drag, gravity and spin
+% coefficient of restitution in the rebound model $\epsilon_{Tz}$
+% vision system operates in a semi-structured and human-inhabited environment
+% Finite State Automaton: four stages: awaiting stage, preparation, hitting and finishing stage
+% hitting stage lasts approximately 80 ms in expert humans [only find a robust hitting trajectory]
+
+% The choice of the the desired landing point of the ball on the opponent's court is generally left to a higher level strategy or policy of the robot. However in this paper we argue that landing the ball successfully on the opponent's court is the \emph{fundamental goal} in table tennis. Therefore policies or the strategies involved in striking movement generation should be combined in one unitary whole.
+
+% Due to the limitations of our setup, our robot is fixed to the ceiling. Hence we expect that the opponent will always throw the ball to the second half of the robots table. The table can be brought closer to the robot to overcome this limitation: however then the trajectory generation problem will be subsequently harder, and the hard constraint of hitting the table becomes more problematic to avoid.
+
+% % % % Cost functions for movement generation % % % %
+% cost of the movement includes - jerk, (metabolic) energy [Bryson and Ho, 1975]
+% relationships found in reaching and pointing movements do not hold in striking sports [Bootsma and van Wieringen, 1990]
+% energy optimality [Alexander, 1997; Kuo, 2005]
+% Comfort of the posture, i.e. cost is induced by proximity to a fixed comfort posture in joint-space. 
+% We believe that a new performance criterion in robotic table tennis is needed to explain the robust trajectory generation frequently observed in humans, and in order to compete with them. 
+
+The opponent's court in table tennis, the net (and other environmental restrictions such as walls) together define the \emph{stability region} $\court$: the robot will have failed the game if it cannot land the ball on the other side of the table.
+
+% robust movement generation
+% robust algorithms that can compensate for low quality hardware and uncertainty in ball estimation
+
+% % % % Table Tennis Setup % % % %
+%We consider table tennis where we are interested in generating and executing accurate striking motions. For the robotic table tennis task we are using a seven degree of freedom (DoF) torque-controlled custom made Barrett WAM arm capable of high speeds and accelerations. A standard size racket (16 cm diameter) is mounted on the end-effector of the arm as can be seen in Figure~\ref{robot}. A vision system consisting of four cameras hanging from the ceiling around each corner of the table is used for tracking the ball \cite{Lampert12}. The orange ball is tracked visually with a sampling rate of 60 Hz and filtered with an extended Kalman filter that accounts for some of the bouncing behavior of the ball and air drag effects. The table and the tennis balls are in accordance with the International Table Tennis Federation (ITTF) rules.
+%
+%A ball launcher (see Figure~\ref{robot}) is available to throw balls accurately to a fixed position in Cartesian space to the forehand of the robot. The incoming ball arrives with low-variability in desired positions and higher-variability in ball velocities. The whole area to be covered amounts to about 1 m$^2$ circular region surrounding the initial forehand posture of the robot. This allows us to avoid the singularities of the robot. Any ball that appears outside of this circular \emph{feasible} region will not be hit.
+%
+%After the visual system predicts a ball trajectory that coincides with the feasible region in Cartesian space, the motion planning system has to come up with a trajectory that specifies how, where and when to intercept the incoming ball. Desired Cartesian position, velocity and orientations of the racket translate in joint space to a specification of 14 parameters: 7 joint angles and 7 joint velocities of the robot arm. Along with the desired hitting time (or the time until impact), these 15 parameters are used to train 7 joint space trajectories that correspond to the desired reference trajectory in Cartesian space.
+%
+%In runtime, in order to generate feasible reference trajectories that account for the variations in incoming ball position and velocities, we come up with the robust cartesian trajectory. We start these references from the initial posture of the robot provided by the sensors.
+% From Katharina's paper:
+%the position, velocity and orientation of the racket can be computed analytically based on the state of the system and the target on the opponents court.
+%These task space parameters can also be converted into joint space parameters using inverse kinematics
 
 
 \bibliographystyle{plain}

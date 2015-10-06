@@ -1,5 +1,6 @@
 ROADMAP
 
+- Derive Kalman filter from minimum variance and derive seperation principle.
 - Check out Kalman filter in Table Tennis estimation tutorial
 - Clean-up: Check out Yanlong's and Katharina's code.
 - Write down draft for Table Tennis Performance Criterion
