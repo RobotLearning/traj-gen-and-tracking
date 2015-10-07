@@ -1,6 +1,5 @@
 ROADMAP
 
-- Check out Kalman filter in Table Tennis estimation tutorial
 - Clean-up: Check out Yanlong's and Katharina's code.
 - Write down draft for Table Tennis Performance Criterion
 - ATLAS/BLAS library integration with SL (wrapper?)
@@ -30,7 +29,6 @@ Robot list:
 - Implement/Learn RDMP first in MATLAB and then in SL
 
 Extensions:
-- Total Gaussian Process?
 - Relaxation Learning Control: how to define cost function? Semi markov decision process? Optimal stopping?
   relation to path following? Metronome? Apply monotonic convergence criteria and/or repetitive systems theory
   (Rogers and Owens,1992)?
