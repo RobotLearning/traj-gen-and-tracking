@@ -82,6 +82,30 @@
 
 % % % % probabilistic modelling for robust trajectory generation % % % %
 
+% Inputs:
+%
+% 1. Estimates of ball position & velocity till net N
+% 2. Stability region of the table S_T is fixed as 3d-coordinates
+% 3. Flight Model of ball dynamics bdot = f(b) estimated from ball trajectory data
+% 4. Bounce model of ball dynamics bdot = g(b) estimated from ball trajectory data
+% 5. Extended Kalman filter or a regression method to predict ball trajectories
+%
+% Estimates
+% 
+% 1. A set or a probability distribution of incoming ball states parameterized by t, e.g. b_t \approx N(\mu_b_in(t),\sigma_b_in(t)) 
+% 2. Interaction probabilities (ball touching the racket)
+% 3. A probabilistic model (e.g. a Gaussian Process) describing the interaction model: outputs a set or a probability distribution of outgoing ball states parameterized (or indexed) by t, e.g. b_t \approx N(\mu_b_out(t), \sigma_b_out(t))
+% 4. A distribution for admissable velocities for the ball for each point inside the workspace of the robot
+%
+% Output
+% 
+% The mapping r_t \approx N(\mu_racket_center(t),\sigma_racket_center(t))) as racket reference trajectory that maximizes the probability of landing on the opponents court, or minimizing KL-divergence between outgoing ball states distribution and admissable/desired velocities [e.g. uniform distribution of velocities]
+%
+% Control: imposing transversality conditions when ball is on a curve p_b(t) or a set with some measure p_b [constant hamiltonian on this set?] we get a probability distribution of admissable end effector configurations
+%
+% Sensitivity of the interaction model should be minimized by coming up with a racket trajectory
+%
+%
 %1. incoming ball trajectory: as Gaussians indexed with time [e.g. Kalman filter should give us this information with prediction. Parameters/model of a Kalman filter could be fit using ball data (when fitting, innovation of the KF should be minimized as to consist mostly of white noise)]
 %
 %2. Probability of interaction occurring: b(t) for the ball must lie in r(t) + \gamma o_perp(t), where r(t) is the racket centre trajectory, \gamma is less than the radius of the racket, and o_perp(t) is perpendicular to the normal (i.e. orientation) of the racket.
@@ -95,6 +119,15 @@
 %6. the feasible region: for every point on the robot court, there is a range of feasible outgoing velocities using the flight model [estimated in (1). how to make it probabilistic? could we have a filter running backwards?] such that the ball avoids the net and the wall and lands on the opponents court. Probabilistically could be a uniform distribution over a set.
 %
 %Optimization criterion: find (4) such that the KL-divergence of (5) with the uniform distributions in (6) has minimum l_inf-norm [since it is a function over time]. Other optimization criteria could be used such as: minimize \delta_1 + \delta_2 + \delta_3 such that with probability at least 1-\delta_1 and 1-\delta_2 and 1-\delta_3, ball avoids the net, the wall and lands on the other side, respectively.
+
+% Reasons for uncertainty & probabilistic modeling:
+% 1. Ball cannot be estimated precisely [both flight/bounce models are also inexact]
+% 2. Trajectories cannot be tracked [control errors]
+% 3. Racket-ball interaction model not known well [elastic momentum law, velocity dependent coefficient of restitution]
+%
+% For every point on the predicted ball trajectory, there is a range/set of admissable outgoing ball velocities [for the set point of view]
+%
+% build a forward/inverse interaction model probabilistically
 
 % % % % Striking Movement Generation in Humans % % % % %
 % speed-accuracy trade-off [Woodworth 1899, Fitts 1954]
