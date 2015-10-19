@@ -3,8 +3,6 @@ ROADMAP
 - Clean-up: Check out Yanlong's and Katharina's code.
 - Write down draft for Table Tennis Performance Criterion
 - ATLAS/BLAS library integration with SL (wrapper?)
-- Experiment with Ballgun fixed.
-- (Guilherme) Extrapolating ILC. Boosting ILC with weak learners?
 - SL code debugging framework in Eclipse
 - Read system identification survey
 - Read control chapter of both books
@@ -25,10 +23,12 @@ implement the test function in MATLAB that checks for differences
 - Test error feedback based weighting on the Q matrix
 
 Robot list:
+- Experiment with Ballgun fixed.
 - Correct initial conditions of zero-phase filtering and test in MATLAB with ILC
 - Implement/Learn RDMP first in MATLAB and then in SL
 
 Extensions:
+- (Guilherme) Extrapolating ILC. Boosting ILC with weak learners?
 - Relaxation Learning Control: how to define cost function? Semi markov decision process? Optimal stopping?
   relation to path following? Metronome? Apply monotonic convergence criteria and/or repetitive systems theory
   (Rogers and Owens,1992)?
