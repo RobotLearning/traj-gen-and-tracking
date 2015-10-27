@@ -8,11 +8,8 @@ ROADMAP
 - Read control chapter of both books
 
 MATLAB/SL list:
-- compare kinematics with SL
 - test performance of ILC with linearization at each iteration
-- why doesn't ball and robot trajectory coincide in simulations? check kinematics in MATLAB
 - Why does ILC learning with feedback generate zero Finv?
-- Load constraints umin and umax, joint limits from sensor offsets file and include in lift_constraints
 - Try IDM as fb in MATLAB
 - Test LQG and iLQR, DDP on MATLAB
 - Implement REPS, PI2 algorithms on MATLAB, variational Bayes
@@ -20,11 +17,11 @@ MATLAB/SL list:
 implement the test function in MATLAB that checks for differences
 - Why are two tracking LQRs not exactly the same (at the end)? 
   [maybe R dependence is not correct, index difference?]
-- Test error feedback based weighting on the Q matrix
 
 Robot list:
 - Experiment with Ballgun fixed.
-- Correct initial conditions of zero-phase filtering and test in MATLAB with ILC
+- Correct initial conditions of zero-phase filtering and test in MATLAB with ILC 
+  [filtfilt is available in SL]
 - Implement/Learn RDMP first in MATLAB and then in SL
 
 Extensions:

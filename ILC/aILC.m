@@ -79,7 +79,7 @@ classdef aILC < ILC
             mats.B = zeros(N*dim_x,N*dim_u);
             mats.C = obj.G;
             mats.D = obj.G * obj.F + obj.H;
-            obj.filter = Filter(model,trj,mats);
+            obj.filter = KF(model,trj,mats);
             
         end
         
