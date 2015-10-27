@@ -1,23 +1,15 @@
 ROADMAP
 
-- Reading ILC review + papers
-- Read control chapter of both books
-- Look at last ACC papers on ILC
 - Clean-up: Check out Yanlong's and Katharina's code.
-- Read system identification survey
-- Derive Kalman filter from minimum variance and derive seperation principle.
-- SL code debugging framework in Eclipse
+- Write down draft for Table Tennis Performance Criterion
 - ATLAS/BLAS library integration with SL (wrapper?)
-- Write down robust trajectory generation framework for table tennis
-- (Guilherme) Extrapolating ILC. Boosting ILC with weak learners?
+- SL code debugging framework in Eclipse
+- Read system identification survey
+- Read control chapter of both books
 
 MATLAB/SL list:
-- compare kinematics with SL
 - test performance of ILC with linearization at each iteration
-- why doesn't ball and robot trajectory coincide in simulations? check kinematics in MATLAB
-- check total least squares on the ball prediction dataset
 - Why does ILC learning with feedback generate zero Finv?
-- Load constraints umin and umax, joint limits from sensor offsets file and include in lift_constraints
 - Try IDM as fb in MATLAB
 - Test LQG and iLQR, DDP on MATLAB
 - Implement REPS, PI2 algorithms on MATLAB, variational Bayes
@@ -25,14 +17,15 @@ MATLAB/SL list:
 implement the test function in MATLAB that checks for differences
 - Why are two tracking LQRs not exactly the same (at the end)? 
   [maybe R dependence is not correct, index difference?]
-- Test error feedback based weighting on the Q matrix
 
 Robot list:
-- Correct initial conditions of zero-phase filtering and test in MATLAB with ILC
+- Experiment with Ballgun fixed.
+- Correct initial conditions of zero-phase filtering and test in MATLAB with ILC 
+  [filtfilt is available in SL]
 - Implement/Learn RDMP first in MATLAB and then in SL
 
 Extensions:
-- Total Gaussian Process?
+- (Guilherme) Extrapolating ILC. Boosting ILC with weak learners?
 - Relaxation Learning Control: how to define cost function? Semi markov decision process? Optimal stopping?
   relation to path following? Metronome? Apply monotonic convergence criteria and/or repetitive systems theory
   (Rogers and Owens,1992)?

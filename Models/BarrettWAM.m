@@ -113,7 +113,14 @@ classdef BarrettWAM < Robot
             
         end
         
+        % Calculate the racket orientation based on quaternion
+        function r = calcRacketOrientation(obj,x)
+            
+            %TODO:
+        end
+        
         % run kinematics using an external function
+        % only the endeffector configurations are returned
         function x = kinematics(obj,q)
             
             lenq = size(q,2);

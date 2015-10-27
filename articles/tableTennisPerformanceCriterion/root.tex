@@ -24,53 +24,43 @@
 \usepackage{algorithmic}
 
 % custom commands
+\newcommand{\boldvec}[1]{\boldsymbol{\mathrm{#1}}}
+\let\vec\boldvec
 \newcommand\at[2]{\left.#1\right|_{#2}} % the at differential sign
 \newcommand\scalemath[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}} % scaling matrices
 
 %% custom macros
+%% Notation for robot
 \newcommand{\todo}{\textcolor{red}{TODO}} % TODO!
 \newcommand{\kin}{\mathcal{T}} % used to denote inverse kinematics
 \newcommand{\invKin}{\mathcal{T}^{-1}} % used to denote inverse kinematics
 
-\newcommand{\joint}{q} % used to denote robot state in joint space
-\newcommand{\state}{\bar{\joint}} % denotes the generalized coordinates - joint space and velocity coordinates
-\newcommand{\dmp}{s} % used to denote the dmp trajectory states
-\newcommand{\error}{e} % difference between state and reference
-\newcommand{\traj}{r} % used to denote the points on the trajectory to be tracked
+\newcommand{\joint}{\vec{q}} % used to denote robot state in joint space
+\newcommand{\state}{\vec{x}} % denotes the generalized coordinates - joint angles and angular velocities
+\newcommand{\error}{\vec{e}} % difference between state and reference
+\newcommand{\traj}{\vec{r}} % used to denote the points on the trajectory to be tracked
 
-\newcommand{\dist}{\epsilon} % denotes the disturbances acting on the rigid body dynamics
-\newcommand{\linDist}{d} % denotes the disturbances on the LTV model
+\newcommand{\dynamics}{\vec{f}}
+\newcommand{\dynamicsNominal}{\dynamics_{\mathrm{nom}}}
+\newcommand{\dist}{\vec{\epsilon}} % denotes the disturbances acting on the rigid body dynamics
 
-\newcommand{\sysInput}{u} % used to denote the system inputs
-\newcommand{\linInput}{\tilde{u}} % denotes the LTV inputs
-\newcommand{\trjInput}{\nu} % denotes the inputs on the trajectory
+\newcommand{\sysInput}{\vec{u}} % used to denote the system inputs
+\newcommand{\trjInput}{\sysInput_{\mathrm{IDM}}} % denotes the inputs on the trajectory (calculated using IDM)
 
-
-% % % % DMP terminology % % % %
-\newcommand{\fullvec}{\psi} % full vector for state-ref-dmp-goal
-\newcommand{\force}{f} % forcing term of the dmps
-\newcommand{\phase}{x} % phase of the dmp
-\newcommand{\weights}{w} % weights of the dmp
-\newcommand{\basis}{\phi} % basis functions of the dmp as a matrix
-
-% % % % ILC terminology % % % %
-\newcommand{\qmatrix}{\Gamma} % denotes the filtering qmatrix term of Bristow et al.
-\newcommand{\lmatrix}{L} % denotes the learning matrix of Bristow et al.
-
-\newcommand{\observations}{\mathbf{y}} % used for the observed output
-\newcommand{\dynamics}{f}
-\newcommand{\dynamicsNominal}{f_{\mathrm{nom}}}
-\newcommand{\policy}{\mathbf{\pi}}
+\newcommand{\policy}{\vec{\pi}}
 \newcommand{\ValueFunction}{J}
 \newcommand{\episode}{k} % used for episode number
-
 \newcommand{\totalTime}{T} % total time duration 
 \newcommand{\numSteps}{N} % total number of time steps
-\newcommand{\numepisode}{K} % total number of episodes
 
 \newcommand{\threshold}{\epsilon}
-\newcommand{\alg}{\emph{wILC}}
+\newcommand{\alg}{\emph{tt}}
 \newcommand{\dataset}{E}
+
+% Notation for the ball and other table tennis jargon
+\newcommand{\court}{\vec{S}} % opponents court
+\newcommand{\net}{\vec{S}} % net
+\newcommand{\wall}{\vec{W}} % wall
 
 % Set the paths where all figures are taken from:
 \graphicspath{{Pictures/}}
@@ -82,51 +72,119 @@
  \input{#1.pdf_tex}%
 }
 
-\author{Okan Ko\c c, Guilherme Maeda, Gerhard Neumann and Jan Peters}
-\title{Optimal Striking Movement Representation \& Execution}
+\author{Okan Ko\c c, Guilherme Maeda, and Jan Peters}
+\title{A New Performance Criterion in Robotic Table Tennis}
 \begin{document}
 \maketitle
 
 
-\section{Robust Control Applications to Table Tennis}
+\section{Introduction}
 
-\subsection{Game Theoretic Analysis}
+% % % % probabilistic modelling for robust trajectory generation % % % %
 
-What actions are available to players? Position and body orientation with racket position and body orientation
-(initial gesture) and hitting motions (trajectories) as dynamic movement primitives.
+% Inputs:
+%
+% 1. Estimates of ball position & velocity till net N
+% 2. Stability region of the table S_T is fixed as 3d-coordinates
+% 3. Flight Model of ball dynamics bdot = f(b) estimated from ball trajectory data
+% 4. Bounce model of ball dynamics bdot = g(b) estimated from ball trajectory data
+% 5. Extended Kalman filter or a regression method to predict ball trajectories
+%
+% Estimates
+% 
+% 1. A set or a probability distribution of incoming ball states parameterized by t, e.g. b_t \approx N(\mu_b_in(t),\sigma_b_in(t)) 
+% 2. Interaction probabilities (ball touching the racket)
+% 3. A probabilistic model (e.g. a Gaussian Process) describing the interaction model: outputs a set or a probability distribution of outgoing ball states parameterized (or indexed) by t, e.g. b_t \approx N(\mu_b_out(t), \sigma_b_out(t))
+% 4. A distribution for admissable velocities for the ball for each point inside the workspace of the robot
+%
+% Output
+% 
+% The mapping r_t \approx N(\mu_racket_center(t),\sigma_racket_center(t))) as racket reference trajectory that maximizes the probability of landing on the opponents court, or minimizing KL-divergence between outgoing ball states distribution and admissable/desired velocities [e.g. uniform distribution of velocities]
+%
+% Control: imposing transversality conditions when ball is on a curve p_b(t) or a set with some measure p_b [constant hamiltonian on this set?] we get a probability distribution of admissable end effector configurations
+%
+% Sensitivity of the interaction model should be minimized by coming up with a racket trajectory
+%
+%
+%1. incoming ball trajectory: as Gaussians indexed with time [e.g. Kalman filter should give us this information with prediction. Parameters/model of a Kalman filter could be fit using ball data (when fitting, innovation of the KF should be minimized as to consist mostly of white noise)]
+%
+%2. Probability of interaction occurring: b(t) for the ball must lie in r(t) + \gamma o_perp(t), where r(t) is the racket centre trajectory, \gamma is less than the radius of the racket, and o_perp(t) is perpendicular to the normal (i.e. orientation) of the racket.
+%
+%3. the interaction (contact) model [maybe a linear model/GP constructed from observations of me hitting the ball, with ball incoming velocity, outgoing velocity, racket velocity and orientation available from data]
+%
+%4. the racket trajectory: this is what we want to generate, more specifically racket positions and orientations over time, could be a Gaussian distribution indexed with time as well.
+%
+%5. the outgoing ball trajectory: should be an integral over the previous Gaussians using the interaction model. If we use GP for (2), then moment matching may be used to estimate the resulting Gaussians [again indexed with time].
+%
+%6. the feasible region: for every point on the robot court, there is a range of feasible outgoing velocities using the flight model [estimated in (1). how to make it probabilistic? could we have a filter running backwards?] such that the ball avoids the net and the wall and lands on the opponents court. Probabilistically could be a uniform distribution over a set.
+%
+%Optimization criterion: find (4) such that the KL-divergence of (5) with the uniform distributions in (6) has minimum l_inf-norm [since it is a function over time]. Other optimization criteria could be used such as: minimize \delta_1 + \delta_2 + \delta_3 such that with probability at least 1-\delta_1 and 1-\delta_2 and 1-\delta_3, ball avoids the net, the wall and lands on the other side, respectively.
 
-Timing of the interactions - sequential model. But not always at the same time
+% Reasons for uncertainty & probabilistic modeling:
+% 1. Ball cannot be estimated precisely [both flight/bounce models are also inexact]
+% 2. Trajectories cannot be tracked [control errors]
+% 3. Racket-ball interaction model not known well [elastic momentum law, velocity dependent coefficient of restitution]
+%
+% For every point on the predicted ball trajectory, there is a range/set of admissable outgoing ball velocities [for the set point of view]
+%
+% build a forward/inverse interaction model probabilistically
 
-What information do different players have when they take actions? 
-They see the opponent's posture always and also their hitting motion. They will also see the incoming ball trajectory - but maybe not everything if it's coming too fast. They may or may not know the spin of the ball.
-Sometimes you have to choose, or take action, before seeing the opponent hit the ball.
+% % % % Striking Movement Generation in Humans % % % % %
+% speed-accuracy trade-off [Woodworth 1899, Fitts 1954]
+% variability [Todorov and Jordan, 2002]
+% goal-directed corrections [Elliott et al.]
+% biomechanical redundancy [Bernstein, 1967]
+% cost functions from optimal control [ Bryson and Ho, 1975; Hogan, 1984; Harris and Wolpert, 1998; Todorov and Jordan, 2002]
+% motor program [Henry and Rogers, 1960; Keele, 19658; Schmidt, 1975; Schmidt and Wrisber, 2000, Schmidt, 2003]
+% related: operational timing hypothesis [Tyldesley and Whiting, 1975]
+% tau hypothesis to account for the time-to-contact: tau is specified as the relative inverse rate of dilation of the object image [Lee and Young, 1985; evidence for it: Bootsma and van Wieringen, 1988]
+% stroke timing independent of ball speed [Hubbard and Seng, 1954] 
+% error tolerance [Dagmar Sternad, Hermann Mueller, 2011]
+% funnel-like control with fixed spatio-temporal bandwidth [Bootsma and Peper, 1992; Williams and Starkes, 2002]
 
-What are the payoffs to the various players as a result of the interaction?
-For the players there are no payoffs unless the ball does not touch the table on the other side. In that case, one gets 1 and the other gets 0.
+% % % % Robotic Table Tennis % % % %
+% virtual hitting point hypothesis
+% vision and trajectory prediction
+% impact time, ball position and velocity
+% time to contact
+% 1. the ballistic flight model
+% air resistance scale factor C 
+% 2. the rebound model with coefficient $\epsilon_T = [\epsilon_{Tx}, \epsilon_{Tx}, -\epsilon_{Tz}]$, $\epsilon_{Tx}$ is the coefficient of friction
+% air drag, gravity and spin
+% coefficient of restitution in the rebound model $\epsilon_{Tz}$
+% coefficient of restitution in the racket: o_parallel - v = \epsilon_{R} (-i_parallel + v) with v the speed of the racket along its normal
+% vision system operates in a semi-structured and human-inhabited environment
+% Finite State Automaton: four stages: awaiting stage, preparation, hitting and finishing stage
+% hitting stage lasts approximately 80 ms in expert humans [only find a robust hitting trajectory]
 
-Sensitivity analysis - am I acting strategically enough?
+% The choice of the the desired landing point of the ball on the opponent's court is generally left to a higher level strategy or policy of the robot. However in this paper we argue that landing the ball successfully on the opponent's court is the \emph{fundamental goal} in table tennis. Therefore policies or the strategies involved in striking movement generation should be combined in one unitary whole.
 
-Pure strategies over actions vs. mixed strategies
+% Due to the limitations of our setup, our robot is fixed to the ceiling. Hence we expect that the opponent will always throw the ball to the second half of the robots table. The table can be brought closer to the robot to overcome this limitation: however then the trajectory generation problem will be subsequently harder, and the hard constraint of hitting the table becomes more problematic to avoid.
 
-Dominant strategy - an individual does not have to make any predictions about what other players
-might do, and still has a well-defined best strategy. This adds robustness.
+% % % % Cost functions for movement generation % % % %
+% cost of the movement includes - jerk, (metabolic) energy [Bryson and Ho, 1975]
+% relationships found in reaching and pointing movements do not hold in striking sports [Bootsma and van Wieringen, 1990]
+% energy optimality [Alexander, 1997; Kuo, 2005]
+% Comfort of the posture, i.e. cost is induced by proximity to a fixed comfort posture in joint-space. 
+% We believe that a new performance criterion in robotic table tennis is needed to explain the robust trajectory generation frequently observed in humans, and in order to compete with them. 
 
-A pure strategy Nash equilibrium only requires that the
-action taken by each agent be best against the actual equilibrium actions taken by the other
-players, and not necessarily against all possible actions of the other players.
-"we have to look for a pair of actions such that neither firm wants
-to change its action given what the other firm has chosen"
+The opponent's court in table tennis, the net (and other environmental restrictions such as walls) together define the \emph{stability region} $\court$: the robot will have failed the game if it cannot land the ball on the other side of the table.
 
-A profile of dominant strategies is a Nash equilibrium but not vice versa.
+% robust movement generation
+% robust algorithms that can compensate for low quality hardware and uncertainty in ball estimation
 
-randomized strategies, or what are called mixed strategies, when no pair of pure strategies forms an equilibrium.
-maximize entropy - do not reveal info to the opponent, he shouldn't be able to predict your future behaviour given past samples.
+% % % % Table Tennis Setup % % % %
+%We consider table tennis where we are interested in generating and executing accurate striking motions. For the robotic table tennis task we are using a seven degree of freedom (DoF) torque-controlled custom made Barrett WAM arm capable of high speeds and accelerations. A standard size racket (16 cm diameter) is mounted on the end-effector of the arm as can be seen in Figure~\ref{robot}. A vision system consisting of four cameras hanging from the ceiling around each corner of the table is used for tracking the ball \cite{Lampert12}. The orange ball is tracked visually with a sampling rate of 60 Hz and filtered with an extended Kalman filter that accounts for some of the bouncing behavior of the ball and air drag effects. The table and the tennis balls are in accordance with the International Table Tennis Federation (ITTF) rules.
+%
+%A ball launcher (see Figure~\ref{robot}) is available to throw balls accurately to a fixed position in Cartesian space to the forehand of the robot. The incoming ball arrives with low-variability in desired positions and higher-variability in ball velocities. The whole area to be covered amounts to about 1 m$^2$ circular region surrounding the initial forehand posture of the robot. This allows us to avoid the singularities of the robot. Any ball that appears outside of this circular \emph{feasible} region will not be hit.
+%
+%After the visual system predicts a ball trajectory that coincides with the feasible region in Cartesian space, the motion planning system has to come up with a trajectory that specifies how, where and when to intercept the incoming ball. Desired Cartesian position, velocity and orientations of the racket translate in joint space to a specification of 14 parameters: 7 joint angles and 7 joint velocities of the robot arm. Along with the desired hitting time (or the time until impact), these 15 parameters are used to train 7 joint space trajectories that correspond to the desired reference trajectory in Cartesian space.
+%
+%In runtime, in order to generate feasible reference trajectories that account for the variations in incoming ball position and velocities, we come up with the robust cartesian trajectory. We start these references from the initial posture of the robot provided by the sensors.
+% From Katharina's paper:
+%the position, velocity and orientation of the racket can be computed analytically based on the state of the system and the target on the opponents court.
+%These task space parameters can also be converted into joint space parameters using inverse kinematics
 
-is table tennis an extensive form game? Game tree? backwards induction 
-
-Spring-like dynamics of the game. You throw hoping that it will never come back (zero disturbance from opponent) but if there is enough disturbance then it will come back. 
-
-The table in table tennis defines the stability region of the space. Precise terminology of the stability region?
 
 \bibliographystyle{plain}
 %\bibliographystyle{./IEEEtran}

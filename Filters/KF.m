@@ -1,6 +1,7 @@
 % Class implementing a basic Kalman filter
+% assuming an LTI system
 
-classdef Filter < handle
+classdef KF < handle
     
     properties
           
@@ -17,61 +18,57 @@ classdef Filter < handle
         % D matrix from inputs to output
         D
         % process noise covariance
-        O
+        Q
         % observation noise covariance
-        M
+        R
     end
     
     methods
         
         %% Initialize variances
-        function obj = Filter(model,trj,mats)
+        function obj = KF(dim,mats)
             
-            dimx = model.SIM.dimx;
-            N = trj.N - 1;
-            obj.P = eye(dimx*N);
-            obj.x = zeros(dimx*N,1);
+            dimx = dim;
+            obj.P = eye(dimx);
+            obj.x = zeros(dimx,1);
             obj.A = mats.A;
             obj.B = mats.B;
             obj.C = mats.C;
             obj.D = mats.D;
             
             % initialize covariances
-            obj.O = mats.O;
-            obj.M = mats.M;
+            obj.Q = mats.O;
+            obj.R = mats.M;
             
+        end
+        
+        %% Initialize state
+        function initState(obj,x0,P0)
+            obj.x = x0;
+            obj.P = P0;
         end
         
         %% predict state and covariance
         function predict(obj,u)
             
             obj.x = obj.A * obj.x + obj.B * u;
-            obj.P = obj.A * obj.P * obj.A + obj.O;
+            obj.P = obj.A * obj.P * obj.A + obj.Q;
         end
         
         %% update Kalman filter variance
-        function update(obj,dev,u)
+        function update(obj,y,u)
             
+            % Innovation sequence
+            Inno = y(:) - obj.C*obj.x - obj.D*u;
             % Innovation (output/residual) covariance
-            Theta = obj.C * obj.P * obj.C' + obj.M;
+            Theta = obj.C * obj.P * obj.C' + obj.R;
             % Optimal Kalman gain
             K = obj.P * obj.C' * inv(Theta); %#ok
             % update state/variance
             obj.P = obj.P - K * obj.C * obj.P;
-            obj.x = obj.x + K * (dev(:) - obj.C*obj.x - obj.D * u);
+            obj.x = obj.x + K * Inno;
         end
         
     end
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
 end
