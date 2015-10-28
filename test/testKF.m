@@ -20,17 +20,17 @@ delete('tmp.mat')
 %% Simple Test for Kalman Filter
 
 clc; clear; close all;
-A = 0.9;
-C = 1;
+A = 0.5 * rand(2);
+C = [0,1];
 eps = 0.01;
 N = 50;
-x0 = 10 * rand;
-x(1) = x0;
+x0 = 10 * rand(2,1);
+x(:,1) = x0;
 for i = 1:N-1
-    x(i+1) = A*x(i);
-    y(i) = C*x(i) + sqrt(eps) * randn;
+    x(:,i+1) = A*x(:,i);
+    y(i) = C*x(:,i) + sqrt(eps) * randn;
 end
-y(N) = C*x(end) + sqrt(eps) * randn;
+y(N) = C*x(:,end) + sqrt(eps) * randn;
 
 % initialize KF
 mats.A = A;
@@ -41,21 +41,23 @@ mats.D = 0;
 mats.O = 0;
 % observation noise var
 mats.M = eps;
-filter = KF(1,mats);
-filter.initState(y(1),eps);
-yKF(1) = C * filter.x;
+filter = KF(2,mats);
+filter.initState(x0,eps);
 for i = 1:N-1
-    filter.predict(0);
     filter.update(y(i),0);
-    yKF(i+1) = C * filter.x;
+    filter.predict(0);
+    yKF(i) = C * filter.x;
 end
+filter.update(y(i),0);
+yKF(N) = C * filter.x;
 
 w_cut = 45/180;
 yButter = filterButter2nd(y,w_cut);
 
 plot(1:N,x,1:N,y,1:N,yKF,1:N,yButter);
 legend('traj','noisy traj','Kalman Filter', 'Butterworth');
-SSE = yKF - y
+SSE(1) = (yKF - C*x)*(yKF - C*x)';
+SSE(2) = (yButter - C*x)*(yButter - C*x)';
 
 %% Set system parameters and constraints
 
@@ -149,19 +151,21 @@ mats.D = zeros(dimy,dimu);
 % process noise covar
 mats.O = 0 * eye(dimx);
 % observation noise covar
-mats.M = eps * eye(SIM.dimy);
+mats.M = eps * eye(dimy);
 filter = KF(dimx,mats);
 
 lin.SIM.eps_m = eps;
 yNoisy = lin.observe(t,x0,us);
 
 filter.initState(x0,eps*eye(dimx));
-yKF(1) = lin.C * filter.x;
 for i = 1:Nu
-    filter.predict(us(i));
     filter.update(yNoisy(i),us(i));
-    yKF(i+1) = lin.C * filter.x;
+    filter.predict(us(i));
+    yKF(i) = lin.C * filter.x;
 end
+yKF(N) = lin.C * filter.x;
 
 plot(t,y,t,yNoisy,t,yKF);
 legend('traj','noisy traj','estimated traj');
+SSE(1) = (yNoisy - y)*(yNoisy - y)';
+SSE(2) = (yKF - y)*(yKF - y)';
