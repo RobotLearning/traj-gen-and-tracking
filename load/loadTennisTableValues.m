@@ -1,12 +1,12 @@
 % Table Variables 
-dist_to_table= -3.50; %-3.34;%-3.6;%-3.34%-2.74 -0.5; %0.8;  %0.2
+dist_to_table= -1.23; %-3.50; %-3.34;%-3.6;%-3.34%-2.74 -0.5; %0.8;  %0.2
 table_height = -0.76;
-table_length = 2.76; %2.74
-net_height   = 0.1525;
+table_length = 2.74; %2.76
+net_height   = 0.144; %0.1525
 net_overhang = 0.1525;
 net_thickness = 0.01;
-table_width  = 1.526;
-table_thickness = 0.05;
+table_width  = 1.525; 
+table_thickness = 0.056;
 net_restitution = 0.05;
 table_center = 0.0;
 
@@ -17,7 +17,7 @@ ball_contact_damping = 0; % filled in SimBall
 ball_contact_spring = 0;  % filled in SimBall
 
 % Table Tennis Racket Radius 
-racket_radius = 0.08;
+racket_radius = 0.076; %not 0.08
 
 % Stand Variables 
 stand_height = -1.16; %-0.95;

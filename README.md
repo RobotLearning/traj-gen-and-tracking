@@ -1,13 +1,17 @@
 ROADMAP
 
-- Clean-up: Check out Yanlong's and Katharina's code.
-- Write down draft for Table Tennis Performance Criterion
-- ATLAS/BLAS library integration with SL (wrapper?)
-- SL code debugging framework in Eclipse
-- Read system identification survey
-- Read control chapter of both books
+1. Learn training EKF based on EM
+2. Train EKF on ball data to find C and g
+3. Train Bounce model based on step 2
+4. Train contact model based on step 3 and step 2
+5. Get viable velocities based on Miki's code
+6. Frame optimization problem and code in SL
+7. Write down draft for Table Tennis Performance Criterion
+
 
 MATLAB/SL list:
+- ATLAS/BLAS library integration with SL (wrapper?)
+- How does aILC perform based on updated Kalman filter code
 - test performance of ILC with linearization at each iteration
 - Why does ILC learning with feedback generate zero Finv?
 - Try IDM as fb in MATLAB

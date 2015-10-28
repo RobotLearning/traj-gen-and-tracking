@@ -1,5 +1,6 @@
 % Class implementing an Extended Kalman filter
 % Assuming noise covariances are time invariant
+% Assuming observation model is linear
 
 classdef EKF < handle
     
@@ -26,13 +27,13 @@ classdef EKF < handle
     methods
         
         %% Initialize variances
-        function obj = EKF(dim,funState,funObserve,mats)
+        function obj = EKF(dim,funState,mats)
             
             dimx = dim;
             obj.P = eye(dimx);
             obj.x = zeros(dimx,1);
             obj.f = funState;
-            obj.g = funObserve;
+            obj.g = []; % not used for now
             
             % initialize covariances
             obj.Q = mats.O;
@@ -40,36 +41,55 @@ classdef EKF < handle
             
             % initialize linearized matrices
             obj.A = [];
-            obj.C = [];
+            obj.C = mats.C;
             
         end
         
         %% linearize the dynamics f and g with 'TWO-SIDED-SECANT'
         % make sure you run this before predict and update
-        function linearize(obj)
+        % if linObs flag is 1, do not linearize observation model g
+        function linearize(obj,u)
             
-            % TWO-SIDED-SECANT
-            % Take 2nd differences with h small
-            h = 1e-3;
-            n = length(obj.x); 
-            xhPlus = repmat(obj.x,1,2*n) + h * eye(2*n);
-            xhMinus = repmat(obj.x,1,2*n) - h * eye(2*n);
-            fPlus = zeros(2*n); 
-            gPlus = zeros(2*n);
-            fMinus = zeros(2*n);
-            gMinus = zeros(2*n);
-            for i = 1:2*n
-                fPlus(:,i) = obj.f(xhPlus(:,i),u);
-                fMinus(:,i) = obj.f(xhMinus(:,i),u);
-                gPlus(:,i) = obj.g(xhPlus(:,i),u);
-                gMinus(:,i) = obj.g(xhMinus(:,i),u);
+            % method for numerical differentiation
+            METHOD = 'TWO-SIDED-SECANT'; 
+            %METHOD = 'FIVE-POINT-STENCIL'; 
+    
+            switch METHOD
+                case 'FIVE-POINT-STENCIL'
+                h = 1e-3;
+                n = length(obj.x);
+                x2hPlus = repmat(obj.x,1,n) + 2*h * eye(n);
+                xhPlus = repmat(obj.x,1,n) + h * eye(n);
+                xhMinus = repmat(obj.x,1,n) - h * eye(n);
+                x2hMinus = repmat(obj.x,1,n) - 2*h * eye(n);
+                xd2hPlus = zeros(n);
+                xdhPlus = zeros(n);
+                xdhMinus = zeros(n);
+                xd2hMinus = zeros(n);
+                for i = 1:n
+                    xd2hPlus(:,i) = obj.f(x2hPlus(:,i),u);
+                    xdhPlus(:,i) = obj.f(xhPlus(:,i),u);
+                    xdhMinus(:,i) = obj.f(xhMinus(:,i),u);
+                    xd2hMinus(:,i) = obj.f(x2hMinus(:,i),u);
+                end
+                fder = (-xd2hPlus + 8*xdhPlus - 8*xdhMinus + xd2hMinus) / (12*h);
+
+                case 'TWO-SIDED-SECANT'
+                % Take 2n differences with h small
+                h = 1e-3;
+                n = length(obj.x); 
+                xhPlus = repmat(obj.x,1,n) + h * eye(n);
+                xhMinus = repmat(obj.x,1,n) - h * eye(n);
+                fPlus = zeros(n); 
+                fMinus = zeros(n);
+                for i = 1:n
+                    fPlus(:,i) = obj.f(xhPlus(:,i),u);
+                    fMinus(:,i) = obj.f(xhMinus(:,i),u);
+                end
+                fder = (fPlus - fMinus) / (2*h);
+                %dfdx = [zeros(n), eye(n); fder(n+1:2*n,:)];
             end
-            fder = (fPlus - fMinus) / (2*h);
-            dgdx = (gPlus - gMinus) / (2*h);
-            dfdx = [zeros(n), eye(n); fder(n+1:2*n,:)];
-            
-            obj.A = dfdx;
-            obj.C = dgdx;
+            obj.A = fder;
         end
         
         %% Initialize state
@@ -82,14 +102,14 @@ classdef EKF < handle
         function predict(obj,u)
             
             obj.x = obj.f(obj.x,u);
-            obj.P = obj.A * obj.P * obj.A + obj.Q;
+            obj.P = obj.A * obj.P * obj.A' + obj.Q;
         end
         
         %% update Kalman filter variance
         function update(obj,y,u)
             
             % Innovation sequence
-            Inno = y(:) - obj.g(obj.x,u);
+            Inno = y(:) - obj.C * obj.x;
             % Innovation (output/residual) covariance
             Theta = obj.C * obj.P * obj.C' + obj.R;
             % Optimal Kalman gain

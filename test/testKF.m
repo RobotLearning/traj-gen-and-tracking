@@ -1,36 +1,22 @@
-%% Test Kalman Filter and EKF
+%% Test Kalman Filter
 
-%# store breakpoints
-tmp = dbstatus;
-save('tmp.mat','tmp')
-
-%# clear all
-close all
-clear classes %# clears even more than clear all
-clc
-
-%# reload breakpoints
-load('tmp.mat')
-dbstop(tmp)
-
-%# clean up
-clear tmp
-delete('tmp.mat')
+clc; clear; close all;
 
 %% Simple Test for Kalman Filter
 
-clc; clear; close all;
+seed = 5;
+rng(seed);
 A = 0.5 * rand(2);
 C = [0,1];
-eps = 0.01;
-N = 50;
-x0 = 10 * rand(2,1);
+eps = 0.1;
+N = 20;
+x0 = [10;1];
 x(:,1) = x0;
-for i = 1:N-1
-    x(:,i+1) = A*x(:,i);
+y(1) = C*x0 + sqrt(eps) * randn;
+for i = 2:N
+    x(:,i) = A*x(:,i-1);
     y(i) = C*x(:,i) + sqrt(eps) * randn;
 end
-y(N) = C*x(:,end) + sqrt(eps) * randn;
 
 % initialize KF
 mats.A = A;
@@ -45,8 +31,8 @@ filter = KF(2,mats);
 filter.initState(x0,eps);
 for i = 1:N-1
     filter.update(y(i),0);
-    filter.predict(0);
     yKF(i) = C * filter.x;
+    filter.predict(0);
 end
 filter.update(y(i),0);
 yKF(N) = C * filter.x;
@@ -54,13 +40,14 @@ yKF(N) = C * filter.x;
 w_cut = 45/180;
 yButter = filterButter2nd(y,w_cut);
 
-plot(1:N,x,1:N,y,1:N,yKF,1:N,yButter);
-legend('traj','noisy traj','Kalman Filter', 'Butterworth');
+plot(1:N, x(2,:), 'ks-', 1:N, y, 'b-', 1:N, yKF, 'rx:', 1:N, yButter, 'g*');
+%legend('traj','noisy traj','Kalman Filter', 'Butterworth');
 SSE(1) = (yKF - C*x)*(yKF - C*x)';
 SSE(2) = (yButter - C*x)*(yButter - C*x)';
 
 %% Set system parameters and constraints
 
+clc; clear; close all;
 % parameter values of the experimental setup
 
 % Simulation Values 
@@ -138,12 +125,12 @@ end
 
 % Plot the controls
 lin.plot_inputs(traj);
-lin.plot_outputs(traj);
+%lin.plot_outputs(traj);
 
 %% See performance of Kalman Filter
 
 close all;
-eps = 1e-4;
+eps = 1e-1;
 mats.A = lin.Ad;
 mats.B = lin.Bd;
 mats.C = lin.C;
@@ -160,12 +147,13 @@ yNoisy = lin.observe(t,x0,us);
 filter.initState(x0,eps*eye(dimx));
 for i = 1:Nu
     filter.update(yNoisy(i),us(i));
-    filter.predict(us(i));
     yKF(i) = lin.C * filter.x;
+    filter.predict(us(i));
 end
+filter.update(yNoisy(N),0);
 yKF(N) = lin.C * filter.x;
 
-plot(t,y,t,yNoisy,t,yKF);
-legend('traj','noisy traj','estimated traj');
+plot(t,y,'ks-',t,yNoisy,'b-',t,yKF,'rx:');
+%legend('traj','noisy traj','estimated traj');
 SSE(1) = (yNoisy - y)*(yNoisy - y)';
 SSE(2) = (yKF - y)*(yKF - y)';
