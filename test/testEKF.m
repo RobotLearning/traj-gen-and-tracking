@@ -1,7 +1,5 @@
 %% Test Extended Kalman filter
 
-function SSE = testEKF()
-
 clc; clear; close all;
 seed = 5;
 rng(seed);
@@ -28,7 +26,7 @@ end
 % initialize EKF
 dim = 6;
 C = [eye(3),zeros(3)];
-funState = @(x,u) symplecticFlightModel(x,dt,drag,g);
+funState = @(x,u,h) symplecticFlightModel(x,h,drag,g);
 % very small but nonzero value for numerical stability
 mats.O = eps * eye(dim);
 mats.C = C;
@@ -36,10 +34,10 @@ mats.M = eps * eye(3);
 filter = EKF(dim,funState,mats);
 filter.initState(x(:,1),eps);
 for i = 1:N-1
-    filter.linearize(0);
+    filter.linearize(dt,0);
     filter.update(yNs(:,i),0);
     yEKF(:,i) = C * filter.x;
-    filter.predict(0);
+    filter.predict(dt,0);
 end
 filter.update(yNs(:,N),0);
 yEKF(:,N) = C * filter.x;
@@ -55,23 +53,3 @@ ylabel('y');
 zlabel('z');
 grid on;
 axis tight;
-
-end
-
-function xNext = symplecticFlightModel(x,dt,C,g)
-
-xNext = zeros(6,1);
-xNext(4:6) = x(4:6) + dt * ballFlightModel(x(4:6),C,g);
-xNext(1:3) = x(1:3) + dt * xNext(4:6);
-
-end
-
-function xddot = ballFlightModel(xdot,C,g)
-
-v = sqrt(xdot(1)^2 + xdot(2)^2 + xdot(3)^2);
-xddot(1) = -C * v * xdot(1);
-xddot(2) = -C * v * xdot(2);
-xddot(3) = g - C * v * xdot(3);
-
-xddot = xddot(:);
-end

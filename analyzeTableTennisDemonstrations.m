@@ -43,10 +43,10 @@ table_x = table_center + table_width/2;
 table_y = table_length/2;
 
 T1 = [table_center - table_x; 
-    dist_to_table + table_length; 
+    dist_to_table - table_length; 
     table_z];
 T2 = [table_center + table_x;
-    dist_to_table + table_length;
+    dist_to_table - table_length;
     table_z];
 T3 = [table_center + table_x;
     dist_to_table;
@@ -57,16 +57,16 @@ T4 = [table_center - table_x;
 T = [T1,T2,T3,T4]';
 
 net1 = [table_center - table_x;
-        dist_to_table + table_y;
+        dist_to_table - table_y;
         table_z];
 net2 = [table_center + table_x;
-        dist_to_table + table_y;
+        dist_to_table - table_y;
         table_z];
 net3 = [table_center + table_x;
-        dist_to_table + table_y;
+        dist_to_table - table_y;
         table_z + net_height];
 net4 = [table_center - table_x;
-        dist_to_table + table_y;
+        dist_to_table - table_y;
         table_z + net_height];
 
 net = [net1,net2,net3,net4]';
@@ -79,6 +79,8 @@ for i = 1:length(set)
     Q = demo(i).Q;
     t = demo(i).t;
     
+    % this is to throw away really bad observations as to not confuse the
+    % filter
     zMax = 0.5;
     % camera 1 time indices for reliable observations
     idxCam1 = find(M(:,2) == 1 & M(:,5) >= table_z & M(:,5) < zMax);
@@ -125,8 +127,9 @@ for i = 1:length(set)
     % for rhythmic DMPs we need to segment differently
     Treturn = t(end) - tStrike;
     idxStrike = find(t >= (tStrike - duration) & t <= tStrike);
+    % do not take all of the return times, skip some to make it faster
     jump = floor(Treturn / duration);
-    idxReturn = idxStrike(end)+jump:jump:length(t);
+    idxReturn = idxStrike(end)+jump:jump:length(t); 
     idxR = [idxStrike', idxReturn];
     idxStrikeReturn = [idxStrike',idxStrike(end)+1:idxStrike(end)+length(idxReturn)];
     tStrikeReturn = t(idxStrikeReturn);
@@ -205,4 +208,50 @@ zlabel('z');
 legend('cam1 ball','cam3 ball','robot');
 fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
-hold off;
+
+%% Using Extended Kalman Filter to predict ball path
+
+% initialize EKF
+dim = 6;
+drag = 0.1414;
+g = -9.802;
+eps = 1e-4;
+C = [eye(3),zeros(3)];
+funState = @(x,u,h) symplecticFlightModel(x,h,drag,g);
+% very small but nonzero value for numerical stability
+mats.O = eps * eye(dim);
+mats.C = C;
+mats.M = eps * eye(3);
+filter = EKF(dim,funState,mats);
+
+% order the ball data w.r.t. time
+b = [tCam1,bx1,by1,bz1,ones(length(tCam1),1); % camera 1
+     tCam3,bx3,by3,bz3,3*ones(length(tCam3),1)]; % camera 3
+b = sortrows(b);
+% get the ones till net
+% idxNet = 1;
+% while b(idxNet,3) <= dist_to_table - table_y
+%     idxNet = idxNet + 1;
+% end
+idxBallTillNet = find(b(:,3) <= dist_to_table - table_y);
+N = 1; % time from ballgun to net 
+while idxBallTillNet(N+1) - idxBallTillNet(N) == 1
+    N = N + 1;
+end
+idxBallTillNet = idxBallTillNet(1:N);
+bTillNet = b(idxBallTillNet,:);
+
+% initialize the state
+ballEKF = zeros(3,N);
+filter.initState(bTillNet(2:4,1),eps);
+for i = 1:N-1
+    dt = bTillNet(i+1,1)-bTillNet(i,1);
+    filter.linearize(dt,0);
+    filter.update(bTillNet(2:4,i),0);
+    ballEKF(:,i) = C * filter.x;
+    filter.predict(0,dt);
+end
+filter.update(bTillNet(2:4,N),0);
+ballEKF(:,N) = C * filter.x;
+
+scatter3(x(1,idxD),x(2,idxD),x(3,idxD),'k');

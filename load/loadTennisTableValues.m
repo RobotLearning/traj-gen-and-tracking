@@ -1,5 +1,5 @@
 % Table Variables 
-dist_to_table= -1.23; %-3.50; %-3.34;%-3.6;%-3.34%-2.74 -0.5; %0.8;  %0.2
+dist_to_table= -0.76; %-3.50; %-3.34;%-3.6;%-3.34%-2.74 -0.5; %0.8;  %0.2
 table_height = -0.76;
 table_length = 2.74; %2.76
 net_height   = 0.144; %0.1525
@@ -20,12 +20,12 @@ ball_contact_spring = 0;  % filled in SimBall
 racket_radius = 0.076; %not 0.08
 
 % Stand Variables 
-stand_height = -1.16; %-0.95;
-radius_bottom= 0.1;
-radius_top   = 0.02;
-stand_x      = 0.02;  %-0.85
-stand_y      = -0.59;
-stand_z	   = 0.9;
+stand_height  = -1.16; %-0.95;
+radius_bottom = 0.1;
+radius_top    = 0.02;
+stand_x       = 0.02;  %-0.85
+stand_y       = -0.59;
+stand_z	      = 0.9;
 
 % Floor 
 floor_level   = -1.71;

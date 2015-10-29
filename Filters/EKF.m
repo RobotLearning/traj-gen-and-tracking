@@ -48,7 +48,7 @@ classdef EKF < handle
         %% linearize the dynamics f and g with 'TWO-SIDED-SECANT'
         % make sure you run this before predict and update
         % if linObs flag is 1, do not linearize observation model g
-        function linearize(obj,u)
+        function linearize(obj,dt,u)
             
             % method for numerical differentiation
             METHOD = 'TWO-SIDED-SECANT'; 
@@ -67,10 +67,10 @@ classdef EKF < handle
                 xdhMinus = zeros(n);
                 xd2hMinus = zeros(n);
                 for i = 1:n
-                    xd2hPlus(:,i) = obj.f(x2hPlus(:,i),u);
-                    xdhPlus(:,i) = obj.f(xhPlus(:,i),u);
-                    xdhMinus(:,i) = obj.f(xhMinus(:,i),u);
-                    xd2hMinus(:,i) = obj.f(x2hMinus(:,i),u);
+                    xd2hPlus(:,i) = obj.f(x2hPlus(:,i),u,dt);
+                    xdhPlus(:,i) = obj.f(xhPlus(:,i),u,dt);
+                    xdhMinus(:,i) = obj.f(xhMinus(:,i),u,dt);
+                    xd2hMinus(:,i) = obj.f(x2hMinus(:,i),u,dt);
                 end
                 fder = (-xd2hPlus + 8*xdhPlus - 8*xdhMinus + xd2hMinus) / (12*h);
 
@@ -83,8 +83,8 @@ classdef EKF < handle
                 fPlus = zeros(n); 
                 fMinus = zeros(n);
                 for i = 1:n
-                    fPlus(:,i) = obj.f(xhPlus(:,i),u);
-                    fMinus(:,i) = obj.f(xhMinus(:,i),u);
+                    fPlus(:,i) = obj.f(xhPlus(:,i),u,dt);
+                    fMinus(:,i) = obj.f(xhMinus(:,i),u,dt);
                 end
                 fder = (fPlus - fMinus) / (2*h);
                 %dfdx = [zeros(n), eye(n); fder(n+1:2*n,:)];
@@ -99,9 +99,11 @@ classdef EKF < handle
         end
         
         %% predict state and covariance
-        function predict(obj,u)
+        % predict dt into the future
+        function predict(obj,dt,u)
             
-            obj.x = obj.f(obj.x,u);
+            % integrating the state to get x(t+1)
+            obj.x = obj.f(obj.x,u,dt);
             obj.P = obj.A * obj.P * obj.A' + obj.Q;
         end
         
