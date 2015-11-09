@@ -3,7 +3,7 @@
 clc; clear; close all;
 seed = 5;
 rng(seed);
-eps = 1e-4;
+eps = 1e-6;
 N = 20;
 dt = 0.02;
 x0 = rand(3,1);
@@ -42,8 +42,8 @@ end
 filter.update(yNs(:,N),0);
 yEKF(:,N) = C * filter.x;
 
-SSE(1) = trace((yEKF - C*x)*(yEKF - C*x)');
-SSE(2) = trace((yNs - C*x)*(yNs - C*x)');
+SSE(1) = trace((yEKF - y)*(yEKF - y)');
+SSE(2) = trace((yNs - y)*(yNs - y)')
 
 plot3(y(1,:), y(2,:), y(3,:), 'ks-', ...
       yNs(1,:), yNs(2,:), yNs(3,:), 'b*', ...
@@ -53,3 +53,4 @@ ylabel('y');
 zlabel('z');
 grid on;
 axis tight;
+legend('actual','observations','EKF');
