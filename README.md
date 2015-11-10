@@ -5,7 +5,7 @@ ROADMAP
 3. Train Bounce model based on step 2
 4. Train contact model based on step 3 and step 2
 5. Get viable velocities based on Miki's code
-6. Frame optimization problem and code in SL
+6. Test stochastic maximum principle in SL
 7. Write down draft for Table Tennis Performance Criterion
 
 
