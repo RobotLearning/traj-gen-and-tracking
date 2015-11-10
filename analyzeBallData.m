@@ -48,9 +48,9 @@ dropSet = [17,20,22,23,24,29,56]; % bad recordings
 for i = 1:length(dropSet)
     set = set(set ~= dropSet(i));
 end
-choose = 18; %set(end);
+choose = 65; %set(end);
 M = dlmread([demoFolder,int2str(choose),'.txt']);
-scale = 0.002; % recorded in milliseconds
+scale = 0.001; % recorded in milliseconds
 t = scale * M(:,end-14);
 
 % this is to throw away really bad observations as to not confuse the
@@ -74,7 +74,7 @@ bz3 = Mball3(idxCam3,3);
 
 %% initialize EKF
 dim = 6;
-eps = 1e-5;
+eps = 1e-6;
 C = [eye(3),zeros(3)];
 
 params.C = Cdrag;
@@ -95,7 +95,7 @@ mats.C = C;
 mats.M = eps * eye(3);
 filter = EKF(dim,funState,mats);
 
-%% Order the ball data w.r.t. time
+%% Order the ball data w.r.t. time and throw away const values
 
 b = [tCam1,bx1,by1,bz1,ones(length(tCam1),1); % camera 1
      tCam3,bx3,by3,bz3,3*ones(length(tCam3),1)]; % camera 3
@@ -107,37 +107,43 @@ b = sortrows(b);
 % end
 idxBallTillNet = find(b(:,3) <= dist_to_table - table_y);
 N = 1; % time from ballgun to net 
+i = 1; % index for diff ball positions
+tol = 1e-3;
 while idxBallTillNet(N+1) - idxBallTillNet(N) == 1
+    if norm(b(N,2:4) - b(N+1,2:4)) > tol
+        idxDiffBallPos(i) = N;
+        i = i+1;
+    end
     N = N + 1;
 end
-idxBallTillNet = idxBallTillNet(1:N);
+idxBallTillNet = idxBallTillNet(idxDiffBallPos);
 bTillNet = b(idxBallTillNet,:);
 
 %% Predict the ball with EKF
 
-N = 20;
+obsLen = size(bTillNet,1);
 % initialize the state with first observation and first derivative est.
 p0 = bTillNet(1,2:4);
 v0 = (bTillNet(5,2:4) - bTillNet(1,2:4))/(bTillNet(5,1)-bTillNet(1,1));
 filter.initState([p0(:);v0(:)],eps);
-for i = 1:N-1
+for i = 1:obsLen-1
     dt = bTillNet(i+1,1) - bTillNet(i,1);
     filter.linearize(dt,0);
     filter.update(bTillNet(i,2:4)',0);
     ballEKF(:,i) = C * filter.x;
     filter.predict(dt,0);
 end
-filter.update(bTillNet(N,2:4)',0);
-ballEKF(:,N) = C * filter.x;
+filter.update(bTillNet(obsLen,2:4)',0);
+ballEKF(:,obsLen) = C * filter.x;
 
 % Now we start predicting ball till we hit the table
-tPredict = 0.4;
+tPredict = 0.8;
 dt = 0.01;
 N_pred = tPredict/dt;
 for i = 1:N_pred
     %filter.linearize(dt,0);
     filter.predict(dt,0);
-    ballEKF(:,N+i) = C * filter.x;
+    ballEKF(:,obsLen+i) = C * filter.x;
 end
 
 figure(3);
