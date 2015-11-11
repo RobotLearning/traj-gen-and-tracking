@@ -99,12 +99,12 @@ Discretizing and stacking the linear time varying matrices obtained, we get the 
 %
 \begin{equation}
 \begin{aligned}
-\error_k \approx \systemMat \sysInput_k + \linDist,
+\error_k \approx \systemMat \sysInput_k + \linDist_k,
 \end{aligned}
 \label{approxModel}
 \end{equation}
 %
-\noindent where the model matrix $\systemMat$ has a block lower-diagonal structure, and is composed of the submatrices
+\noindent where $\linDist_k$ is the disturbance observed along the trajectory at iteration $k$ and the model matrix $\systemMat$ has a block lower-diagonal structure, composed of the submatrices
 %
 \begin{equation}
 \begin{aligned}
@@ -117,7 +117,7 @@ Discretizing and stacking the linear time varying matrices obtained, we get the 
 \end{aligned}
 \label{Fmatrix}
 \end{equation}
-
+%
 \noindent Matrices $\vec{A}_j$ and $\vec{B}_j$ are linearizations of the nominal model $\dynamicsNominal$ around the discrete trajectory points $\traj_j$ and nominal inputs $\vec{\nu}_j$ respectively. Conventional ILC algorithms using such a linearized model compute at each iteration the feedforward compensation signals $\sysInput = (\sysInput_1^{\mathrm{T}}, \ldots, \sysInput_N^{\mathrm{T}})^{\mathrm{T}}$ added to the nominal inputs $\trjInput = (\trjInput_1^{\mathrm{T}}, \ldots, \trjInput_N^{\mathrm{T}})^{\mathrm{T}}$ to drive error $\error = (\error_1^{\mathrm{T}}, \ldots, \error_N^{\mathrm{T}})^{\mathrm{T}}$ to its theoretical minimum (ideally zero). For example, the ILC algorithm utilizing plant inversion with pseudoinverse 
 % reference needed
 computes the updates using % ref needed
