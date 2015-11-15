@@ -27,7 +27,7 @@ ax = 1;
 % temporal scaling factor
 tau = 1;
 % time evolution
-T = 5;
+T = 3;
 tspan = [0 T];
 % number of points
 t = tspan(1):h:tspan(2);
@@ -41,8 +41,8 @@ can = CAN(h,ax,tau,numbf,T,pat);
 %% test forced rhythmic DMP
 
 % create two different DMPs
-alpha = 25;
-beta = 25/4;
+alpha = 50;
+beta = 50/4;
 % goal and amplitude are initialized here
 goal = 1;
 amp = 1;
@@ -88,53 +88,53 @@ legend('path','dmp');
 
 %% test regression on Barrett WAM
 
-initializeWAM;
-q0 = zeros(N_DOFS,3);
-goal = ones(N_DOFS,1);
-amp = ones(N_DOFS,1);
-
-for j = 1:N_DOFS
-    joints{j} = ['joint\_', int2str(j)];
-    vel{j} = ['joint\_vel\_', int2str(j)];
-    acc{j} = ['joint\_acc\_', int2str(j)];
-    %err{i} = ['err_j_', int2str(i)];
-end
-
-q = zeros(N_DOFS,N);
-qd = zeros(N_DOFS,N);
-qdd = zeros(N_DOFS,N);
-
-for i = 1:N_DOFS
-    dmp(i) = RDMP(can,alpha,beta,goal,amp,q0(i,:)');
-    q(i,:) = rand + rand * cos(2*pi*t) + rand * sin(2*pi*t);
-    qd(i,1:end-1) = diff(q(i,:))/h; qd(i,end) = qd(i,end-1);
-    qdd(i,1:end-1) = diff(qd(i,:))/h; qdd(i,end) = qdd(i,end-1);
-    dmp(i).regressLive(q(i,:)',qd(i,:)',qdd(i,:)',goal(i));
-end
-
-figure;
-for i = 1:N_DOFS
-    dmp(i).resetStates();
-    [~,qdmp] = dmp(i).evolve(N);
-    Qdmp(i,:) = qdmp(1,:);
-    Qdmp(i+N_DOFS,:) = qdmp(2,:);
-    subplot(7,2,2*i-1);
-    plot(t,qdmp(1,:),t,q(i,:));
-    legend([joints{i},'\_rdmp'],'demonstration');
-    subplot(7,2,2*i);
-    plot(t,qdmp(2,:),t,qd(i,:));
-    legend([vel{i},'\_rdmp'],'demonstration');
-
-end
-
-x_dmp = wam.kinematics(Qdmp);
-x_example = wam.kinematics([q;qd]);
-
-figure;
-plot3(x_dmp(1,:),x_dmp(2,:),x_dmp(3,:),'--r');
-hold on;
-plot3(x_example(1,:),x_example(2,:),x_example(3,:),'-b');
-grid on;
-axis equal;
-xlabel('x');ylabel('y');zlabel('z');
-legend('dmp',['demo ',num2str(j)]);
+% initializeWAM;
+% q0 = zeros(N_DOFS,3);
+% goal = ones(N_DOFS,1);
+% amp = ones(N_DOFS,1);
+% 
+% for j = 1:N_DOFS
+%     joints{j} = ['joint\_', int2str(j)];
+%     vel{j} = ['joint\_vel\_', int2str(j)];
+%     acc{j} = ['joint\_acc\_', int2str(j)];
+%     %err{i} = ['err_j_', int2str(i)];
+% end
+% 
+% q = zeros(N_DOFS,N);
+% qd = zeros(N_DOFS,N);
+% qdd = zeros(N_DOFS,N);
+% 
+% for i = 1:N_DOFS
+%     dmp(i) = RDMP(can,alpha,beta,goal,amp,q0(i,:)');
+%     q(i,:) = rand + rand * cos(2*pi*t) + rand * sin(2*pi*t);
+%     qd(i,1:end-1) = diff(q(i,:))/h; qd(i,end) = qd(i,end-1);
+%     qdd(i,1:end-1) = diff(qd(i,:))/h; qdd(i,end) = qdd(i,end-1);
+%     dmp(i).regressLive(q(i,:)',qd(i,:)',qdd(i,:)',goal(i));
+% end
+% 
+% figure;
+% for i = 1:N_DOFS
+%     dmp(i).resetStates();
+%     [~,qdmp] = dmp(i).evolve(N);
+%     Qdmp(i,:) = qdmp(1,:);
+%     Qdmp(i+N_DOFS,:) = qdmp(2,:);
+%     subplot(7,2,2*i-1);
+%     plot(t,qdmp(1,:),t,q(i,:));
+%     legend([joints{i},'\_rdmp'],'demonstration');
+%     subplot(7,2,2*i);
+%     plot(t,qdmp(2,:),t,qd(i,:));
+%     legend([vel{i},'\_rdmp'],'demonstration');
+% 
+% end
+% 
+% x_dmp = wam.kinematics(Qdmp);
+% x_example = wam.kinematics([q;qd]);
+% 
+% figure;
+% plot3(x_dmp(1,:),x_dmp(2,:),x_dmp(3,:),'--r');
+% hold on;
+% plot3(x_example(1,:),x_example(2,:),x_example(3,:),'-b');
+% grid on;
+% axis equal;
+% xlabel('x');ylabel('y');zlabel('z');
+% legend('dmp',['demo ',num2str(j)]);
