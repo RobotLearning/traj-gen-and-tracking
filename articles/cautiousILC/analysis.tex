@@ -152,7 +152,36 @@ Left hand side is less than $\gamma$ when
 % where does this fit in?
 \subsection{Adaptive ILC based on Bayesian TLS}\label{adaptiveILC}
 
-In this section we propose a natural Bayesian extension of the algorithm $\alg$ proposed in Section \ref{ilcTLS}. The resulting algorithm is an adaptive Kalman-filter that filters and adapts the nominal models $\latentMat_k = \systemMat + \errorMat_k$ estimated with TLS in \eqref{tlsilc2}. It is by definition a high-order ILC algorithm that considers all of the iterations, i.e all the deviations $\error_i, \ i = 1, \ldots, k,$ from the reference trajectory. 
+In this section we propose a natural Bayesian extension of the algorithm $\alg$ proposed in Section \ref{ilcTLS}. The resulting algorithm adapts the nominal models $\latentMat_k = \systemMat + \errorMat_k$ estimated with Bayesian linear regression. It is by definition a high-order ILC algorithm that considers all of the iterations, i.e all the deviations $\error_i, \ i = 1, \ldots, k,$ from the reference trajectory. 
+
+We estimate the latent matrix and the disturbances using Bayesian linear regression, i.e.
+
+\begin{align}
+\begin{bmatrix} \sysInput_1^{\mathrm{T}} & 1 \\ \sysInput_2^{\mathrm{T}} & 1 \\ \vdots & \vdots \\ \sysInput_k^{\mathrm{T}} & 1 \end{bmatrix} \begin{bmatrix}
+\latentMat^{\mathrm{T}} \\ \linDist^{\mathrm{T}}
+\end{bmatrix} \approx \begin{bmatrix}
+\error_1^{\mathrm{T}} \\ \vdots \\ \error_k^{\mathrm{T}}
+\end{bmatrix}
+\end{align}
+
+where we incorporate our knowledge about the nominal dynamics with a prior on the parameter mean and  $\vec{\theta} = \begin{bmatrix}
+\latentMat & \linDist \end{bmatrix}^{\mathrm{T}}$
+%
+\begin{align}
+\rho(\vec{\theta},\vec{\Sigma}) = \rho(\vec{\Sigma})\rho(\vec{\theta}|\vec{\Sigma})
+\end{align}
+%
+After this estimation procedure, at each iteration $k$ we can plug in the estimated matrix $\hat{\latentMat}$ and $\hat{\linDist}$ as well as the covariances $\vec{\Sigma} = \begin{bmatrix}
+\vec{\Sigma}_Z & \vec{0} \\ \vec{0} & \vec{\Sigma}_d
+\end{bmatrix}$ to weighted TLS and come up with $\sysInput_{k+1}$
+%
+\begin{equation}
+\begin{aligned}
+\text{minimize} &\ \| \hat{\vec{\Sigma}}_Z \begin{bmatrix} \errorMat_k & \residual_k \end{bmatrix} \hat{\vec{\Sigma}}_d \|, \\
+\text{subject to} &\ -\hat{\linDist}_k + \residual_k \in \text{Range}(\hat{\latentMat}_k + \errorMat_k).
+\end{aligned}
+\end{equation}
+
 
 %The prior weighting of the nominal model before starting the adaptive procedure can be based on the number of samples used in the identification of the model matrix $\systemMat$.
 
