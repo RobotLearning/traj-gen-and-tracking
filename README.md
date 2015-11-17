@@ -8,7 +8,6 @@ ROADMAP
 6. Test stochastic maximum principle in SL
 7. Write down draft for Table Tennis Performance Criterion
 
-
 MATLAB/SL list:
 - ATLAS/BLAS library integration with SL (wrapper?)
 - How does aILC perform based on updated Kalman filter code

@@ -120,15 +120,19 @@ classdef BarrettWAM < Robot
         end
         
         % run kinematics using an external function
-        % only the endeffector configurations are returned
-        function x = kinematics(obj,q)
+        % endeffector configurations and velocities are returned
+        function [x,xd] = kinematics(obj,q)
             
             lenq = size(q,2);
             x = zeros(3,lenq);
+            xd = zeros(3,lenq);
             for i = 1:lenq
                 linkPos = barrettWamKinematics(q(:,i),obj.PAR);
+                linkVel = barrettWAMJacobian(q(:,i),obj.PAR);
                 finPos = linkPos(6,:);
+                finVel = linkVel(6,:);
                 x(:,i) = finPos(:);
+                xd(:,i) = finVel(:);
             end
         end
         

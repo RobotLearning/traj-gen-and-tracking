@@ -7,7 +7,6 @@
 %
 % these are called from the kinematics method of Barrett WAM class
 %
-% TODO: only returning cartesian positions for now
 %
 function Xlink = barrettWamKinematics(Q,PAR)
 
