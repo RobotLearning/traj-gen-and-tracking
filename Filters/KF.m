@@ -69,6 +69,36 @@ classdef KF < handle
             obj.x = obj.x + K * Inno;
         end
         
+        %% Kalman smoother (batch mode)
+        % class must be initialized and initState must be run before
+        function [X,V] = smooth(obj,Y,U)
+            
+            N = size(Y,2);
+            X = zeros(length(obj.x),N);
+            X_pred = zeros(length(obj.x),N-1);
+            V = zeros(length(obj.x),length(obj.x),N);
+            V_pred = zeros(length(obj.x),length(obj.x),N-1);
+            % forward pass
+            for i = 1:N-1
+                obj.update(Y(:,i),U(:,i));
+                X(:,i) = obj.x;
+                V(:,:,i) = obj.P;
+                obj.predict(U(:,i));
+                X_pred(:,i) = obj.x;
+                V_pred(:,:,i) = obj.P;
+            end
+            obj.update(Y(:,N),0);
+            X(:,N) = obj.x;
+            V(:,:,N) = obj.P;
+            % backward pass
+            for i = N-1:-1:1
+                % Rauch recursion 
+                H = V(:,:,i) * obj.A' * inv(V_pred(:,:,i));
+                X(:,i) = X(:,i) + H * (X(:,i+1) - X_pred(:,i));
+                V(:,:,i) = V(:,:,i) + H * (V(:,:,i+1) - V_pred(:,:,i)) * H';
+            end
+        end
+        
     end
     
 end

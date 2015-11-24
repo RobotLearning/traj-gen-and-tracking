@@ -10,13 +10,12 @@ classdef EKF < handle
         P
         % state to be estimated
         x
-        % function handle for state evolution model
+        % function handle for state evolution model to be integrated
+        % for time dt
         f
-        % function handle for observation model
-        g
         % linearization of the function f around estimated state
         A
-        % linearization of the function g around estimated state
+        % observation model g is assumed to be linear and discrete
         C
         % process noise covariance
         Q
@@ -33,7 +32,6 @@ classdef EKF < handle
             obj.P = eye(dimx);
             obj.x = zeros(dimx,1);
             obj.f = funState;
-            obj.g = []; % not used for now
             
             % initialize covariances
             obj.Q = mats.O;
@@ -47,7 +45,7 @@ classdef EKF < handle
         
         %% linearize the dynamics f and g with 'TWO-SIDED-SECANT'
         % make sure you run this before predict and update
-        % if linObs flag is 1, do not linearize observation model g
+        % does not linearize observation model g (assumed linear)
         function linearize(obj,dt,u)
             
             % method for numerical differentiation
@@ -119,6 +117,39 @@ classdef EKF < handle
             % update state/variance
             obj.P = obj.P - K * obj.C * obj.P;
             obj.x = obj.x + K * Inno;
+        end
+        
+        %% Kalman smoother (batch mode)
+        % class must be initialized and initState must be run before
+        function [X,V] = smooth(obj,t,Y,U)
+            
+            N = size(Y,2);
+            X = zeros(length(obj.x),N);
+            X_pred = zeros(length(obj.x),N-1);
+            V = zeros(length(obj.x),length(obj.x),N);
+            V_pred = zeros(length(obj.x),length(obj.x),N-1);
+            % forward pass
+            for i = 1:N-1
+                dt = t(i+1) - t(i);
+                obj.linearize(dt,U(:,i));
+                obj.update(Y(:,i),U(:,i));
+                X(:,i) = obj.x;
+                V(:,:,i) = obj.P;
+                obj.predict(dt,U(:,i));
+                X_pred(:,i) = obj.x;
+                V_pred(:,:,i) = obj.P;
+            end
+            obj.linearize(dt,U(:,i));
+            obj.update(Y(:,N),0);
+            X(:,N) = obj.x;
+            V(:,:,N) = obj.P;
+            % backward pass
+            for i = N-1:-1:1
+                % Rauch recursion 
+                H = V(:,:,i) * obj.A' * inv(V_pred(:,:,i));
+                X(:,i) = X(:,i) + H * (X(:,i+1) - X_pred(:,i));
+                V(:,:,i) = V(:,:,i) + H * (V(:,:,i+1) - V_pred(:,:,i)) * H';
+            end
         end
         
     end

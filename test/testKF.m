@@ -40,8 +40,9 @@ yKF(N) = C * filter.x;
 w_cut = 45/180;
 yButter = filterButter2nd(y,w_cut);
 
+figure(1);
 plot(1:N, x(2,:), 'ks-', 1:N, y, 'b-', 1:N, yKF, 'rx:', 1:N, yButter, 'g*');
-%legend('traj','noisy traj','Kalman Filter', 'Butterworth');
+legend('traj','noisy traj','Kalman Filter', 'Butterworth');
 SSE(1) = (yKF - C*x)*(yKF - C*x)';
 SSE(2) = (yButter - C*x)*(yButter - C*x)';
 
@@ -153,7 +154,27 @@ end
 filter.update(yNoisy(N),0);
 yKF(N) = lin.C * filter.x;
 
-plot(t,y,'ks-',t,yNoisy,'b-',t,yKF,'rx:');
+% kalman smoothing
+filter.initState(x0,eps*eye(dimx));
+[X,V] = filter.smooth(yNoisy,us);
+yKFsmooth = lin.C * X;
+
+% butterworth
+cutoff = 4;
+w_nyquist = floor(length(t)/2);
+w_cut = cutoff/w_nyquist;
+yButter = filterButter2nd(yNoisy,w_cut);
+% filtfilt
+[B,A] = butter(2,w_cut);
+yFiltFilt = filtfilt(B,A,yNoisy'); 
+yFiltFilt = yFiltFilt';
+
+figure(2);
+plot(t,y,'ks-',t,yNoisy,'b-',t,yKF,'rx:',t,yButter,'g*',t,yFiltFilt, 'r*',t,yKFsmooth,'--s');
+legend('actual obs','noisy obs', 'KF-filtered obs', 'Butterworth', 'Filtfilt','KF-smoother');
 %legend('traj','noisy traj','estimated traj');
-SSE(1) = (yNoisy - y)*(yNoisy - y)';
-SSE(2) = (yKF - y)*(yKF - y)';
+SSE_noise = (yNoisy - y)*(yNoisy - y)'
+SSE_KF = (yKF - y)*(yKF - y)'
+SSE_KF_smooth = (yKFsmooth - y)*(yKFsmooth - y)'
+SSE_butter = (yButter - y) * (yButter - y)'
+SSE_filtfilt = (yFiltFilt - y) * (yFiltFilt - y)'
