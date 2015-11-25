@@ -128,11 +128,11 @@ classdef BarrettWAM < Robot
             xd = zeros(3,lenq);
             for i = 1:lenq
                 linkPos = barrettWamKinematics(q(:,i),obj.PAR);
-                linkVel = barrettWAMJacobian(q(:,i),obj.PAR);
+                %linkVel = barrettWAMJacobian(q(:,i),obj.PAR);
                 finPos = linkPos(6,:);
-                finVel = linkVel(6,:);
+                %finVel = linkVel(6,:);
                 x(:,i) = finPos(:);
-                xd(:,i) = finVel(:);
+                %xd(:,i) = finVel(:);
             end
         end
         

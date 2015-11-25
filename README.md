@@ -1,12 +1,11 @@
 ROADMAP
 
-1. Learn training EKF based on EM
-2. Train EKF on ball data to find C and g
-3. Train Bounce model based on step 2
-4. Train contact model based on step 3 and step 2
-5. Get viable velocities based on Miki's code
-6. Test stochastic maximum principle in SL
-7. Write down draft for Table Tennis Performance Criterion
+- Train Bounce and contact models
+- Train contact model based on step 3 and step 2
+- Train EKF on ball data with EM to find C and g
+- Get viable velocities based on Miki's code
+- Test stochastic maximum principle in SL
+- Write down draft for Table Tennis Performance Criterion
 
 MATLAB/SL list:
 - ATLAS/BLAS library integration with SL (wrapper?)

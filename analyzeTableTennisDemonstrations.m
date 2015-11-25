@@ -8,9 +8,12 @@ initializeWAM;
 
 %% Load table values, ball and robot data
 
-demoFolder = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
-set = 15:65; % dataset of demonstrations
-dropSet = [17,20,22,23,24,29,56]; % bad recordings
+%demoFolder = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
+demoFolder = '../Desktop/okanKinestheticTeachin_20151125/unifyData';
+%set = 15:65; % dataset of demonstrations
+set = 2:64;
+%dropSet = [17,20,22,23,24,29,56]; % bad recordings
+dropSet = [5,6,9,10,14,26,27,32,38,42,55,56,57];
 for i = 1:length(dropSet)
     set = set(set ~= dropSet(i));
 end
@@ -26,9 +29,12 @@ for i = 1:length(set)
     demo(i).name = ['demo ',int2str(set(i))];
     demo(i).raw = dlmread([demoFolder,int2str(set(i)),'.txt']);
     % extract time and the joints - last 14 variables
-    robot = demo(i).raw(:,end-14:end);
+    %robot = demo(i).raw(:,end-14:end);
+    robot = demo(i).raw(:,end-20:end);
     q = robot(:,2:dof+1);
-    qd = robot(:,dof+2:end);
+    qd = robot(:,dof+2:dof+8);
+    x = robot(:,dof+9:dof+11);
+    xd = robot(:,dof+12:dof+14);
     demo(i).t = scale * robot(:,1);
     demo(i).Q = [q';qd'];
 end
@@ -37,6 +43,9 @@ end
 
 % load table parameters
 loadTennisTableValues;
+
+% for the second demo only
+dist_to_table = dist_to_table - 0.25;
 
 table_z = floor_level - table_height;
 table_x = table_center + table_width/2;

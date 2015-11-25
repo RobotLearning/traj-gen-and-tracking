@@ -7,6 +7,9 @@ clc; clear; close all;
 % load table parameters
 loadTennisTableValues;
 
+% for the second demo only
+dist_to_table = dist_to_table - 0.25;
+
 table_z = floor_level - table_height;
 table_x = table_center + table_width/2;
 table_y = table_length/2;
@@ -42,16 +45,22 @@ net = [net1,net2,net3,net4]';
 
 %% Load last data
 
-demoFolder = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
-set = 15:65; % dataset of demonstrations
-dropSet = [17,20,22,23,24,29,56]; % bad recordings
-for i = 1:length(dropSet)
-    set = set(set ~= dropSet(i));
+demoFolder1 = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
+set1 = 15:65; % dataset of demonstrations
+demoFolder2 = '../Desktop/okanKinestheticTeachin_20151125/unifyData';
+set2 = 2:64;
+dropSet1 = [17,20,22,23,24,29,31,32,34,35,38,41,48,53,54,56]; % bad recordings
+dropSet2 = [5,6,9,10,14,26,27,32,38,42,55,56,57];
+% what's wrong with sample 31? problem on the ekf-smoother bouncing 
+% what's wrong with sample 54? symplecticFlightModel does not terminate
+for i = 1:length(dropSet1)
+    set1 = set1(set1 ~= dropSet1(i));
 end
-choose = 65; %set(end);
-M = dlmread([demoFolder,int2str(choose),'.txt']);
+
+choose = 64; %set(end);
+M = dlmread([demoFolder2,int2str(choose),'.txt']);
 scale = 0.001; % recorded in milliseconds
-t = scale * M(:,end-14);
+t = scale * M(:,11);
 
 % this is to throw away really bad observations as to not confuse the
 % filter
@@ -119,6 +128,20 @@ end
 idxBallTillNet = idxBallTillNet(idxDiffBallPos);
 bTillNet = b(idxBallTillNet,:);
 
+idxBallTillEndOfTable = find(b(:,3) <= dist_to_table);
+N = 1;
+i = 1;
+tol = 1e-3;
+while idxBallTillEndOfTable(N+1) - idxBallTillEndOfTable(N) == 1
+    if norm(b(N,2:4) - b(N+1,2:4)) > tol
+        idxDiffBallPos(i) = N;
+        i = i+1;
+    end
+    N = N + 1;
+end
+idxBallTillEndOfTable = idxBallTillEndOfTable(idxDiffBallPos);
+bTillEndOfTable = b(idxBallTillEndOfTable,:);
+
 %% Predict the ball with EKF
 
 obsLen = size(bTillNet,1);
@@ -137,7 +160,7 @@ filter.update(bTillNet(obsLen,2:4)',0);
 ballEKF(:,obsLen) = C * filter.x;
 
 % Now we start predicting ball till we hit the table
-tPredict = 0.8;
+tPredict = 0.4;
 dt = 0.01;
 N_pred = tPredict/dt;
 for i = 1:N_pred
@@ -146,18 +169,68 @@ for i = 1:N_pred
     ballEKF(:,obsLen+i) = C * filter.x;
 end
 
+%% Predict the ball with EKF smoother to get x0
+
+filter.initState([p0(:);v0(:)],eps);
+u = zeros(1,size(bTillNet,1));
+tTillNet = bTillNet(:,1);
+[xEKFSmooth, VekfSmooth] = filter.smooth(tTillNet,bTillNet(:,2:4)',u);
+ballEKFSmooth = C * xEKFSmooth;
+
+% Now we start predicting ball till we hit the table
+filter.initState(xEKFSmooth(:,1),VekfSmooth(:,:,1));
+for i = 1:obsLen-1
+    dt = bTillNet(i+1,1) - bTillNet(i,1);
+    filter.linearize(dt,0);
+    filter.update(bTillNet(i,2:4)',0);
+    ballEKFSmooth(:,i) = C * filter.x;
+    filter.predict(dt,0);
+end
+filter.update(bTillNet(obsLen,2:4)',0);
+ballEKFSmooth(:,obsLen) = C * filter.x;
+
+% Now we start predicting ball till we hit the table
+dt = 0.01;
+for i = 1:N_pred
+    %filter.linearize(dt,0);
+    filter.predict(dt,0);
+    ballEKFSmooth(:,obsLen+i) = C * filter.x;
+end
+
+%% Plot predictions
 figure(3);
 scatter3(bx1,by1,bz1,'r');
 hold on;
 scatter3(bx3,by3,bz3,'b');
-scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
+%scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
+scatter3(ballEKFSmooth(1,:),ballEKFSmooth(2,:),ballEKFSmooth(3,:));
 title('Filtered ball trajectory');
 grid on;
 axis equal;
 xlabel('x');
 ylabel('y');
 zlabel('z');
-legend('cam1','cam3','EKF');
+legend('cam1','cam3','EKF smooth');
 fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 hold off;
+
+% x-y-z vs t
+% tAfterNet = tTillNet(end) + dt * (1:N_pred);
+% tTotal = [tTillNet; tAfterNet(:)];
+% figure(4);
+% subplot(3,1,1);
+% plot(tTotal, ballEKF(1,:));
+% title('xaxis');
+% xlabel('t');
+% ylabel('x');
+% subplot(3,1,2);
+% plot(tTotal, ballEKF(2,:));
+% title('yaxis');
+% xlabel('t');
+% ylabel('y');
+% subplot(3,1,3);
+% plot(tTotal, ballEKF(3,:));
+% title('zaxis');
+% xlabel('t');
+% ylabel('z');

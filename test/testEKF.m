@@ -44,7 +44,7 @@ funState = @(x,u,h) symplecticFlightModel(x,h,params);
 % very small but nonzero value for numerical stability
 mats.O = eps * eye(dim);
 mats.C = C;
-mats.M = eps * eye(3);
+mats.M = eps * eye(3);floor_level
 filter = EKF(dim,funState,mats);
 filter.initState(x(:,1),eps);
 for i = 1:N-1
@@ -59,6 +59,7 @@ yEKF(:,N) = C * filter.x;
 % Extended Kalman Smoother
 t = dt * (1:N);
 u = zeros(1,N);
+filter.initState(x(:,1),eps);
 [xsmooth,~] = filter.smooth(t,yNs,u);
 yEKF_smooth = C * xsmooth;
 

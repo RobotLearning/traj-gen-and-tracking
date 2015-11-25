@@ -2,6 +2,15 @@
 
 clc; clear; close all;
 
+% FOR ALL DATA
+% Detect when it bounces
+% Kalman smoothing on the first part
+% Detect when it hits the racket
+% Smooth on also this part
+% Check if bouncing points are close
+% Get velocities before and after impact
+% Train the bounce model
+
 %% Load table values
 
 % load table parameters
@@ -40,13 +49,36 @@ net4 = [table_center - table_x;
 
 net = [net1,net2,net3,net4]';
 
+%% initialize EKF
+dim = 6;
+eps = 1e-6;
+C = [eye(3),zeros(3)];
+
+params.C = Cdrag;
+params.g = gravity;
+params.zTable = table_z;
+params.yNet = dist_to_table - table_y;
+params.table_length = table_length;
+params.table_width = table_width;
+% coeff of restitution-friction vector [TO BE LEARNED!]
+params.CFTX = CFTX;
+params.CFTY = CFTY;
+params.CRT = CRT;
+
+funState = @(x,u,dt) symplecticFlightModel(x,dt,params);
+% very small but nonzero value for numerical stability
+mats.O = eps * eye(dim);
+mats.C = C;
+mats.M = eps * eye(3);
+filter = EKF(dim,funState,mats);
+
 %% Load all data
 
 demoFolder = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
 set = 15:65; % dataset of demonstrations
-dropSet = [17,20,22,23,24,29,56]; % bad recordings
-for i = 1:length(dropSet)
-    set = set(set ~= dropSet(i));
+dropSet1 = [17,20,22,23,24,29,31,32,34,35,38,41,48,53,54,56]; % bad recordings
+for i = 1:length(dropSet1)
+    set = set(set ~= dropSet1(i));
 end
 scale  = 0.001; % recorded in milliseconds
 
@@ -78,6 +110,35 @@ for i = set
     by3 = Mball3(idxCam3,2);
     bz3 = Mball3(idxCam3,3);
     
-    % USE A KALMAN SMOOTHER!
+    b = [tCam1,bx1,by1,bz1,ones(length(tCam1),1); % camera 1
+     tCam3,bx3,by3,bz3,3*ones(length(tCam3),1)]; % camera 3
+    b = sortrows(b);
+    % get the ones till net
+    % idxNet = 1;
+    % while b(idxNet,3) <= dist_to_table - table_y
+    %     idxNet = idxNet + 1;
+    % end
+    tol = 1e-3;
+    idxBallBounce = find(b(:,4) <= table_z + ball_radius + tol);
+    idxBallBounce = idxBallBounce(1);
+    j = 1; % time from ballgun to net 
+    for i = 1:idxBallBounce
+        if norm(b(i,2:4) - b(i+1,2:4)) > tol
+            idxDiffBallPos(j) = i;
+            j = j+1;
+        end
+    end
+    bTillTable = b(idxDiffBallPos,:);
+    
+    %% Fit a Kalman smoother
+    obsLen = size(bTillTable,1);
+    % initialize the state with first observation and first derivative est.
+    p0 = bTillTable(1,2:4);
+    v0 = (bTillTable(5,2:4) - bTillTable(1,2:4))/(bTillTable(5,1)-bTillTable(1,1));
+    filter.initState([p0(:);v0(:)],eps);
+    u = zeros(1,size(bTillTable,1));
+    tTillTable = bTillTable(:,1);
+    [xEKFSmooth, VekfSmooth] = filter.smooth(tTillTable,bTillTable(:,2:4)',u);
+    ballEKFSmooth = C * xEKFSmooth;
     
 end
