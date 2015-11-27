@@ -49,6 +49,10 @@ net4 = [table_center - table_x;
 
 net = [net1,net2,net3,net4]';
 
+%% Initialize Barrett WAM
+
+initializeWAM;
+
 %% initialize EKF
 dim = 6;
 eps = 1e-6;
@@ -64,6 +68,10 @@ params.table_width = table_width;
 params.CFTX = CFTX;
 params.CFTY = CFTY;
 params.CRT = CRT;
+
+% initial restitution-friction matrix 
+M0 = diag([CFTX, CFTY, CRT]);
+M0full = diag([1,1,1,CFTX,CFTY,CRT]);
 
 funState = @(x,u,dt) symplecticFlightModel(x,dt,params);
 % very small but nonzero value for numerical stability
@@ -86,7 +94,7 @@ scale  = 0.001; % recorded in milliseconds
 bounce = [];
 idxBnc = 0;
 
-for i = set
+for i = 15 %set
 
     M = dlmread([demoFolder,int2str(i),'.txt']);
     t = scale * M(:,end-14);
@@ -111,9 +119,16 @@ for i = set
     bz3 = Mball3(idxCam3,3);
     
     b = [tCam1,bx1,by1,bz1,ones(length(tCam1),1); % camera 1
-     tCam3,bx3,by3,bz3,3*ones(length(tCam3),1)]; % camera 3
-    b = sortrows(b);
-    % get the ones till net
+         tCam3,bx3,by3,bz3,3*ones(length(tCam3),1)]; % camera 3
+    [b,idxB] = sortrows(b);
+    
+    robot = M(:,end-14:end);
+    q = robot(:,2:N_DOFS+1);
+    qd = robot(:,N_DOFS+2:N_DOFS+8);
+    Q = [q';qd'];
+    Qb = Q(:,idxB); % robot joint angles and vel. sorted via ball observ.
+    
+    %% Get ball positions till net
     % idxNet = 1;
     % while b(idxNet,3) <= dist_to_table - table_y
     %     idxNet = idxNet + 1;
@@ -136,9 +151,96 @@ for i = set
     p0 = bTillTable(1,2:4);
     v0 = (bTillTable(5,2:4) - bTillTable(1,2:4))/(bTillTable(5,1)-bTillTable(1,1));
     filter.initState([p0(:);v0(:)],eps);
-    u = zeros(1,size(bTillTable,1));
+    u = zeros(1,obsLen);
     tTillTable = bTillTable(:,1);
     [xEKFSmooth, VekfSmooth] = filter.smooth(tTillTable,bTillTable(:,2:4)',u);
     ballEKFSmooth = C * xEKFSmooth;
     
+    %% Predict if necessary to get velocity before bounce
+    zBeforeBounce = ballEKFSmooth(3,end);
+    dt = 0.001;
+    i = 1;
+    while zBeforeBounce >= table_z + ball_radius + tol
+        filter.predict(dt,0);
+        ballEKFSmooth(:,obsLen+i) = C * filter.x;
+        zBeforeBounce = filter.x(3);
+        i = i + 1;
+    end
+    tBounce = bTillTable(end,1) + dt * (i-1);
+    
+    % Get velocity before bounce
+    velBeforeBounce = filter.x(4:6);
+    
+    %% Estimate striking time
+    % Get cartesian coordinates of robot trajectory
+    x = wam.kinematics(Qb);
+
+    % find closest points in space as a first estimate
+    diffBallRobot = b(:,2:4)-x';
+    distBallRobot = diag(diffBallRobot * diffBallRobot');
+    [minDist,idxStrike] = min(distBallRobot);
+    tStrike = b(idxStrike,1);
+    fprintf('Striking time est. for demo %d: %f\n',i,tStrike);
+    
+    %% Get ball positions after net till strike
+    % idxNet = 1;
+    % while b(idxNet,3) <= dist_to_table - table_y
+    %     idxNet = idxNet + 1;
+    % end
+    idxDiffBallPos = [];
+    j = 1; % time from bounce till strike
+    for i = idxBallBounce:idxStrike
+        if norm(b(i,2:4) - b(i+1,2:4)) > tol
+            idxDiffBallPos(j) = i;
+            j = j+1;
+        end
+    end
+    bAfterBounceTillStrike = b(idxDiffBallPos,:);
+    
+    %% Fit again a Kalman smoother
+    obsLen = size(bAfterBounceTillStrike,1);
+    % initialize the state with first observation and first derivative est.
+    p0 = ballEKFSmooth(1:3,end);
+    v0 = M0 * xEKFSmooth(4:end,end);
+    filter.initState([p0(:);v0(:)],M0full*VekfSmooth(:,:,end)*M0full);
+    u = zeros(1,obsLen);
+    tFromTableTillStrike = bAfterBounceTillStrike(:,1);
+    [xEKFSmooth, VekfSmooth] = filter.smooth(tFromTableTillStrike,...
+                                         bAfterBounceTillStrike(:,2:4)',u);
+    ballEKFSmooth = [ballEKFSmooth, C * xEKFSmooth];
+    
+    %% Predict to get velocity before bounce
+    zAfterBounce = ballEKFSmooth(3,end);
+    dt = 0.001;
+    i = 1;
+    filter.initState(xEKFSmooth(:,1),VekfSmooth(:,:,1));
+    while zAfterBounce >= table_z + ball_radius + tol
+        filter.predict(-dt,0);
+        ballEKFSmooth(:,end+1) = C * filter.x;
+        zAfterBounce = filter.x(3);
+        i = i + 1;
+    end
+    
+    % Get velocity before bounce
+    velAfterBounce = filter.x(4:6);
+    
+    
 end
+
+%% Plot smoothing
+figure(3);
+scatter3(bx1,by1,bz1,'r');
+hold on;
+scatter3(bx3,by3,bz3,'b');
+%scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
+scatter3(ballEKFSmooth(1,:),ballEKFSmooth(2,:),ballEKFSmooth(3,:));
+title('Filtered ball trajectory');
+grid on;
+axis equal;
+xlabel('x');
+ylabel('y');
+zlabel('z');
+legend('cam1','cam3','EKF smooth');
+fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
+fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+hold off;

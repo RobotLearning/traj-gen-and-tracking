@@ -53,11 +53,11 @@ dropSet1 = [17,20,22,23,24,29,31,32,34,35,38,41,48,53,54,56]; % bad recordings
 dropSet2 = [5,6,9,10,14,26,27,32,38,42,55,56,57];
 % what's wrong with sample 31? problem on the ekf-smoother bouncing 
 % what's wrong with sample 54? symplecticFlightModel does not terminate
-for i = 1:length(dropSet1)
-    set1 = set1(set1 ~= dropSet1(i));
+for i = 1:length(dropSet2)
+    set2 = set2(set2 ~= dropSet2(i));
 end
 
-choose = 64; %set(end);
+choose = 3; %set(end);
 M = dlmread([demoFolder2,int2str(choose),'.txt']);
 scale = 0.001; % recorded in milliseconds
 t = scale * M(:,11);

@@ -1,4 +1,6 @@
 %% Ball flight model and symplectic integration functions
+% Note: can also be run backwards in time by specifying -dt
+% TODO: bounce model cannot be run backwards as of now!
 
 % incorporate bounce also
 function xNext = symplecticFlightModel(x,dt,params)
