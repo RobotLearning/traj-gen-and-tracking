@@ -9,7 +9,7 @@ initializeWAM;
 %% Load table values, ball and robot data
 
 %demoFolder = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
-demoFolder = '../Desktop/okanKinestheticTeachin_20151125/unifyData';
+demoFolder = '../Desktop/okanKinestheticTeachin_20151124/unifyData';
 %set = 15:65; % dataset of demonstrations
 set = 2:64;
 %dropSet = [17,20,22,23,24,29,56]; % bad recordings

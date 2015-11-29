@@ -1,0 +1,63 @@
+%% Creator: Inkscape inkscape 0.48.4, www.inkscape.org
+%% PDF/EPS/PS + LaTeX output extension by Johan Engelen, 2010
+%% Accompanies image file 'plant.pdf' (pdf, eps, ps)
+%%
+%% To include the image in your LaTeX document, write
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics{<filename>.pdf}
+%% To scale the image, write
+%%   \def\svgwidth{<desired width>}
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics[width=<desired width>]{<filename>.pdf}
+%%
+%% Images with a different path to the parent latex file can
+%% be accessed with the `import' package (which may need to be
+%% installed) using
+%%   \usepackage{import}
+%% in the preamble, and then including the image with
+%%   \import{<path to file>}{<filename>.pdf_tex}
+%% Alternatively, one can specify
+%%   \graphicspath{{<path to file>/}}
+%% 
+%% For more information, please see info/svg-inkscape on CTAN:
+%%   http://tug.ctan.org/tex-archive/info/svg-inkscape
+%%
+\begingroup%
+  \makeatletter%
+  \providecommand\color[2][]{%
+    \errmessage{(Inkscape) Color is used for the text in Inkscape, but the package 'color.sty' is not loaded}%
+    \renewcommand\color[2][]{}%
+  }%
+  \providecommand\transparent[1]{%
+    \errmessage{(Inkscape) Transparency is used (non-zero) for the text in Inkscape, but the package 'transparent.sty' is not loaded}%
+    \renewcommand\transparent[1]{}%
+  }%
+  \providecommand\rotatebox[2]{#2}%
+  \ifx\svgwidth\undefined%
+    \setlength{\unitlength}{536.8134085bp}%
+    \ifx\svgscale\undefined%
+      \relax%
+    \else%
+      \setlength{\unitlength}{\unitlength * \real{\svgscale}}%
+    \fi%
+  \else%
+    \setlength{\unitlength}{\svgwidth}%
+  \fi%
+  \global\let\svgwidth\undefined%
+  \global\let\svgscale\undefined%
+  \makeatother%
+  \begin{picture}(1,0.40204808)%
+    \put(0,0){\includegraphics[width=\unitlength]{plant.pdf}}%
+    \put(0.18780511,0.1352834){\makebox(0,0)[lb]{\smash{\texttt{-}}}}%
+    \put(0.89174901,0.19678448){\makebox(0,0)[lb]{\smash{\state_k}}}%
+    \put(0.33307668,0.16927741){\makebox(0,0)[lb]{\smash{ILC}}}%
+    \put(0.62965138,0.17051756){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{\vec{P}}}}%
+    \put(0.01354888,0.19459025){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{\traj}}}%
+    \put(0.49042665,0.20169752){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{\sysInput_k}}}%
+    \put(0.11553675,0.19620176){\makebox(0,0)[lb]{\smash{\texttt{+}}}}%
+    \put(0.15775898,0.17607716){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{\Sigma}}}%
+    \put(0.22815688,0.20267687){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{\error_k}}}%
+  \end{picture}%
+\endgroup%

@@ -31,7 +31,7 @@ stand_z	      = 0.9;
 floor_level   = -1.71;
 
 % Contact parameters
-CRT = 0.88; % coeff of restitution for table (i.e. for z-dir)
+CRT = 0.86; %0.88; % coeff of restitution for table (i.e. for z-dir)
 CFTY = 0.72; % coeff of friction on Y-dir
 CFTX = 0.68; % coefficient of friction on X-dir
 CRR = 0.78; % coeff of restitution for racket
