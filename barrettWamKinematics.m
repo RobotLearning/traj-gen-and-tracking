@@ -7,13 +7,16 @@
 %
 % these are called from the kinematics method of Barrett WAM class
 %
+% \param[out]    Xaxis   : array of rotation axes (z)
+% \param[out]    Xorigin : array of coord.sys. origin vectors
+% \param[out]    Xlink   : array of link position
+% \param[out]    Amats   : homogeneous transformation matrices of each link
 %
-function Xlink = barrettWamKinematics(Q,PAR)
+function [Xlink,Xorigin,Xaxis,Amats] = barrettWamKinematics(Q,PAR)
 
 NDOF = 7;
-% system states are X   =   (q(1),...q(7),qd(1),...,qd(7));
+% system states are X   =   (q(1),...q(7));
 q = Q(1:NDOF);
-qd = Q(NDOF+1:2*NDOF);
 
 % definitions
 ZSFE = 0.346;              %!< z height of SAA axis above ground
@@ -60,7 +63,7 @@ rceff1a3 = cos(eff(1).a(3));
 
 %% Calculations are done here
 
-% inverse homogeneous rotation matrices */
+% inverse homogeneous rotation matrices 
 Hi00(1,1) = -1 + 2*power(baseo.q(1),2) + 2*power(baseo.q(2),2);
 Hi00(1,2) = 2*(baseo.q(2)*baseo.q(3) - baseo.q(1)*baseo.q(4));
 Hi00(1,3) = 2*(baseo.q(1)*baseo.q(3) + baseo.q(2)*baseo.q(4));
@@ -153,7 +156,7 @@ Hi78(3,4) = eff(1).x(3);
 
 
 
-% per link inverse homogeneous rotation matrices */
+% per link inverse homogeneous rotation matrices 
 Ai01(1,1) = Hi00(1,1)*Hi01(1,1) + Hi00(1,2)*Hi01(2,1);
 Ai01(1,2) = Hi00(1,1)*Hi01(1,2) + Hi00(1,2)*Hi01(2,2);
 Ai01(1,3) = Hi00(1,3);
@@ -283,7 +286,7 @@ Ai08(3,4) = Ai07(3,4) + Ai07(3,1)*Hi78(1,4) + Ai07(3,2)*Hi78(2,4) + Ai07(3,3)*Hi
 
 
 
-% joint ID: 0 */
+% joint ID: 0 
 Xorigin0(1) = Hi00(1,4);
 Xorigin0(2) = Hi00(2,4);
 Xorigin0(3) = Hi00(3,4);
@@ -292,7 +295,7 @@ Xmcog0(1) = link0.mcm(1)*Hi00(1,1) + link0.mcm(2)*Hi00(1,2) + link0.mcm(3)*Hi00(
 Xmcog0(2) = link0.mcm(1)*Hi00(2,1) + link0.mcm(2)*Hi00(2,2) + link0.mcm(3)*Hi00(2,3) + link0.m*Hi00(2,4);
 Xmcog0(3) = link0.mcm(1)*Hi00(3,1) + link0.mcm(2)*Hi00(3,2) + link0.mcm(3)*Hi00(3,3) + link0.m*Hi00(3,4);
 
-% link: {basec$0$$x((1)), basec$0$$x((2)), basec$0$$x((3))} */
+% link: {basec$0$$x((1)), basec$0$$x((2)), basec$0$$x((3))} 
 Xlink0(1) = Hi00(1,4);
 Xlink0(2) = Hi00(2,4);
 Xlink0(3) = Hi00(3,4);
@@ -315,7 +318,7 @@ Ahmat0(3,4) = Hi00(3,4);
 Ahmat0(4,4) = 1;
 
 
-% joint ID: 1 */
+% joint ID: 1 
 Xorigin(1,1) = Ai01(1,4);
 Xorigin(1,2) = Ai01(2,4);
 Xorigin(1,3) = Ai01(3,4);
@@ -328,7 +331,7 @@ Xaxis(1,1) = Ai01(1,3);
 Xaxis(1,2) = Ai01(2,3);
 Xaxis(1,3) = Ai01(3,3);
 
-% link: {0, 0, ZSFE} */
+% link: {0, 0, ZSFE} 
 Xlink(1,1) = Ai01(1,4);
 Xlink(1,2) = Ai01(2,4);
 Xlink(1,3) = Ai01(3,4);
@@ -351,7 +354,7 @@ Ahmat(1,3,4) = Ai02(3,4);
 Ahmat(1,4,4) = 1;
 
 
-% joint ID: 2 */
+% joint ID: 2 
 Xorigin(2,1) = Ai02(1,4);
 Xorigin(2,2) = Ai02(2,4);
 Xorigin(2,3) = Ai02(3,4);
@@ -364,7 +367,7 @@ Xaxis(2,1) = Ai02(1,3);
 Xaxis(2,2) = Ai02(2,3);
 Xaxis(2,3) = Ai02(3,3);
 
-% joint ID: 3 */
+% joint ID: 3 
 Xorigin(3,1) = Ai03(1,4);
 Xorigin(3,2) = Ai03(2,4);
 Xorigin(3,3) = Ai03(3,4);
@@ -377,7 +380,7 @@ Xaxis(3,1) = Ai03(1,3);
 Xaxis(3,2) = Ai03(2,3);
 Xaxis(3,3) = Ai03(3,3);
 
-% link: {ZHR, 0, 0} */
+% link: {ZHR, 0, 0} 
 Xlink(2,1) = Ai03(1,4);
 Xlink(2,2) = Ai03(2,4);
 Xlink(2,3) = Ai03(3,4);
@@ -400,7 +403,7 @@ Ahmat(2,3,4) = Ai03(3,4);
 Ahmat(2,4,4) = 1;
 
 
-% joint ID: 4 */
+% joint ID: 4 
 Xorigin(4,1) = Ai04(1,4);
 Xorigin(4,2) = Ai04(2,4);
 Xorigin(4,3) = Ai04(3,4);
@@ -413,7 +416,7 @@ Xaxis(4,1) = Ai04(1,3);
 Xaxis(4,2) = Ai04(2,3);
 Xaxis(4,3) = Ai04(3,3);
 
-% link: {0, YEB, ZEB} */
+% link: {0, YEB, ZEB} 
 Xlink(3,1) = Ai04(1,4);
 Xlink(3,2) = Ai04(2,4);
 Xlink(3,3) = Ai04(3,4);
@@ -436,7 +439,7 @@ Ahmat(3,3,4) = Ai04(3,4);
 Ahmat(3,4,4) = 1;
 
 
-% joint ID: 5 */
+% joint ID: 5 
 Xorigin(5,1) = Ai05(1,4);
 Xorigin(5,2) = Ai05(2,4);
 Xorigin(5,3) = Ai05(3,4);
@@ -449,7 +452,7 @@ Xaxis(5,1) = Ai05(1,3);
 Xaxis(5,2) = Ai05(2,3);
 Xaxis(5,3) = Ai05(3,3);
 
-% link: {ZWR, YWR, 0} */
+% link: {ZWR, YWR, 0} 
 Xlink(4,1) = Ai05(1,4);
 Xlink(4,2) = Ai05(2,4);
 Xlink(4,3) = Ai05(3,4);
@@ -472,7 +475,7 @@ Ahmat(4,3,4) = Ai05(3,4);
 Ahmat(4,4,4) = 1;
 
 
-% joint ID: 6 */
+% joint ID: 6 
 Xorigin(6,1) = Ai06(1,4);
 Xorigin(6,2) = Ai06(2,4);
 Xorigin(6,3) = Ai06(3,4);
@@ -485,7 +488,7 @@ Xaxis(6,1) = Ai06(1,3);
 Xaxis(6,2) = Ai06(2,3);
 Xaxis(6,3) = Ai06(3,3);
 
-% link: {0, 0, ZWFE} */
+% link: {0, 0, ZWFE} 
 Xlink(5,1) = Ai06(1,4);
 Xlink(5,2) = Ai06(2,4);
 Xlink(5,3) = Ai06(3,4);
@@ -508,7 +511,7 @@ Ahmat(5,3,4) = Ai07(3,4);
 Ahmat(5,4,4) = 1;
 
 
-% joint ID: 7 */
+% joint ID: 7 
 Xorigin(7,1) = Ai07(1,4);
 Xorigin(7,2) = Ai07(2,4);
 Xorigin(7,3) = Ai07(3,4);
@@ -521,7 +524,7 @@ Xaxis(7,1) = Ai07(1,3);
 Xaxis(7,2) = Ai07(2,3);
 Xaxis(7,3) = Ai07(3,3);
 
-% link: {eff$1$$x((1)), eff$1$$x((2)), eff$1$$x((3))} */
+% link: {eff$1$$x((1)), eff$1$$x((2)), eff$1$$x((3))} 
 Xlink(6,1) = Ai08(1,4);
 Xlink(6,2) = Ai08(2,4);
 Xlink(6,3) = Ai08(3,4);
@@ -542,5 +545,4 @@ Ahmat(6,3,3) = Ai08(3,3);
 Ahmat(6,3,4) = Ai08(3,4);
 
 Ahmat(6,4,4) = 1;
-
 

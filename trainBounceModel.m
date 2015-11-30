@@ -202,7 +202,7 @@ for idx = 1:length(set)
     
     %% Estimate striking time
     % Get cartesian coordinates of robot trajectory
-    x = wam.kinematics(Q');
+    [x,xd,o] = wam.kinematics(Q');
 
     % find closest points in space as a first estimate
     diffBallRobot = b(:,2:4)-x';

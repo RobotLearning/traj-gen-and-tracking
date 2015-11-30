@@ -33,10 +33,11 @@ for i = 1:length(set)
     robot = demo(i).raw(:,end-20:end);
     q = robot(:,2:dof+1);
     qd = robot(:,dof+2:dof+8);
-    x = robot(:,dof+9:dof+11);
-    xd = robot(:,dof+12:dof+14);
+    x_SL = robot(:,dof+9:dof+11);
+    xd_SL = robot(:,dof+12:dof+14);
     demo(i).t = scale * robot(:,1);
     demo(i).Q = [q';qd'];
+    demo(i).x = [x_SL'; xd_SL'];
 end
 
 %% Load table values
@@ -82,7 +83,7 @@ net = [net1,net2,net3,net4]';
 
 %% Extract reliable ball positions and estimate striking time
 
-for i = 1:length(set)
+for i = 2 %1:length(set)
 
     M = demo(i).raw;
     Q = demo(i).Q;
@@ -110,7 +111,30 @@ for i = 1:length(set)
     % Estimate striking time
 
     % Get cartesian coordinates of robot trajectory
-    x = wam.kinematics(Q);
+    [x,xd,~] = wam.kinematics(Q);
+    % Differentiate x
+    xdiff = diff(x')';
+    xdiff = [xdiff, xdiff(:,end)];
+    % Compare with x coming from SL
+    figure(3);
+    view(3);
+    plot3(xdiff(1,:),xdiff(2,:),xdiff(3,:));
+    hold on;
+    plot3(demo(i).x(4,:),demo(i).x(5,:),demo(i).x(6,:));
+    grid on;
+    axis equal
+    xlabel('x');
+    ylabel('y');
+    zlabel('z');
+    legend('xd matlab','xd sl');
+    hold off;
+    figure(4)
+    plot(t,xd(1,:),t,demo(i).x(4,:));
+    figure(5)
+    plot(t,xd(2,:),t,demo(i).x(5,:));
+    figure(6)
+    plot(t,xd(3,:),t,demo(i).x(6,:));
+
 
     camInfo = [tCam1,bx1,by1,bz1;
                 tCam3,bx3,by3,bz3];

@@ -97,8 +97,8 @@ set = setdiff(set1,dropSet1);
 scale  = 0.001; % recorded in milliseconds
 
 % bouncing data to be used for regression
-velBeforeStrike = zeros(3,length(set));
-velAfterStrike = zeros(3,length(set));
+velBallBeforeStrike = zeros(3,length(set));
+velBallAfterStrike = zeros(3,length(set));
 
 for idx = 1:length(set)
 
@@ -152,9 +152,9 @@ for idx = 1:length(set)
     % get the robot positions that correspond to ball positions in t
     Q = b(:,5:5+2*N_DOFS-1); % robot joint angles and vel. sorted via ball observ.
     
-    %% Estimate striking time
+    %% Estimate striking time roughly
     % Get cartesian coordinates of robot trajectory
-    x = wam.kinematics(Q');
+    [x,xd,o] = wam.kinematics(Q');
 
     % find closest points in space as a first estimate
     diffBallRobot = b(:,2:4)-x';
@@ -172,20 +172,31 @@ for idx = 1:length(set)
     filter.initState([p0(:);v0(:)],eps);
     u = zeros(1,obsLen);
     tTillStrike = bTillStrike(:,1);
-    [xEKFSmooth, VekfSmooth] = filter.smooth(tTillStrike,bTillStrike(:,2:4)',u);
-    ballEKFSmoothPreStrike = C * xEKFSmooth;
+    [xEKFSmoothPre, VekfSmooth] = filter.smooth(tTillStrike,bTillStrike(:,2:4)',u);
+    ballEKFSmoothPreStrike = C * xEKFSmoothPre;
     
     %% Fit again a Kalman smoother from strike onwards
     bAfterStrike = b(idxStrike+1:end,1:4);
     obsLen = size(bAfterStrike,1);
     % initialize the state with first observation and first derivative est.
     p0 = ballEKFSmoothPreBounce(1:3,end);
-    % THESE SHOULD BE CHANGED!
-    v0 = M0 * xEKFSmooth(4:end,end);
+    % Calculate outgoing velocity using conservation of momentum
+    velBallPreStrike(:,idx) = xEKFSmoothPre(4:end,end);
+    % GET THE RACKET PRENORMAL
+    % GET THE RACKET VELOCITY 
+    racketNormal = racketPreNormal ./ norm(racketPreNormal,2);
+    velBallPreStrikeNormal = velBallPreStrike(:,idx)' * racketNormal;
+    velBallAlongRacket = velBallPreStrike(:,idx) - velBallPreStrikeNormal .* racketNormal;
+    velRacketAlongNormal = velRacket' * racketNormal;
+    velBallAfterStrikeNormal = velRacketAlongNormal + ...
+                     CRR * (velRacketAlongNormal - velBallPreStrikeNormal);
+    % assuming velocity along racket stays the same
+    velBallAfterStrike(:,idx) = velBallAlongRacket + velBallAfterStrikeNormal .* racketNormal;
+    v0 = velBallAfterStrike(:,idx);
     filter.initState([p0(:);v0(:)],M0full*VekfSmooth(:,:,end)*M0full);
     u = zeros(1,obsLen);
     tAfterStrike = bAfterStrike(:,1);
-    [xEKFSmooth, VekfSmooth] = filter.smooth(tAfterStrike,...
+    [xEKFSmoothAfter, VekfSmooth] = filter.smooth(tAfterStrike,...
                                              bAfterStrike(:,2:4)',u);
     ballEKFSmoothAfterStrike = C * xEKFSmooth;
     
@@ -194,6 +205,13 @@ for idx = 1:length(set)
     % find the times when the ball path and racket path are within
     % radius cms. and then take the first one
     % use prediction models for the first 
+    
+    % PREDICT TILL BOTH PATHS COINCIDE
+    
+    % update the velocity before strike
+    velBallPreStrike(:,idx) = xEKFSmoothPre(4:end,end);
+    % update the velocity after strike
+    velBallAfterStrike(:,idx) = xEKFSmooth(4:end,1);
     
 end
 

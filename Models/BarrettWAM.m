@@ -114,25 +114,50 @@ classdef BarrettWAM < Robot
         end
         
         % Calculate the racket orientation based on quaternion
-        function r = calcRacketOrientation(obj,x)
+        function racketOrient = calcRacketOrientation(obj,cartOrient)
             
-            %TODO:
+            % quaternion transformation of pi/4 from endeff to racket
+            rot = [cos(pi/4); -sin(pi/4); 0; 0];
+            racketOrient(1) = cartOrient(1)*rot(1) - ...
+                              cartOrient(2)*rot(2) - ...
+                              cartOrient(3)*rot(3) - ...
+                              cartOrient(4)*rot(4);
+            racketOrient(2) = cartOrient(2)*rot(1) + ...
+                              cartOrient(1)*rot(2) + ...
+                              cartOrient(3)*rot(4) - ...
+                              cartOrient(4)*rot(3);
+            racketOrient(3) = cartOrient(1)*rot(3) - ...
+                              cartOrient(2)*rot(4) + ...
+                              cartOrient(3)*rot(1) + ...
+                              cartOrient(4)*rot(2);
+            racketOrient(4) = cartOrient(1)*rot(4) + ...
+                              cartOrient(2)*rot(3) - ...
+                              cartOrient(3)*rot(2) + ...
+                              cartOrient(4)*rot(1);
+            
         end
         
         % run kinematics using an external function
-        % endeffector configurations and velocities are returned
-        function [x,xd] = kinematics(obj,q)
+        % racket configurations and velocities are returned
+        % racket orientations are also returned as a quaternions
+        function [x,xd,o] = kinematics(obj,Q)
             
-            lenq = size(q,2);
+            assert(size(Q,1) == 14, 'velocities not fed in!');
+            dim = size(Q,1)/2;
+            lenq = size(Q,2);
+            q = Q(1:dim,:);
+            qd = Q(dim+1:end,:);
             x = zeros(3,lenq);
             xd = zeros(3,lenq);
+            o = zeros(4,lenq);
             for i = 1:lenq
-                linkPos = barrettWamKinematics(q(:,i),obj.PAR);
-                %linkVel = barrettWAMJacobian(q(:,i),obj.PAR);
-                finPos = linkPos(6,:);
-                %finVel = linkVel(6,:);
-                x(:,i) = finPos(:);
-                %xd(:,i) = finVel(:);
+                % TODO: only need to return Amats actually!
+                [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(q(:,i),obj.PAR);
+                quat = rot2quat(Amats(6,:,:));
+                o(:,i) = obj.calcRacketOrientation(quat);
+                Jac = jacobian(xLink,xOrigin,xAxis);
+                x(:,i) = xLink(6,:)';
+                xd(:,i) = Jac(1:3,:) * qd(:,i);
             end
         end
         
