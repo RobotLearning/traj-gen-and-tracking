@@ -80,7 +80,8 @@ funState = @(x,u,dt) symplecticFlightModel(x,dt,params);
 mats.O = eps * eye(dim);
 mats.C = C;
 mats.M = eps * eye(3);
-filter = EKF(dim,funState,mats);
+filterPre = EKF(dim,funState,mats);
+filterAfter = EKF(dim,funState,mats);
 
 %% Load all data
 
@@ -100,7 +101,7 @@ scale  = 0.001; % recorded in milliseconds
 velBallPreStrike = zeros(3,length(set));
 velBallAfterStrike = zeros(3,length(set));
 
-for idx = 1:length(set)
+for idx = 2 %1:length(set)
 
     %% Get rid of outliers
     M = dlmread([demoFolder1,int2str(set(idx)),'.txt']);
@@ -169,13 +170,15 @@ for idx = 1:length(set)
     % initialize the state with first observation and first derivative est.
     p0 = bTillStrike(1,2:4);
     v0 = (bTillStrike(5,2:4) - bTillStrike(1,2:4))/(bTillStrike(5,1)-bTillStrike(1,1));
-    filter.initState([p0(:);v0(:)],eps);
+    filterPre.initState([p0(:);v0(:)],eps);
     u = zeros(1,obsLen);
     tTillStrike = bTillStrike(:,1);
-    [xEKFSmoothPre, VekfSmooth] = filter.smooth(tTillStrike,bTillStrike(:,2:4)',u);
+    [xEKFSmoothPre, VekfSmoothPre] = filterPre.smooth(tTillStrike,bTillStrike(:,2:4)',u);
     ballEKFSmoothPreStrike = C * xEKFSmoothPre;
     
     %% Fit again a Kalman smoother from strike onwards
+    
+    % ELIMINATE BALL POSITIONS THAT ARE CRAZY!
     bAfterStrike = b(idxStrike+1:end,1:4);
     obsLen = size(bAfterStrike,1);
     % initialize the state with first observation and first derivative est.
@@ -196,12 +199,12 @@ for idx = 1:length(set)
     % assuming velocity along racket stays the same
     velBallAfterStrike(:,idx) = velBallAlongRacket + velBallAfterStrikeNormal .* racketNormal;
     v0 = velBallAfterStrike(:,idx);
-    filter.initState([p0(:);v0(:)],VekfSmooth(:,:,end));
+    filterAfter.initState([p0(:);v0(:)],VekfSmoothPre(:,:,end));
     u = zeros(1,obsLen);
     tAfterStrike = bAfterStrike(:,1);
-    [xEKFSmoothAfter, VekfSmooth] = filter.smooth(tAfterStrike,...
+    [xEKFSmoothAfter, VekfSmoothAfter] = filterAfter.smooth(tAfterStrike,...
                                              bAfterStrike(:,2:4)',u);
-    ballEKFSmoothAfterStrike = C * xEKFSmooth;
+    ballEKFSmoothAfterStrike = C * xEKFSmoothAfter;
     
     %% Refine the striking time
     
@@ -209,31 +212,55 @@ for idx = 1:length(set)
     % radius cms. and then take the first one
     % use prediction models for the first 
     
-    % PREDICT TILL BOTH PATHS COINCIDE
+    % Predict till both parts coincide
+    xPre = xEKFSmoothPre(:,end);
+    ballPre = C * xPre;
+    xAfter = xEKFSmoothAfter(:,1);
+    ballAfter = C * xAfter;
+    dt = 0.01;
+    i = 1;
+    filterPre.initState(xPre,VekfSmoothPre(:,:,end));
+    filterAfter.initState(xAfter,VekfSmoothAfter(:,:,1));
+    tol = 1e-3;
+    
+    % FIRST PREDICT BACK TILL TSTRIKE
+    % THEN PREDICT TOGETHER WITH BOTH FILTERS
+    
+    while norm(ballPre - ballAfter,2) > tol
+        filterAfter.predict(-dt,0);
+        ballAfter = C * filterAfter.x;
+        filterPre.predict(dt,0);
+        ballPre = C * filterPre.x;
+        i = i+1;
+    end
+    
+    % Refine tStrike
+    tStrike = tStrike + (i-1)*dt;
+    % Get the velocities
     
     % update the velocity before strike
-    velBallPreStrike(:,idx) = xEKFSmoothPre(4:end,end);
+    velBallPreStrike(:,idx) = filterPre.x(4:end);
     % update the velocity after strike
-    velBallAfterStrike(:,idx) = xEKFSmooth(4:end,1);
+    velBallAfterStrike(:,idx) = filterAfter.x(4:end);
     
 end
 
 %% Regression
+ballEKFSmooth = [ballEKFSmoothPreStrike, ballEKFSmoothAfterStrike];
 
-
-% figure(4);
-% scatter3(bx1,by1,bz1,'r');
-% hold on;
-% scatter3(bx3,by3,bz3,'b');
-% %scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
-% scatter3(ballEKFSmooth(1,:),ballEKFSmooth(2,:),ballEKFSmooth(3,:));
-% title('Filtered ball trajectory');
-% grid on;
-% axis equal;
-% xlabel('x');
-% ylabel('y');
-% zlabel('z');
-% legend('cam1','cam3','EKF smooth');
-% fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
-% fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
-% hold off;
+figure(4);
+scatter3(bx1,by1,bz1,'r');
+hold on;
+scatter3(bx3,by3,bz3,'b');
+%scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
+%scatter3(ballEKFSmooth(1,:),ballEKFSmooth(2,:),ballEKFSmooth(3,:));
+title('Filtered ball trajectory');
+grid on;
+axis equal;
+xlabel('x');
+ylabel('y');
+zlabel('z');
+%legend('cam1','cam3','EKF smooth');
+fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
+fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+hold off;

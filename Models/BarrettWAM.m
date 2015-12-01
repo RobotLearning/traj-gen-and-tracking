@@ -152,9 +152,9 @@ classdef BarrettWAM < Robot
                 [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(q(:,i),obj.PAR);
                 quat = rot2Quat(Amats(6,1:3,1:3));
                 o(:,i) = obj.calcRacketOrientation(quat);
-                Jac = jacobian(xLink,xOrigin,xAxis);
+                obj.jac = jacobian(xLink,xOrigin,xAxis);
                 x(:,i) = xLink(6,:)';
-                xd(:,i) = Jac(1:3,:) * qd(:,i);
+                xd(:,i) = obj.jac(1:3,:) * qd(:,i);
             end
         end
         

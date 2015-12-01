@@ -240,7 +240,7 @@ for idx = 1:length(set)
                                          bAfterBounceTillStrike(:,2:4)',u);
     ballEKFSmoothAfterBounce = C * xEKFSmooth;
     
-    %% Predict to get velocity before bounce
+    %% Predict to get velocity after bounce
     zAfterBounce = xEKFSmooth(3,1);
     yAfterBounce = xEKFSmooth(2,1);
     dt = 0.001;
