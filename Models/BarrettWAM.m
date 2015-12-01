@@ -119,9 +119,7 @@ classdef BarrettWAM < Robot
             % quaternion transformation of pi/4 from endeff to racket
             rot = [cos(pi/4); -sin(pi/4); 0; 0];
             racketOrient(1) = cartOrient(1)*rot(1) - ...
-                              cartOrient(2)*rot(2) - ...
-                              cartOrient(3)*rot(3) - ...
-                              cartOrient(4)*rot(4);
+                              cartOrient(2:4)*rot(2:4);
             racketOrient(2) = cartOrient(2)*rot(1) + ...
                               cartOrient(1)*rot(2) + ...
                               cartOrient(3)*rot(4) - ...
@@ -141,7 +139,7 @@ classdef BarrettWAM < Robot
         % racket configurations and velocities are returned
         % racket orientations are also returned as a quaternions
         function [x,xd,o] = kinematics(obj,Q)
-            
+              
             assert(size(Q,1) == 14, 'velocities not fed in!');
             dim = size(Q,1)/2;
             lenq = size(Q,2);
@@ -151,9 +149,8 @@ classdef BarrettWAM < Robot
             xd = zeros(3,lenq);
             o = zeros(4,lenq);
             for i = 1:lenq
-                % TODO: only need to return Amats actually!
                 [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(q(:,i),obj.PAR);
-                quat = rot2quat(Amats(6,:,:));
+                quat = rot2Quat(Amats(6,1:3,1:3));
                 o(:,i) = obj.calcRacketOrientation(quat);
                 Jac = jacobian(xLink,xOrigin,xAxis);
                 x(:,i) = xLink(6,:)';

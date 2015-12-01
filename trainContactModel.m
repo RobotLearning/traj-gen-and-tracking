@@ -97,7 +97,7 @@ set = setdiff(set1,dropSet1);
 scale  = 0.001; % recorded in milliseconds
 
 % bouncing data to be used for regression
-velBallBeforeStrike = zeros(3,length(set));
+velBallPreStrike = zeros(3,length(set));
 velBallAfterStrike = zeros(3,length(set));
 
 for idx = 1:length(set)
@@ -179,12 +179,15 @@ for idx = 1:length(set)
     bAfterStrike = b(idxStrike+1:end,1:4);
     obsLen = size(bAfterStrike,1);
     % initialize the state with first observation and first derivative est.
-    p0 = ballEKFSmoothPreBounce(1:3,end);
+    p0 = ballEKFSmoothPreStrike(:,end);
     % Calculate outgoing velocity using conservation of momentum
     velBallPreStrike(:,idx) = xEKFSmoothPre(4:end,end);
-    % GET THE RACKET PRENORMAL
-    % GET THE RACKET VELOCITY 
-    racketNormal = racketPreNormal ./ norm(racketPreNormal,2);
+    % Get the racket prenormal
+    quatRacketStrike = o(:,idxStrike);
+    R = quat2Rot(quatRacketStrike);
+    racketNormal = R(:,3); % of unit length
+    % Get the racket velocity
+    velRacket = xd(:,idxStrike);
     velBallPreStrikeNormal = velBallPreStrike(:,idx)' * racketNormal;
     velBallAlongRacket = velBallPreStrike(:,idx) - velBallPreStrikeNormal .* racketNormal;
     velRacketAlongNormal = velRacket' * racketNormal;
@@ -193,7 +196,7 @@ for idx = 1:length(set)
     % assuming velocity along racket stays the same
     velBallAfterStrike(:,idx) = velBallAlongRacket + velBallAfterStrikeNormal .* racketNormal;
     v0 = velBallAfterStrike(:,idx);
-    filter.initState([p0(:);v0(:)],M0full*VekfSmooth(:,:,end)*M0full);
+    filter.initState([p0(:);v0(:)],VekfSmooth(:,:,end));
     u = zeros(1,obsLen);
     tAfterStrike = bAfterStrike(:,1);
     [xEKFSmoothAfter, VekfSmooth] = filter.smooth(tAfterStrike,...
