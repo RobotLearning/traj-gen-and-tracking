@@ -36,49 +36,9 @@ clc; clear; close all;
 % load table parameters
 loadTennisTableValues;
 
-% for the second demo only
-%dist_to_table = dist_to_table - 0.25;
-
-table_z = floor_level - table_height;
-table_x = table_center + table_width/2;
-table_y = table_length/2;
-
-T1 = [table_center - table_x; 
-    dist_to_table - table_length; 
-    table_z];
-T2 = [table_center + table_x;
-    dist_to_table - table_length;
-    table_z];
-T3 = [table_center + table_x;
-    dist_to_table;
-    table_z];
-T4 = [table_center - table_x;
-    dist_to_table;
-    table_z];
-T = [T1,T2,T3,T4]';
-
-net1 = [table_center - table_x;
-        dist_to_table - table_y;
-        table_z];
-net2 = [table_center + table_x;
-        dist_to_table - table_y;
-        table_z];
-net3 = [table_center + table_x;
-        dist_to_table - table_y;
-        table_z + net_height];
-net4 = [table_center - table_x;
-        dist_to_table - table_y;
-        table_z + net_height];
-
-net = [net1,net2,net3,net4]';
-
 %% Initialize Barrett WAM
 
 initializeWAM;
-% initialize the ball gun
-ball_cannon(1) = table_center + 0.4;
-ball_cannon(2) = dist_to_table - table_length - 0.2; % since dist_to_table is negative
-ball_cannon(3) = floor_level - table_height + 0.15;
 
 %% initialize EKF
 dim = 6;
@@ -105,17 +65,27 @@ filter = EKF(dim,funState,mats);
 
 %% Main control and estimation loop
 
+% flags for the main loop
 finished = false;
 predict = false;
-predict_horizon = 0.8;
+% maximum horizon to predict
+maxPredictHorizon = 0.8;
+% land the ball on the centre of opponents court
+desBall(1) = 0.0;
+desBall(2) = dist_to_table - 3*table_y/2;
+desBall(3) = table_z + ball_radius;
+time2reach = 0.5;
+% initialize ball on the ball cannon with a sensible vel
 ball(1:3,1) = ball_cannon;
 ball(4:6,1) = [-0.9 4.000 3.2] + 0.05 * randn(1,3);
+% initialize the filters state with sensible values
 filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
 
 % initialize indices and time
 i = 1;
 dt = 0.01;
 ballNoisyPos = ball(1:3,1);
+% time to simulate in total
 timeSimTotal = 1.2;
 t = 0.0;
 
@@ -134,7 +104,9 @@ while t < timeSimTotal && ~finished
     else
         if ~predict
             %% predict ball trajectory
-            predictHorizon = min(predict_horizon,timeSimTotal - t);
+            % ideally stop predicting only when time left is
+            % less than a certain value, e.g. 0.5 sec
+            predictHorizon = min(maxPredictHorizon,timeSimTotal - t);
             predictLen = floor(predictHorizon / dt);
             ballPred = zeros(6,predictLen);
             for j = 1:predictLen
@@ -157,10 +129,48 @@ while t < timeSimTotal && ~finished
         
         %% Calculate ball outgoing velocities attached to each ball pos
         
-        % desired pos is in the centre of opponents court
-        time2reach = 0.5;
-        solinit = bvpinit(linspace(0,4,5),[-1 0]);
-        sol = bvp4c(@func,@bc,solinit);
+        for j = 1:size(ballTrjPred,2)
+            % desired pos is in the centre of opponents court
+            velBallOut(1) = (desBall(1) - ballIncoming(1,j))/time2reach;
+            velBallOut(2) = (desBall(2) - ballIncoming(2,j))/time2reach;
+            velBallOut(3) = (desBall(3) - ballIncoming(3,j) - ...
+                            0.5*gravity*time2reach^2)/time2reach;
+            % initialize using a linear model (no drag)
+            linFlightTraj = @(t) [ballIncoming(1:3,j) + velBallOut(:)*t;
+                                  velBallOut(:)] + ...
+                                  [0;0;0.5*gravity*t^2;0;0;gravity*t];
+            flightModel = @(t,x) [x(4);
+                                x(5);
+                                x(6);
+                          -Cdrag * x(4) * sqrt(x(4)^2 + x(5)^2 + x(6)^2);
+                          -Cdrag * x(5) * sqrt(x(4)^2 + x(5)^2 + x(6)^2);
+                  gravity - Cdrag * x(6) * sqrt(x(4)^2 + x(5)^2 + x(6)^2)];
+            % boundary value condition
+            bc = @(x0,xf) [x0(1) - ballIncoming(1,j);
+                           x0(2) - ballIncoming(2,j);
+                           x0(3) - ballIncoming(3,j);
+                           xf(1) - desBall(1);
+                           xf(2) - desBall(2);
+                           xf(3) - desBall(3)];
+            meshpoints = 50;
+            solinit = bvpinit(linspace(0,time2reach,meshpoints),...
+                              linFlightTraj);
+            sol = bvp4c(flightModel,bc,solinit);
+            ballOut = deval(sol,0);
+            velOut(:,j) = ballOut(4:6);
+        
+            %% Use the inverse contact model to compute racket vels and normal
+            % at every point
+            
+            % FOR NOW USING ONLY THE MIRROR LAW
+            normal(:,j) = (velOut(:,j) - ballIncoming(4:6,j)) ...
+                          ./ norm(velOut(:,j) - ballIncoming(4:6,j),2);
+            velOutAlongNormal = velOut(:,j)' * normal(:,j);
+            velInAlongNormal = ballIncoming(4:6,j)' * normal(:,j);
+            racketVelAlongNormal(j) = velOutAlongNormal + ... 
+                CRR * velInAlongNormal / (1 + CRR);
+        end
+        
         
         %% OPTIMAL CONTROL HERE
         

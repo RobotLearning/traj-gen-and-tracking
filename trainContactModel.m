@@ -19,42 +19,6 @@ clc; clear; close all;
 % load table parameters
 loadTennisTableValues;
 
-% for the second demo only
-%dist_to_table = dist_to_table - 0.25;
-
-table_z = floor_level - table_height;
-table_x = table_center + table_width/2;
-table_y = table_length/2;
-
-T1 = [table_center - table_x; 
-    dist_to_table - table_length; 
-    table_z];
-T2 = [table_center + table_x;
-    dist_to_table - table_length;
-    table_z];
-T3 = [table_center + table_x;
-    dist_to_table;
-    table_z];
-T4 = [table_center - table_x;
-    dist_to_table;
-    table_z];
-T = [T1,T2,T3,T4]';
-
-net1 = [table_center - table_x;
-        dist_to_table - table_y;
-        table_z];
-net2 = [table_center + table_x;
-        dist_to_table - table_y;
-        table_z];
-net3 = [table_center + table_x;
-        dist_to_table - table_y;
-        table_z + net_height];
-net4 = [table_center - table_x;
-        dist_to_table - table_y;
-        table_z + net_height];
-
-net = [net1,net2,net3,net4]';
-
 %% Initialize Barrett WAM
 
 initializeWAM;
