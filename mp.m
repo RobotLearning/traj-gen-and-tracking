@@ -1,54 +1,64 @@
-%% Solving Minimum principle 
+%% Solving Minimum principle for 3d kinematics cose
+% Transversality conditions are applied
+% TODO: test gradient descent also!
 
-function [t,x,u,J] = mp(solve_method)
+function [t,x,u,J] = mp(robotInit,ballInit,Tinit,solve_method)
 
-    t0 = 0; tf = 0.78;
-    N = 100;
-    x(1:2,1) = [0.05;0];
-    max_iteration = 100;
-    u = zeros(1,N);
+    R = 0.1;
+    posRobotInit = robotInit(1:3);
+    velRobotInit = robotInit(4:6);
+    posBallInit = ballInit(1:3);
+    velBallInit = ballInit(4:6);
+    momentumInit = zeros(6,1);
     tic;
     if strcmp(solve_method,'BVP')
-        tic;
         % Initial guess for the solution
-        solinit = bvpinit(linspace(t0,tf,N), [0 0 0.5 0.5]);
+        solinit = bvpinit(linspace(0,1),[posRobotInit;velRobotInit;
+                                 momentumInit;Tinit]);
         options = bvpset('Stats','on','RelTol',1e-1);
-        R = 0.1;
-        sol = bvp4c(@BVP_ode, @BVP_bc, solinit, options);
-        t = sol.x;
+
+        bcfull = @(y0,yf) bc(y0,yf,posBallInit,velBallInit,...
+                     posRobotInit,velRobotInit);        
+        sol = bvp4c(@ode, bcfull, solinit, options);
         y = sol.y;
-        x = y(1:2,:);
-        p = y(3:4,:);
-        % Calculate u(t) from x1,x2,p1,p2
-        u = (p(1,:).*(x(1,:) + 1/4))/(2*R);
-        % Calculate the cost
-        dt = tf/length(t);
-        J = dt * (x(1,:)*x(1,:)' + x(2,:)*x(2,:)' + u*R*u');
-    else    
+        t = y(end)*sol.x;
+        y = sol.y;
+        x = y(1:6,:);
+        % Calculate u from lambda
+        p = y(7:12,:);
+        B = [zeros(3);eye(3)];
+        R = eye(3);
+        u = -R \ (B' * p);
+        % Calculate cost
+        T = t(end);
+        N = length(t);
+        dt = T/N;
+        J = 0.5 * dt * trace(u'*R*u);
+    else if strcmp(solve_method,'GD') % gradient descent    
         %% Steepest descent
+        max_iteration = 100;
+        N = 100;
         J = zeros(1,max_iteration);
         eps = 1e-3;
         step = 0.2;
         options = [];
-        tu = linspace(t0,tf,N);
+        tu = linspace(0,1,N);
+        u = zeros(1,N);
         for i = 1:max_iteration
             % 1) start with assumed control u and move forward
-            initx = x(1:2,1);
-            [t,x] = ode45(@(t,x) stateEq(t,x,u,tu), [t0 tf], ...
+            initx = [posRobotInit;velRobotInit;Tinit];
+            [t,x] = ode45(@(t,x) stateEq(t,x,u,tu), [0 1], ...
                            initx, options);
-            % 2) Move backward to get the trajectory of costates
-            x1 = x(:,1); x2 = x(:,2);
+            x = x(1:6,:);
             % calculate initp
-            initp = [0;0];
-            [tp,P] = ode45(@(tp,p) costateEq(tp,p,u,tu,x1,x2,t), ...
-            [tf t0], initp, options);
-            p1 = P(:,1);
+            initp = [momentumInit;0];
+            [tp,p] = ode45(@(tp,p) costateEq(tp,p,u,tu,x,t), [0 1], initp, options);
             % Important: costate is stored in reverse order. The dimension of
             % costates may also different from dimension of states
             % Use interploate to make sure x and p is aligned along the time axis
-            p1 = interp1(tp,p1,t);
-            % Calculate deltaH with x1(t), x2(t), p1(t), p2(t)
-            dH = Hu(x1,p1,t,u,tu);
+            p = interp1(tp,p,t);
+            % Calculate deltaH 
+            dH = Hu(x1,p,t,u,tu);
             H_Norm = dH'*dH;
             % Calculate the cost function
             J(i) = tf*(((x1')*x1 + (x2')*x2)/length(t) + ...
@@ -60,44 +70,44 @@ function [t,x,u,J] = mp(solve_method)
                 % adjust control for next iteration
                 u_old = u;
                 u = descend(dH,t,u_old,tu,step);
+                % modify also Tinit
             end;
         end
         x = [x1';x2'];
         u = interp1(tu,u,t);
+        else error('Algorithm not implemented!');
+        end
     end
-    elapsedTime = toc;
-    fprintf('MP took %f sec \n', elapsedTime);
+    toc
 end
 
-% State equations
-function dx = stateEq(t,x,u,Tu)
-    dx = zeros(2,1);
+%% State equations for iterative methods
+function ydot = stateEq(t,x,u,Tu)
     u = interp1(Tu,u,t); % Interpolate the control at time t
-    dx(1) = -2*(x(1) + 0.25) + (x(2) + 0.5)*exp(25*x(1)/(x(1)+2)) ...
-            -(x(1) + 0.25).*u;
-    dx(2) = 0.5 - x(2) -(x(2) + 0.5)*exp(25*x(1)/(x(1)+2));
+    T = x(end);
+    A = [zeros(3),eye(3); zeros(3,6)];
+    B = [zeros(3);eye(3)];
+    x_dot = T*(A*x(1:6) + B*u);
+    ydot = [x_dot; 0];
 end
 
 % Costate equations
-function dp = costateEq(t,p,u,Tu,x1,x2,xt)
-    dp = zeros(2,1);
-    x1 = interp1(xt,x1,t); % Interpolate the state variables
-    x2 = interp1(xt,x2,t);
-    u = interp1(Tu,u,t); % Interpolate the control
-    dp(1) = p(1).*(u + exp((25*x1)/(x1 + 2)).*((25*x1)/(x1 + 2)^2 - ...
-    25/(x1 + 2))*(x2 + 1/2) + 2) - ...
-    2*x1 - p(2).*exp((25*x1)/(x1 + 2))*((25*x1)/(x1 + 2)^2 - ...
-    25/(x1 + 2))*(x2 + 1/2);
-    dp(2) = p(2).*(exp((25*x1)/(x1 + 2)) + 1) - ...
-    p(1).*exp((25*x1)/(x1 + 2)) - 2*x2;
+function pdot = costateEq(t,p,u,tu,x,tx)
+    T = p(end);
+    x = interp1(tx,x,t); % Interpolate the state variables
+    u = interp1(tu,u,t); % Interpolate the control
+    A = [zeros(3),eye(3); zeros(3,6)];
+    dp = -A' * p(1:6);
+    pdot = T*[dp; 0];
 end
 
 % Partial derivative of H with respect to u
-function dH = Hu(x1,p1,tx,u,Tu)
+function dH = Hu(x,p,tx,u,tu)
     % interpolate the control
-    u = interp1(Tu,u,tx);
-    R = 0.1;
-    dH = 2*R*u - p1.*(x1 + 0.25);
+    u = interp1(tu,u,tx);
+    R = 1;
+    B = [zeros(3);eye(3)];
+    dH = R*u + B'*p;
 end
 
 % Adjust the control
@@ -107,31 +117,43 @@ function u_new = descend(pH,tx,u,tu,step)
     u_new = u - step*pH;
 end
 
-%% BVP functions
+%% BVP functions (indirect method)
 
-%------------------------------------------------
-% ODE’s for states and costates
+% -------------------------------------------------------------------------
+% ODE's of augmented states
 %
-function dxdt = BVP_ode(t,x)
-    R = 0.1;
-    t1 = x(1) + .25;
-    t2 = x(2) + .5;
-    t3 = exp(25*x(1)/(x(2) + 2));
-    t4 = 50/(x(1) + 2)^2;
-    u = x(3)*t1/(2*R);
-    dxdt = [-2*t1 + t2*t3 - t2*u;
-            0.5-x(2) - t2*t3;
-            -2*x(1) + 2*x(3) - x(3)*t2*t4*t3 + x(3)*u + x(4)*t2*t4*t3;
-            -2*x(2) - x(3)*t3 + x(4)*(1+t3)];
+function ydot = ode(t,y)
+    
+    T = y(end);
+    x = y(1:6);
+    p = y(7:12);
+    A = [zeros(3),eye(3); zeros(3,6)];
+    B = [zeros(3);eye(3)];
+    R = 1;
+    u = -R \ (B' * p);
+    x_dot = A*x + B*u;
+    p_dot = -A' * p;
+    ydot = T*[x_dot; p_dot; 0];
 end
 
-% -----------------------------------------------
-% The boundary conditions:
-% x1(0) = 0.05, x2(0) = 0, tf = 0.78, p1(tf) = 0, p2(tf) = 0;
+% -------------------------------------------------------------------------
+% boundary conditions: 
 %
-function res = BVP_bc(xa,xb)
-    res = [ xa(1) - 0.05;
-            xa(2) - 0;
-            xb(3) - 0;
-            xb(4) - 0];
+function res = bc(y0,yf,posBallInit,velBallInit,posRobotInit,velRobotInit)
+    % ball at time T
+    T = yf(end);
+    g = -9.8;
+    bT = posBallInit + velBallInit*T + 0.5*T^2*[0;0;g];
+    dbdT = velBallInit + T*[0;0;g];
+    % 6 initial conditions
+    res = [ y0(1) - posRobotInit(1);
+            y0(2) - posRobotInit(2);
+            y0(3) - posRobotInit(3);
+            y0(4) - velRobotInit(1);
+            y0(5) - velRobotInit(2);
+            y0(6) - velRobotInit(3);
+            yf(1:3) - bT; 
+            yf(4:6) + dbdT;
+            %yf(10:12) - 0;
+            yf(7:9)' * dbdT];
 end
