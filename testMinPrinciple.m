@@ -1,42 +1,101 @@
 %% Testing minimum principle for table tennis
  
-function testMinPrinciple()
+function [T,J] = testMinPrinciple()
  
 % simple dynamics scenario to catch an incoming ball
+posRobotInit = [0;0;0];
+posBallInit = [0;0;3];
+velRobotInit = [0;0;0];
+velBallInit = randn(3,1);
+momentumInit = zeros(6,1);
 
 % try to get also an analytic soln.
 % extend to t0 variable as well!
 tic
-solinit = bvpinit(linspace(0,1),[2;3;1;1;2]);
+Tinit = 2.0;
+solinit = bvpinit(linspace(0,1),[posRobotInit;velRobotInit;
+                                 momentumInit;Tinit]);
 
-sol = bvp4c(@ode, @bc, solinit);
+bcfull = @(y0,yf) bc(y0,yf,posBallInit,velBallInit,...
+                     posRobotInit,velRobotInit);                             
+sol = bvp4c(@ode, bcfull, solinit);
 y = sol.y;
-time = y(5)*sol.x;
-ut = -y(4,:);
+time = y(end)*sol.x;
+% Calculate u from lambda
+lambda = y(7:12,:);
+B = [zeros(3);eye(3)];
+R = eye(3);
+u = -R \ (B' * lambda);
 toc
+
+% calculate ball path
+g = -9.8;
+N = length(time);
+ball = posBallInit*ones(1,N) + velBallInit*time + 0.5*[0;0;g]*(time.^2);
+
+% Calculate cost
+T = time(end);
+dt = T/N;
+J = 0.5 * dt * trace(u'*R*u);
+
 figure(1);
-plot(time,y([1 2],:)','-'); hold on;
-plot(time, ut, 'k:');
-axis([0 time(1,end) -1.5 3]);
-text(1.3,2.5,'x_1(t)');
-text(1.3,.9,'x_2(t)');
-text(1.3,-.5,'u(t)');
-xlabel('time');
-ylabel('states');
-title('Numerical solution');
+plot3(y(1,:),y(2,:),y(3,:),'b');
+hold on;
+grid on;
+plot3(ball(1,:),ball(2,:),ball(3,:),'r');
+xlabel('x');
+ylabel('y');
+zlabel('z');
+legend('robot','ball');
 hold off;
-% print -djpeg90 -r300 eg3b.jpg
+
+figure(2);
+plot(time,y(1:3,:)','-'); 
+legend('x','y','z');
+figure(3);
+plot(time, u, '-');
+legend('u1','u2','u3');
+%axis([0 time(1,end) -1.5 3]);
+
+end
+
 % -------------------------------------------------------------------------
 % ODE's of augmented states
-function dydt = ode(t,y)
-dydt = y(5)*[ y(2);-y(4);0;-y(3);0 ];
+function ydot = ode(t,y)
+    
+    T = y(end);
+    x = y(1:6);
+    p = y(7:12);
+    A = [zeros(3),eye(3); zeros(3,6)];
+    B = [zeros(3);eye(3)];
+    R = 1;
+    u = -R \ (B' * p);
+    x_dot = T*(A*x + B*u);
+    p_dot = -A' * p;
+    ydot = T*[x_dot; p_dot; 0];
+end
 
 % -------------------------------------------------------------------------
-% boundary conditions: x1(0)=1;x2(0)=2, x1(tf)=3, p2(tf)=0;
-%                      p1(tf)*x2(tf)-0.5*p2(2)^2
-function res = bc(ya,yb)
-res = [ ya(1) - 1; ya(2) - 2; yb(1) - 3; yb(4);
-        yb(3)*yb(2)-0.5*yb(4)^2];
+% boundary conditions: 
+%
+function res = bc(y0,yf,posBallInit,velBallInit,posRobotInit,velRobotInit)
+    % ball at time T
+    T = yf(end);
+    g = -9.8;
+    bT = posBallInit + velBallInit*T + 0.5*T^2*[0;0;g];
+    dbdT = velBallInit + T*[0;0;g];
+    % 6 initial conditions
+    res = [ y0(1) - posRobotInit(1);
+            y0(2) - posRobotInit(2);
+            y0(3) - posRobotInit(3);
+            y0(4) - velRobotInit(1);
+            y0(5) - velRobotInit(2);
+            y0(6) - velRobotInit(3);
+            yf(1:3) - bT; 
+            yf(4:6) + dbdT;
+            %yf(10:12) - 0;
+            yf(7:9)' * dbdT];
+end
 
 % % 1. Estimate initial pos and vel with kalman smoother up to net/bounce
 % % 2. Predict the ball trajectory after bounce
