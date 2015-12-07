@@ -2,10 +2,10 @@
 % Transversality conditions are applied
 % TODO: test gradient descent also!
 
-function [t,x,u,J] = mp(robotInit,ballTime,ballPred,racketVel,solve_method)
+function [t,x,u,J] = mp(robotInit,ballTime,ballPred,desVel,solve_method)
 
     Tinit = 0.5;
-    R = 0.1;
+    R = 1;
     momentumInit = zeros(6,1);
     tic;
     if strcmp(solve_method,'BVP')
@@ -13,7 +13,7 @@ function [t,x,u,J] = mp(robotInit,ballTime,ballPred,racketVel,solve_method)
         solinit = bvpinit(linspace(0,1),[robotInit;momentumInit;Tinit]);
         options = bvpset('Stats','on','RelTol',1e-1);
 
-        bcfull = @(y0,yf) bc(y0,yf,ballTime,ballPred,robotInit,racketVel);        
+        bcfull = @(y0,yf) bc(y0,yf,ballTime,ballPred,robotInit,desVel);        
         sol = bvp4c(@ode, bcfull, solinit, options);
         y = sol.y;
         t = y(end)*sol.x;
@@ -22,7 +22,6 @@ function [t,x,u,J] = mp(robotInit,ballTime,ballPred,racketVel,solve_method)
         % Calculate u from lambda
         p = y(7:12,:);
         B = [zeros(3);eye(3)];
-        R = eye(3);
         u = -R \ (B' * p);
         % Calculate cost
         T = t(end);
@@ -57,7 +56,7 @@ function [t,x,u,J] = mp(robotInit,ballTime,ballPred,racketVel,solve_method)
             H_Norm = dH'*dH;
             % Calculate the cost function
             J(i) = tf*(((x1')*x1 + (x2')*x2)/length(t) + ...
-                    0.1*(u*u')/length(tu));
+                    0.5*R*(u*u')/length(tu));
             % if dH/du < epslon, exit
             if H_Norm < eps
                 break;
@@ -140,21 +139,26 @@ function res = bc(y0,yf,ballTime,ballPred,robotInit,racketVel)
     velRobotInit = robotInit(4:6);
     T = yf(end);
     g = -9.8;
+    % Hamiltonian at time T
+    p = yf(7:12);
+    x = yf(1:6);
+    A = [zeros(3),eye(3); zeros(3,6)];
+    B = [zeros(3);eye(3)];
+    R = 1;
+    HatT = -0.5*p'*B*(R\(B'*p)) + p'*A*x;
     ballStateAtT = interp1(ballTime,ballPred',T)';
     ballPosAtT = ballStateAtT(1:3);
     racketVelAtT = interp1(ballTime,racketVel',T)';
-    dbdT = ballStateAtT(4:6);
+    racketAcc = diff(racketVel')./repmat(diff(ballTime'),1,size(racketVel,1));
+    racketAccAtT = interp1(ballTime(1:end-1),racketAcc,T)';
+    ballVelAtT = ballStateAtT(4:6);
     %bT = posBallInit + velBallInit*T + 0.5*T^2*[0;0;g];
     %dbdT = velBallInit + T*[0;0;g];
     % 6 initial conditions
-    res = [ y0(1) - posRobotInit(1);
-            y0(2) - posRobotInit(2);
-            y0(3) - posRobotInit(3);
-            y0(4) - velRobotInit(1);
-            y0(5) - velRobotInit(2);
-            y0(6) - velRobotInit(3);
+    res = [ y0(1:3) - posRobotInit;
+            y0(4:6) - velRobotInit;
             yf(1:3) - ballPosAtT; 
             yf(4:6) - racketVelAtT;
             %yf(10:12) - 0;
-            yf(7:9)' * dbdT];
+            HatT - yf(7:9)' * ballVelAtT - yf(10:12)' * racketAccAtT];
 end
