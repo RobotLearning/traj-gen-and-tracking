@@ -1,24 +1,19 @@
-%% Solving Minimum principle for 3d kinematics cose
+%% Solving Minimum principle for 3d kinematics case
 % Transversality conditions are applied
 % TODO: test gradient descent also!
 
-function [t,x,u,J] = mp(robotInit,ballInit,Tinit,solve_method)
+function [t,x,u,J] = mp(robotInit,ballTime,ballPred,racketVel,solve_method)
 
+    Tinit = 0.5;
     R = 0.1;
-    posRobotInit = robotInit(1:3);
-    velRobotInit = robotInit(4:6);
-    posBallInit = ballInit(1:3);
-    velBallInit = ballInit(4:6);
     momentumInit = zeros(6,1);
     tic;
     if strcmp(solve_method,'BVP')
         % Initial guess for the solution
-        solinit = bvpinit(linspace(0,1),[posRobotInit;velRobotInit;
-                                 momentumInit;Tinit]);
+        solinit = bvpinit(linspace(0,1),[robotInit;momentumInit;Tinit]);
         options = bvpset('Stats','on','RelTol',1e-1);
 
-        bcfull = @(y0,yf) bc(y0,yf,posBallInit,velBallInit,...
-                     posRobotInit,velRobotInit);        
+        bcfull = @(y0,yf) bc(y0,yf,ballTime,ballPred,robotInit,racketVel);        
         sol = bvp4c(@ode, bcfull, solinit, options);
         y = sol.y;
         t = y(end)*sol.x;
@@ -139,12 +134,18 @@ end
 % -------------------------------------------------------------------------
 % boundary conditions: 
 %
-function res = bc(y0,yf,posBallInit,velBallInit,posRobotInit,velRobotInit)
+function res = bc(y0,yf,ballTime,ballPred,robotInit,racketVel)
     % ball at time T
+    posRobotInit = robotInit(1:3);
+    velRobotInit = robotInit(4:6);
     T = yf(end);
     g = -9.8;
-    bT = posBallInit + velBallInit*T + 0.5*T^2*[0;0;g];
-    dbdT = velBallInit + T*[0;0;g];
+    ballStateAtT = interp1(ballTime,ballPred',T)';
+    ballPosAtT = ballStateAtT(1:3);
+    racketVelAtT = interp1(ballTime,racketVel',T)';
+    dbdT = ballStateAtT(4:6);
+    %bT = posBallInit + velBallInit*T + 0.5*T^2*[0;0;g];
+    %dbdT = velBallInit + T*[0;0;g];
     % 6 initial conditions
     res = [ y0(1) - posRobotInit(1);
             y0(2) - posRobotInit(2);
@@ -152,8 +153,8 @@ function res = bc(y0,yf,posBallInit,velBallInit,posRobotInit,velRobotInit)
             y0(4) - velRobotInit(1);
             y0(5) - velRobotInit(2);
             y0(6) - velRobotInit(3);
-            yf(1:3) - bT; 
-            yf(4:6) + dbdT;
+            yf(1:3) - ballPosAtT; 
+            yf(4:6) - racketVelAtT;
             %yf(10:12) - 0;
             yf(7:9)' * dbdT];
 end

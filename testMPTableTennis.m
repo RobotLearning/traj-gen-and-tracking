@@ -1,5 +1,7 @@
 %% Testing minimum principle in table tennis
 
+clc; clear; close all
+
 % 1. Estimate initial pos and vel with kalman smoother up to net/bounce
 % 2. Predict the ball trajectory after bounce
 % 3. Fix the center of the table as the goal position
@@ -43,6 +45,7 @@ qd0 = zeros(N_DOFS,1);
 Q0 = [q0; qd0];
 [x0,xd0] = wam.kinematics(Q0);
 X0 = [x0;xd0];
+robot(:,1) = X0;
 % initialize ball on the ball cannon with a sensible vel
 ball(1:3,1) = ball_cannon;
 ball(4:6,1) = [-0.9 4.000 3.2] + 0.05 * randn(1,3);
@@ -64,7 +67,7 @@ params.zTable = table_z;
 params.yNet = dist_to_table - table_y;
 params.table_length = table_length;
 params.table_width = table_width;
-% coeff of restitution-friction vector [TO BE LEARNED!]
+% coeff of restitution-friction vector
 params.CFTX = CFTX;
 params.CFTY = CFTY;
 params.CRT = CRT;
@@ -80,17 +83,21 @@ filter = EKF(dim,funState,mats);
 
 figure;
 orange = [0.9100 0.4100 0.1700];
-h1 = scatter3(ball(1,1),ball(2,1),ball(3,1),10,orange,'filled');
+h1 = scatter3(ball(1,1),ball(2,1),ball(3,1),20,orange,'filled');
 hold on;
-h2 = scatter3(ballPred(1,1),ballPred(2,1),ballPred(3,1),10,'b','filled');
-h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),10,'k','filled');
+%h2 = scatter3(ballPred(1,1),ballPred(2,1),ballPred(3,1),20,'b','filled');
+h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
 title('Ball-robot interaction');
 grid on;
-axis equal; 
+axis equal;
 xlabel('x');
 ylabel('y');
 zlabel('z');
-legend('ball','ballPred','robot');
+tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
+xlim([-table_x - tol_x, table_x + tol_x]);
+ylim([dist_to_table - table_length - tol_y, tol_y]);
+zlim([table_z - tol_z, table_z + 2*tol_z]);
+legend('ball','robot');
 fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 %scatter3(ball(1,:),ball(2,:),ball(3,:),'r');
@@ -114,23 +121,21 @@ maxPredictHorizon = 0.8;
 filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
 
 % initialize indices and time
-i = 1;
-dt = 0.002;
+i = 1; k = 1; t = 0.0;
+dt = 0.01;
 ballNoisyPos = ball(1:3,1);
-t = 0.0;
 
 while ~finished
     
     %% Evolve ball flight, table and racket contact interactions
-    if ball(:,i) <= floor_level
+    if ball(3,i) <= floor_level
         disp('Ball hit the floor. Resetting...');
-        t = 0.0; i = 1; j = 1;
-        predict = true;
+        t = 0.0; i = 1; k = 1;
+        predict = false;
         time2PassTable = 1.0;
         ball(1:3,1) = ball_cannon;
         ball(4:6,1) = [-0.9 4.000 3.2] + 0.05 * randn(1,3);
-        robot(:,1) = X0;
-        break;
+        filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
     end
     
     ball(:,i+1) = funState(ball(:,i),0,dt);
@@ -158,10 +163,10 @@ while ~finished
         PSave = filter.P;
         % update the time it takes to pass table
         yBallEst = filter.x(2);
-        tPredIncrement = 10*dt;
+        tPredIncrement = dt;
         time2PassTable = 0.0;
         while yBallEst <= dist_to_table
-             filter.linearize(tPredIncrement,0);
+             %filter.linearize(tPredIncrement,0);
              filter.predict(tPredIncrement,0);
              yBallEst = filter.x(2);
              time2PassTable = time2PassTable + tPredIncrement;
@@ -169,33 +174,30 @@ while ~finished
         % revert back to saved state
         filter.initState(xSave,PSave);
     else
-    
         %% predict ball trajectory once
         if ~predict            
-            predictHorizon = min(maxPredictHorizon,timeSimTotal - t);
+            predictHorizon = maxPredictHorizon;
             predictLen = floor(predictHorizon / dt);
             ballPred = zeros(6,predictLen);
             for j = 1:predictLen
-                filter.linearize(dt,0);
+                %filter.linearize(dt,0);
                 filter.predict(dt,0);
                 ballPred(:,j) = filter.x;
             end
-            predict = true;
-        
+            predict = true;        
 
             %% Calculate the intersection of ball path with robot workspace
 
             % for now only considering the ball positions after table
             tol = 5e-2;
             idxAfterTable = find(ballPred(2,:) > dist_to_table + tol);
-            ballIncoming = ballPred(:,idxAfterTable);
-            timeIncoming = idxAfterTable * dt;
+            ballIncoming = ballPred; %ballPred(:,idxAfterTable);
+            timeIncoming = (1:predictLen) * dt; %idxAfterTable * dt;
             minTimeToHit = timeIncoming(1);
-            ballTrjPred = [timeIncoming; ballIncoming];
 
             %% Calculate ball outgoing velocities attached to each ball pos
 
-            for j = 1:size(ballTrjPred,2)
+            for j = 1:size(ballIncoming,2)
                 % desired pos is in the centre of opponents court
                 velBallOut(1) = (desBall(1) - ballIncoming(1,j))/time2reach;
                 velBallOut(2) = (desBall(2) - ballIncoming(2,j))/time2reach;
@@ -206,8 +208,8 @@ while ~finished
                                       velBallOut(:)] + ...
                                       [0;0;0.5*gravity*t^2;0;0;gravity*t];
                 flightModel = @(t,x) [x(4);
-                                    x(5);
-                                    x(6);
+                                      x(5);
+                                      x(6);
                               -Cdrag * x(4) * sqrt(x(4)^2 + x(5)^2 + x(6)^2);
                               -Cdrag * x(5) * sqrt(x(4)^2 + x(5)^2 + x(6)^2);
                       gravity - Cdrag * x(6) * sqrt(x(4)^2 + x(5)^2 + x(6)^2)];
@@ -235,6 +237,8 @@ while ~finished
                 velInAlongNormal = ballIncoming(4:6,j)' * normal(:,j);
                 racketVelAlongNormal(j) = velOutAlongNormal + ... 
                     CRR * velInAlongNormal / (1 + CRR);
+                % TO BE CHANGED 
+                racketVel(:,j) = racketVelAlongNormal(j) * normal(:,j);
             end
             
             %% COMPUTE OPTIMAL TRAJECTORY HERE
@@ -242,20 +246,28 @@ while ~finished
             T0 = 0.5;
             B0 = ballIncoming(:,1);
             solve_method = 'BVP';
-            [t,X,u,J] = mp(X0,B0,T0,solve_method);
+            
+            [tx,X,u,J] = mp(X0,timeIncoming,ballIncoming,racketVel,solve_method);
+            % interpolate to get equal dt increments
+            teq = dt:dt:tx(end);
+            Xeq = interp1(tx,X',teq)';
         end % end predict        
 
         %% Initiate the robot
-        robot(:,j+1) = X(:,j+1);
-        j = j + 1;
+        robot(:,k+1) = Xeq(:,min(k+1,size(Xeq,2)));
+        k = k + 1;
         
-        %% ANIMATE BOTH THE ROBOT AND THE BALL
-        set(h1,'XData',ball(1,i));
-        set(h1,'YData',ball(2,i));
-        set(h1,'ZData',ball(3,i));
-        drawnow;
-        pause(0.005);
     end 
+    
+    %% ANIMATE BOTH THE ROBOT AND THE BALL
+    set(h1,'XData',ball(1,i));
+    set(h1,'YData',ball(2,i));
+    set(h1,'ZData',ball(3,i));
+    set(h3,'XData',robot(1,k));
+    set(h3,'YData',robot(2,k));
+    set(h3,'ZData',robot(3,k));
+    drawnow;
+    pause(0.002);
         
     t = t + dt;
     i = i + 1;

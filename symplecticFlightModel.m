@@ -26,6 +26,7 @@ if xNext(3) < zTable && abs(xNext(2) - yNet) < tableLength/2 && abs(xNext(1)) < 
     dt1 = 0;
     dt2 = dt;
     xBounce = x;
+    dtBounce = 0.0;
     % doing bisection to find the bounce time
     while abs(xBounce(3) - zTable) > tol
         dtBounce = (dt1 + dt2) / 2;
