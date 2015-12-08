@@ -1,11 +1,10 @@
 %% TODO: Testing mp for 2d-case
 
 clc; clear; close all
-% p1 = -v1;
-% p2 = (-v2 +- sqrt(v1^2+ v2^2)) / 2
-% T = b2 / (p2 + v2);
+
+b2 = 2;
 posRobotInit = [0;0];
-posBallInit = [0;5];
+posBallInit = [0;b2];
 v1 = 1;
 v2 = -1;
 velBallInit = [v1;v2];
@@ -15,14 +14,18 @@ solve_method = 'BVP';
 
 % calculate ball path
 dt = 0.1;
-t = dt:dt:1;
+t = dt:dt:2;
 N = length(t);
 ballTime = t;
 ballPath = posBallInit*ones(1,N) + velBallInit*t;
 ballVel = velBallInit*ones(1,N);
 ballPred = [ballPath;ballVel];
 
-[t,y,u,J] = mp(robotInit,ballTime,ballPred,0,solve_method);
+[t,y,u,J] = mp0(robotInit,ballTime,ballPred);
+
+p1 = -v1;
+speed = sqrt(v1^2 + v2^2);
+T = b2 / speed
 
 figure(1);
 plot(y(1,:),y(2,:),'b');

@@ -182,9 +182,48 @@ classdef BarrettWAM < Robot
             end
         end
         
+        % to draw the robots joints and endeffector 
+        % for one posture only
+        function [joints,endeff,racket] = drawPosture(obj,q)
+            
+            [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(q,obj.PAR);
+            quat = rot2Quat(Amats(6,1:3,1:3));
+            orient = obj.calcRacketOrientation(quat);
+            R = quat2Rot(orient);
+            joints = xOrigin;
+            endeff = xLink(6,:);
+            
+            %x and y are the coordinates of the center of the circle
+            %r is the radius of the circle
+            %0.01 is the angle step, bigger values will draw the circle faster but
+            %you might notice imperfections (not very smooth)
+            racket_radius = 0.076;
+            ang = 0:0.01:2*pi; 
+            racket_x = racket_radius * cos(ang);
+            racket_y = racket_radius * sin(ang);
+            % transform into base coord.
+            racket = repmat(endeff(:),1,length(ang)) + ...
+                R * [racket_x; racket_y; zeros(1,length(ang))];
+            
+        end
+        
         % make an animation of the robot manipulator
-        function animateArm(obj,q_actual,s)
-            %TODO:
+        %TODO
+        function animateArm(obj,qs)
+            
+            dim = 7;
+            assert(size(qs,1) == dim, 'velocities not necessary!');
+            NCART = 3;
+            x = zeros(NCART,lenq);
+            o = zeros(4,lenq);
+            for i = 1:lenq
+                [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(qs(:,i),obj.PAR);
+                quat = rot2Quat(Amats(6,1:3,1:3));
+                o(:,i) = obj.calcRacketOrientation(quat);
+                x(:,:,i) = [xOrigin;xLink(6,:)];
+            end
+            
+            animateWAM(x,o);
         end
         
         % get lifted model constraints
