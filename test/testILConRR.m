@@ -139,55 +139,55 @@ rr.plot_outputs(traj);
 
 %% Start learning feedforward with ILC
 
-%{
+%%{
+num_trials = 10;
+
+%ilc = aILC(rr,traj);
+ilc = mILC(rr,traj); 
+
+for i = 1:num_trials
+    % get next inputs
+    u = ilc.feedforward(traj,qact);
+    %u = ilc.feedforward(traj,rr,dev);
+    % evolve system
+    qact = rr.observe(t,q0,u);
+    % get the cartesian coordinates
+    %[~,y] = rr.kinematics(qact(1:2,:));
+    % add performance to trajectory
+    traj.addPerformance(u,qact,rr.COST,ilc);
+    % Plot the controls and animate the robot arm
+    %rr.animateArm(qact(1:2,:),ref);
+end
+
+% Plot the controls and animate the robot arm
+rr.plot_inputs(traj);
+rr.plot_outputs(traj);
+rr.animateArm(qact(1:2,:),ref);
+%}
+
+%% Learn with feedback
+
 % num_trials = 10;
 % 
 % %ilc = aILC(rr,traj);
 % ilc = mILC(rr,traj); 
+% %ilc.inp_last = traj.unom;
 % 
 % for i = 1:num_trials
-%     % get next inputs
-%     u = ilc.feedforward(traj,qact);
-%     %u = ilc.feedforward(traj,rr,dev);
-%     % evolve system
-%     qact = rr.observe(t,q0,u);
-%     % get the cartesian coordinates
-%     %[~,y] = rr.kinematics(qact(1:2,:));
-%     % add performance to trajectory
-%     traj.addPerformance(u,qact,rr.COST,ilc);
-%     % Plot the controls and animate the robot arm
-%     %rr.animateArm(qact(1:2,:),ref);
+%     
+%     %us = ilc.feedforward(traj,rr,qact);
+%     us = ilc.feedforward(traj,qact);     
+%     traj.unom = us;
+%     % get the measurements
+%     [qact,ufull] = rr.observeWithFeedbackErrorForm(traj,q0);
+%     traj.addPerformance(ufull,qact,rr.COST,ilc);
+% 
 % end
 % 
 % % Plot the controls and animate the robot arm
 % rr.plot_inputs(traj);
 % rr.plot_outputs(traj);
 % rr.animateArm(qact(1:2,:),ref);
-%}
-
-%% Learn with feedback
-
-num_trials = 10;
-
-%ilc = aILC(rr,traj);
-ilc = mILC(rr,traj); 
-%ilc.inp_last = traj.unom;
-
-for i = 1:num_trials
-    
-    %us = ilc.feedforward(traj,rr,qact);
-    us = ilc.feedforward(traj,qact);     
-    traj.unom = us;
-    % get the measurements
-    [qact,ufull] = rr.observeWithFeedbackErrorForm(traj,q0);
-    traj.addPerformance(ufull,qact,rr.COST,ilc);
-
-end
-
-% Plot the controls and animate the robot arm
-rr.plot_inputs(traj);
-rr.plot_outputs(traj);
-%rr.animateArm(qact(1:2,:),ref);
 
 %% Change the reference slightly and see how the robot is doing
 

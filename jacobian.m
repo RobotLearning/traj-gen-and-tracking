@@ -23,7 +23,7 @@ NCART = 3;
 for i = 1:NDOF
     %if Jlist(i) ~= 0
     % compute c here
-    Jac(:,i) = revoluteGJacColumn(xLink(6,:),xOrigin(i,:),xAxis(i,:));
+    Jac(:,i) = revoluteGJacColumn(xLink(end,:),xOrigin(i,:),xAxis(i,:));
     %end
 end
 

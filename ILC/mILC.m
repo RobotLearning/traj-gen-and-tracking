@@ -177,7 +177,7 @@ classdef mILC < ILC
             % gradient descent
             %u = obj.inp_last(:) - 1e-10 * obj.F' * obj.Ql * e(:);
             % model inversion based Newton-Raphson update
-            %u = obj.inp_last(:) - obj.F \ e(:);
+            u = obj.inp_last(:) - obj.F \ e(:);
             % more stable inverse based Newton-Raphson update
             % computes very high inverses though
             %u = obj.inp_last(:) - pinv(obj.F,0.2) * e(:);
@@ -199,7 +199,7 @@ classdef mILC < ILC
             %A = obj.F' * obj.Ql * obj.F + Sl;
             %u = obj.inp_last(:) - cgs(A,obj.F'*obj.Ql*e(:));
             % Total Least Squares
-            u = obj.inp_last(:) - tls(obj.F,e(:),0.2);
+            %u = obj.inp_last(:) - tls(obj.F,e(:),0.2);
             
             % revert from lifted vector from back to normal form
             u = reshape(u,dimu,Nu);
