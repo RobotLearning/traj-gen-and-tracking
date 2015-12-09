@@ -4,7 +4,7 @@
 
 function [t,x,u,J] = mp(robotInit,ballTime,ballPred,desVel,solve_method)
 
-    Tinit = 0.5;
+    Tinit = 0.6;
     R = 1;
     momentumInit = zeros(6,1);
     tic;

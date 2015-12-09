@@ -3,9 +3,11 @@
 clc; clear; close all
 
 %{
+b1 = 0;
 b2 = 2;
-posRobotInit = [0;0];
-posBallInit = [0;b2];
+x1 = 0; x2 = 0;
+posRobotInit = [x1;x2];
+posBallInit = [b1;b2];
 v1 = 1;
 v2 = -1;
 velBallInit = [v1;v2];
@@ -24,9 +26,21 @@ ballPred = [ballPath;ballVel];
 
 [t,y,u,J] = mp0(robotInit,ballTime,ballPred);
 
-p1 = -v1;
-speed = sqrt(v1^2 + v2^2);
-T = b2 / speed
+% speed = sqrt(v1^2 + v2^2);
+% T = b2 / speed;
+
+x0 = [1;1;0.5];
+x = fsolve(@(x) bv1(x(1),x(2),x(3),x1,x2,b1,b2,v1,v2),x0);
+T = x(3)
+
+syms p1 p2 T;
+eqns = [-p1*T + x1 == b1 + v1*T, ...
+        -p2*T + x2 == b2 + v2*T, ...
+        1/2*(p1^2 + p2^2) + p1*v1 + p2*v2 == 0];
+S = solve(eqns,[p1,p2,T]);
+T = subs(S.T);
+T = eval(real(vpa(T)));
+fprintf('T = %f.\n', max(T));
 
 figure(1);
 plot(y(1,:),y(2,:),'b');
@@ -37,14 +51,18 @@ xlabel('x');
 ylabel('y');
 legend('robot','ball');
 hold off;
+%}
 
 %% Testing minimum principle for simple 3d- ball interception
  
 % simple dynamics scenario to catch an incoming ball
+%{
 posRobotInit = [0;0;0];
-posBallInit = [0;0;3];
+b1 = 0; b2 = 0; b3 = 3;
+posBallInit = [b1;b2;b3];
+v1 = 1; v2 = 1; v3 = -1;
 velRobotInit = [0;0;0];
-velBallInit = [1;1;-1];
+velBallInit = [v1;v2;v3];
 robotInit = [posRobotInit;velRobotInit];
 ballInit = [posBallInit;velBallInit];
 solve_method = 'BVP';
@@ -83,27 +101,32 @@ legend('u1','u2','u3');
 %axis([0 time(1,end) -1.5 3]);
 
 % Solve symbolically to compare
+syms p1 p2 p3 p4 p5 p6 T 
+eqns = [1/6*p1*T^3 + 1/2*p4*T^2 == v1*T + b1, ... % desired ball pos at T
+        1/6*p2*T^3 + 1/2*p5*T^2 == v2*T + b2, ...
+        1/6*p3*T^3 + 1/2*p6*T^2 == v3*T + 1/2*g*T^2 + b3, ...
+        1/2*p1*T^2 + p4*T == -v1, ... % desired racket velocities at T
+        1/2*p2*T^2 + p5*T == -v2, ...
+        1/2*p3*T^2 + p6*T == -v3 - g*T, ...
+         p1*v1 + p2*v2 + p3*(v3+g*T) + (p6+p3*T)*g + ...
+         +1/2*(p4^2 + p5^2 + p6^2) == 0]; 
+S = solve(eqns,[p1 p2 p3 p4 p5 p6 T]);
+T = subs(S.T);
+T = eval(real(vpa(T)));
+fprintf('Symbolic solver: T = %f.\n', max(T));
 
-% syms p1 p2 p3 p4 p5 p6 T v1 v2 v3 b1 b2 b3 
-% eqns = [-1/6*p1*T^3 - 1/2*p4*T^2 == v1*T + b1, ... % desired ball pos at T
-%         -1/6*p2*T^3 - 1/2*p5*T^2 == v2*T + b2, ...
-%         -1/6*p3*T^3 - 1/2*p6*T^2 == v3*T + 1/2*g*T^2 + b3, ...
-%         -1/2*p1*T^2 - p4*T == -v1, ... % desired racket velocities at T
-%         -1/2*p2*T^2 - p5*T == -v2, ...
-%         -1/2*p3*T^2 - p6*T == -v3 - g*T, ...
-%          p1*v1 + p2*v2 + p3*(v3+g*T) - p6*g + ...
-%          +1/2*(p4^2 + p5^2 + p6^2) + ...
-%          (p1*v1 + p2*v2 + p3*(v3 + g*T)) == 0]; 
-% S = solve(eqns,[p1 p2 p3 p4 p5 p6 T]);\
-% T = subs(S.T,[v1,v2,v3,b1,b2,b3],[velBallInit',posBallInit']);
-% T = eval(real(vpa(T)));
-% fprintf('T = %f.\n', max(T));
+x0 = [zeros(6,1);0.5];
+options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
+    'MaxFunEvals',1000,'MaxIter',1000);
+lb = [-Inf(6,1);0];
+x = lsqnonlin(@(x) bv1(x,[b1;b2;b3;v1;v2;v3]), x0, lb, [], options);
+T = x(7)
+
 %}
 
 %% Testing MP on RR
 
-clc; clear; close all;
-
+%%{
 % Simulation Values 
 % system is continous
 SIM.discrete = false;
@@ -129,8 +152,8 @@ g = 9.81;
 % joint parameters
 m1 = 1; %mass of first link, kg
 m2 = 0.5; %mass of second link, kg
-l1 = 0.50; %length of first link, m
-l2 = 0.40; %length of second link, m
+l1 = 1.0; %length of first link, m
+l2 = 1.0; %length of second link, m
 l_c1 = 0.25; %distance of first link's center of gravity to prev. joint, m
 l_c2 = 0.20; %dist. of second link's c.oZ.g. to prev. joint, m
 I1 = (1/12)*m1*l1^2; %assume thin rod moment of inertia around c.o.g.
@@ -183,10 +206,13 @@ COST.R = 1 * eye(SIM.dimu);
 rr = RR(PAR,CON,COST,SIM);
 
 % simple dynamics scenario to catch an incoming ball
-robotInit = [0;0;0;0];
+q1 = 0; q2 = 0;
+robotInit = [q1;q2;0;0];
 % ball is in 2d space
-posBallInit = [1;0.5];
-velBallInit = [-1;-1];
+b1 = 0.5; b2 = 2;
+v1 = 0.5; v2 = -1;
+posBallInit = [b1; b2];
+velBallInit = [v1; v2];
 ballInit = [posBallInit;velBallInit];
 %solve_method = 'BVP';
 
@@ -195,8 +221,8 @@ dt = 0.02;
 t = dt:dt:1;
 N = length(t);
 ballTime = t;
-ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
-ballVel = velBallInit*ones(1,N) + [g;0]*t;
+ballPath = posBallInit*ones(1,N) + velBallInit*t;
+ballVel = velBallInit*ones(1,N);
 ballPred = [ballPath; ballVel];
 desVel = -ballVel;
 
@@ -224,6 +250,50 @@ derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+
 % xdot = jac(1:2,1:2)*qdot;
 
 
-[t,y,u,J] = mpq(robotInit,ballTime,ballPred,desVel,jacExact,kinFnc,derJacTimesQdot);
+% solve numerically with lsqnonlin
+x0 = [pi/4*ones(4,1);0.5];
+options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
+    'MaxFunEvals',1000,'MaxIter',1000);
+lb = [-Inf(4,1);0];
+[x,resnorm,res] = lsqnonlin(@(x) bv1(x,[l1;l2;b1;b2;v1;v2;q1;q2]), x0, lb, [], options);
+T = x(5)
+
+
+%[t,y,u,J] = mpq(robotInit,ballTime,ballPred,desVel,jacExact,kinFnc,derJacTimesQdot);
 
 %rr.animateArm(qact(1:2,:),ref);
+
+% Solve symbolically to compare
+syms p1 p2 p3 p4 T 
+eqns = [l1*cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1) + ... % kinematics constr.
+        l2*cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2) == b1 + v1*T, ...
+        l1*sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1) + ... % kinematics constr.
+        l2*sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2) == b2 + v2*T, ...
+        (-l1*sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1) - ... % Jacobian constr.
+        l2*sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2)) * ((-1/2)*p1*T^2 - p3*T) + ...
+        (l2*sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2)) * ((-1/2)*p3*T^2 - p4*T) == -v1, ...
+         (l1*cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1) + ... % Jacobian constr.
+        l2*cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2)) * ((-1/2)*p1*T^2 - p3*T) + ...
+        (l2*cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2)) * ((-1/2)*p3*T^2 - p4*T) == -v2, ...
+         -1/2*(p3^2 + p4^2) == (1/(l1*l2*(cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1)* ... %Hamiltonian
+         sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2) - ...
+         sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1) * ...
+               -sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2)))) ...
+               * l2*v1*p1*cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2) + p1*l2*v2*sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2) - p2*l1*v1*cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1) ...
+               -p2*l2*v1*cos(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2) - p2*l1*v2*sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1) ...
+               -p2*l2*v2*sin(-(1/6)*p1*T^3 - (1/2)*p3*T^2 + q1 ...
+               -(1/6)*p2*T^3 - (1/2)*p4*T^2 + q2)];
+S = solve(eqns,[p1 p2 p3 p4 T]);
+T = subs(S.T);
+T = eval(real(vpa(T)));
+fprintf('T = %f.\n', max(T));
+%}

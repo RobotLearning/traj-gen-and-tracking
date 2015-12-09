@@ -8,7 +8,8 @@ function [t,x,u,J] = mpq(robotInit,ballTime,ballPred,desVel,jac,kin,djac)
     momentumInit = zeros(4,1);
     tic;
     % Initial guess for the solution
-    solinit = bvpinit(linspace(0,1),[robotInit;momentumInit;Tinit]);
+    initGuessRobot = [pi/4;pi/4;0;0];
+    solinit = bvpinit(linspace(0,1),[initGuessRobot;momentumInit;Tinit]);
     options = bvpset('Stats','on','RelTol',1e-1);
     bcfull = @(y0,yf) bc(y0,yf,ballTime,ballPred,robotInit,desVel,jac,kin,djac);        
     sol = bvp4c(@ode, bcfull, solinit, options);
@@ -55,7 +56,6 @@ function res = bc(y0,yf,ballTime,ballPred,robotInit,racketVel,jac,kin,djac)
     posRobotInit = robotInit(1:2);
     velRobotInit = robotInit(3:4);
     T = yf(end);
-    g = 9.8;
     % Hamiltonian at time T
     p = yf(5:8);
     q = yf(1:4);
@@ -65,7 +65,7 @@ function res = bc(y0,yf,ballTime,ballPred,robotInit,racketVel,jac,kin,djac)
     HatT = -0.5*p'*B*(R\(B'*p)) + p'*A*q;
     ballStateAtT = interp1(ballTime,ballPred',T)';
     ballPosAtT = ballStateAtT(1:2);
-    ballAccAtT = [g;0];
+    %ballAccAtT = [g;0];
     racketVelAtT = interp1(ballTime,racketVel',T)';
     %racketAcc = diff(racketVel')./repmat(diff(ballTime'),1,size(racketVel,1));
     %racketAccAtT = interp1(ballTime(1:end-1),racketAcc,T)';
@@ -73,17 +73,15 @@ function res = bc(y0,yf,ballTime,ballPred,robotInit,racketVel,jac,kin,djac)
     %bT = posBallInit + velBallInit*T + 0.5*T^2*[0;0;g];
     %dbdT = velBallInit + T*[0;0;g];
     [~,xAtT] = kin(yf(1:2));
-    xdAtT = jac(yf(1:2))*yf(3:4);
-    % form the A matrix
-    Am = [-ballVelAtT', ballAccAtT';
-         jac(q(1:2))', djac(q(1:2),q(3:4))';
-         zeros(2,2),jac(q(1:2))];
-    pars = [HatT;p];
-    M = [Am,pars]; % matrix for ensuring transversality
+    J = jac(q(1:2));
+    xdAtT = J*q(3:4);
+    %M = djac(q(1:2),q(3:4));
     % 4 initial conditions + 4 terminal cond + 1 time cond from transv.
     res = [ y0(1:2) - posRobotInit;
             y0(3:4) - velRobotInit;
             xAtT - ballPosAtT; 
             xdAtT - racketVelAtT;
-            det(M)];
+            HatT - p(1:2)'*(J\ballVelAtT)];
+            %HatT + ballVelAtT * (J'\(M*(J\p(3:4))) - J'\p(1:2)) ...
+             %-racketAccAtT * (J\p(3:4))];
 end
