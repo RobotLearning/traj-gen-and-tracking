@@ -19,7 +19,7 @@ function [t,x,u,J] = mpq(robotInit,ballTime,ballPred,desVel,jac,kin,djac)
     x = y(1:4,:);
     % Calculate u from lambda
     p = y(5:8,:);
-    B = [zeros(3);eye(3)];
+    B = [zeros(2);eye(2)];
     u = -R \ (B' * p);
     % Calculate cost
     T = t(end);

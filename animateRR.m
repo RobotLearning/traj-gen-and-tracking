@@ -3,7 +3,8 @@
 function animateRR(x1,x2,X_des)
 
 % position of the base
-shift = [0; 0.9];
+%shift = [0; 0.9];
+shift = [0;0];
 
 % rotate everything by 90 degrees
 R = [0 1; -1 0];
@@ -26,9 +27,9 @@ link2_y = [x1(2,1),x2(2,1)];
 hf = figure('color','white');
 axis manual; axis equal; 
 
-%%%%%%%%%%%%%%%%%%%%%%%% TODO: only for putting
-xlabel('Distance in x (m)');
-ylabel('Distance in y (m)');
+%%%%%%%%%%%%%%%%%%%%%%%% only for putting
+% xlabel('Distance in x (m)');
+% ylabel('Distance in y (m)');
 axis auto;
 %camroll(-90); 
 %set(gca, 'YTick',[]);
@@ -41,7 +42,8 @@ hold on;
 h3 = scatter(shift(1),shift(2),100,'b','LineWidth',4);
 h4 = scatter(x1(1,1),x1(2,1),100,'b','LineWidth',4);
 h5 = scatter(x2(1,1),x2(2,1),10,'b','LineWidth',4);
-h6 = plot(x_des,y_des,'-.','color', [.6 .6 .6], 'LineWidth',1);
+%h6 = plot(x_des,y_des,'-.','color', [.6 .6 .6], 'LineWidth',1);
+h6 = scatter(x_des(1),y_des(1),10,'r','LineWidth',2); % for ball tracking
 
 for j = 2:length(x1)
      link1_x(2) = x1(1,j);
@@ -60,10 +62,14 @@ for j = 2:length(x1)
      set(h5,'XData',link2_x(2));
      set(h5,'YData',link2_y(2));
      
+     % for ball tracking
+     set(h6,'XData',x_des(j));
+     set(h6,'YData',y_des(j));
+     
      % connect the resulting end-effector trajectory
-     %traj_x = [x2(1,j-1),x2(1,j)];               
-     %traj_y = [x2(2,j-1),x2(2,j)];              
-     %h7 = line(traj_x, traj_y, 'color', [.4 .4 .5],'LineWidth',1);
+     traj_x = [x2(1,j-1),x2(1,j)];               
+     traj_y = [x2(2,j-1),x2(2,j)];              
+     h7 = line(traj_x, traj_y, 'color', [.4 .4 .5],'LineWidth',1);
      
      drawnow;
      pause(0.005);
