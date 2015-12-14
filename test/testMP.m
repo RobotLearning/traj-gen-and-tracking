@@ -126,7 +126,7 @@ T = x(7)
 
 %% Testing MP on RR
 
-%%{
+%{
 % Simulation Values 
 % system is continous
 SIM.discrete = false;
@@ -148,7 +148,7 @@ SIM.int = 'Euler';
 SIM.jref = false;
 
 % constants
-g = 9.81;
+g = 1; %9.81;
 % joint parameters
 m1 = 1; %mass of first link, kg
 m2 = 0.5; %mass of second link, kg
@@ -206,11 +206,12 @@ COST.R = 1 * eye(SIM.dimu);
 rr = RR(PAR,CON,COST,SIM);
 
 % simple dynamics scenario to catch an incoming ball
-q1 = 0; q2 = 0;
-robotInit = [q1;q2;0;0];
+q10 = 0.0; q20 = 0.0;
+q0 = [q10;q20];
+robotInit = [q0;0;0];
 % ball is in 2d space
 b1 = 1; b2 = 1;
-v1 = 0.2; v2 = 0.2;
+v1 = -0.2; v2 = -0.2;
 posBallInit = [b1; b2];
 velBallInit = [v1; v2];
 ballInit = [posBallInit;velBallInit];
@@ -221,7 +222,7 @@ dt = 0.02;
 t = dt:dt:1;
 N = length(t);
 ballTime = t;
-ballPath = posBallInit*ones(1,N) + velBallInit*t;
+ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
 ballVel = velBallInit*ones(1,N);
 ballPred = [ballPath; ballVel];
 desVel = -ballVel;
@@ -252,8 +253,8 @@ derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+
 
 % solve numerically with lsqnonlin
 x0 = [pi/4*ones(4,1);0.5];
-options = optimoptions('fsolve','Algorithm','trust-region-dogleg',...
-    'MaxFunEvals',10000,'MaxIter',1000,'TolFun',1e-10);
+options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
+    'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
 lb = [-Inf(4,1);0];
 tic;
 PAR.l1 = l1; 
@@ -262,23 +263,24 @@ PAR.b1 = b1;
 PAR.b2 = b2;
 PAR.v1 = v1;
 PAR.v2 = v2;
-PAR.q1 = q1;
-PAR.q2 = q2;
+PAR.q0 = q0;
 PAR.kin = kinFnc;
 PAR.jac = jacExact;
-[x,fval] = fsolve(@(x) bv1(x,PAR), x0, options);
+PAR.g = g;
+[x,resnorm,resval] = lsqnonlin(@(x) bv1(x,PAR), x0, lb, [], options);
 toc
 T = x(5)
 
 t = dt:dt:T;
-q(1,:) = -(1/6)*x(1)*t.^3 - (1/2)*x(3)*t.^2 + q1;
-q(2,:) = -(1/6)*x(2)*t.^3 - (1/2)*x(4)*t.^2 + q2;
-%[~,xc] = kinFnc(q);
 N = length(t);
-ballPath = posBallInit*ones(1,N) + velBallInit*t;
+mu0 = x(1:2);
+nu0 = -x(3:4) - mu0*T;
+q = (1/6)*mu0*t.^3 + (1/2)*nu0*t.^2 + repmat(q0,1,N);
+%[~,xc] = kinFnc(q);
+ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
 %plot(x(2,:),-x(1,:),'b',ballPath(2,:),-ballPath(1,:),'r');
 
-[t,y,u,J] = mpq(robotInit,ballTime,ballPred,desVel,jacExact,kinFnc,derJacTimesQdot);
+%[t,y,u,J] = mpq(robotInit,ballTime,ballPred,desVel,jacExact,kinFnc,derJacTimesQdot);
 %t(end)
 
 rr.animateArm(q(1:2,:),ballPath);
@@ -316,4 +318,172 @@ rr.animateArm(q(1:2,:),ballPath);
 % T = subs(S.T);
 % T = eval(real(vpa(T)));
 % fprintf('T = %f.\n', max(T));
+
+%}
+
+%% Testing MP for RRR for hitting an uncertain ball
+
+%%{
+% Simulation Values 
+% system is continous
+SIM.discrete = false;
+% learn in cartesian space
+SIM.cartesian = false;
+% dimension of the x vector
+SIM.dimx = 6;
+% dimension of the output y
+SIM.dimy = 3;
+% dimension of the control input
+SIM.dimu = 3;
+% time step h 
+SIM.h = 0.01;
+% measurement noise covariance
+SIM.eps_m = 3e-10;
+% integration method
+SIM.int = 'Euler';
+% trajectory in joint space?
+SIM.jref = false;
+
+% constants
+g = 1; %9.81;
+% joint parameters
+m1 = 1; %mass of first link, kg
+m2 = 0.5; %mass of second link, kg
+m3 = 0.5; 
+l1 = 1.0; %length of first link, m
+l2 = 1.0; %length of second link, m
+l3 = 1.0;
+l_c1 = 0.25; %distance of first link's center of gravity to prev. joint, m
+l_c2 = 0.20; %dist. of second link's c.oZ.g. to prev. joint, m
+l_c3 = 0.5;
+I1 = (1/12)*m1*l1^2; %assume thin rod moment of inertia around c.o.g.
+I2 = (1/12)*m2*l2^2; %kg m^2
+I3 = (1/12)*m3*l3^2;
+% motor parameters
+J_a1 = 0.100; % actuator inertia of link 1
+J_g1 = 0.050; % gear inertia of link1
+J_m1 = J_a1 + J_g1;
+J_a2 = 0.080; % actuator inertia of link 2
+J_g2 = 0.040; % gear inertia of link2
+J_m2 = J_a2 + J_g2;
+J_a3 = 0.12;
+J_g3 = 0.06;
+J_m3 = J_a3 + J_g3;
+% gear ratio typically ranges from 20 to 200 or more - comment from book
+r_1 = 20;
+r_2 = 20;
+r_3 = 40;
+ 
+% pass it as a parameter structure
+PAR.const.g = g;
+PAR.link1.mass = m1;
+PAR.link2.mass = m2;
+PAR.link3.mass = m3;
+PAR.link1.length = l1;
+PAR.link2.length = l2;
+PAR.link3.length = l3;
+PAR.link1.centre.dist = l_c1;
+PAR.link2.centre.dist = l_c2;
+PAR.link3.centre.dist = l_c3;
+PAR.link1.inertia = I1;
+PAR.link2.inertia = I2;
+PAR.link3.inertia = I3;
+PAR.link1.motor.inertia = J_m1;
+PAR.link2.motor.inertia = J_m2;
+PAR.link3.motor.inertia = J_m3;
+PAR.link1.motor.gear_ratio = r_1;
+PAR.link2.motor.gear_ratio = r_2;
+PAR.link3.motor.gear_ratio = r_3;
+
+PAR.C = eye(SIM.dimy,SIM.dimx);
+
+% form constraints
+CON.link1.u.min = -Inf;
+CON.link1.u.max = Inf;
+CON.link2.u.min = -Inf;
+CON.link2.u.max = Inf;
+CON.link3.u.min = -Inf;
+CON.link3.u.max = Inf;
+CON.link1.udot.min = -Inf;
+CON.link1.udot.max = Inf;
+CON.link2.udot.min = -Inf;
+CON.link2.udot.max = Inf;
+CON.link3.udot.min = -Inf;
+CON.link3.udot.max = Inf;
+
+% cost structure
+% only penalize positions
+COST.Q = 100*diag([1,1,1,0,0,0]);
+COST.R = 1 * eye(SIM.dimu);
+
+% initialize model
+rrr = RRR(PAR,CON,COST,SIM);
+
+% simple dynamics scenario to catch an incoming ball
+q10 = 0.10; q20 = 0.10; q30 = 0.0;
+q0 = [q10;q20;q30];
+robotInit = [q0;0;0;0];
+% ball is in 2d space
+b1 = 1; b2 = 1;
+v1 = -0.2; v2 = -0.2;
+posBallInit = [b1; b2];
+velBallInit = [v1; v2];
+ballInit = [posBallInit;velBallInit];
+%solve_method = 'BVP';
+
+% calculate ball path
+dt = 0.02;
+t = dt:dt:1;
+N = length(t);
+ballTime = t;
+ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
+ballVel = velBallInit*ones(1,N);
+ballPred = [ballPath; ballVel];
+desVel = -ballVel;
+
+% supply kinematics and jacobian
+kinFnc = @(q) RRRKinematics(q,PAR);
+
+jacExact = @(q) [-l1*sin(q(1)) - l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
+                 -l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
+                 -l3*sin(q(1)+q(2)+q(3)); 
+                 l1*cos(q(1)) + l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
+                 l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
+                 l3*cos(q(1)+q(2)+q(3))];
+% derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+qdot(2)), ...
+%                              -l2*cos(q(1)+q(2))*(qdot(1)+qdot(2));
+%                              -l1*sin(q(1))*qdot(1) - l2*sin(q(1)+q(2))*(qdot(1)+qdot(2)), ...
+%                              -l2*sin(q(1)+q(2))*(qdot(1)+qdot(2))];                                 
+
+
+% solve numerically with lsqnonlin
+x0 = [pi/4*ones(6,1);0.5];
+options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
+    'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
+lb = [-Inf(6,1);0];
+tic;
+PAR.l1 = l1; 
+PAR.l2 = l2;
+PAR.b1 = b1;
+PAR.b2 = b2;
+PAR.v1 = v1;
+PAR.v2 = v2;
+PAR.q0 = [q10;q20;q30];
+PAR.kin = kinFnc;
+PAR.jac = jacExact;
+PAR.g = g;
+[x,resnorm,resval] = lsqnonlin(@(x) bv1(x,PAR), x0, lb, [], options);
+toc
+T = x(5)
+
+t = dt:dt:T;
+N = length(t);
+mu0 = x(1:3);
+nu0 = -x(4:6) - mu0*T;
+q = (1/6)*mu0*t.^3 + (1/2)*nu0*t.^2 + repmat(q0,1,N);
+%[~,xc] = kinFnc(q);
+N = length(t);
+ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
+
+rrr.animateArm(q(1:3,:),ballPath);
 %}
