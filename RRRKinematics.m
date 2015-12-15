@@ -25,7 +25,8 @@ x2 = [l1 * c1 + l2 * c12;
 x3 = [l1 * c1 + l2 * c12 + l3 * c123;
       l1 * s1 + l2 * s12 + l3 * s123];
 
-for i = 1:length(theta1)  
+Ahmats = zeros(4,4,3,size(theta1,2));
+for i = 1:size(theta1,2)  
     R1 = [c1(i),-s1(i),0;
           s1(i),c1(i),0;
           0,0,1];
@@ -35,9 +36,10 @@ for i = 1:length(theta1)
     R3 = [c123(i),-s123(i),0;
           s123(i),c123(i),0;
           0,0,1];
-    p1 = [x1;0];
-    p2 = [x2;0];
-    p3 = [x3;0];
+    p1 = [l1*c1(i);l1*s1(i);0];
+    p2 = [l1*c1(i)+l2*c12(i);l1*s1(i)+l2*s12(i);0];
+    p3 = [l1*c1(i)+l2*c12(i)+l3*c123(i);
+          l1*s1(i)+l2*s12(i)+l3*s123(i);0];
     Ahmats(:,:,1,i) = [R1,p1;zeros(1,3),1];
     Ahmats(:,:,2,i) = [R2,p2;zeros(1,3),1];
     Ahmats(:,:,3,i) = [R3,p3;zeros(1,3),1];

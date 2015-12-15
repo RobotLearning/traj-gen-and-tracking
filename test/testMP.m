@@ -31,7 +31,7 @@ ballPred = [ballPath;ballVel];
 
 x0 = [1;1;0.5];
 x = fsolve(@(x) bv1(x(1),x(2),x(3),x1,x2,b1,b2,v1,v2),x0);
-T = x(3)
+T = x(end)
 
 syms p1 p2 T;
 eqns = [-p1*T + x1 == b1 + v1*T, ...
@@ -120,7 +120,7 @@ options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
     'MaxFunEvals',1000,'MaxIter',1000);
 lb = [-Inf(6,1);0];
 x = lsqnonlin(@(x) bv1(x,[b1;b2;b3;v1;v2;v3]), x0, lb, [], options);
-T = x(7)
+T = x(end)
 
 %}
 
@@ -253,10 +253,7 @@ derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+
 
 % solve numerically with lsqnonlin
 x0 = [pi/4*ones(4,1);0.5];
-options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
-    'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
 lb = [-Inf(4,1);0];
-tic;
 PAR.l1 = l1; 
 PAR.l2 = l2;
 PAR.b1 = b1;
@@ -267,9 +264,21 @@ PAR.q0 = q0;
 PAR.kin = kinFnc;
 PAR.jac = jacExact;
 PAR.g = g;
-[x,resnorm,resval] = lsqnonlin(@(x) bv1(x,PAR), x0, lb, [], options);
+
+tic;
+if 1 %isempty(which('lsqnonlin'))
+    % try newton raphson
+    options = optimset('TolX',1e-12); % set TolX
+    fun = @(x) bvMP(x,PAR);
+    [x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
+    fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
+else
+    options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
+        'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
+    [x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
+end
 toc
-T = x(5)
+T = x(end)
 
 t = dt:dt:T;
 N = length(t);
@@ -420,7 +429,7 @@ COST.R = 1 * eye(SIM.dimu);
 rrr = RRR(PAR,CON,COST,SIM);
 
 % simple dynamics scenario to catch an incoming ball
-q10 = 0.10; q20 = 0.10; q30 = 0.0;
+q10 = 0.0; q20 = 0.0; q30 = 0.0;
 q0 = [q10;q20;q30];
 robotInit = [q0;0;0;0];
 % ball is in 2d space
@@ -458,10 +467,7 @@ jacExact = @(q) [-l1*sin(q(1)) - l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
 
 % solve numerically with lsqnonlin
 x0 = [pi/4*ones(6,1);0.5];
-options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
-    'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
 lb = [-Inf(6,1);0];
-tic;
 PAR.l1 = l1; 
 PAR.l2 = l2;
 PAR.b1 = b1;
@@ -472,9 +478,16 @@ PAR.q0 = [q10;q20;q30];
 PAR.kin = kinFnc;
 PAR.jac = jacExact;
 PAR.g = g;
-[x,resnorm,resval] = lsqnonlin(@(x) bv1(x,PAR), x0, lb, [], options);
+tic;
+options = optimset('TolX',1e-12); % set TolX
+fun = @(x) bvMP(x,PAR);
+[x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
+fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
+% options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
+%     'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
+% [x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
 toc
-T = x(5)
+T = x(end)
 
 t = dt:dt:T;
 N = length(t);

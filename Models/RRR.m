@@ -173,9 +173,9 @@ classdef RRR < Robot
         %% Kinematics and dynamics models
         
         % run kinematics using an external function
-        function [x1,x2,Ahmats] = kinematics(obj,q)
+        function [x1,x2,x3,Ahmats] = kinematics(obj,q)
             
-            [x1,x2,Ahmats] = RRRKinematics(q,obj.PAR);
+            [x1,x2,x3,Ahmats] = RRRKinematics(q,obj.PAR);
         end
         
         % call inverse kinematics from outside
@@ -209,11 +209,11 @@ classdef RRR < Robot
         
         %% Make an animation of the robot manipulator
         function animateArm(obj,q_actual,s)
-            [x1,x2] = obj.kinematics(q_actual);
+            [x1,x2,x3,~] = obj.kinematics(q_actual);
             if obj.flag_ref_jsp
                 [~,s] = obj.kinematics(s);
             end
-            animateRRR(x1,x2,s);
+            animateRRR(x1,x2,x3,s);
         end
         
         
