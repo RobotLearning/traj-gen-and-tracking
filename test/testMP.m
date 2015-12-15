@@ -226,16 +226,11 @@ ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
 ballVel = velBallInit*ones(1,N);
 ballPred = [ballPath; ballVel];
 desVel = -ballVel;
-
-% supply kinematics and jacobian
-kinFnc = @(q) RRKinematics(q,PAR);
-
-jacExact = @(q) [-l1*sin(q(1)) - l2*sin(q(1)+q(2)), -l2*sin(q(1)+q(2));
-                 l1*cos(q(1)) + l2*cos(q(1)+q(2)), l2*cos(q(1)+q(2))];
-derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+qdot(2)), ...
-                             -l2*cos(q(1)+q(2))*(qdot(1)+qdot(2));
-                             -l1*sin(q(1))*qdot(1) - l2*sin(q(1)+q(2))*(qdot(1)+qdot(2)), ...
-                             -l2*sin(q(1)+q(2))*(qdot(1)+qdot(2))];                             
+% 
+% derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+qdot(2)), ...
+%                              -l2*cos(q(1)+q(2))*(qdot(1)+qdot(2));
+%                              -l1*sin(q(1))*qdot(1) - l2*sin(q(1)+q(2))*(qdot(1)+qdot(2)), ...
+%                              -l2*sin(q(1)+q(2))*(qdot(1)+qdot(2))];                             
 %xdotExact = jacExact(q)*qdot;             
              
 % test if jacobians match
@@ -254,16 +249,13 @@ derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+
 % solve numerically with lsqnonlin
 x0 = [pi/4*ones(4,1);0.5];
 lb = [-Inf(4,1);0];
-PAR.l1 = l1; 
-PAR.l2 = l2;
-PAR.b1 = b1;
-PAR.b2 = b2;
-PAR.v1 = v1;
-PAR.v2 = v2;
-PAR.q0 = q0;
-PAR.kin = kinFnc;
-PAR.jac = jacExact;
-PAR.g = g;
+
+PAR.ball.x0 = [b1;b2];
+PAR.ball.v0 = [v1;v2];
+PAR.ball.g = g; % acceleration
+PAR.robot.Q0 = q0;
+PAR.robot.Qd0 = 0;
+PAR.robot.class = rr;
 
 tic;
 if 1 %isempty(which('lsqnonlin'))
@@ -440,25 +432,28 @@ velBallInit = [v1; v2];
 ballInit = [posBallInit;velBallInit];
 %solve_method = 'BVP';
 
-% calculate ball path
+% give ball path as a bunch of points or as a function of x0,v0 and T
 dt = 0.02;
-t = dt:dt:1;
+Tmax = 5.0;
+t = dt:dt:Tmax;
 N = length(t);
 ballTime = t;
 ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
 ballVel = velBallInit*ones(1,N);
 ballPred = [ballPath; ballVel];
 desVel = -ballVel;
+% ball path as a function
+ballFnc = @(b0,v0,T) [b0 + v0*T + (1/2)*[g;0]*T^2; v0 + [g;0]*T];
 
 % supply kinematics and jacobian
-kinFnc = @(q) RRRKinematics(q,PAR);
-
-jacExact = @(q) [-l1*sin(q(1)) - l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
-                 -l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
-                 -l3*sin(q(1)+q(2)+q(3)); 
-                 l1*cos(q(1)) + l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
-                 l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
-                 l3*cos(q(1)+q(2)+q(3))];
+% kinFnc = @(q) RRRKinematics(q,PAR);
+% 
+% jacExact = @(q) [-l1*sin(q(1)) - l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
+%                  -l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
+%                  -l3*sin(q(1)+q(2)+q(3)); 
+%                  l1*cos(q(1)) + l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
+%                  l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
+%                  l3*cos(q(1)+q(2)+q(3))];
 % derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+qdot(2)), ...
 %                              -l2*cos(q(1)+q(2))*(qdot(1)+qdot(2));
 %                              -l1*sin(q(1))*qdot(1) - l2*sin(q(1)+q(2))*(qdot(1)+qdot(2)), ...
@@ -468,24 +463,25 @@ jacExact = @(q) [-l1*sin(q(1)) - l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
 % solve numerically with lsqnonlin
 x0 = [pi/4*ones(6,1);0.5];
 lb = [-Inf(6,1);0];
-PAR.l1 = l1; 
-PAR.l2 = l2;
-PAR.b1 = b1;
-PAR.b2 = b2;
-PAR.v1 = v1;
-PAR.v2 = v2;
-PAR.q0 = [q10;q20;q30];
-PAR.kin = kinFnc;
-PAR.jac = jacExact;
-PAR.g = g;
+
+PAR.ball.x0 = [b1;b2];
+PAR.ball.v0 = [v1;v2];
+PAR.ball.g = g; % acceleration
+PAR.ball.model = ballFnc;
+PAR.ball.time = ballTime;
+PAR.ball.path = ballPred;
+PAR.robot.Q0 = q0;
+PAR.robot.Qd0 = 0;
+PAR.robot.class = rrr;
+
 tic;
 options = optimset('TolX',1e-12); % set TolX
 fun = @(x) bvMP(x,PAR);
 [x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
 fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
-% options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
+%options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
 %     'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
-% [x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
+%[x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
 toc
 T = x(end)
 

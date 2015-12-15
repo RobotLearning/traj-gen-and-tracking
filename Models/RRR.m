@@ -207,6 +207,28 @@ classdef RRR < Robot
             end
         end
         
+        % get end effector position
+        function [x,xd] = getEndEffectorState(obj,q,qd)
+            
+            [~,~,x] = obj.kinematics(q);
+            obj.calcJacobian(q);
+            xd = obj.jac * qd;
+        end
+        
+        % get jacobian at current q
+        function calcJacobian(obj,q)
+            
+            l1 = obj.PAR.link1.length;
+            l2 = obj.PAR.link2.length;
+            l3 = obj.PAR.link3.length;
+            obj.jac = [-l1*sin(q(1)) - l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
+                       -l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
+                       -l3*sin(q(1)+q(2)+q(3)); 
+                       l1*cos(q(1)) + l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
+                       l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
+                       l3*cos(q(1)+q(2)+q(3))];
+        end
+        
         %% Make an animation of the robot manipulator
         function animateArm(obj,q_actual,s)
             [x1,x2,x3,~] = obj.kinematics(q_actual);

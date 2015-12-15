@@ -79,7 +79,7 @@ classdef BarrettWAM < Robot
             obj.CON = con;        
             % cost function handle
             obj.COST = cost;
-            % TODO: construct jacobian
+            % jacobian in case we need it
             obj.jac = [];
         end
         

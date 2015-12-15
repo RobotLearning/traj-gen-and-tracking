@@ -34,7 +34,7 @@ axis equal; axis auto;
 h1 = line(link1_x, link1_y, 'color', [.4 .4 .4],'LineWidth',4);
 h2 = line(link2_x, link2_y, 'color', [.4 .4 .4],'LineWidth',4);
 h3 = line(link3_x, link3_y, 'color', [.4 .4 .4],'LineWidth',4);
-title('Two-link planar arm');
+title('Three-link planar arm');
 hold on;
 h4 = scatter(shift(1),shift(2),100,'r','LineWidth',4);
 h5 = scatter(x1(1,1),x1(2,1),50,'b','LineWidth',4);
