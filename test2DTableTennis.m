@@ -36,9 +36,9 @@ g = 9.81;
 m1 = 1; %mass of first link, kg
 m2 = 0.5; %mass of second link, kg
 m3 = 0.5; 
-l1 = 0.3; %length of first link, m
+l1 = 0.4; %length of first link, m
 l2 = 0.4; %length of second link, m
-l3 = 0.2;
+l3 = 0.4;
 l_c1 = 0.25; %distance of first link's center of gravity to prev. joint, m
 l_c2 = 0.20; %dist. of second link's c.oZ.g. to prev. joint, m
 l_c3 = 0.5;
@@ -107,7 +107,7 @@ rrr = RRR(PAR,CON,COST,SIM);
 
 %% initialize EKF
 dim = 4;
-eps = 1e-3;
+eps = 1e-1;
 C = [eye(2),zeros(2)];
 
 params.C = Cdrag;
@@ -128,15 +128,9 @@ filter = EKF(dim,funState,mats);
 
 %% Prepare the animation
 
-figure;
-%uisetcolor is useful here
-orange = [0.9100 0.4100 0.1700];
-gray = [0.5020    0.5020    0.5020];
-
 % simple dynamics scenario to catch an incoming ball
-q10 = 0.0; q20 = 0.0; q30 = 0.0;
+q10 = 0.3; q20 = -0.3; q30 = -0.4;
 q0 = [q10;q20;q30];
-robotInit = [q0;0;0;0];
 % get joints, endeffector pos and orientation
 [x1,x2,x3,mats] = rrr.kinematics(q0);
 
@@ -154,6 +148,9 @@ link3_y = [x2(1,1),x3(1,1)];
 link3_z = [x2(2,1),x3(2,1)];
 hf = figure('color','white');
 axis equal; axis auto;
+%uisetcolor is useful here
+orange = [0.9100 0.4100 0.1700];
+gray = [0.5020    0.5020    0.5020];
 h0 = scatter(ball(1,1),ball(2,1),20,orange,'filled');
 hold on;
 h1 = line(link1_y, link1_z, 'color', [.4 .4 .4],'LineWidth',4);
@@ -162,7 +159,17 @@ h3 = line(link3_y, link3_z, 'color', [.4 .4 .4],'LineWidth',4);
 h4 = scatter(shift(1),shift(2),50,'k','LineWidth',4);
 h5 = scatter(x1(1,1),x1(2,1),20,'b','LineWidth',4);
 h6 = scatter(x2(1,1),x2(2,1),20,'b','LineWidth',4);
-h7 = scatter(x3(1,1),x3(2,1),20,'b','LineWidth',4);
+%h7 = scatter(x3(1,1),x3(2,1),20,'b','LineWidth',4);
+% add the endeffector as a racket-line attached
+racket_orient = R * mats(1:2,1,3);
+racket_dir = R * mats(1:2,2,3);
+racket_radius = 0.08;
+racket1 = x3 - racket_radius * racket_dir;
+racket2 = x3 + racket_radius * racket_dir;
+line_racket_y = [racket1(1,1),racket2(1,1)];
+line_racket_z = [racket1(2,1),racket2(2,1)];
+h7 = line(line_racket_y,line_racket_z,'color',[.4 .4 .4],'LineWidth',4);
+robot(:,1) = [x1;x2;x3;racket1;racket2];
 
 %h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
 title('Ball-robot interaction');
@@ -208,9 +215,9 @@ fill(net(:,1),net(:,2),[0 0 0]);
 %% Main control and estimation loop
 
 % flags for the main loop
-finished = false;
 contact = false;
-collectData = 0;
+numTrials = 0;
+numHits = 0;
 predict = false;
 % maximum horizon to predict
 time2PassTable = 1.0;
@@ -218,7 +225,7 @@ maxTime2Hit = 0.6;
 maxPredictHorizon = 0.8;
 
 % initialize the filters state with sensible values
-ballNoisyVel = ball(3:4,1); % + sqrt(eps)*rand(2,1);
+ballNoisyVel = ball(3:4,1);% + sqrt(eps)*rand(2,1);
 filter.initState([ball(1:2,1);ballNoisyVel],eps);
 
 % initialize indices and time
@@ -226,30 +233,36 @@ i = 1; k = 1; t = 0.0;
 dt = 0.01;
 ballNoisyPos = ball(1:2,1);
 
-while ~finished
+while numTrials < 50
     
     % Evolve ball flight, table and racket contact interactions
-    if ball(3,i) <= floor_level
+    if ball(2,i) <= floor_level
         disp('Ball hit the floor. Resetting...');
         t = 0.0; i = 1; k = 1;
         predict = false;
+        numTrials = numTrials+1;
         time2PassTable = 1.0;
-        ball(1:2,1) = ball_cannon(1:2);
+        ball(1:2,1) = ball_cannon(2:3);
         ball(3:4,1) = [4.000 3.2] + 0.05 * randn(1,2);
+        ballNoisyVel = ball(3:4,1);% + sqrt(eps)*rand(2,1);
+        filter.initState([ball(1:2,1);ballNoisyVel],eps);
     end
     
     ball(:,i+1) = funState(ball(:,i),0,dt);
     
     %TODO: check contact with racket
-    if contact
+    tol = ball_radius;
+    l = min(k,size(path,2));
+    vecFromRacketToBall = ball(1:2,i) - robot(5:6,l);
+    racketPlane = racket_dir(:,l);
+    projPlane = racketPlane*racketPlane'/(racketPlane'*racketPlane);
+    projOrth = eye(2) - projPlane;
+    distToRacketPlane = norm(projOrth * vecFromRacketToBall);
+    distOnRacketPlane = norm(projPlane * vecFromRacketToBall);
+    if distToRacketPlane < tol && distOnRacketPlane < racket_radius
         disp('A hit! Well done!');
+        numHits = numHits+1;
         % change ball velocity based on contact model
-    end
-    
-    %TODO: check simulation criterion
-    if collectData == 50
-        disp('Finishing up...');
-        finished = true;
     end
     
     % Get noisy ball positions till ball passes the net
@@ -262,13 +275,13 @@ while ~finished
         xSave = filter.x;
         PSave = filter.P;
         % update the time it takes to pass table
-        yBallEst = filter.x(2);
+        yBallEst = filter.x(1);
         tPredIncrement = dt;
         time2PassTable = 0.0;
         while yBallEst <= dist_to_table
              %filter.linearize(tPredIncrement,0);
              filter.predict(tPredIncrement,0);
-             yBallEst = filter.x(2);
+             yBallEst = filter.x(1);
              time2PassTable = time2PassTable + tPredIncrement;
         end
         % revert back to saved state
@@ -300,28 +313,35 @@ while ~finished
             T0 = 0.5;
             B0 = ballIncoming(:,1);
             
-            % solve numerically with Newton-Raphson
+            % solve numerically with Newton-Raphson / nlsq-optimization
             x0 = [pi/4*ones(6,1);T0];
             lb = [-Inf(6,1);0];
 
             PAR.ball.x0 = B0(1:2);
             PAR.ball.v0 = B0(3:4);
             PAR.ball.g = g; % acceleration
-            PAR.ball.model = @(b,v,T) funState([b;v],0,T);
+            %PAR.ball.model = @(b,v,T) funState([b;v],0,T);
             PAR.ball.time = ballTime;
             PAR.ball.path = ballPred;
             PAR.robot.Q0 = q0;
             PAR.robot.Qd0 = 0;
             PAR.robot.class = rrr;
+            PAR.rotate = R;
             
             tic;
+            %{
             options = optimset('TolX',1e-12); % set TolX
             fun = @(x) bvMP(x,PAR);
-            %[x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
-            %fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
+            [x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
+            fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
+            %}
+            %%{
             options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
                  'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
             [x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
+            %fprintf('Residuals:\n');
+            %fprintf('%f\n', resval); 
+            %}
             toc
             T = x(end)
 
@@ -331,100 +351,59 @@ while ~finished
             nu0 = -x(4:6) - mu0*T;
             q = (1/6)*mu0*t.^3 + (1/2)*nu0*t.^2 + repmat(q0,1,N);
             qd = (1/2)*mu0*t.^2 + nu0*t;
-            [x1,x2,x3,~] = rrr.kinematics(q);
+            [x1,x2,x3,mats] = rrr.kinematics(q);
+            x1 = R * x1;
+            x2 = R * x2;
+            x3 = R * x3;
+            racket_dir = R * squeeze(mats(1:2,2,3,:));
+
+            racket1 = x3 - racket_radius * racket_dir;
+            racket2 = x3 + racket_radius * racket_dir;
+            orient = [racket1;racket2];
+            path = [x1;x2;x3;orient];
         end % end predict        
 
         % Initiate the robot
-        robot(:,k+1) = q(:,min(k+1,size(xc,2)));
+        robot(:,k+1) = path(:,min(k+1,size(path,2)));
         k = k + 1;
         
     end 
     
     % ANIMATE BOTH THE ROBOT AND THE BALL
     set(h0,'XData',ball(1,i));
-    set(h0,'YData',ball(2,i));
+    set(h0,'YData',ball(2,i));    
+    
+    
+    link1_y = [shift(1),robot(1,k)];
+    link1_z = [shift(2),robot(2,k)];
+    link2_y = [robot(1,k),robot(3,k)];
+    link2_z = [robot(2,k),robot(4,k)];
+    link3_y = [robot(3,k),robot(5,k)];
+    link3_z = [robot(4,k),robot(6,k)];
+    line_racket_y = [robot(7,k),robot(9,k)];
+    line_racket_z = [robot(8,k),robot(10,k)];
+     
+    set(h1,'XData',link1_y)
+    set(h1,'YData',link1_z)
+    set(h2,'XData',link2_y)
+    set(h2,'YData',link2_z)
+    set(h3,'XData',link3_y)
+    set(h3,'YData',link3_z)
+    set(h5,'XData',link1_y(2));
+    set(h5,'YData',link1_z(2));
+    set(h6,'XData',link2_y(2));
+    set(h6,'YData',link2_z(2));
+    %set(h7,'XData',link3_y(2));
+    %set(h7,'YData',link3_z(2));
+    set(h7,'XData',line_racket_y);
+    set(h7,'YData',line_racket_z);
+    
+    t = t + dt;
+    i = i + 1;
     
     drawnow;
     pause(0.002);
         
-    t = t + dt;
-    i = i + 1;
-    
-    
 end
 
 hold off;
-
-%%
-
-%{
-% simple dynamics scenario to catch an incoming ball
-q10 = 0.0; q20 = 0.0; q30 = 0.0;
-q0 = [q10;q20;q30];
-robotInit = [q0;0;0;0];
-% ball is in 2d space
-b1 = 1; b2 = 1;
-v1 = -0.2; v2 = -0.2;
-posBallInit = [b1; b2];
-velBallInit = [v1; v2];
-ballInit = [posBallInit;velBallInit];
-%solve_method = 'BVP';
-
-% calculate ball path
-dt = 0.02;
-t = dt:dt:1;
-N = length(t);
-ballTime = t;
-ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
-ballVel = velBallInit*ones(1,N);
-ballPred = [ballPath; ballVel];
-desVel = -ballVel;
-
-% supply kinematics and jacobian
-kinFnc = @(q) RRRKinematics(q,PAR);
-
-jacExact = @(q) [-l1*sin(q(1)) - l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
-                 -l2*sin(q(1)+q(2)) - l3*sin(q(1)+q(2)+q(3)), ...
-                 -l3*sin(q(1)+q(2)+q(3)); 
-                 l1*cos(q(1)) + l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
-                 l2*cos(q(1)+q(2)) + l3*cos(q(1)+q(2)+q(3)), ...
-                 l3*cos(q(1)+q(2)+q(3))];
-% derJacTimesQdot = @(q,qdot) [-l1*cos(q(1))*qdot(1) - l2*cos(q(1)+q(2))*(qdot(1)+qdot(2)), ...
-%                              -l2*cos(q(1)+q(2))*(qdot(1)+qdot(2));
-%                              -l1*sin(q(1))*qdot(1) - l2*sin(q(1)+q(2))*(qdot(1)+qdot(2)), ...
-%                              -l2*sin(q(1)+q(2))*(qdot(1)+qdot(2))];                                 
-
-
-% solve numerically with lsqnonlin
-x0 = [pi/4*ones(6,1);0.5];
-lb = [-Inf(6,1);0];
-
-PAR.ball.x0 = [b1;b2];
-PAR.ball.v0 = [v1;v2];
-PAR.ball.g = g; % acceleration
-PAR.robot.Q0 = q0;
-PAR.robot.Qd0 = 0;
-PAR.robot.class = rrr;
-
-tic;
-options = optimset('TolX',1e-12); % set TolX
-fun = @(x) bvMP(x,PAR);
-[x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
-fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
-% options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
-%     'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
-% [x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
-toc
-T = x(end)
-
-t = dt:dt:T;
-N = length(t);
-mu0 = x(1:3);
-nu0 = -x(4:6) - mu0*T;
-q = (1/6)*mu0*t.^3 + (1/2)*nu0*t.^2 + repmat(q0,1,N);
-%[~,xc] = kinFnc(q);
-N = length(t);
-ballPath = posBallInit*ones(1,N) + velBallInit*t + 0.5*[g;0]*(t.^2);
-
-rrr.animateArm(q(1:3,:),ballPath);
-%}

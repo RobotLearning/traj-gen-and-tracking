@@ -42,18 +42,31 @@ qdot = (1/2)*mu0*T^2 + nu0*T;
 H = (1/2)*(mu0*T - nu0)'*(mu0*T + nu0); %0; %-1/2*(nu'*nu);
 %coeff = 1/(l1*l2*(cos(q1)*sin(q1+q2) - sin(q1)*cos(q1+q2)));
 
+R = [0 1; -1 0];
 [xT,xdotT] = robot.getEndEffectorState(q,qdot);
+if isfield(PAR,'rotate')
+    R = PAR.rotate;
+    xT = R * xT;
+    xdotT = R * xdotT;
+end
 J = robot.jac;
     
 %bT = b0 + v0*T + (1/2)*[g;0]*T^2;
 %vT = v0 + [g;0]*T;
 %vdes = -v;
-Dphi = [-vT, J];
-r = (eye(dim+1) - Dphi'*pinv(Dphi)')*[H;-mu];
+
+% Transversality conditions
+%Dphi = [-vT, J];
+%r = (eye(dim+1) - Dphi'*pinv(Dphi)')*[H;-mu];
+% Final cost conditions
+m = 1000; % weighting for quadratic final cost
+
 
 F = [xT - bT;
      nu - 0;
      %J * qdot - vdes;];
      %H - mu'*(J\vT)];
      %min(T,0);
-     r];
+     H - vT'*m*(xT-bT);
+     mu - J'*m*(xT-bT)];
+     %r];

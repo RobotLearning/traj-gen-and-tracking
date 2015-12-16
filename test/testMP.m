@@ -475,13 +475,13 @@ PAR.robot.Qd0 = 0;
 PAR.robot.class = rrr;
 
 tic;
-options = optimset('TolX',1e-12); % set TolX
-fun = @(x) bvMP(x,PAR);
-[x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
-fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
-%options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
-%     'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
-%[x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
+%options = optimset('TolX',1e-12); % set TolX
+%fun = @(x) bvMP(x,PAR);
+%[x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
+%fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
+options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
+     'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
+[x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
 toc
 T = x(end)
 
