@@ -2,52 +2,103 @@
 % for a particular ball and racket trajectory and orientation
 clc; clear; close all;
 
-n = 10;
-mu = [1;-1];
-d = length(mu);
-xmin = [-2;-2];
-xmax = [2;2];
-SIGMA = [0.9, 0.4; 0.4, 0.3];
-
-% Statistics toolbox is needed
-X1 = mvnrnd(mu',SIGMA,n);
-p = mvnpdf(X1,mu',SIGMA);
-tic;
-mvncdf(xmin',xmax',mu',SIGMA)
-toc
-
-tic;
-fun = @(x,y) exp(-(1/2)*(([x;y]-mu)'*(SIGMA\([x;y]-mu)))) ./ (((2*pi)^(d/2))*(det(SIGMA)^(1/2)));
-prob = quad2d(@(X,Y)arrayfun(fun,X,Y),xmin(1),xmax(1),xmin(2),xmax(2))
-toc
-
-% generate a racket trajectory
-x = @(t) t;
-y = @(t) t.^2 - 2*t + 5;
-r = @(t) [x(t);y(t)];
-
-dt = 0.02;
-tfin = 1;
-t = dt:dt:tfin;
-xt = x(t);
-yt = y(t);
-plot(xt,yt)
-
-racket_radius = 0.08;
-T = 0.5;
-xT = x(T);
-yT = y(T);
-% fix theta
-theta = pi/4;
-oT = [-sin(theta);cos(theta)];
-
-xmin = [xT-racket_radius*abs(oT(1));xT-racket_radius*abs(oT(2))];
-xmax = [xT+racket_radius*abs(oT(1));xT+racket_radius*abs(oT(2))];
-probHit = quad2d(@(X,Y)arrayfun(fun,X,Y),xmin(1),xmax(1),xmin(2),xmax(2))
-
 %% Compute the probability of hitting for a fixed racket trajectory 
 
 % fix a racket trajectory
 % fix a ball distribution (use kalman filter)
 % see if simulations agree with the theoretical prob(hitting) = int(O to T)
 % hitting time distribution
+
+d = 2;
+n = 100000;
+T = 1.0;
+dt = 0.02;
+t = dt:dt:T;
+N = length(t);
+% generate a 2D ball trajectory
+mu_b0 = [2; 2];
+s_b0 = [0.01, 0.0; 0.0, 0.01];
+mu_v0 = [-1; -1];
+s_v0 = [0.1, 0.0; 0.0, 0.1];
+% generate n sample trajectories
+v0 = repmat(mu_v0,1,n) + chol(s_v0)*randn(2,n);
+b0 = repmat(mu_b0,1,n) + chol(s_b0)*randn(2,n);
+b = @(t) mu_b0 + mu_v0*t;
+ball = zeros(d,N,n);
+for i = 1:n
+    ball(:,:,i) = repmat(b0(:,i),1,N) + v0(:,i)*t;
+end
+
+% generate a fixed racket trajectory
+r1 = 0.1*rand; r2 = 0.1*rand;
+w1 = 1 + 0.1*rand; w2 = 1 + 0.1*rand;
+
+x = @(t) r1 + w1*t;
+y = @(t) r2 + w2*t;
+r = @(t) [x(t);y(t)];
+
+xt = x(t);
+yt = y(t);
+rt = [x(t);y(t)];
+
+% calculate the percentage of intersecting trajectories
+% here we imagine a racket in the y-direction
+radius = 0.01;
+dist = zeros(1,n);
+tol = radius; %1e-2;
+hit = 0;
+for i = 1:n
+    diff = rt - ball(:,:,i);
+    % first get the index where they intersect
+    %[M,I] = min(abs(diff'));
+    % interpolate to get better accuracy
+    dist = interp1(diff(1,:),diff(2,:),0,'spline');
+    % look at the distance in the y-direction
+    %dist = diff(2,I(2));
+    %dist = min(diag(diff'*diff));
+    if abs(dist) < tol
+        hit = hit + 1;
+    end
+end
+disp('Calculating by direct simulation');
+probHit = hit/n
+        
+% compute the probability of hitting
+% rejection sampling here
+%v0 = repmat(mu_v0,1,M) + chol(s_v0)*randn(2,M);
+%b0 = repmat(mu_b0,1,M) + chol(s_b0)*randn(2,M);
+Tcand = (b0(1,:) - r1)./(w1 - v0(1,:));
+Thit = Tcand(abs(b0(2,:)-r2 + (v0(2,:)-w2).*Tcand)<radius);
+%percHitTillT = sum(Thit < T)/length(Thit)
+disp('Rejection sampling')
+probHit = length(Thit)/n
+probHitTillT = sum(Thit < T)/n
+histogram(Thit)
+
+
+disp('Integration of Gaussians')
+MU = @(t) b(t) - r(t);
+SIGMA = @(t) s_b0 + (s_v0 .* t^2);
+fun = @(t,x,y) exp(-(1/2)*(([x;y]-MU(t))'*(SIGMA(t)\([x;y]-MU(t))))) ./ ...
+       (((2*pi)^(d/2))*(det(SIGMA(t))^(1/2)));
+fun = @(t,y) fun(t,0,y);
+xmin = [0;-tol];
+xmax = [T;tol];
+tic;
+probHitTillT = integral2(@(T,Y)arrayfun(fun,T,Y),...
+          xmin(1),xmax(1),xmin(2),xmax(2));
+probHit = integral2(@(T,Y)arrayfun(fun,T,Y),...
+          0,Inf,-tol,tol);
+scale = integral2(@(T,Y)arrayfun(fun,T,Y),...
+           0,Inf,-Inf,Inf);
+%scale = 0.5;
+probHit = probHit / scale
+probHitTillT = probHitTillT / scale
+
+% plot some samples
+% b1 = squeeze(ball(1,:,:));
+% b2 = squeeze(ball(2,:,:));
+% plot(b1,b2)
+% hold on;
+% plot(xt,yt,'r--','LineWidth',2)
+% hold off
