@@ -364,8 +364,7 @@ classdef (Abstract) Model < handle
                 yDraw = yDesCart(2,1:drawTimeIter:end);
                 zDraw = yDesCart(3,1:drawTimeIter:end);
                 text(xDraw,yDraw,zDraw,tLabelCell);
-                hold off;
-                
+                hold off;                
                 
             else % other models            
                 for i = 1:num_out

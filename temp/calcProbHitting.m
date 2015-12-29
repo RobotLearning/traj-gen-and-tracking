@@ -43,6 +43,7 @@ rt = [x(t);y(t)];
 
 % calculate the percentage of intersecting trajectories
 % here we imagine a racket in the y-direction
+disp('Calculating by direct simulation');
 radius = 0.01;
 dist = zeros(1,n);
 tol = radius; %1e-2;
@@ -60,40 +61,59 @@ for i = 1:n
         hit = hit + 1;
     end
 end
-disp('Calculating by direct simulation');
 probHit = hit/n
         
 % compute the probability of hitting
 % rejection sampling here
 %v0 = repmat(mu_v0,1,M) + chol(s_v0)*randn(2,M);
 %b0 = repmat(mu_b0,1,M) + chol(s_b0)*randn(2,M);
+disp('Rejection sampling')
 Tcand = (b0(1,:) - r1)./(w1 - v0(1,:));
 Thit = Tcand(abs(b0(2,:)-r2 + (v0(2,:)-w2).*Tcand)<radius);
 %percHitTillT = sum(Thit < T)/length(Thit)
-disp('Rejection sampling')
 probHit = length(Thit)/n
 probHitTillT = sum(Thit < T)/n
 histogram(Thit)
 
 
 disp('Integration of Gaussians')
-MU = @(t) b(t) - r(t);
-SIGMA = @(t) s_b0 + (s_v0 .* t^2);
-fun = @(t,x,y) exp(-(1/2)*(([x;y]-MU(t))'*(SIGMA(t)\([x;y]-MU(t))))) ./ ...
-       (((2*pi)^(d/2))*(det(SIGMA(t))^(1/2)));
-fun = @(t,y) fun(t,0,y);
-xmin = [0;-tol];
-xmax = [T;tol];
-tic;
-probHitTillT = integral2(@(T,Y)arrayfun(fun,T,Y),...
-          xmin(1),xmax(1),xmin(2),xmax(2));
-probHit = integral2(@(T,Y)arrayfun(fun,T,Y),...
-          0,Inf,-tol,tol);
-scale = integral2(@(T,Y)arrayfun(fun,T,Y),...
-           0,Inf,-Inf,Inf);
-%scale = 0.5;
-probHit = probHit / scale
-probHitTillT = probHitTillT / scale
+
+mu1 = mu_b0(1) - r1;
+mu2 = mu_b0(2) - r2;
+nu1 = w1 - mu_v0(1);
+nu2 = w2 - mu_v0(2);
+s1 = s_b0(1,1);
+s2 = s_b0(2,2);
+g1 = s_v0(1,1);
+g2 = s_v0(2,2);
+tau1 = @(x,y) (-nu1.*(tol+x) - mu1.*y) ./ sqrt(g1.*(tol+x).^2 + s1.*y.^2);
+tau2 = @(x,y) (nu1.*(tol-x) - mu1.*y) ./ sqrt(g1.*(tol-x).^2 + s1.*y.^2);
+tauMin = @(x,y) min(tau1(x,y),tau2(x,y));
+tauMax = @(x,y) max(tau1(x,y),tau2(x,y));
+gaussSpace1 = @(x) exp(-(x-mu2).^2 ./ (2*s2)) ./ sqrt(2*pi*s2);
+gaussSpace2 = @(y) exp(-(y-nu2).^2 ./ (2*g2)) ./ sqrt(2*pi*g2);
+gaussTime = @(t) exp(-t.^2 ./ 2) ./ sqrt(2*pi);
+fun = @(t,x,y) gaussTime(t).*gaussSpace1(x).*gaussSpace2(y);
+probHit = integral3(@(X,Y,T)arrayfun(fun,T,X,Y),-Inf,Inf,-Inf,Inf,...
+                    tauMin,tauMax)
+
+% MU = @(t) b(t) - r(t);
+% SIGMA = @(t) s_b0 + (s_v0 .* t^2);
+% fun = @(t,x,y) exp(-(1/2)*(([x;y]-MU(t))'*(SIGMA(t)\([x;y]-MU(t))))) ./ ...
+%        (((2*pi)^(d/2))*(det(SIGMA(t))^(1/2)));
+% fun = @(t,y) fun(t,0,y);
+% xmin = [0;-tol];
+% xmax = [T;tol];
+% tic;
+% probHitTillT = integral2(@(T,Y)arrayfun(fun,T,Y),...
+%           xmin(1),xmax(1),xmin(2),xmax(2));
+% probHit = integral2(@(T,Y)arrayfun(fun,T,Y),...
+%           0,Inf,-tol,tol);
+% scale = integral2(@(T,Y)arrayfun(fun,T,Y),...
+%            0,Inf,-Inf,Inf);
+% %scale = 0.5;
+% probHit = probHit / scale
+% probHitTillT = probHitTillT / scale
 
 % plot some samples
 % b1 = squeeze(ball(1,:,:));

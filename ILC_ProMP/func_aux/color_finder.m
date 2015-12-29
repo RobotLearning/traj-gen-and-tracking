@@ -3,7 +3,9 @@ function out =  color_finder( n )
 
     out = [];
     if exist('n', 'var')
-        out = distinguishable_colors( n );
+        %out = distinguishable_colors( n );
+        func = @(x) colorspace('RGB->Lab',x);
+        out = distinguishable_colors(n,'w',func);
     else
         standard_display;
     end

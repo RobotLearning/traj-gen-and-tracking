@@ -10,9 +10,9 @@
 
 clear; clc; close all; dbstop if error;
 
-add_required_folders();
+%add_required_folders();
 
-data_folder = fileparts(pwd);
+data_folder = pwd; %fileparts(pwd);
 data_folder = [data_folder '/common_data/'];
     
 
@@ -27,7 +27,8 @@ dfv = [0.1 -1  0.1];
 %% main code
 
 refname = 'ilc_conditioned_guess_all_reach.mat';
-load([data_folder refname]);
+%load([data_folder refname]);
+load(refname);
 
 nCases = numel(iguess);
 cl = distinguishable_colors(nCases);

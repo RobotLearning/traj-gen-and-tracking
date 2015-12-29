@@ -2,12 +2,12 @@ function [ref, visited]   = promp_conditioning( trainingData, datac, path1, desR
 
     %% initializing
     
-    extra_folders = ({'func_process_data/', 'func_plot/', 'func_promp/'} );
-
-    % adding path so that promp works
-    for k=1:numel(extra_folders)
-        addpath([path1 '/' extra_folders{k}]);
-    end
+%     extra_folders = ({'func_process_data/', 'func_plot/', 'func_promp/'} );
+% 
+%     % adding path so that promp works
+%     for k=1:numel(extra_folders)
+%         addpath([path1 '/' extra_folders{k}]);
+%     end
 
     strial{1} = struct('Color', 'b', 'LineStyle', '-', 'LineWidth', 2, 'Marker' , 'o',...
                        'MarkerFaceColor','b', 'MarkerSize', 5);
@@ -138,9 +138,9 @@ function [ref, visited]   = promp_conditioning( trainingData, datac, path1, desR
     ref = prepare_reference(datac{k}.prm.ref, time, joint_KF);
 
     % remove path so that promp stuff does not clash with ilc
-    for k=1:numel(extra_folders)
-        rmpath([path1 '/' extra_folders{k}]);
-    end
+%     for k=1:numel(extra_folders)
+%         rmpath([path1 '/' extra_folders{k}]);
+%     end
 
 
 end %

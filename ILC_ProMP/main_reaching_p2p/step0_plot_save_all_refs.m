@@ -14,11 +14,11 @@
 
 
 clear; clc; close all; dbstop if error;
-add_required_folders();
+%add_required_folders();
 
 %data_folder = fileparts(pwd);
-data_folder = pwd;
-data_folder = [data_folder '/common_data/'];
+folder = [pwd, '/ILC_ProMP'];
+data_folder = [folder '/common_data'];
 
 % default view angle [x y z] of the plot (this is just eye-candy)
 dfv = [0.1 -1  0.1];
@@ -51,7 +51,7 @@ if 0
 % ===========================
 % Load and plot all reference trajectories
 % ==========================
-load([data_folder 'ref_reaching_all.mat']);
+load([data_folder '/ref_reaching_all.mat']);
 h = plot_all_references(dfv, bioRob, refc);
 
 

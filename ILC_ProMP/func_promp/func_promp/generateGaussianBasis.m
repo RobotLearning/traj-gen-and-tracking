@@ -1,6 +1,7 @@
 function [basis_n, basisD_n, basisDD_n] = generateGaussianBasis( phase, mu, sigma)
 
     dbg = 0;
+    % check for statistics toolbox!
 
     basisCenter = mu;
 
@@ -12,7 +13,7 @@ function [basis_n, basisD_n, basisDD_n] = generateGaussianBasis( phase, mu, sigm
     %> (z - basisCenter)
     z_minus_center = bsxfun(@minus, z, basisCenter );
     
-    if dbg % original
+    if true %dbg % original
     % ====================================
     % original implementation
     % ====================================
@@ -28,18 +29,18 @@ function [basis_n, basisD_n, basisDD_n] = generateGaussianBasis( phase, mu, sigm
     % ====================================
     % my simple implementation
     % ====================================
-    clear basiss
-    for k = 1:numel(mu)
-        basiss(k,:) = pdf('Normal', z, mu(k), sigma(k));
-    end
-    basiss = basiss';
-
-    normSum = sum(basiss,2); 
-    if 1 % normalize
-        basiss_n   = bsxfun(@times, basiss, 1./ normSum);
-    else % skip normalization
-        basiss_n   = basiss;
-    end
+%     clear basiss
+%     for k = 1:numel(mu)
+%         basiss(k,:) = pdf('Normal', z, mu(k), sigma(k));
+%     end
+%     basiss = basiss';
+% 
+%     normSum = sum(basiss,2); 
+%     if 1 % normalize
+%         basiss_n   = bsxfun(@times, basiss, 1./ normSum);
+%     else % skip normalization
+%         basiss_n   = basiss;
+%     end
 
     if dbg
         debugBasis(z, basis_n, basiss_n);
@@ -48,9 +49,9 @@ function [basis_n, basisD_n, basisDD_n] = generateGaussianBasis( phase, mu, sigm
     % ====================================
     % use my simple implementation
     % ====================================
-    basis = basiss;
-    basis_n = basiss_n;
-    basis_sum = normSum;
+    %basis = basiss;
+    %basis_n = basiss_n;
+    %basis_sum = normSum;
 
     
     z_minus_center_sigma = bsxfun(@times, -z_minus_center, 1./(sigma.^2) );

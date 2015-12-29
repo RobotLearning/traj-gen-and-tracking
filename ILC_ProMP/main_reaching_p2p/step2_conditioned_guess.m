@@ -32,8 +32,7 @@ clear; clc; close all; dbstop if error;
 
 extraFolder1 = add_required_folders_promp();
 
-data_folder = fileparts(pwd);
-data_folder = [data_folder '/common_data/'];
+data_folder = [pwd '/common_data/'];
     
 % default view angle [x y z] of the plot (this is just eye-candy)
 dfv = [0.1 -1  0.1];
