@@ -35,8 +35,8 @@
 
 % % % % % % % % Notation for robot % % % % % % %
 \newcommand{\todo}{\textcolor{red}{TODO}} % TODO!
-\newcommand{\kin}{\mathcal{T}} % used to denote forward kinematics
-\newcommand{\invKin}{\mathcal{T}^{-1}} % used to denote inverse kinematics
+\newcommand{\kin}{\mathcal{K}} % used to denote forward kinematics
+\newcommand{\invKin}{\mathcal{K}^{-1}} % used to denote inverse kinematics
 
 \newcommand{\joint}{\vec{q}} % used to denote robot state in joint space
 \newcommand{\state}{\vec{y}} % denotes the generalized coordinates - joint angles and angular velocities
@@ -69,13 +69,19 @@
 \newcommand{\racket}{\vec{r}} % racket positions
 \newcommand{\racketRadius}{r} % racket radius
 \newcommand{\orient}{\vec{o}} % racket orientations
+\newcommand{\normal}{\vec{n}} % racket normal
 \newcommand{\robot}{\vec{x}_{R}} % racket state involving pos,vel and orient
 \newcommand{\court}{\mathcal{S}} % opponents court
 \newcommand{\net}{\mathcal{N}} % net
 \newcommand{\wall}{\mathcal{W}} % wall
 
+
 % % % % % % % % Probability notation % % % % % % %
-\newcommand{\prob}{\mathcal{P}} % probability
+\newcommand{\prob}{\mathbb{P}} % probability
+\newcommand{\landTime}{\tau} % random variable
+\newcommand{\landDist}{p_{\tau}} % distribution of landing time
+\newcommand{\hitTime}{\nu} % hitting time
+\newcommand{\hitDist}{p_{\nu}} % distribution of hitting time
 
 
 % Set the paths where all figures are taken from:
@@ -209,8 +215,11 @@ After accounting for the net and any other environmental constraints such as wal
 % air resistance scale factor C 
 % $\ballFull = (\ball^{\mathrm{T}},\dot{\ball^{\mathrm{T}}})^{\mathrm{T}}$
 We require three models for the trajectory generation process and acquire them (iteratively) from raw ball data. The ballistic \emph{flight model} $\ddot{\ball} = \ballDynamics(\dot{\ball})$ is a nonlinear model that describes the ball dynamics and generally involves air drag $\drag$ and gravity $\gravity$. The \emph{rebound model} $\dot{\ball}_{\mathrm{out}} = \bounce\dot{\ball}_{\mathrm{in}}$ is a discrete event with diagonal entries of $\bounce$ as coefficients $\epsilon = [\epsilon_{x}, \epsilon_{y}, -\epsilon_{z}]$. The coefficient of restitution $\epsilon_{z}$ accounts for the reflection of velocity in the vertical direction $z$ and $\epsilon_{x}, \epsilon_{y}$ are the coefficients of friction along the planar $x,y$ directions.
+% incoming ball trajectory: as Gaussians indexed with time [e.g. Kalman filter should give us this information with prediction. Parameters/model of a Kalman filter could be fit using ball data (when fitting, innovation of the KF should be minimized as to consist mostly of white noise)]
 
 % A probabilistic model describing the interaction model: outputs a probability distribution of outgoing ball states parameterized (or indexed) by t, e.g. b_t \approx N(\mu_b_out(t), \sigma_b_out(t))
+
+% build a forward/inverse interaction model probabilistically
 The last model to train from data is the \emph{ball-racket contact model} $\ \dot{\ball}_{\mathrm{out}} = \contact(\dot{\ball}_{\mathrm{in}},\dot{\racket},\orient)$. This model is significantly harder to train from the previous models, as it requires ball-racket interaction data and it is difficult to get reliable ball estimates around hitting time. We need to instead rely on smoothing using the trained flight model and the samples before and after hitting. In previous works, the outgoing velocity of the ball is calculated using a \emph{mirror law}: $o_{\parallel} - v = \epsilon_{R} (-i_{\parallel} + v)$ with $v$ the speed of the racket along its normal and $\epsilon_{R}$ the coefficient of restitution on the racket. $o_{\parallel}$ and $i_{\parallel}$ are the outgoing and incoming ball velocities along the racket, respectively. This model assumes an elastic momentum exchange and it is quite inaccurate, especially at high ball velocities.
 % is this true? is the parallel o and i definitions correct?
 
@@ -225,7 +234,17 @@ Prediction continues after a possible interaction with the racket trajectory. If
 
 \subsection{Optimal Control for Trajectory Generation}
 
-% A distribution for admissable velocities for the ball for each point inside the workspace of the robot
+From a set point of view, for every point on the predicted ball trajectory, there is a range of admissible outgoing ball velocities that the racket can impart. This set is constricted by the geometry of the table and the demands of the game: the ball has to avoid the net and the walls and should land on the opponents court. Probabilistically speaking, the landing point could be any distribution with compact support over the table, e.g. a uniform distribution $x_{\textrm{land}}, y_{\textrm{land}} \sim \mathcal{U}(x_{a},x_{b})\mathcal{U}(y_{a},y_{b})$ or a truncated normal distribution. The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponents court.
+%
+
+Our optimization criterion of choice is to find the racket trajectory that minimizes the KL-divergence of the marginal ball distribution of the ball process with a desired distribution imposed by the robotic player. Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF.
+
+% is this true?
+For maximum robustness, the robot player can choose the uniform distribution over the table as a desired distribution. In this case the optimization reduces to maximizing the probability of landing on the table. By formulating the problem in joint space, we find the joint trajectory $\joint(t)$ that provides a suitable trade-off between minimum joint accelerations $\ddot{\joint}(t)$ and maximum probability of landing $\prob(\textrm{land})$. Using direct kinematics we can obtain the desired racket trajectory and orientations, i.e. $[\racket(t),\orient(t)] = \kin(\joint(t))$.
+
+$\prob(\textrm{land}) = \int_{0}^{\infty}\landDist(\landTime)\textrm{d}\landTime$
+$\prob(\textrm{hit}) = \int_{0}^{T}\hitDist(\hitTime)\textrm{d}\hitTime$
+
 
 % Output
 % 
@@ -233,26 +252,13 @@ Prediction continues after a possible interaction with the racket trajectory. If
 
 % Control: imposing transversality conditions when ball is on a curve p_b(t) or a set with some measure p_b [constant hamiltonian on this set?] we get a probability distribution of admissable end effector configurations
 %
-% Sensitivity of the interaction model should be minimized by coming up with a racket trajectory
 %
+% Probability of interaction occurring: b(t) for the ball must lie in r(t) + \gamma o_\parallel(t), where r(t) is the racket centre trajectory, \gamma is less than the radius of the racket, and o_\parallel(t) is any direction perpendicular to the normal (i.e. orientation) of the racket.
 %
-%1. incoming ball trajectory: as Gaussians indexed with time [e.g. Kalman filter should give us this information with prediction. Parameters/model of a Kalman filter could be fit using ball data (when fitting, innovation of the KF should be minimized as to consist mostly of white noise)]
-%
-%2. Probability of interaction occurring: b(t) for the ball must lie in r(t) + \gamma o_perp(t), where r(t) is the racket centre trajectory, \gamma is less than the radius of the racket, and o_perp(t) is perpendicular to the normal (i.e. orientation) of the racket.
-%
-%3. the interaction (contact) model [maybe a linear model/GP constructed from observations of me hitting the ball, with ball incoming velocity, outgoing velocity, racket velocity and orientation available from data]
-%
-%4. the racket trajectory: this is what we want to generate, more specifically racket positions and orientations over time, could be a Gaussian distribution indexed with time as well.
-%
-%5. the outgoing ball trajectory: should be an integral over the previous Gaussians using the interaction model. If we use GP for (2), then moment matching may be used to estimate the resulting Gaussians [again indexed with time].
-%
-%6. the feasible region: for every point on the robot court, there is a range of feasible outgoing velocities using the flight model [estimated in (1). how to make it probabilistic? could we have a filter running backwards?] such that the ball avoids the net and the wall and lands on the opponents court. Probabilistically could be a uniform distribution over a set.
-%
-%Optimization criterion: find (4) such that the KL-divergence of (5) with the uniform distributions in (6) has minimum l_inf-norm [since it is a function over time]. Other optimization criteria could be used such as: minimize \delta_1 + \delta_2 + \delta_3 such that with probability at least 1-\delta_1 and 1-\delta_2 and 1-\delta_3, ball avoids the net, the wall and lands on the other side, respectively.
-%
-% For every point on the predicted ball trajectory, there is a range/set of admissable outgoing ball velocities [for the set point of view]
-%
-% build a forward/inverse interaction model probabilistically
+
+% Refer to article for the simplest case when diving two Gaussians with nonzero mean.
+We do not know of any way to compute the ball landing distribution in closed form. However, the outgoing ball trajectory is an integral over the previous incoming ball distribution using the ball-racket contact model. Any sampling based approach (e.g. rejection sampling) may be used to simulate then the outgoing ball trajectory and approximate the resulting landing distribution. 
+
 
 \section{ALGORITHM}\label{alg}
 
