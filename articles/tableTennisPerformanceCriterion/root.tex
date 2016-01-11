@@ -61,16 +61,19 @@
 % % % % % % % % Table tennis notation % % % % % %
 \newcommand{\ballFull}{\vec{x}_{B}} % ball cartesian state
 \newcommand{\ball}{\vec{b}} % ball positions
+\newcommand{\ballRadius}{r_B}
+\newcommand{\ballVel}{v} 
 \newcommand{\ballDynamics}{\vec{F}} % ball dynamics
 \newcommand{\drag}{C} % drag
 \newcommand{\gravity}{g}
 \newcommand{\bounce}{\vec{E}} 
 \newcommand{\contact}{\vec{C}} % contact model
 \newcommand{\racket}{\vec{r}} % racket positions
-\newcommand{\racketRadius}{r} % racket radius
+\newcommand{\racketRadius}{r_R} % racket radius
 \newcommand{\orient}{\vec{o}} % racket orientations
 \newcommand{\normal}{\vec{n}} % racket normal
 \newcommand{\robot}{\vec{x}_{R}} % racket state involving pos,vel and orient
+\newcommand{\stabilityRegion}{\mathcal{S}} % stability region in ball phase space
 \newcommand{\court}{\mathcal{T}} % opponents court
 \newcommand{\net}{\mathcal{N}} % net
 \newcommand{\wall}{\mathcal{W}} % wall
@@ -81,6 +84,7 @@
 \newcommand{\landDist}{p(\tau)} % distribution of landing time
 \newcommand{\hitTime}{\nu} % hitting time
 \newcommand{\hitDist}{p(\nu)} % distribution of hitting time
+\newcommand{\KL}{D_{\mathrm{KL}}}
 
 
 % Set the paths where all figures are taken from:
@@ -144,7 +148,7 @@ In this paper, we incorporate probabilistic modeling for robust trajectory gener
 Our approach involves intensive modeling of task-relevant quantities from data, e.g. ball flight, bounce models and ball-racket contact modeling. The last one especially can be hard to train from missing data. However, we keep the uncertainty of all of our models and use them also in our decision-making process. This cautious design is an asset that differentiates our approach from previous approaches (e.g. \cite{Matsushima05}, \cite{Muelling13}) that are less robust to modeling and estimation uncertainty.
 % from missing data and can even be misleading when given example ball trajectories with high spin.
 
-To summarize our reasons for introducing uncertainty and probabilistic modeling to trajectory generation in table tennis: \textit{i)} Table tennis balls are very light and cannot be estimated or predicted precisely. \textit{ii)} Racket-ball interaction is generally not known well and the elasticity of the momentum exchange differentiates it from the mirror laws used in the literature so far. \textit{iii)} The set of allowed landing point specifications in the opponent's side can be incorporated to design robust algorithms that return the ball with a higher probability, when under the influence of various effects mentioned in \textit{(i)} and \textit{(ii)}. See figure~\ref{mainIdea} for an illustration.% ref needed obviously 
+To summarize our reasons for introducing uncertainty and probabilistic modeling to trajectory generation in table tennis: \textit{i)} Table tennis balls are very light and cannot be estimated or predicted precisely. \textit{ii)} Racket-ball interaction is generally not known well and the elasticity of the momentum exchange differentiates it from the mirror laws used in the literature so far. \textit{iii)} The set of allowed landing point specifications in the opponent's side can be incorporated to design robust algorithms that return the ball with a higher probability, when under the influence of various effects mentioned in \textit{(i)} and \textit{(ii)}. See Figure~\ref{mainIdea} for an illustration.% ref needed obviously 
 % velocity dependent coefficient of restitution
 
 % The choice of the the desired landing point of the ball on the opponent's court is generally left to a higher level strategy or policy of the robot. However in this paper we argue that landing the ball successfully on the opponent's court is the \emph{fundamental goal} in table tennis. Therefore policies or the strategies involved in striking movement generation should be combined in one unitary whole.
@@ -167,6 +171,10 @@ In the rest of this paper, we elaborate on this notion of robustness, giving mor
 \end{figure}
 
 \section{RELATED WORK}\label{relatedWork}
+
+% this doesn't fit here so well
+We will summarize the Virtual Hitting Point (VHP) framework here only very briefly. In this approach, the trajectory of the incoming ball is estimated and filtered from a stream of ball position estimates. Usually a physical flight model is used to predict the intersection point of the ball trajectory with a comfortably chosen VHP. For safety reasons, a minimum hitting time $T_{\textrm{min}}$ is also specified in addition to the coordinates of the hitting plane. When the ball is coming very fast towards the VHP, any calculated robot trajectory of duration below the minimum time will simply not be executed. The estimation process is terminated at least $T_{\textrm{min}}$ before the expected hitting time, to give the robot enough reaction time. This prevents high accelerations and any risk of damage to the robot. For more details see \cite{Muelling13}, or \cite{Matsushima05} for a more general discussion. 
+%after a bounce event has been detected with high probability. 
 
 % % % % Striking Movement Generation in Humans % % % % %
 % speed-accuracy trade-off [Woodworth 1899, Fitts 1954]
@@ -198,50 +206,96 @@ In the rest of this paper, we elaborate on this notion of robustness, giving mor
 
 \section{METHOD}\label{method}
 
-In table tennis, one needs to determine when, where and how to intercept the incoming ball trajectory. So far, most of the algorithms for robotic table tennis \cite{Muelling13} calculate the intersection point of an estimated ball trajectory with a Virtual Hitting Plane (VHP) to determine the space and time coordinates of the hitting point. To estimate the trajectory of the ball, we require as data, a stream of estimates of ball position. We terminate the estimation process after a bounce event has been detected with high probability. 
+In table tennis, one needs to specify when, where and how to intercept the incoming ball trajectory. After a successful hit however, the landing point of the ball is not completely specified. This \emph{task redundancy} in table tennis can be captured more formally, from a ball dynamics point of view, as a stability region $\stabilityRegion$ in phase space. As a set of desired ball positions and velocities, the geometry of $\stabilityRegion$ is approximately affine
+%
+\begin{align}
+(\ball,\dot{\ball}) \in \stabilityRegion \subset \court \times \mathbb{R}^{3} \subset \mathbb{R}^{6},
+\label{stabilityRegion}
+\end{align}
+%
+\noindent where $\court$ is the set of Cartesian coordinates of the table $\court$, i.e. a rectangular region with a fixed vertical distance $z_{\court}$ from origin. The net and any other environmental constraints such as walls are the environmental factors constraining the set of desired ball velocities and will for simplicity of presentation be neglected. Any algorithm that can return the ball to this fixed region $\stabilityRegion \approx \court \times \mathbb{R}^3$ in phase space can be said to be \emph{stable}.
+% it reduces approximately to
+%
+So far, most of the algorithms for robotic table tennis \cite{Matsushima05}, \cite{Muelling13} calculate the intersection point of an estimated ball trajectory with a Virtual Hitting Plane (VHP) to determine the space and time coordinates of the hitting point. They neglect to account for uncertainty in ball estimation or the underspecification of the task. Moreover the determination of a hitting time can be arbitrary, and the algorithms involving a VHP can lead to unnecessarily restrictive strokes. 
 % do we really need a fixed event such as bounce to terminate the estimation process?
 %It is possible to eliminate this termination event altogether and vary the robot trajectory launch times based on ball estimates.
 
-For safety reasons, VHP algorithms need to specify a minimum hitting time $T_{\textrm{min}}$ in addition to the coordinates of the hitting plane. When the ball is coming very fast towards the VHP, any calculated trajectory of duration below the minimum time will simply not be executed. This will prevent high accelerations and any risk of damage to the robot. However the determination of this minimum hitting time can be arbitrary, and the algorithms involving a VHP can lead to unnecessarily strict or restrictive strokes.
 % impact time, ball position and velocity
 % time to contact
 
-After accounting for the net and any other environmental constraints such as walls, the stability region of table tennis reduces to the Cartesian coordinates of the table $\court$ as a rectangular region with a fixed vertical distance $z_{\court}$ from origin. Any algorithm that can return the ball to this fixed region can be said to be \emph{stable}.
-
+% or a similar event such as passing over the net
 
 \subsection{Learning Models From Data}
 
 % air resistance scale factor C 
 % $\ballFull = (\ball^{\mathrm{T}},\dot{\ball^{\mathrm{T}}})^{\mathrm{T}}$
-We require three models for the trajectory generation process and acquire them (iteratively) from raw ball data. The ballistic \emph{flight model} $\ddot{\ball} = \ballDynamics(\dot{\ball})$ is a nonlinear model that describes the ball dynamics and generally involves air drag $\drag$ and gravity $\gravity$. The \emph{rebound model} $\dot{\ball}_{\mathrm{out}} = \bounce\dot{\ball}_{\mathrm{in}}$ is a discrete event with diagonal entries of $\bounce$ as coefficients $\epsilon = [\epsilon_{x}, \epsilon_{y}, -\epsilon_{z}]$. The coefficient of restitution $\epsilon_{z}$ accounts for the reflection of velocity in the vertical direction $z$ and $\epsilon_{x}, \epsilon_{y}$ are the coefficients of friction along the planar $x,y$ directions.
+In this framework, we require three models for the trajectory generation process and acquire them (iteratively) from raw ball data. The ballistic \emph{flight model} is a nonlinear model $\ddot{\ball} = \ballDynamics(\dot{\ball})$ that describes the dynamics of the ball $\ball = (b_x,b_y,b_z)^{\mathrm{T}}$. It involves air drag $\drag$ and gravity $\gravity$
+%
+\begin{align}
+\ddot{\begin{bmatrix}
+   b_x \\
+   b_y \\
+   b_z   
+ \end{bmatrix}} &= 
+ \begin{bmatrix}
+ -\drag \ballVel \dot{b}_x  \\
+ -\drag \ballVel \dot{b}_y  \\
+ \ \gravity - \drag \ballVel \dot{b}_z 
+ \end{bmatrix},
+\label{flightModel}
+\end{align}
+%
+\noindent where $\ballVel = \|\dot{\ball}\|_2$ is the velocity of the ball. We use a linear model for the \emph{rebound model}
+%
+\begin{align}
+\dot{\ball}_{\mathrm{out}} = \bounce\dot{\ball}_{\mathrm{in}}.
+\label{reboundModel}
+\end{align}
+
+\noindent The rebound model \eqref{reboundModel} is a discrete event which reflects the ball when the ball with radius $\ballRadius$ is touching the table, i.e. $\{b_z = z_{\court} + \ballRadius\}$. $\bounce$ is a diagonal matrix with entries $\vec{\epsilon} = [\epsilon_{x}, \epsilon_{y}, -\epsilon_{z}]^{\mathrm{T}} \in (0,1)^{3}$. The coefficient of restitution $\epsilon_{z}$ accounts for the reflection of velocity in the vertical direction $z$ and $\epsilon_{x}, \epsilon_{y}$ are the coefficients of friction along the planar $x,y$ directions.
 % incoming ball trajectory: as Gaussians indexed with time [e.g. Kalman filter should give us this information with prediction. Parameters/model of a Kalman filter could be fit using ball data (when fitting, innovation of the KF should be minimized as to consist mostly of white noise)]
 
 % A probabilistic model describing the interaction model: outputs a probability distribution of outgoing ball states parameterized (or indexed) by t, e.g. b_t \approx N(\mu_b_out(t), \sigma_b_out(t))
 
 % build a forward/inverse interaction model probabilistically
-The last model to train from data is the \emph{ball-racket contact model} $\ \dot{\ball}_{\mathrm{out}} = \contact(\dot{\ball}_{\mathrm{in}},\dot{\racket},\orient)$. This model is significantly harder to train from the previous models, as it requires ball-racket interaction data and it is difficult to get reliable ball estimates around hitting time. We need to instead rely on smoothing using the trained flight model and the samples before and after hitting. In previous works, the outgoing velocity of the ball is calculated using a \emph{mirror law}: $o_{\parallel} - v = \epsilon_{R} (-i_{\parallel} + v)$ with $v$ the speed of the racket along its normal and $\epsilon_{R}$ the coefficient of restitution on the racket. $o_{\parallel}$ and $i_{\parallel}$ are the outgoing and incoming ball velocities along the racket, respectively. This model assumes an elastic momentum exchange and it is quite inaccurate, especially at high ball velocities.
+The last model to train from data is the \emph{ball-racket contact model} 
+%
+\begin{align}
+\dot{\ball}_{\mathrm{out}} &= \contact(\dot{\ball}_{\mathrm{in}},\dot{\racket},\orient).
+\label{ballRacketContactModel}
+\end{align}
+%
+\noindent This model is significantly harder to train from the previous models, as it requires ball-racket interaction data and it is difficult to get reliable ball estimates around hitting time. We rely instead on Kalman smoothing using the trained flight model to estimate the ball velocities before and after hitting. In previous works, the outgoing velocity of the ball is calculated using a \emph{mirror law}: $o_{\parallel} - v_N = -\epsilon_{R} (i_{\parallel} - v_N)$ with $v_N$ the speed of the racket along its normal and $\epsilon_{R} \in (0,1)$ the coefficient of restitution on the racket. Velocities $o_{\parallel}$ and $i_{\parallel}$ are the outgoing and incoming ball velocities along the racket, respectively. This model assumes an elastic momentum exchange and it is quite inaccurate, especially at high ball velocities.
+% show that it is quite inaccurate with data
 % is this true? is the parallel o and i definitions correct?
 
-The accuracy of these models all depend on each other and for this reason, we train the parameters of these models with the Expectation-Maximization (EM) algorithm. Effects of angular velocity, or in other words spin, are not accounted for in these models. During test time when running these trained models online, an Extended Kalman Filter (EKF) or any regression method to estimate initial ball position and velocity can use these models to perform prediction and update steps.
+The accuracy of the models \eqref{flightModel} - \eqref{ballRacketContactModel} all depend on each other and for this reason, we train the parameters of these models with the Expectation-Maximization (EM) algorithm. Effects of angular velocity, or in other words spin, are not accounted for in these models.
 
 \subsection{Predicting with Probabilistic Modeling}
-
+ 
+During test time when running the trained models \eqref{flightModel} - \eqref{ballRacketContactModel} online, we use an Extended Kalman Filter (EKF) to perform prediction as well as filtering. Any other regression method to estimate initial ball position and velocity can also be used.
 % density or distribution
-Using an EKF for our nonlinear model $\ballDynamics$ generates at each time instant $t$ a probability distribution $p_t(x,y,z|t)$ of incoming ball states parameterized by time, e.g. $\ball_t \sim \mathcal{N}(\vec{\mu}_{\textrm{in}}(t),\vec{\Sigma}_{\textrm{in}}(t))$. 
-
+Using an EKF for our nonlinear model \eqref{flightModel} generates at each time instant $t$ a probability distribution $p_t(\ball,\dot{\ball}|t)$ of incoming ball states parameterized by time, 
+%
+\begin{align}
+\ball_t &\sim \mathcal{N}(\vec{\mu}_{\textrm{in}}(t),\vec{\Sigma}_{\textrm{in}}(t)). 
+\end{align}
+%
 % % % EXT. KALMAN FILTER EQUATIONS HERE % % %
-
-Formally this is a stochastic process, and for the Kalman Filter with a noisy process model, a Brownian motion. However we set the process covariance to zero during prediction, as the sample paths of the exponential kernel used in the Kalman Filter framework are very rough, i.e. almost surely not differentiable.
+%
+\noindent Formally this is a stochastic process, and for the Kalman Filter with a noisy process model, a Brownian motion. However we set the process covariance to zero during prediction, as the sample paths of the exponential kernel used in the Kalman Filter framework are very rough, i.e. almost surely not differentiable.
 
 % Interaction probabilities (ball touching the racket)
-Prediction continues after a possible interaction with the racket trajectory. If the ball touches the racket, i.e. if the surface of the ball is located inside the radius $\racketRadius = 8$ cm of the racket plane, ball incoming velocities will be transformed according to the trained contact model. Otherwise the ball with continue its previous projectile-like motion. Prediction is stopped when the ball hits the table plane with negative velocity in the $z$ direction.
+Prediction continues after a possible interaction with the racket trajectory. If the ball touches the racket, i.e. if the surface of the ball is located inside the radius $\racketRadius = 8$ cm of the racket plane, ball incoming velocities will be transformed according to the trained contact model \eqref{ballRacketContactModel}. Otherwise the ball with continue its previous projectile-like motion following \eqref{flightModel}. Prediction is stopped when the ball hits the table plane with negative velocity in the $z$ direction: $\{b_z = z_{\court} + \ballRadius \cap \dot{b}_z < 0\}$.
 
 \subsection{Optimal Control for Trajectory Generation}
 
-From a set point of view, for every point on the predicted ball trajectory, there is a range of admissible outgoing ball velocities that the racket can impart. This set is constricted by the geometry of the table and the demands of the game: the ball has to avoid the net and the walls and should land on the opponents court. Probabilistically speaking, the landing point could be any distribution with compact support over the table, e.g. a uniform distribution $x_{\textrm{land}}, y_{\textrm{land}} \sim \mathcal{U}(\court) = \mathcal{U}(x_{a},x_{b})\mathcal{U}(y_{a},y_{b})$ or a truncated normal distribution. The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponent's court.
+From a set point of view, for every point on the predicted ball trajectory, there is a range of admissible outgoing ball velocities that the racket can impart. This set is constricted by the stability region $\stabilityRegion$. 
+%the geometry of the table and the demands of the game: the ball has to avoid the net and the walls and should land on the opponents court.
+Putting a probability measure $\mu(\stabilityRegion)$ on this set is straightforward. For instance, the desired landing point distribution could be any distribution with compact support over the table. A uniform distribution $b_x, b_y \sim \mathcal{U}(\court) = \mathcal{U}(x_{a},x_{b})\mathcal{U}(y_{a},y_{b})$ or a truncated normal distribution are options that could be chosen as strategy demands. The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponent's court.
 %
 
-Our optimization criterion of choice is to find the racket trajectory that minimizes the Kullback-Leibler (KL) divergence $\textrm{KL}(p\|q) = \int_{\court}p(x,y)\log(\frac{p(x,y)}{q(x,y)})\textrm{d}x\textrm{d}y$ of $p(x,y|z_{\court},\dot{z} < 0) = \int_{\hitTime = 0}^{\infty} p_{\hitTime}(x,y|z_{\court},\dot{z} < 0,\hitTime)\hitDist \textrm{d}\hitTime$ with a desired distribution imposed by the robotic player. $p(x,y|z_{\court},\dot{z} < 0)$ is the marginal distribution over time of the ball process $p_t(\cdot)$. Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF.
+Our optimization criterion of choice is to find the racket trajectory that minimizes the Kullback-Leibler (KL) divergence $\KL(p\|q) = \int_{\court}p(x,y)\log(\frac{p(x,y)}{q(x,y)})\textrm{d}x\textrm{d}y$ of $p(x,y|z_{\court},\dot{z} < 0) = \int_{\hitTime = 0}^{\infty} p_{\hitTime}(x,y|z_{\court},\dot{z} < 0,\hitTime)\hitDist \textrm{d}\hitTime$ from the uniform distribution $q(x,y|z_{\court},\dot{z} < 0) = \mathcal{U}(\court)$. $p(x,y|z_{\court},\dot{z} < 0)$ is the marginal distribution over time of the ball process $p_t(\cdot)$. Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF.
 
 % what about maximizing the probability of landing, regardless of any specified distribution?
 % is this true?
@@ -250,7 +304,7 @@ Any specified distribution $q(\cdot)$ of compact support $\court$ will indirectl
 For safety and efficiency, we would prefer trajectories with minimal acceleration or jerk, the derivative of acceleration. Combining the minimal acceleration criterion with the KL-divergence we get
 %
 \begin{align}
-\min \int\limits_{0}^{T}\ddot{\joint}(t) + \textrm{KL}(p(x,y|z_{\court},\dot{z}<0)|\mathcal{U}(\court)),
+\min \int\limits_{0}^{T}\ddot{\joint}(t) + \KL(p(x,y|z_{\court},\dot{z}<0)|\mathcal{U}(\court)),
 \label{costFnc1}
 \end{align}
 %
