@@ -71,17 +71,16 @@
 \newcommand{\orient}{\vec{o}} % racket orientations
 \newcommand{\normal}{\vec{n}} % racket normal
 \newcommand{\robot}{\vec{x}_{R}} % racket state involving pos,vel and orient
-\newcommand{\court}{\mathcal{S}} % opponents court
+\newcommand{\court}{\mathcal{T}} % opponents court
 \newcommand{\net}{\mathcal{N}} % net
 \newcommand{\wall}{\mathcal{W}} % wall
-
 
 % % % % % % % % Probability notation % % % % % % %
 \newcommand{\prob}{\mathbb{P}} % probability
 \newcommand{\landTime}{\tau} % random variable
-\newcommand{\landDist}{p_{\tau}} % distribution of landing time
+\newcommand{\landDist}{p(\tau)} % distribution of landing time
 \newcommand{\hitTime}{\nu} % hitting time
-\newcommand{\hitDist}{p_{\nu}} % distribution of hitting time
+\newcommand{\hitDist}{p(\nu)} % distribution of hitting time
 
 
 % Set the paths where all figures are taken from:
@@ -207,7 +206,7 @@ For safety reasons, VHP algorithms need to specify a minimum hitting time $T_{\t
 % impact time, ball position and velocity
 % time to contact
 
-After accounting for the net and any other environmental constraints such as walls, the stability region of table tennis reduces to the Cartesian coordinates of the table $\court$ as a rectangular region with a fixed vertical distance $z_{\textrm{table}}$ from origin. Any algorithm that can return the ball to this fixed region can be said to be \emph{stable}.
+After accounting for the net and any other environmental constraints such as walls, the stability region of table tennis reduces to the Cartesian coordinates of the table $\court$ as a rectangular region with a fixed vertical distance $z_{\court}$ from origin. Any algorithm that can return the ball to this fixed region can be said to be \emph{stable}.
 
 
 \subsection{Learning Models From Data}
@@ -227,23 +226,55 @@ The accuracy of these models all depend on each other and for this reason, we tr
 
 \subsection{Predicting with Probabilistic Modeling}
 
-Using an EKF for our nonlinear model $\ballDynamics$ generates at each time instant $t$ a probability distribution of incoming ball states parameterized by time, e.g. $\ball_t \approx \mathcal{N}(\vec{\mu}_{\textrm{in}}(t),\vec{\Sigma}_{\textrm{in}}(t))$. Formally this is a stochastic process, and for the Kalman Filter with a noisy process model, a Brownian motion. However we set the process covariance to zero during prediction, as the sample paths of the exponential kernel used in the Kalman Filter framework are very rough, i.e. almost surely not differentiable.
+% density or distribution
+Using an EKF for our nonlinear model $\ballDynamics$ generates at each time instant $t$ a probability distribution $p_t(x,y,z|t)$ of incoming ball states parameterized by time, e.g. $\ball_t \sim \mathcal{N}(\vec{\mu}_{\textrm{in}}(t),\vec{\Sigma}_{\textrm{in}}(t))$. 
+
+% % % EXT. KALMAN FILTER EQUATIONS HERE % % %
+
+Formally this is a stochastic process, and for the Kalman Filter with a noisy process model, a Brownian motion. However we set the process covariance to zero during prediction, as the sample paths of the exponential kernel used in the Kalman Filter framework are very rough, i.e. almost surely not differentiable.
 
 % Interaction probabilities (ball touching the racket)
 Prediction continues after a possible interaction with the racket trajectory. If the ball touches the racket, i.e. if the surface of the ball is located inside the radius $\racketRadius = 8$ cm of the racket plane, ball incoming velocities will be transformed according to the trained contact model. Otherwise the ball with continue its previous projectile-like motion. Prediction is stopped when the ball hits the table plane with negative velocity in the $z$ direction.
 
 \subsection{Optimal Control for Trajectory Generation}
 
-From a set point of view, for every point on the predicted ball trajectory, there is a range of admissible outgoing ball velocities that the racket can impart. This set is constricted by the geometry of the table and the demands of the game: the ball has to avoid the net and the walls and should land on the opponents court. Probabilistically speaking, the landing point could be any distribution with compact support over the table, e.g. a uniform distribution $x_{\textrm{land}}, y_{\textrm{land}} \sim \mathcal{U}(x_{a},x_{b})\mathcal{U}(y_{a},y_{b})$ or a truncated normal distribution. The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponents court.
+From a set point of view, for every point on the predicted ball trajectory, there is a range of admissible outgoing ball velocities that the racket can impart. This set is constricted by the geometry of the table and the demands of the game: the ball has to avoid the net and the walls and should land on the opponents court. Probabilistically speaking, the landing point could be any distribution with compact support over the table, e.g. a uniform distribution $x_{\textrm{land}}, y_{\textrm{land}} \sim \mathcal{U}(\court) = \mathcal{U}(x_{a},x_{b})\mathcal{U}(y_{a},y_{b})$ or a truncated normal distribution. The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponent's court.
 %
 
-Our optimization criterion of choice is to find the racket trajectory that minimizes the KL-divergence of the marginal ball distribution of the ball process with a desired distribution imposed by the robotic player. Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF.
+Our optimization criterion of choice is to find the racket trajectory that minimizes the Kullback-Leibler (KL) divergence $\textrm{KL}(p\|q) = \int_{\court}p(x,y)\log(\frac{p(x,y)}{q(x,y)})\textrm{d}x\textrm{d}y$ of $p(x,y|z_{\court},\dot{z} < 0) = \int_{\hitTime = 0}^{\infty} p_{\hitTime}(x,y|z_{\court},\dot{z} < 0,\hitTime)\hitDist \textrm{d}\hitTime$ with a desired distribution imposed by the robotic player. $p(x,y|z_{\court},\dot{z} < 0)$ is the marginal distribution over time of the ball process $p_t(\cdot)$. Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF.
 
+% what about maximizing the probability of landing, regardless of any specified distribution?
 % is this true?
-For maximum robustness, the robot player can choose the uniform distribution over the table as a desired distribution. In this case the optimization reduces to maximizing the probability of landing on the table. By formulating the problem in joint space, we find the joint trajectory $\joint(t)$ that provides a suitable trade-off between minimum joint accelerations $\ddot{\joint}(t)$ and maximum probability of landing $\prob(\textrm{land})$. Using direct kinematics we can obtain the desired racket trajectory and orientations, i.e. $[\racket(t),\orient(t)] = \kin(\joint(t))$.
+Any specified distribution $q(\cdot)$ of compact support $\court$ will indirectly maximize the probability of landing on the table, $\prob(\textrm{land}) = \int_{0}^{\infty}\landDist\textrm{d}\landTime$. Here $\landTime$ is a \emph{hitting time} random variable of the set $\court$. In addition, for maximal unpredictability, the robot player can choose the uniform distribution over the table as a desired distribution. In this case the optimization reduces to maximizing the entropy of the landing distribution on the table. 
 
-$\prob(\textrm{land}) = \int_{0}^{\infty}\landDist(\landTime)\textrm{d}\landTime$
-$\prob(\textrm{hit}) = \int_{0}^{T}\hitDist(\hitTime)\textrm{d}\hitTime$
+For safety and efficiency, we would prefer trajectories with minimal acceleration or jerk, the derivative of acceleration. Combining the minimal acceleration criterion with the KL-divergence we get
+%
+\begin{align}
+\min \int\limits_{0}^{T}\ddot{\joint}(t) + \textrm{KL}(p(x,y|z_{\court},\dot{z}<0)|\mathcal{U}(\court)),
+\label{costFnc1}
+\end{align}
+%
+where the marginal distribution $p(x,y|z_{\court},\dot{z}<0)$ of the ball process can be written as
+%
+% should we give also the probability of landing here?
+\begin{align}
+p(x,y|z_{\court},\dot{z}<0) &= \int_{\landTime = 0}^{\infty} p_{\landTime}(x,y|z_{\court},\dot{z}<0,\landTime)\hitDist \textrm{d}\landTime \label{marginalDistr1}, \\
+p_{\landTime}(x,y|z_{\court},\dot{z}<0,\landTime) &= \frac{ \int_{\dot{z}=-\infty}^{0}\int_{\dot{x},\dot{y}}p_{\landTime}(x,y,z_{\court},\dot{x},\dot{y},\dot{z}|\landTime)}{p(z_{\court},\dot{z}<0)}.
+\label{marginalDistr2}
+\end{align}
+%
+The marginal distribution over $x,y$ velocities appearing in the numerator of \eqref{marginalDistr2} is
+\begin{align}
+& p_{\landTime}(x,y,z,\dot{z}|\landTime) = \int_{\hitTime = 0}^{T} \int_{\dot{x},\dot{y}}  p_{\landTime}(x,y,z,\dot{x},\dot{y},\dot{z}|\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}},\landTime) \times \\
+& p(\dot{\ball}_{\textrm{out}}|\dot{\ball}_{\textrm{in}},\dot{\racket}(\hitTime),\orient(\hitTime),\hitTime)p(\ball_{\textrm{out}}|\ball_{\textrm{in}},\racket(\hitTime),\orient(\hitTime),\hitTime)\hitDist\textrm{d}\hitTime.
+\label{fullDistr}
+\end{align}
+%
+where $\hitTime$ is the hitting time random variable corresponding to the time of ball-racket contact, $\prob(\textrm{hit}) = \int_{0}^{T}\hitDist\textrm{d}\hitTime$. In \eqref{fullDistr} the probability densities are obtained using the trained models, i.e. the flight model and the ball-racket contact model. 
+
+By formulating \eqref{costFnc1} in joint space, we find the joint trajectory $\joint(t)$ that provides a suitable trade-off between minimum joint accelerations $\ddot{\joint}(t)$ and maximum probability of landing $\prob(\textrm{land})$. Using direct kinematics we can obtain the desired racket trajectory and orientations, i.e. $[\racket(t),\orient(t)] = \kin(\joint(t))$.
+
+
 
 
 % Output
@@ -257,7 +288,7 @@ $\prob(\textrm{hit}) = \int_{0}^{T}\hitDist(\hitTime)\textrm{d}\hitTime$
 %
 
 % Refer to article for the simplest case when diving two Gaussians with nonzero mean.
-We do not know of any way to compute the ball landing distribution in closed form. However, the outgoing ball trajectory is an integral over the previous incoming ball distribution using the ball-racket contact model. Any sampling based approach (e.g. rejection sampling) may be used to simulate then the outgoing ball trajectory and approximate the resulting landing distribution. 
+We do not know of any way to compute the ball landing distribution in closed form, as a function of racket positions and orientations. However, the outgoing ball trajectory is an integral over the previous incoming ball distribution using the ball-racket contact model. Any sampling based approach (e.g. rejection sampling) may be used to simulate then the outgoing ball trajectory and approximate the resulting landing distribution. 
 
 
 \section{ALGORITHM}\label{alg}
