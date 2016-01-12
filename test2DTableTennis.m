@@ -9,6 +9,9 @@ ball(1:2,1) = ball_cannon(2:3);
 ball(3:4,1) = [4.000 3.2] + 0.05 * randn(1,2);
 ballPred(1:4,1) = ball(1:4,1); % to initialize drawing of predicted balls
 
+% define virtual hitting plane (VHP)
+y_VHP = -0.5;
+
 %% Initialize the RRR robot
 % Simulation Values 
 % system is continous
@@ -147,7 +150,7 @@ link2_z = [x1(2,1),x2(2,1)];
 link3_y = [x2(1,1),x3(1,1)];
 link3_z = [x2(2,1),x3(2,1)];
 hf = figure('color','white');
-axis equal; axis auto;
+axis equal; %axis auto;
 %uisetcolor is useful here
 orange = [0.9100 0.4100 0.1700];
 gray = [0.5020    0.5020    0.5020];
@@ -222,7 +225,7 @@ predict = false;
 % maximum horizon to predict
 time2PassTable = 1.0;
 maxTime2Hit = 0.6;
-maxPredictHorizon = 0.8;
+maxPredictHorizon = 1.0;
 
 % initialize the filters state with sensible values
 ballNoisyVel = ball(3:4,1);% + sqrt(eps)*rand(2,1);
@@ -261,7 +264,7 @@ while numTrials < 50
     distOnRacketPlane = norm(projPlane * vecFromRacketToBall);
     if distToRacketPlane < tol && distOnRacketPlane < racket_radius
         disp('A hit! Well done!');
-        numHits = numHits+1;
+        %numHits = numHits+1;
         % change ball velocity based on contact model
     end
     
@@ -304,12 +307,19 @@ while numTrials < 50
             % for now only considering the ball positions after table
             tol = 5e-2;
             idxAfterTable = find(ballPred(1,:) > dist_to_table + tol);
-            ballIncoming = ballPred; %ballPred(:,idxAfterTable);
             ballTime = (1:predictLen) * dt; %idxAfterTable * dt;
+            ballPredWithTime = [ballPred;ballTime]; %ballPred(:,idxAfterTable);
             minTimeToHit = ballTime(1);
             
-            % COMPUTE OPTIMAL TRAJECTORY HERE
-            % first computing in cartesian space assuming a cartesian robot
+            %% COMPUTE VHP TRAJECTORY HERE
+            
+            ballAtVHP = interp1(ballPredWithTime(1,:)',ballPredWithTime(2:5,:)',y_VHP);
+            timeAtVHP = ballAtVHP(end);
+            ballAtVHP = [y_VHP;ballAtVHP(1:end-1)'];
+            
+            
+            %% COMPUTE OPTIMAL TRAJECTORY HERE
+            %{
             T0 = 0.5;
             B0 = ballIncoming(:,1);
             
@@ -335,7 +345,7 @@ while numTrials < 50
             [x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
             fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
             %}
-            %%{
+            %{
             options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
                  'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
             [x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
@@ -361,6 +371,7 @@ while numTrials < 50
             racket2 = x3 + racket_radius * racket_dir;
             orient = [racket1;racket2];
             path = [x1;x2;x3;orient];
+            %}
         end % end predict        
 
         % Initiate the robot
@@ -369,7 +380,7 @@ while numTrials < 50
         
     end 
     
-    % ANIMATE BOTH THE ROBOT AND THE BALL
+    %% ANIMATE BOTH THE ROBOT AND THE BALL
     set(h0,'XData',ball(1,i));
     set(h0,'YData',ball(2,i));    
     

@@ -81,8 +81,10 @@
 % % % % % % % % Probability notation % % % % % % %
 \newcommand{\prob}{\mathbb{P}} % probability
 \newcommand{\landTime}{\tau} % random variable
+\newcommand{\landEvent}{\mathcal{L}} % land on table
 \newcommand{\landDist}{p(\tau)} % distribution of landing time
 \newcommand{\hitTime}{\nu} % hitting time
+\newcommand{\hitEvent}{\mathcal{H}}
 \newcommand{\hitDist}{p(\nu)} % distribution of hitting time
 \newcommand{\KL}{D_{\mathrm{KL}}}
 
@@ -252,7 +254,15 @@ In this framework, we require three models for the trajectory generation process
 \label{reboundModel}
 \end{align}
 
-\noindent The rebound model \eqref{reboundModel} is a discrete event which reflects the ball when the ball with radius $\ballRadius$ is touching the table, i.e. $\{b_z = z_{\court} + \ballRadius\}$. $\bounce$ is a diagonal matrix with entries $\vec{\epsilon} = [\epsilon_{x}, \epsilon_{y}, -\epsilon_{z}]^{\mathrm{T}} \in (0,1)^{3}$. The coefficient of restitution $\epsilon_{z}$ accounts for the reflection of velocity in the vertical direction $z$ and $\epsilon_{x}, \epsilon_{y}$ are the coefficients of friction along the planar $x,y$ directions.
+\noindent The rebound model \eqref{reboundModel} is a discrete event which reflects the ball when the ball with radius $\ballRadius$ is touching the table, i.e. the landing event
+%
+\begin{align}
+\landEvent = \{b_z(t) = z_{\court} + \ballRadius \cap \dot{b}_z(t) < 0\},
+\label{landingEvent}
+\end{align}
+%
+%
+\noindent occurs. Matrix $\bounce$ in \eqref{reboundModel} is a diagonal matrix with entries $\vec{\epsilon} = [\epsilon_{x}, \epsilon_{y}, -\epsilon_{z}]^{\mathrm{T}} \in (0,1)^{3}$. The coefficient of restitution $\epsilon_{z}$ accounts for the reflection of velocity in the vertical direction $z$ and $\epsilon_{x}, \epsilon_{y}$ are the coefficients of friction along the planar $x,y$ directions.
 % incoming ball trajectory: as Gaussians indexed with time [e.g. Kalman filter should give us this information with prediction. Parameters/model of a Kalman filter could be fit using ball data (when fitting, innovation of the KF should be minimized as to consist mostly of white noise)]
 
 % A probabilistic model describing the interaction model: outputs a probability distribution of outgoing ball states parameterized (or indexed) by t, e.g. b_t \approx N(\mu_b_out(t), \sigma_b_out(t))
@@ -269,7 +279,8 @@ The last model to train from data is the \emph{ball-racket contact model}
 % show that it is quite inaccurate with data
 % is this true? is the parallel o and i definitions correct?
 
-The accuracy of the models \eqref{flightModel} - \eqref{ballRacketContactModel} all depend on each other and for this reason, we train the parameters of these models with the Expectation-Maximization (EM) algorithm. Effects of angular velocity, or in other words spin, are not accounted for in these models.
+The accuracy of the models \eqref{flightModel} - \eqref{ballRacketContactModel} all depend on each other and for this reason, we train the parameters of these models with the smoothing Expectation-Maximization (EM) algorithm. Effects of angular velocity, or in other words spin, are not accounted for in these models.
+% smoothing EM ref needed
 
 \subsection{Predicting with Probabilistic Modeling}
  
@@ -286,8 +297,13 @@ Using an EKF for our nonlinear model \eqref{flightModel} generates at each time 
 \noindent Formally this is a stochastic process, and for the Kalman Filter with a noisy process model, a Brownian motion. However we set the process covariance to zero during prediction, as the sample paths of the exponential kernel used in the Kalman Filter framework are very rough, i.e. almost surely not differentiable.
 
 % Interaction probabilities (ball touching the racket)
-Prediction continues after a possible interaction with the racket trajectory. If the ball touches the racket, i.e. if the surface of the ball is located inside the radius $\racketRadius = 8$ cm of the racket plane, ball incoming velocities will be transformed according to the trained contact model \eqref{ballRacketContactModel}. Otherwise the ball with continue its previous projectile-like motion following \eqref{flightModel}. Prediction is stopped when the ball hits the table plane with negative velocity in the $z$ direction: $\{b_z = z_{\court} + \ballRadius \cap \dot{b}_z < 0\}$.
-
+Prediction continues after a possible interaction with the racket trajectory. If the ball touches the racket, i.e. if the surface of the ball is located inside the radius $\racketRadius = 8$ cm of the racket plane, ball incoming velocities will be transformed according to the trained contact model \eqref{ballRacketContactModel}. Otherwise the ball with continue its previous projectile-like motion following \eqref{flightModel}. Prediction is stopped at landing time $\landTime$ when the ball hits the table plane with negative velocity in the $z$ direction: 
+%
+\begin{align}
+\landTime = \inf(t \geq 0 | b_z(t) = z_{\court} + \ballRadius \cap \dot{b}_z(t) < 0).
+\label{landTime}
+\end{align}
+%
 \subsection{Optimal Control for Trajectory Generation}
 
 From a set point of view, for every point on the predicted ball trajectory, there is a range of admissible outgoing ball velocities that the racket can impart. This set is constricted by the stability region $\stabilityRegion$. 
@@ -295,41 +311,68 @@ From a set point of view, for every point on the predicted ball trajectory, ther
 Putting a probability measure $\mu(\stabilityRegion)$ on this set is straightforward. For instance, the desired landing point distribution could be any distribution with compact support over the table. A uniform distribution $b_x, b_y \sim \mathcal{U}(\court) = \mathcal{U}(x_{a},x_{b})\mathcal{U}(y_{a},y_{b})$ or a truncated normal distribution are options that could be chosen as strategy demands. The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponent's court.
 %
 
-Our optimization criterion of choice is to find the racket trajectory that minimizes the Kullback-Leibler (KL) divergence $\KL(p\|q) = \int_{\court}p(x,y)\log(\frac{p(x,y)}{q(x,y)})\textrm{d}x\textrm{d}y$ of $p(x,y|z_{\court},\dot{z} < 0) = \int_{\hitTime = 0}^{\infty} p_{\hitTime}(x,y|z_{\court},\dot{z} < 0,\hitTime)\hitDist \textrm{d}\hitTime$ from the uniform distribution $q(x,y|z_{\court},\dot{z} < 0) = \mathcal{U}(\court)$. $p(x,y|z_{\court},\dot{z} < 0)$ is the marginal distribution over time of the ball process $p_t(\cdot)$. Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF.
+Our optimization criterion of choice is to find the racket trajectory that minimizes the Kullback-Leibler (KL) divergence $\KL(p\|q) = \int_{\court}p(x,y)\log(\frac{p(x,y)}{q(x,y)})\textrm{d}x\textrm{d}y$ of 
+%
+\begin{align}
+p(b_x,b_y|\landEvent) = \int_{\landTime = 0}^{\infty} p_{\landTime}(b_x,b_y|\landEvent,\landTime)\landDist \textrm{d}\landTime
+\label{marginalProcess}
+\end{align}
+%
+from the uniform distribution $q(b_x,b_y|\landEvent) = \mathcal{U}(\court)$. The distribution $p(b_x,b_y|\landEvent)$ is the marginal distribution over time of the ball process $p_t(\cdot)$ conditioned on the landing event $\landEvent$. Here $\landTime$ is the \emph{hitting time} as in \eqref{landTime}, a random variable with distribution $p(\landTime)$ corresponding to the event $\landEvent$ in \eqref{landingEvent}.
 
 % what about maximizing the probability of landing, regardless of any specified distribution?
 % is this true?
-Any specified distribution $q(\cdot)$ of compact support $\court$ will indirectly maximize the probability of landing on the table, $\prob(\textrm{land}) = \int_{0}^{\infty}\landDist\textrm{d}\landTime$. Here $\landTime$ is a \emph{hitting time} random variable of the set $\court$. In addition, for maximal unpredictability, the robot player can choose the uniform distribution over the table as a desired distribution. In this case the optimization reduces to maximizing the entropy of the landing distribution on the table. 
+Any specified distribution $q(\cdot)$ of compact support $\court$ will indirectly maximize the probability of landing on the table, $\prob(\landEvent) = \int_{0}^{\infty}\landDist\textrm{d}\landTime$. In addition, for maximal unpredictability, the robot player can choose the uniform distribution over the table as a desired distribution. In this case the optimization reduces to maximizing the entropy of the landing distribution on the table. 
 
-For safety and efficiency, we would prefer trajectories with minimal acceleration or jerk, the derivative of acceleration. Combining the minimal acceleration criterion with the KL-divergence we get
+Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF.
+
+For safety and efficiency, we would prefer trajectories with minimal acceleration or jerk, the derivative of acceleration. Combining the corresponding cost functional with the KL-divergence we get the following \emph{free-time} optimal control problem
 %
 \begin{align}
-\min \int\limits_{0}^{T}\ddot{\joint}(t) + \KL(p(x,y|z_{\court},\dot{z}<0)|\mathcal{U}(\court)),
+\min_{\sysInput,T} & \int\limits_{0}^{T}\sysInput(t)^{\mathrm{T}}\vec{R}\sysInput(t) + \KL(p(b_x,b_y|\landEvent)|\mathcal{U}(\court)), \\
+& \textrm{s.t. } \ddot{\joint}(t) = \sysInput(t),
 \label{costFnc1}
 \end{align}
 %
-where the marginal distribution $p(x,y|z_{\court},\dot{z}<0)$ of the ball process can be written as
+\noindent where the final time $T$ of the racket trajectory 
+%
+\begin{align}
+\big(\racket(t),\orient(t)\big) &= \kin(\joint(t)),
+\end{align}
+%
+\noindent is an additional variable to be optimized. $\vec{R} \succeq 0$ is a positive definite matrix. The conditional of the stochastic process $p_{\landTime}(b_x,b_y|\landEvent,\landTime)$ in \eqref{marginalProcess} can be expanded as follows
 %
 % should we give also the probability of landing here?
 \begin{align}
-p(x,y|z_{\court},\dot{z}<0) &= \int_{\landTime = 0}^{\infty} p_{\landTime}(x,y|z_{\court},\dot{z}<0,\landTime)\hitDist \textrm{d}\landTime \label{marginalDistr1}, \\
-p_{\landTime}(x,y|z_{\court},\dot{z}<0,\landTime) &= \frac{ \int_{\dot{z}=-\infty}^{0}\int_{\dot{x},\dot{y}}p_{\landTime}(x,y,z_{\court},\dot{x},\dot{y},\dot{z}|\landTime)}{p(z_{\court},\dot{z}<0)}.
+p_{\landTime}(b_x,b_y|\landEvent,\landTime) &= \frac{ \int_{\dot{b}_z=-\infty}^{0}\int_{\dot{b}_x,\dot{b}_y}p_{\landTime}(b_x,b_y,z_{\court},\dot{\ball}|\landTime)\mathrm{d}\dot{\ball}}{\prob(\landEvent)}.
 \label{marginalDistr2}
 \end{align}
 %
-The marginal distribution over $x,y$ velocities appearing in the numerator of \eqref{marginalDistr2} is
+\noindent Finally we can relate the integrand $p_{\landTime}(b_x,b_y,z_{\court},\dot{\ball}|\landTime)$ to the racket trajectory by marginalizing over the outgoing ball state $\big(\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}})$
+%
+%& p_{\landTime}(b_x,b_y,z_{\court},\dot{\ball}|\landTime) = 
 \begin{align}
-& p_{\landTime}(x,y,z,\dot{z}|\landTime) = \int_{\hitTime = 0}^{T} \int_{\dot{x},\dot{y}}  p_{\landTime}(x,y,z,\dot{x},\dot{y},\dot{z}|\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}},\landTime) \times \\
-& p(\dot{\ball}_{\textrm{out}}|\dot{\ball}_{\textrm{in}},\dot{\racket}(\hitTime),\orient(\hitTime),\hitTime)p(\ball_{\textrm{out}}|\ball_{\textrm{in}},\racket(\hitTime),\orient(\hitTime),\hitTime)\hitDist\textrm{d}\hitTime.
-\label{fullDistr}
+\int_{\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}}}  p_{\landTime}(b_x,b_y,z_{\court},\dot{\ball}|\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}},\landTime) p(\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}})\textrm{d}\ball_{\textrm{out}}\textrm{d}\dot{\ball}_{\textrm{out}},
+\label{fullDistrMarginal1}
 \end{align}
 %
-where $\hitTime$ is the hitting time random variable corresponding to the time of ball-racket contact, $\prob(\textrm{hit}) = \int_{0}^{T}\hitDist\textrm{d}\hitTime$. In \eqref{fullDistr} the probability densities are obtained using the trained models, i.e. the flight model and the ball-racket contact model. 
-
-By formulating \eqref{costFnc1} in joint space, we find the joint trajectory $\joint(t)$ that provides a suitable trade-off between minimum joint accelerations $\ddot{\joint}(t)$ and maximum probability of landing $\prob(\textrm{land})$. Using direct kinematics we can obtain the desired racket trajectory and orientations, i.e. $[\racket(t),\orient(t)] = \kin(\joint(t))$.
-
-
-
+\noindent where $p(\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}})$ can be calculated using the trained models \eqref{flightModel} - \eqref{ballRacketContactModel}
+%
+\begin{align}
+&\int_{0}^{T}\!\int_{\ball_{\textrm{in}},\dot{\ball}_{\textrm{in}}}\!p(\dot{\ball}_{\textrm{out}}|\dot{\ball}_{\textrm{in}},\dot{\racket}(\hitTime),\orient(\hitTime),\hitTime) p(\ball_{\textrm{out}}|\ball_{\textrm{in}},\racket(\hitTime),\orient(\hitTime),\hitTime)\textrm{d}\hitTime. %\hitDist
+\label{fullDistrMarginal2}
+\end{align}
+% % % WORK ON THIS!!!
+%
+\noindent Here $\hitTime$ is the hitting time random variable corresponding to the time of ball-racket contact, i.e. 
+%
+\begin{align}
+\hitTime = \inf\big(t \geq 0 | \ball(t) = \racket(t) + \gamma \orient_{\perp}(t), \gamma < \racketRadius, \orient_{\perp}(t) \perp \normal(t)).
+\label{hitTime}
+\end{align}
+%$\prob(\hitEvent) = \int_{0}^{T}\hitDist\textrm{d}\hitTime$. 
+%
+By formulating \eqref{costFnc1} in joint space, we find the joint trajectory $\joint(t)$ that provides a suitable trade-off between minimum joint accelerations $\ddot{\joint}(t)$ and the KL-divergence. 
 
 % Output
 % 
@@ -342,7 +385,7 @@ By formulating \eqref{costFnc1} in joint space, we find the joint trajectory $\j
 %
 
 % Refer to article for the simplest case when diving two Gaussians with nonzero mean.
-We do not know of any way to compute the ball landing distribution in closed form, as a function of racket positions and orientations. However, the outgoing ball trajectory is an integral over the previous incoming ball distribution using the ball-racket contact model. Any sampling based approach (e.g. rejection sampling) may be used to simulate then the outgoing ball trajectory and approximate the resulting landing distribution. 
+The equations \eqref{costFnc1}, \eqref{fullDistrMarginal1} and \eqref{fullDistrMarginal2} are functions of the racket trajectory. When optimizing for \eqref{costFnc1} we do not know of any way to compute the gradient of the KL-divergence with respect to the racket trajectory in closed form. However, the outgoing ball trajectory is an integral over the previous incoming ball distribution using the ball-racket contact model. Any sampling based approach (e.g. rejection sampling) may be used to simulate then the outgoing ball trajectory and approximate the resulting landing distribution. 
 
 
 \section{ALGORITHM}\label{alg}
@@ -372,13 +415,20 @@ Due to the limitations of our setup, our robot is fixed to the ceiling. Hence we
 \section{CONCLUSION}\label{end}
 
 % stochastic optimal control
-We see the probabilistic extensions of Pontryagin's minimum principle as a very fruitful direction for robotics in general in the upcoming years, as robots start taking decisions in complex, demanding tasks. The robot trajectories to be generated can also taken to be probabilistic, leading to an optimization framework that considers the interaction between two probability distributions. We consider the probabilistic movement primitives~\cite{Paraschos13} to be a step in the right direction.
+We see the probabilistic extensions of the Pontryagin's minimum principle \cite{Liberzon11} and stochastic optimal control in general, as a very fruitful direction for robotics in general in the upcoming years as robots start taking decisions in complex dynamic tasks. The robot trajectories in \eqref{fullDistrMarginal2} to be generated can also taken to be probabilistic, leading to an optimization framework that considers the interaction between two probability distributions. We consider the probabilistic movement primitives~\cite{Paraschos13} to be a step in this direction.
 
 % reinforcement learning to modify trajectories
 
+% shall we put inv. dynamics eq here?
 The cost functional to be minimized considers the accelerations as the quantity to be minimized. It assumes that the feedback linearization of the robot is perfect, that is the inverse dynamics model for the robot is exact. Whenever the cancellation is imperfect due to inaccurate robot control, execution error will prevent the robot from achieving the desired trajectories. Execution errors are not taken into consideration within this framework. 
 
-A natural reward signal to use for reinforcement learning is to look at the set-distance of the landing point from the opponents court. This reward can be used to modify the generated trajectories and learn to compensate for the execution errors. Another promising approach is Iterative Learning Control (ILC), see for example \cite{Bristow06}, \cite{Longman2000}, \cite{Koc15}. ILC is a more efficient learning approach that generally makes more assumptions. Generalizing ILC to different trajectories generated by $\alg$, we hope to increase the performance of our robot further. 
+A natural reward signal to use for reinforcement learning is to look at the set-distance of the landing point from the opponents court
+%
+\begin{align}
+d(\ball(\landTime),\court) = \inf_{\ball_z = z_{\court} + \ballRadius, \vec{x} \in \court} d(\ball,\vec{x}).
+\end{align}
+%
+\noindent This negative reward can be used to modify the generated trajectories and learn to compensate for the execution errors. Another promising approach is Iterative Learning Control (ILC), see for example \cite{Bristow06}, \cite{Longman2000}, \cite{Koc15}. ILC is a more efficient learning approach that generally makes more assumptions. Generalizing ILC to different trajectories generated by $\alg$, we hope to compensate for any execution error and increase the performance of our robot further. 
 
 \bibliographystyle{plain}
 %\bibliographystyle{./IEEEtran}

@@ -97,7 +97,7 @@ h11 = plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
 h12 = fill3(r(1,:), r(2,:), r(3,:), 'r');
 
 h2 = scatter3(ballPred(1,1),ballPred(2,1),ballPred(3,1),20,'b','filled');
-%h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
+h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
 title('Ball-robot interaction');
 grid on;
 axis equal;
