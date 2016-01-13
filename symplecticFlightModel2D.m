@@ -19,7 +19,12 @@ xNext(3:4) = x(3:4) + dt * ballFlightModel(x(3:4),C,g);
 xNext(1:2) = x(1:2) + dt * xNext(3:4);
 
 % condition for bouncing
-if xNext(2) < zTable && abs(xNext(1) - yNet) < tableLength/2
+
+% adding tolerance to make sure nothing wierd happens when the ball
+% is below the table
+d = 0.1; 
+
+if xNext(2) < zTable && xNext(2) > zTable - d && abs(xNext(1) - yNet) < tableLength/2
     tol = 1e-4;
     dt1 = 0;
     dt2 = dt;

@@ -6,11 +6,17 @@ clc; clear; close all;
 % load table parameters
 loadTennisTableValues;
 ball(1:2,1) = ball_cannon(2:3);
-ball(3:4,1) = [4.000 3.2] + 0.05 * randn(1,2);
+ball(3:4,1) = 1.1*[4.000 3.2] + 0.00 * randn(1,2);
 ballPred(1:4,1) = ball(1:4,1); % to initialize drawing of predicted balls
 
 % define virtual hitting plane (VHP)
-y_VHP = -0.5;
+VHP = -0.5;
+
+% land the ball on the centre of opponents court
+desBall(1) = dist_to_table - 3*table_y/2;
+desBall(2) = table_z + ball_radius;
+time2reach = 0.5; % time to reach desired point on opponents court
+time2return = 0.5; % time to return to initial configuration
 
 %% Initialize the RRR robot
 % Simulation Values 
@@ -39,9 +45,9 @@ g = 9.81;
 m1 = 1; %mass of first link, kg
 m2 = 0.5; %mass of second link, kg
 m3 = 0.5; 
-l1 = 0.4; %length of first link, m
-l2 = 0.4; %length of second link, m
-l3 = 0.4;
+l1 = 0.5; %length of first link, m
+l2 = 0.5; %length of second link, m
+l3 = 0.5;
 l_c1 = 0.25; %distance of first link's center of gravity to prev. joint, m
 l_c2 = 0.20; %dist. of second link's c.oZ.g. to prev. joint, m
 l_c3 = 0.5;
@@ -222,56 +228,79 @@ contact = false;
 numTrials = 0;
 numHits = 0;
 predict = false;
+hit = false;
 % maximum horizon to predict
 time2PassTable = 1.0;
 maxTime2Hit = 0.6;
 maxPredictHorizon = 1.0;
+maxWaitAfterHit = 1.0;
 
 % initialize the filters state with sensible values
 ballNoisyVel = ball(3:4,1);% + sqrt(eps)*rand(2,1);
 filter.initState([ball(1:2,1);ballNoisyVel],eps);
 
 % initialize indices and time
-i = 1; k = 1; t = 0.0;
+ballIdx = 1; robotIdx = 1; t = 0.0;
 dt = 0.01;
+cnt = 0.0; % counter for resetting
 ballNoisyPos = ball(1:2,1);
 
 while numTrials < 50
     
     % Evolve ball flight, table and racket contact interactions
-    if ball(2,i) <= floor_level
-        disp('Ball hit the floor. Resetting...');
-        t = 0.0; i = 1; k = 1;
+    if ball(2,ballIdx) <= floor_level || cnt > maxWaitAfterHit
+        disp('Resetting...'); % ball hit the floor
+        t = 0.0; ballIdx = 1; robotIdx = 1; cnt = 0.0;
         predict = false;
+        hit = false;
         numTrials = numTrials+1;
         time2PassTable = 1.0;
         ball(1:2,1) = ball_cannon(2:3);
-        ball(3:4,1) = [4.000 3.2] + 0.05 * randn(1,2);
+        ball(3:4,1) = 1.1*[4.000 3.2] + 0.00 * randn(1,2);
         ballNoisyVel = ball(3:4,1);% + sqrt(eps)*rand(2,1);
         filter.initState([ball(1:2,1);ballNoisyVel],eps);
     end
-    
-    ball(:,i+1) = funState(ball(:,i),0,dt);
-    
-    %TODO: check contact with racket
+
+    % check contact with racket
     tol = ball_radius;
-    l = min(k,size(path,2));
-    vecFromRacketToBall = ball(1:2,i) - robot(5:6,l);
+    l = min(robotIdx,size(path,2));
+    vecFromRacketToBall = ball(1:2,ballIdx) - robot(5:6,l);
     racketPlane = racket_dir(:,l);
     projPlane = racketPlane*racketPlane'/(racketPlane'*racketPlane);
     projOrth = eye(2) - projPlane;
     distToRacketPlane = norm(projOrth * vecFromRacketToBall);
     distOnRacketPlane = norm(projPlane * vecFromRacketToBall);
-    if distToRacketPlane < tol && distOnRacketPlane < racket_radius
+    if distToRacketPlane < tol && distOnRacketPlane < racket_radius && ~hit            
         disp('A hit! Well done!');
-        %numHits = numHits+1;
-        % change ball velocity based on contact model
+        hit = true;
+        numHits = numHits + 1;
+        % Change ball velocity based on contact model
+        % get ball velocity
+        velIn = ball(3:4,ballIdx);
+        velInAlongNormal = projOrth * velIn;
+        % get racket velocity
+        velRacket = (path(5:6,l+1) - path(5:6,l))/dt;
+        velRacketAlongNormal = projOrth * velRacket;
+        % this is kept the same in mirror law
+        velInAlongRacket = projPlane * velIn; 
+        velOutAlongNormal = velRacketAlongNormal + ...
+            CRR * (velRacketAlongNormal - velInAlongNormal);
+        velOut = velOutAlongNormal + velInAlongRacket;
+        ball(3:4,ballIdx) = velOut;
+    end
+    
+    % evolve ball according to flight model
+    ball(:,ballIdx+1) = funState(ball(:,ballIdx),0,dt);
+    
+    % run counter to terminate game after hit
+    if hit
+        cnt = cnt + dt;
     end
     
     % Get noisy ball positions till ball passes the net
     if time2PassTable >= maxTime2Hit
         % add noise
-        ballNoisyPos = ball(1:2,i+1); % + sqrt(eps) * randn(2,1);
+        ballNoisyPos = ball(1:2,ballIdx+1); % + sqrt(eps) * randn(2,1);
         filter.linearize(dt,0);
         filter.update(ballNoisyPos,0);
         filter.predict(dt,0);
@@ -290,7 +319,7 @@ while numTrials < 50
         % revert back to saved state
         filter.initState(xSave,PSave);
     else
-        % predict ball trajectory once
+        % Predict ball trajectory once
         if ~predict            
             predictHorizon = maxPredictHorizon;
             predictLen = floor(predictHorizon / dt);
@@ -313,15 +342,89 @@ while numTrials < 50
             
             %% COMPUTE VHP TRAJECTORY HERE
             
-            ballAtVHP = interp1(ballPredWithTime(1,:)',ballPredWithTime(2:5,:)',y_VHP);
+            %%{
+            ballAtVHP = interp1(ballPredWithTime(1,:)',ballPredWithTime(2:5,:)',VHP);
             timeAtVHP = ballAtVHP(end);
-            ballAtVHP = [y_VHP;ballAtVHP(1:end-1)'];
+            ballAtVHP = [VHP;ballAtVHP(1:end-1)'];
+            ballPosAtVHP = ballAtVHP(1:2);
+            ballInVelAtVHP = ballAtVHP(3:4);
             
+            % GET DESIRED OUTGOING VELOCITY OF THE BALL AT VHP
+            
+            % approximate with a linear model
+            ballOutVelAtVHP(1) = (desBall(1) - ballPosAtVHP(1))/time2reach;
+            ballOutVelAtVHP(2) = (desBall(2) - ballPosAtVHP(2) - ...
+                                0.5*gravity*time2reach^2)/time2reach;
+            
+            % initialize using a linear model (no drag)
+            linFlightTraj = @(t) [ballPosAtVHP + ballOutVelAtVHP(:)*t;
+                                  ballOutVelAtVHP(:)] + ...
+                                 [0;0.5*gravity*t^2;0;gravity*t];
+            flightModel = @(t,x) [x(3);
+                                  x(4);                                  
+                              -Cdrag * x(3) * sqrt(x(3)^2 + x(4)^2);
+                      gravity - Cdrag * x(4) * sqrt(x(3)^2 + x(4)^2)];
+            % boundary value condition
+            bc = @(x0,xf) [x0(1) - ballPosAtVHP(1);
+                           x0(2) - ballPosAtVHP(2);
+                           xf(1) - desBall(1);
+                           xf(2) - desBall(2)];
+            meshpoints = 50;
+            solinit = bvpinit(linspace(0,time2reach,meshpoints),...
+                               linFlightTraj);
+            sol = bvp4c(flightModel,bc,solinit);
+            ballOut = deval(sol,0);
+            ballOutVelAtVHP = ballOut(3:4);
+            
+            % GET RACKET DESIRED VEL AND ORIENTATION AT VHP 
+            
+            % inverting the mirror law
+            normal = (ballOutVelAtVHP - ballInVelAtVHP) ...
+                          ./ norm(ballOutVelAtVHP - ballInVelAtVHP);
+            velOutAlongNormal = ballOutVelAtVHP' * normal;
+            velInAlongNormal = ballInVelAtVHP' * normal;
+            racketVelAlongNormal = (velOutAlongNormal + ... 
+                CRR * velInAlongNormal) / (1 + CRR);
+            % racket velocity along racket plane we take to be zero
+            % this implies no spinning
+            racketVel = racketVelAlongNormal * normal;
+                            
+            %phiVHP = atan2(normal(2),normal(1))-pi/2;
+            % get desired orientation angle phi at VHP
+            normalRot = R'*normal;
+            phiVHP = atan2(normalRot(2),normalRot(1));
+            % feed to inverse kinematics to get qf
+            qf = RRRInvKinematics(R'*ballPosAtVHP,phiVHP,rrr.PAR);
+            rrr.calcJacobian(qf);
+            qfdot = rrr.jac \ (R'*racketVel);
+            q0dot = zeros(3,1);
+            
+            % GET 3RD DEGREE POLYNOMIALS
+            thit = timeAtVHP;
+            t = dt:dt:thit;
+            t2 = dt:dt:time2return;
+            M = @(t0,tf) [t0^3 t0^2 t0^1 1;
+                          3*t0^2 2*t0 1 0;
+                          tf^3 tf^2 tf^1 1;
+                          3*tf^2 2*tf 1 0];
+            qStrike = zeros(3,length(t));
+            qReturn = zeros(3,length(t2));            
+            for m = 1:3
+                %q0dot is zero
+                Qstrike = [q0(m); q0dot(m); qf(m); qfdot(m)]; % strike
+                Qreturn = [qf(m); qfdot(m); q0(m); q0dot(m)]; % return
+                a = M(0,thit) \ Qstrike;
+                b = M(0,time2return) \ Qreturn;
+                qStrike(m,:) = a(1)*t.^3 + a(2)*t.^2 + a(3)*t + a(4);
+                qReturn(m,:) = b(1)*t2.^3 + b(2)*t2.^2 + b(3)*t2 + b(4);
+            end
+            q = [qStrike,qReturn];
+            %}
             
             %% COMPUTE OPTIMAL TRAJECTORY HERE
             %{
             T0 = 0.5;
-            B0 = ballIncoming(:,1);
+            B0 = ballPred(:,1);
             
             % solve numerically with Newton-Raphson / nlsq-optimization
             x0 = [pi/4*ones(6,1);T0];
@@ -361,6 +464,8 @@ while numTrials < 50
             nu0 = -x(4:6) - mu0*T;
             q = (1/6)*mu0*t.^3 + (1/2)*nu0*t.^2 + repmat(q0,1,N);
             qd = (1/2)*mu0*t.^2 + nu0*t;
+            %}
+            
             [x1,x2,x3,mats] = rrr.kinematics(q);
             x1 = R * x1;
             x2 = R * x2;
@@ -371,28 +476,28 @@ while numTrials < 50
             racket2 = x3 + racket_radius * racket_dir;
             orient = [racket1;racket2];
             path = [x1;x2;x3;orient];
-            %}
+            
         end % end predict        
 
-        % Initiate the robot
-        robot(:,k+1) = path(:,min(k+1,size(path,2)));
-        k = k + 1;
+        % Robot joint coordinates in cartesian space (for drawing)
+        robot(:,robotIdx+1) = path(:,min(robotIdx+1,size(path,2)));
+        robotIdx = robotIdx + 1;
         
     end 
     
     %% ANIMATE BOTH THE ROBOT AND THE BALL
-    set(h0,'XData',ball(1,i));
-    set(h0,'YData',ball(2,i));    
+    set(h0,'XData',ball(1,ballIdx));
+    set(h0,'YData',ball(2,ballIdx));    
     
     
-    link1_y = [shift(1),robot(1,k)];
-    link1_z = [shift(2),robot(2,k)];
-    link2_y = [robot(1,k),robot(3,k)];
-    link2_z = [robot(2,k),robot(4,k)];
-    link3_y = [robot(3,k),robot(5,k)];
-    link3_z = [robot(4,k),robot(6,k)];
-    line_racket_y = [robot(7,k),robot(9,k)];
-    line_racket_z = [robot(8,k),robot(10,k)];
+    link1_y = [shift(1),robot(1,robotIdx)];
+    link1_z = [shift(2),robot(2,robotIdx)];
+    link2_y = [robot(1,robotIdx),robot(3,robotIdx)];
+    link2_z = [robot(2,robotIdx),robot(4,robotIdx)];
+    link3_y = [robot(3,robotIdx),robot(5,robotIdx)];
+    link3_z = [robot(4,robotIdx),robot(6,robotIdx)];
+    line_racket_y = [robot(7,robotIdx),robot(9,robotIdx)];
+    line_racket_z = [robot(8,robotIdx),robot(10,robotIdx)];
      
     set(h1,'XData',link1_y)
     set(h1,'YData',link1_z)
@@ -410,7 +515,7 @@ while numTrials < 50
     set(h7,'YData',line_racket_z);
     
     t = t + dt;
-    i = i + 1;
+    ballIdx = ballIdx + 1;
     
     drawnow;
     pause(0.002);

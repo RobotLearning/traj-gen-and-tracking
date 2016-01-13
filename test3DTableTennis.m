@@ -240,14 +240,16 @@ while ~finished
 
                 %% Use the inverse contact model to compute racket vels and normal
                 % at every point
+                
+                % TODO: is this correct? normal computation may be wrong
 
                 % FOR NOW USING ONLY THE MIRROR LAW
                 normal(:,j) = (velOut(:,j) - ballIncoming(4:6,j)) ...
                               ./ norm(velOut(:,j) - ballIncoming(4:6,j),2);
                 velOutAlongNormal = velOut(:,j)' * normal(:,j);
                 velInAlongNormal = ballIncoming(4:6,j)' * normal(:,j);
-                racketVelAlongNormal(j) = velOutAlongNormal + ... 
-                    CRR * velInAlongNormal / (1 + CRR);
+                racketVelAlongNormal(j) = (velOutAlongNormal + ... 
+                    CRR * velInAlongNormal) / (1 + CRR);
                 % TO BE CHANGED 
                 racketVel(:,j) = racketVelAlongNormal(j) * normal(:,j);
             end
