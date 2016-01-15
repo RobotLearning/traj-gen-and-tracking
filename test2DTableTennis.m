@@ -144,12 +144,14 @@ q10 = 0.3; q20 = -0.3; q30 = -0.4;
 q0 = [q10;q20;q30];
 % get joints, endeffector pos and orientation
 [x1,x2,x3,mats] = rrr.kinematics(q0);
+x0 = x3(:,1);
 
 % rotate everything by 90 degrees
 R = [0 1; -1 0];
 x1 = R * x1;
 x2 = R * x2;
 x3 = R * x3;
+x0 = R * x0;
 shift = [0;0];
 link1_y = [shift(1) x1(1,1)];
 link1_z = [shift(2) x1(2,1)];
@@ -270,6 +272,9 @@ while numTrials < 50
     end
 
     % check contact with racket
+    
+    velOut = ballRacketContact();
+    
     tol = ball_radius;
     l = min(robotIdx,size(path,2));
     vecFromRacketToBall = ball(1:2,ballIdx) - robot(5:6,l);
@@ -371,158 +376,17 @@ while numTrials < 50
             ballPredWithTime = [ballPred;ballTime]; %ballPred(:,idxAfterTable);
             minTimeToHit = ballTime(1);
             
-            %% COMPUTE VHP TRAJECTORY HERE
+            %% COMPUTE TRAJECTORY HERE
             
-            %{
-            ballAtVHP = interp1(ballPredWithTime(1,:)',ballPredWithTime(2:5,:)',VHP);
-            timeAtVHP = ballAtVHP(end);
-            ballAtVHP = [VHP;ballAtVHP(1:end-1)'];
-            ballPosAtVHP = ballAtVHP(1:2);
-            ballInVelAtVHP = ballAtVHP(3:4);
+            % consider different vhp trajectories and keep the optimal
+            %ballInitVar = PSave;
+            %[q,qd] = rrr.generateOptimalTTT(ballPred,ballTime,ballInitVar,desBall,time2reach,time2return,q0);
             
-            % GET DESIRED OUTGOING VELOCITY OF THE BALL AT VHP
+            % Compute VHP Trajectory here            
+            [q,qd,~] = rrr.generateTTTwithVHP(VHP,ballPred,ballTime,...
+                                        desBall,time2reach,time2return,q0);            
+            %computeMPfor2DTT;            
             
-            % approximate with a linear model
-            ballOutVelAtVHP(1) = (desBall(1) - ballPosAtVHP(1))/time2reach;
-            ballOutVelAtVHP(2) = (desBall(2) - ballPosAtVHP(2) - ...
-                                0.5*gravity*time2reach^2)/time2reach;
-            
-            % initialize using a linear model (no drag)
-            linFlightTraj = @(t) [ballPosAtVHP + ballOutVelAtVHP(:)*t;
-                                  ballOutVelAtVHP(:)] + ...
-                                 [0;0.5*gravity*t^2;0;gravity*t];
-            flightModel = @(t,x) [x(3);
-                                  x(4);                                  
-                              -Cdrag * x(3) * sqrt(x(3)^2 + x(4)^2);
-                      gravity - Cdrag * x(4) * sqrt(x(3)^2 + x(4)^2)];
-            % boundary value condition
-            bc = @(x0,xf) [x0(1) - ballPosAtVHP(1);
-                           x0(2) - ballPosAtVHP(2);
-                           xf(1) - desBall(1);
-                           xf(2) - desBall(2)];
-            meshpoints = 50;
-            solinit = bvpinit(linspace(0,time2reach,meshpoints),...
-                               linFlightTraj);
-            sol = bvp4c(flightModel,bc,solinit);
-            ballOut = deval(sol,0);
-            ballOutVelAtVHP = ballOut(3:4);
-            
-            % GET RACKET DESIRED VEL AND ORIENTATION AT VHP 
-            
-            % inverting the mirror law
-            normal = (ballOutVelAtVHP - ballInVelAtVHP) ...
-                          ./ norm(ballOutVelAtVHP - ballInVelAtVHP);
-            velOutAlongNormal = ballOutVelAtVHP' * normal;
-            velInAlongNormal = ballInVelAtVHP' * normal;
-            racketVelAlongNormal = (velOutAlongNormal + ... 
-                CRR * velInAlongNormal) / (1 + CRR);
-            % racket velocity along racket plane we take to be zero
-            % this implies no spinning
-            racketVel = racketVelAlongNormal * normal;
-                            
-            %phiVHP = atan2(normal(2),normal(1))-pi/2;
-            % get desired orientation angle phi at VHP
-            normalRot = R'*normal;
-            phiVHP = atan2(normalRot(2),normalRot(1));
-            % feed to inverse kinematics to get qf
-            try
-                qf = RRRInvKinematics(R'*ballPosAtVHP,phiVHP,rrr.PAR);
-                rrr.calcJacobian(qf);
-                qfdot = rrr.jac \ (R'*racketVel);
-            catch ME
-                disp('Virtual Hitting Point outside of workspace');
-                qf = q0;
-                qfdot = zeros(3,1);
-            end
-
-            q0dot = zeros(3,1);
-            
-            % GET 3RD DEGREE POLYNOMIALS
-            thit = timeAtVHP;
-            t = dt:dt:thit;
-            t2 = dt:dt:time2return;
-            M = @(t0,tf) [t0^3 t0^2 t0^1 1;
-                          3*t0^2 2*t0 1 0;
-                          tf^3 tf^2 tf^1 1;
-                          3*tf^2 2*tf 1 0];
-            qStrike = zeros(3,length(t));
-            qReturn = zeros(3,length(t2));            
-            for m = 1:3
-                %q0dot is zero
-                Qstrike = [q0(m); q0dot(m); qf(m); qfdot(m)]; % strike
-                Qreturn = [qf(m); qfdot(m); q0(m); q0dot(m)]; % return
-                a = M(0,thit) \ Qstrike;
-                b = M(0,time2return) \ Qreturn;
-                qStrike(m,:) = a(1)*t.^3 + a(2)*t.^2 + a(3)*t + a(4);
-                qReturn(m,:) = b(1)*t2.^3 + b(2)*t2.^2 + b(3)*t2 + b(4);
-            end
-            q = [qStrike,qReturn];
-            %}
-            
-            %% COMPUTE OPTIMAL TRAJECTORY HERE
-            %%{
-            T0 = 0.5;
-            B0 = ballPred(:,1);
-            
-            % solve numerically with Newton-Raphson / nlsq-optimization
-            x0 = [pi/4*ones(6,1);T0];
-            lb = [-Inf(6,1);0];
-
-            PAR.ball.x0 = B0(1:2);
-            PAR.ball.v0 = B0(3:4);
-            PAR.ball.g = g; % acceleration
-            %PAR.ball.model = @(b,v,T) funState([b;v],0,T);
-            PAR.ball.time = ballTime;
-            PAR.ball.path = ballPred;
-            PAR.robot.Q0 = q0;
-            PAR.robot.Qd0 = 0;
-            PAR.robot.class = rrr;
-            PAR.rotate = R;
-            
-            tic;
-            %%{
-            options = optimset('TolX',1e-12); % set TolX
-            fun = @(x) bvMP(x,PAR);
-            [x, resnorm, resval, exitflag, output, jacob] = newtonraphson(fun, x0, options);
-            fprintf('\nExitflag: %d, %s\n',exitflag, output.message) % display output message
-            %}
-            %{
-            options = optimoptions('lsqnonlin','Algorithm','trust-region-reflective',...
-                 'MaxFunEvals',50000,'MaxIter',5000,'TolFun',1e-20);
-            [x,resnorm,resval] = lsqnonlin(@(x) bvMP(x,PAR), x0, lb, [], options);
-            %fprintf('Residuals:\n');
-            %fprintf('%f\n', resval); 
-            %}
-            toc
-            T = x(end)
-
-            t = dt:dt:T;
-            N = length(t);
-            mu0 = x(1:3);
-            nu0 = -x(4:6) - mu0*T;
-            qStrike = (1/6)*mu0*t.^3 + (1/2)*nu0*t.^2 + repmat(q0,1,N);
-            qdStrike = (1/2)*mu0*t.^2 + nu0*t;
-            %}
-            
-            % calculate a returning trajectory with a polynomial
-            q0dot = zeros(3,1);
-            
-            % GET 3RD DEGREE POLYNOMIALS
-            t2 = dt:dt:time2return;
-            qf = qStrike(:,end);
-            qfdot = qdStrike(:,end);
-            M = @(t0,tf) [t0^3 t0^2 t0^1 1;
-                          3*t0^2 2*t0 1 0;
-                          tf^3 tf^2 tf^1 1;
-                          3*tf^2 2*tf 1 0];
-            qReturn = zeros(3,length(t2));            
-            for m = 1:3
-                %q0dot is zero
-                Qreturn = [qf(m); qfdot(m); q0(m); q0dot(m)]; % return
-                c = M(0,time2return) \ Qreturn;
-                qReturn(m,:) = c(1)*t2.^3 + c(2)*t2.^2 + c(3)*t2 + c(4);
-            end
-            q = [qStrike,qReturn];
             
             [x1,x2,x3,mats] = rrr.kinematics(q);
             x1 = R * x1;

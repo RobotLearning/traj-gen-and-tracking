@@ -32,18 +32,84 @@ classdef (Abstract) Robot < Model
     end
     
     % methods that robots share
-    methods (Access = public)
+    methods (Access = public)        
+        
+        %% Generate optimal tt trajectories
+        function [q,qd] = generateOptimalTTT(obj,ballPred,ballTime,ballInitVar,...
+                                        ballDes,time2reach,time2return,q0)
+                                    
+            % sample ball initial states 
+            M = 100;
+            bSamp = repmat(ballPred(:,1),1,M) + chol(ballInitVar)*randn(4,M);    
+            
+            % rotate everything by 90 degrees for 2d case
+            R = [0 1; -1 0];
+                                    
+            % consider different vhp trajectories and keep the optimal
+            N = 10;
+            loadTennisTableValues();
+            tol = ball_radius;
+            vhps = linspace(dist_to_table,dist_to_table/2,N);
+            Js = zeros(1,N);
+            for i = 1:N
+                [q,qd,J] = obj.generateTTTwithVHP(vhps(i),ballPred,...
+                           ballTime,ballDes,time2reach,time2return,q0);
+                [~,~,x,mats] = rrr.kinematics();
+                racket_dir = R * squeeze(mats(1:2,2,3,:));
+                % calculate probability of landing the ball  
+                
+                % compute hitting time
+                for j = 1:M
+                    while ball           
+                        vecFromRacketToBall = ball(1:2,k) - x(:,k);
+                        racketPlane = racket_dir(:,k);
+                        projPlane = racketPlane*racketPlane'/(racketPlane'*racketPlane);
+                        projOrth = eye(2) - projPlane;
+                        distToRacketPlane = norm(projOrth * vecFromRacketToBall);
+                        distOnRacketPlane = norm(projPlane * vecFromRacketToBall);
+                        if distToRacketPlane < tol && distOnRacketPlane < racket_radius
+                            % calculate outgoing velocity
+                            %timeHit = ballTime(k);
+                            % Change ball velocity based on contact model
+                            % get ball velocity
+                            velIn = ball(3:4,k);
+                            velInAlongNormal = projOrth * velIn;
+                            % get racket velocity
+                            velRacket = obj.getEndEffectorState(q(:,k),qd(:,k));
+                            velRacketAlongNormal = projOrth * velRacket;
+                            % this is kept the same in mirror law
+                            velInAlongRacket = projPlane * velIn; 
+                            velOutAlongNormal = velRacketAlongNormal + ...
+                                CRR * (velRacketAlongNormal - velInAlongNormal);
+                            velOut = velOutAlongNormal + velInAlongRacket;
+                            ball(3:4,ballIdx) = velOut;
+                            break;
+                        end
+                    end
+                end
+                         
+                Js(i) = J;
+            end
+            [~,i] = min(Js);
+            [q,qd,~] = obj.generateTTTwithVHP(vhps(i),ballPred,ballTime,...
+                                        ballDes,time2reach,time2return,q0); 
+        end
         
         %% Generate table tennis trajectories with the VHP method
-        % TODO
-        function Traj = generateTTTwithVHP(obj,VHP,ballPred,ballTime,ballDes,time2reach)
+        % TODO: works only for RRR
+        function [q,qd,J] = generateTTTwithVHP(obj,VHP,ballPred,ballTime,...
+                                        ballDes,time2reach,time2return,q0)
             
+            dt = ballTime(2)-ballTime(1);
             ballPredWithTime = [ballPred;ballTime];
             ballAtVHP = interp1(ballPredWithTime(1,:)',ballPredWithTime(2:5,:)',VHP);
             timeAtVHP = ballAtVHP(end);
             ballAtVHP = [VHP;ballAtVHP(1:end-1)'];
             ballPosAtVHP = ballAtVHP(1:2);
             ballInVelAtVHP = ballAtVHP(3:4);
+            
+            % rotate everything by 90 degrees for 2d case
+            R = [0 1; -1 0];
             
             % GET DESIRED OUTGOING VELOCITY OF THE BALL AT VHP
             
@@ -92,9 +158,9 @@ classdef (Abstract) Robot < Model
             phiVHP = atan2(normalRot(2),normalRot(1));
             % feed to inverse kinematics to get qf
             try
-                qf = RRRInvKinematics(R'*ballPosAtVHP,phiVHP,rrr.PAR);
-                rrr.calcJacobian(qf);
-                qfdot = rrr.jac \ (R'*racketVel);
+                qf = obj.invKinematics(R'*ballPosAtVHP,phiVHP);
+                obj.calcJacobian(qf);
+                qfdot = obj.jac \ (R'*racketVel);
             catch ME
                 disp('Virtual Hitting Point outside of workspace');
                 qf = q0;
@@ -112,7 +178,10 @@ classdef (Abstract) Robot < Model
                           tf^3 tf^2 tf^1 1;
                           3*tf^2 2*tf 1 0];
             qStrike = zeros(3,length(t));
-            qReturn = zeros(3,length(t2));            
+            qdStrike = zeros(3,length(t));
+            qddStrike = zeros(3,length(t));
+            qReturn = zeros(3,length(t2));
+            qdReturn = zeros(3,length(t2));
             for m = 1:3
                 %q0dot is zero
                 Qstrike = [q0(m); q0dot(m); qf(m); qfdot(m)]; % strike
@@ -120,9 +189,16 @@ classdef (Abstract) Robot < Model
                 a = M(0,thit) \ Qstrike;
                 b = M(0,time2return) \ Qreturn;
                 qStrike(m,:) = a(1)*t.^3 + a(2)*t.^2 + a(3)*t + a(4);
+                qdStrike(m,:) = 3*a(1)*t.^2 + 2*a(2)*t + a(3);
+                qddStrike(m,:) = 3*a(1)*t + 2*a(2);
                 qReturn(m,:) = b(1)*t2.^3 + b(2)*t2.^2 + b(3)*t2 + b(4);
+                qdReturn(m,:) = 3*b(1)*t2.^2 + 2*b(2)*t2 + b(3);
             end
             q = [qStrike,qReturn];
+            qd = [qdStrike,qdReturn];
+            
+            % compute the cost
+            J = trace(qddStrike'*qddStrike)*dt;            
         end
         
         %% Generate inputs for a reference

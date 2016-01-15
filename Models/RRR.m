@@ -179,14 +179,21 @@ classdef RRR < Robot
         end
         
         % call inverse kinematics from outside
-        function q = invKinematics(obj,x,Ahmat)
+        function q = invKinematics(obj,x,var)
             
-            % Ahmat is the last hom. matrix for the last joint
-            % get the approach vector
-            a = Ahmat(1:3,1);
-            % get phi
-            phi = Atan2(a(2),a(1));
-            q = RRRInvKinematics(x,phi,obj.PAR);
+            if isscalar(var)
+                % phi must have been provided
+                phi = var;
+                q = RRRInvKinematics(x,phi,obj.PAR);
+            else
+                Ahmat = var;
+                % Ahmat is the last hom. matrix for the last joint
+                % get the approach vector
+                a = Ahmat(1:3,1);
+                % get phi
+                phi = Atan2(a(2),a(1));
+                q = RRRInvKinematics(x,phi,obj.PAR);
+            end
         end
                    
         % dynamics to get u
