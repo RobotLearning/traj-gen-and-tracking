@@ -37,58 +37,25 @@ classdef (Abstract) Robot < Model
         %% Generate optimal tt trajectories
         function [q,qd] = generateOptimalTTT(obj,ballPred,ballTime,ballInitVar,...
                                         ballDes,time2reach,time2return,q0)
-                                    
+                       
+            loadTennisTableValues();
+            % the weighting for the probability of landing vs. control
+            % effort
+            m = 1e6;            
+              
             % sample ball initial states 
             M = 100;
-            bSamp = repmat(ballPred(:,1),1,M) + chol(ballInitVar)*randn(4,M);    
-            
-            % rotate everything by 90 degrees for 2d case
-            R = [0 1; -1 0];
+            bSamp = repmat(ballPred(:,1),1,M) + 0; %chol(ballInitVar)*randn(4,M);                
                                     
             % consider different vhp trajectories and keep the optimal
-            N = 10;
-            loadTennisTableValues();
-            tol = ball_radius;
+            N = 10;            
             vhps = linspace(dist_to_table,dist_to_table/2,N);
             Js = zeros(1,N);
             for i = 1:N
-                [q,qd,J] = obj.generateTTTwithVHP(vhps(i),ballPred,...
+                [q,qd,J] = obj.generateTTTwithVHP(-0.5,ballPred,...
                            ballTime,ballDes,time2reach,time2return,q0);
-                [~,~,x,mats] = rrr.kinematics();
-                racket_dir = R * squeeze(mats(1:2,2,3,:));
-                % calculate probability of landing the ball  
-                
-                % compute hitting time
-                for j = 1:M
-                    while ball           
-                        vecFromRacketToBall = ball(1:2,k) - x(:,k);
-                        racketPlane = racket_dir(:,k);
-                        projPlane = racketPlane*racketPlane'/(racketPlane'*racketPlane);
-                        projOrth = eye(2) - projPlane;
-                        distToRacketPlane = norm(projOrth * vecFromRacketToBall);
-                        distOnRacketPlane = norm(projPlane * vecFromRacketToBall);
-                        if distToRacketPlane < tol && distOnRacketPlane < racket_radius
-                            % calculate outgoing velocity
-                            %timeHit = ballTime(k);
-                            % Change ball velocity based on contact model
-                            % get ball velocity
-                            velIn = ball(3:4,k);
-                            velInAlongNormal = projOrth * velIn;
-                            % get racket velocity
-                            velRacket = obj.getEndEffectorState(q(:,k),qd(:,k));
-                            velRacketAlongNormal = projOrth * velRacket;
-                            % this is kept the same in mirror law
-                            velInAlongRacket = projPlane * velIn; 
-                            velOutAlongNormal = velRacketAlongNormal + ...
-                                CRR * (velRacketAlongNormal - velInAlongNormal);
-                            velOut = velOutAlongNormal + velInAlongRacket;
-                            ball(3:4,ballIdx) = velOut;
-                            break;
-                        end
-                    end
-                end
-                         
-                Js(i) = J;
+                probLand = obj.calcProbOfLand(bSamp,q,qd);                         
+                Js(i) = J + m * probLand;
             end
             [~,i] = min(Js);
             [q,qd,~] = obj.generateTTTwithVHP(vhps(i),ballPred,ballTime,...

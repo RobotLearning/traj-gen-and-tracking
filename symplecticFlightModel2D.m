@@ -20,17 +20,14 @@ xNext(1:2) = x(1:2) + dt * xNext(3:4);
 
 % condition for bouncing
 
-% adding tolerance to make sure nothing wierd happens when the ball
-% is below the table
-d = 0.1; 
-
-if xNext(2) < zTable && xNext(2) > zTable - d && abs(xNext(1) - yNet) < tableLength/2
+if x(2) > zTable && xNext(2) < zTable && abs(xNext(1) - yNet) < tableLength/2
     tol = 1e-4;
     dt1 = 0;
     dt2 = dt;
     xBounce = x;
     dtBounce = 0.0;
     % doing bisection to find the bounce time
+    k = 1;
     while abs(xBounce(2) - zTable) > tol
         dtBounce = (dt1 + dt2) / 2;
         xBounce(3:4) = x(3:4) + dtBounce * ballFlightModel(x(3:4),C,g);
@@ -41,6 +38,7 @@ if xNext(2) < zTable && xNext(2) > zTable - d && abs(xNext(1) - yNet) < tableLen
         else
             dt2 = dtBounce;
         end
+        k = k+1;
     end
     % rebound
     xBounce(3:4) = reboundModel(xBounce(3:4),K);

@@ -142,6 +142,8 @@ filter = EKF(dim,funState,mats);
 % simple dynamics scenario to catch an incoming ball
 q10 = 0.3; q20 = -0.3; q30 = -0.4;
 q0 = [q10;q20;q30];
+q(:,1) = q0;
+qd(:,1) = zeros(3,1);
 % get joints, endeffector pos and orientation
 [x1,x2,x3,mats] = rrr.kinematics(q0);
 x0 = x3(:,1);
@@ -271,14 +273,16 @@ while numTrials < 50
         filter.initState([ball(1:2,1);ballNoisyVel],eps);
     end
 
-    % check contact with racket
-    
-    velOut = ballRacketContact();
-    
+    % check contact with racket    
     tol = ball_radius;
     l = min(robotIdx,size(path,2));
-    vecFromRacketToBall = ball(1:2,ballIdx) - robot(5:6,l);
-    racketPlane = racket_dir(:,l);
+    % get racket pos, vel and orientation (on plane)
+    [xRacket,velRacket,mats] = rrr.getEndEffectorState(q(:,l),qd(:,l));
+    xRacket = R * xRacket;
+    velRacket = R * velRacket;
+    racketPlane = R * squeeze(mats(1:2,2,3,:)); % orientation along racket
+    vecFromRacketToBall = ball(1:2,ballIdx) - xRacket;
+    %racketPlane = racket_dir(:,l);
     projPlane = racketPlane*racketPlane'/(racketPlane'*racketPlane);
     projOrth = eye(2) - projPlane;
     distToRacketPlane = norm(projOrth * vecFromRacketToBall);
@@ -292,8 +296,6 @@ while numTrials < 50
         % get ball velocity
         velIn = ball(3:4,ballIdx);
         velInAlongNormal = projOrth * velIn;
-        % get racket velocity
-        velRacket = (path(5:6,l+1) - path(5:6,l-1))/(2*dt);
         velRacketAlongNormal = projOrth * velRacket;
         % this is kept the same in mirror law
         velInAlongRacket = projPlane * velIn; 
@@ -365,7 +367,7 @@ while numTrials < 50
                 filter.predict(dt,0);
                 ballPred(:,j) = filter.x;
             end
-            predict = true;        
+            predict = true;
 
             % Calculate the intersection of ball path with robot workspace
 
@@ -379,14 +381,22 @@ while numTrials < 50
             %% COMPUTE TRAJECTORY HERE
             
             % consider different vhp trajectories and keep the optimal
-            %ballInitVar = PSave;
-            %[q,qd] = rrr.generateOptimalTTT(ballPred,ballTime,ballInitVar,desBall,time2reach,time2return,q0);
+            %{
+            ballInitVar = PSave;
+            [q,qd] = rrr.generateOptimalTTT(ballPred,ballTime,ballInitVar,desBall,time2reach,time2return,q0);
+            %}
             
+            %%{
             % Compute VHP Trajectory here            
-            [q,qd,~] = rrr.generateTTTwithVHP(VHP,ballPred,ballTime,...
-                                        desBall,time2reach,time2return,q0);            
+            [q,qd,~] = rrr.generateTTTwithVHP(VHP,ballPred,ballTime,desBall,time2reach,time2return,q0);            
+            M = 100;
+            ballInitVar = PSave;
+            bSamp = repmat(ballPred(:,1),1,M) + 0; %chol(ballInitVar)*randn(4,M);
+            tic;
+            probLand = calcProbOfLand(rrr,bSamp,q,qd)
+            toc
             %computeMPfor2DTT;            
-            
+            %}
             
             [x1,x2,x3,mats] = rrr.kinematics(q);
             x1 = R * x1;

@@ -215,9 +215,9 @@ classdef RRR < Robot
         end
         
         % get end effector position
-        function [x,xd] = getEndEffectorState(obj,q,qd)
+        function [x,xd,mats] = getEndEffectorState(obj,q,qd)
             
-            [~,~,x,~] = obj.kinematics(q);
+            [~,~,x,mats] = obj.kinematics(q);
             obj.calcJacobian(q);
             xd = obj.jac * qd;
         end
