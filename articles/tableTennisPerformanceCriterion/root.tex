@@ -119,7 +119,7 @@
 \begin{abstract}
 
 In highly dynamics tasks that involve moving targets, planning is necessary to figure out when, where and how to intercept the target. In robotic table tennis in particular, conventional planning algorithms often rely on the virtual hitting plane hypothesis to construct robot striking trajectories. These algorithms however are vulnerable to modeling and execution errors. %For example, the trajectories they generate are not robust to uncertainty in ball position and velocity at hitting time. 
-Moreover, they do not take advantage of the inherent task redundancy when planning trajectories. In this paper, we address these two issues by introducing a new performance criterion for robotic table tennis. We use an optimal control approach to construct a novel inverse-kinematics algorithm that does not involve a fixed hitting plane. Furthermore, by augmenting our cost functional with a probabilistic final-cost we incorporate the uncertainties in modeling, estimation and execution as well as task redundancy. Our algorithm returns the balls with a higher probability to the opponents court in two and three dimensional table tennis with different robot models when compared with a state of the art planning approach. 
+Moreover, they do not take advantage of the inherent task redundancy when planning trajectories. In this paper, we address these two issues by introducing a new performance criterion for robotic table tennis. We use an optimal control approach to construct a novel inverse-kinematics algorithm that does not involve a fixed hitting plane. Furthermore, by augmenting our cost functional with a probabilistic final-cost we incorporate the uncertainties in modeling, estimation and execution as well as task redundancy. Our algorithm returns the balls with a higher probability to the opponents court in two and three dimensional table tennis with different robot models when compared with the state of the art planning approach. 
 
 % better term for task redundancy?
 % certainty-equivalent, cautious
@@ -158,12 +158,12 @@ To summarize our reasons for introducing uncertainty and probabilistic modeling 
 \begin{figure}[t!]
 \center
 \includegraphics[scale=0.4]{robot1.png}			
-\caption{Robotic table tennis setup with four cameras tracking the ball at 60 Hz. In order to return the ball to the opponent's court, we need to consider the uncertainty in ball estimation as well as in our ball-racket contact model. Introducing uncertainty into planning and a more cautious generation of striking trajectories will allow us to return the ball with a higher probability.}
+\caption{Robotic table tennis setup with four cameras tracking the ball at 60 Hz. We consider the uncertainty in ball estimation as well as in our ball-racket contact models in order to return the ball more robustly to the opponent's court. Introducing uncertainty into planning and a more cautious generation of striking trajectories will allow us to return the ball with a higher probability.}
 \label{robot}
 \end{figure}
 % REPLACE PHOTO WITH ANOTHER ONE INCLUDING CAMERAS
 
-In the rest of this paper, we elaborate on this notion of robustness, giving more examples and the necessary intuition where needed. In Section~\ref{relatedWork} we introduce previous work on table tennis and other relevant trajectory generation frameworks. In Section~\ref{method} we formalize robot trajectory generation as a specific optimal control problem and incorporate probabilistic modeling within this framework. We do not know of any closed-form solutions even in simplified cases. In Section~\ref{alg} we discuss a Monte-Carlo based rejection sampling approach for optimizing the previously introduced cost functional. In Section~\ref{results} we evaluate the performance of this approach and compare it with previous inverse kinematics (IK) approaches. When the inverse dynamics models are not known well for the robot, robustness with respect to trajectory \emph{execution} must be additionally considered. In the final section~\ref{end} we discuss several promising extensions in this regard. %VHP-based
+In the rest of this paper, we elaborate on this notion of robustness, giving more examples and the necessary intuition where needed. In Section~\ref{relatedWork} we introduce previous work on table tennis and other relevant trajectory generation frameworks. In Section~\ref{method} we formalize robot trajectory generation as a specific optimal control problem and incorporate probabilistic modeling within this framework. We do not know of any closed-form solutions even in simplified cases. In Section~\ref{alg} we discuss a rejection sampling approach for optimizing the previously introduced cost functional. In Section~\ref{results} we evaluate the performance of this approach and compare it with previous inverse kinematics (IK) approaches. When the inverse dynamics models are not known well for the robot, robustness with respect to trajectory \emph{execution} must be additionally considered. In the final section~\ref{end} we discuss several promising extensions in this regard. %VHP-based
 
 \begin{figure}[t!]
 \centering
@@ -175,7 +175,8 @@ In the rest of this paper, we elaborate on this notion of robustness, giving mor
 \section{RELATED WORK}\label{relatedWork}
 
 % this doesn't fit here so well
-We will summarize the Virtual Hitting Point (VHP) framework here only very briefly. In this approach, the trajectory of the incoming ball is estimated and filtered from a stream of ball position estimates. Usually a physical flight model is used to predict the intersection point of the ball trajectory with a comfortably chosen VHP. For safety reasons, a minimum hitting time $T_{\textrm{min}}$ is also specified in addition to the coordinates of the hitting plane. When the ball is coming very fast towards the VHP, any calculated robot trajectory of duration below the minimum time will simply not be executed. The estimation process is terminated at least $T_{\textrm{min}}$ before the expected hitting time, to give the robot enough reaction time. This prevents high accelerations and any risk of damage to the robot. For more details see \cite{Muelling13}, or \cite{Matsushima05} for a more general discussion. 
+We will summarize the Virtual Hitting Point (VHP) framework here only very briefly. In this approach, the trajectory of the incoming ball is estimated and filtered from a stream of ball position estimates. Usually a physical flight model is used to predict the intersection point of the ball trajectory with a comfortably chosen VHP. For safety reasons, a minimum hitting time $T_{\textrm{min}}$ is also specified in addition to the coordinates of the hitting plane. The estimation process has to be terminated at least $T_{\textrm{min}}$ before the expected hitting time, to give the robot enough reaction time. This prevents high accelerations and any risk of damage to the robot. For more details see \cite{Muelling13}, or \cite{Matsushima05} for a more general discussion. 
+% When the ball is coming very fast towards the VHP, any calculated robot trajectory of duration below the minimum time will simply not be executed.
 %after a bounce event has been detected with high probability. 
 
 % % % % Striking Movement Generation in Humans % % % % %
@@ -220,7 +221,7 @@ In table tennis, one needs to specify when, where and how to intercept the incom
 \noindent where $\court$ is the set of Cartesian coordinates of the table $\court$, i.e. a rectangular region with a fixed vertical distance $z_{\court}$ from origin. The net and any other environmental constraints such as walls are the environmental factors constraining the set of desired ball velocities and will for simplicity of presentation be neglected. Any algorithm that can return the ball to this fixed region $\stabilityRegion \approx \court \times \mathbb{R}^3$ in phase space can be said to be \emph{stable}.
 % it reduces approximately to
 %
-So far, most of the algorithms for robotic table tennis \cite{Matsushima05}, \cite{Muelling13} calculate the intersection point of an estimated ball trajectory with a Virtual Hitting Plane (VHP) to determine the space and time coordinates of the hitting point. They neglect to account for uncertainty in ball estimation or the underspecification of the task. Moreover the determination of a hitting time can be arbitrary, and the algorithms involving a VHP can lead to unnecessarily restrictive strokes. 
+So far, most of the algorithms for robotic table tennis \cite{Matsushima05}, \cite{Muelling13} calculate the intersection point of an estimated ball trajectory with a Virtual Hitting Plane (VHP) to determine the space and time coordinates of the hitting point. They neglect to account for uncertainty in ball estimation or the underspecification of the landing point. Moreover the determination of a hitting time can be arbitrary, and the algorithms involving a VHP can lead to unnecessarily restrictive strokes. 
 % do we really need a fixed event such as bounce to terminate the estimation process?
 %It is possible to eliminate this termination event altogether and vary the robot trajectory launch times based on ball estimates.
 
@@ -264,34 +265,58 @@ In this framework, we require three models for the trajectory generation process
 \end{align}
 %
 %
-\noindent occurs. Matrix $\bounce$ in \eqref{reboundModel} is a diagonal matrix with entries $\vec{\epsilon} = [\epsilon_{x}, \epsilon_{y}, -\epsilon_{z}]^{\mathrm{T}} \in (0,1)^{3}$. The coefficient of restitution $\epsilon_{z}$ accounts for the reflection of velocity in the vertical direction $z$ and $\epsilon_{x}, \epsilon_{y}$ are the coefficients of friction along the planar $x,y$ directions.
+\noindent occurs. Matrix $\bounce$ in \eqref{reboundModel} is a diagonal matrix with entries $\vec{\epsilon} = [\epsilon_{x}, \epsilon_{y}, -\epsilon_{z}]^{\mathrm{T}}$. The coefficient of restitution $\epsilon_{z} \in (0,1)$ accounts for the reflection of velocity in the vertical direction $z$ and $\epsilon_{x}, \epsilon_{y} \in (0,1)$ are the coefficients of friction along the planar $x,y$ directions. See Figure~\ref{models} for a table tennis schema. 
+
 % incoming ball trajectory: as Gaussians indexed with time [e.g. Kalman filter should give us this information with prediction. Parameters/model of a Kalman filter could be fit using ball data (when fitting, innovation of the KF should be minimized as to consist mostly of white noise)]
 
 % A probabilistic model describing the interaction model: outputs a probability distribution of outgoing ball states parameterized (or indexed) by t, e.g. b_t \approx N(\mu_b_out(t), \sigma_b_out(t))
 
 % build a forward/inverse interaction model probabilistically
-The last model to train from data is the \emph{ball-racket contact model} 
+The last model to train from data is the \emph{ball-racket contact model}. In previous works, the outgoing velocity of the ball as a result of contact is calculated using a \emph{mirror law}: 
 %
 \begin{align}
-\dot{\ball}_{\mathrm{out}} &= \contact(\dot{\ball}_{\mathrm{in}},\dot{\racket},\orient).
+o_{n} - v_{n} = -\epsilon_{R} (i_{n} - v_{n}),
+\label{mirrorLaw}
+\end{align}
+%
+\noindent with $v_{n}$ the speed of the racket along its normal $\normal(t)$ and $\epsilon_{R} \in (0,1)$ the coefficient of restitution of the racket. Scalars $o_{n}$ and $i_{n}$ are the outgoing and incoming ball speeds along the racket normal, respectively. This model \eqref{mirrorLaw} assumes an elastic momentum exchange and it is quite inaccurate, especially at high ball velocities. Instead we consider a more general model
+%
+\begin{align}
+\dot{\ball}_{\mathrm{out}}(\hitTime) &= \contact\big(\dot{\ball}_{\mathrm{in}}(\hitTime),\dot{\racket}(\hitTime),\orient(\hitTime)\big),
 \label{ballRacketContactModel}
 \end{align}
 %
-\noindent This model is significantly harder to train from the previous models, as it requires ball-racket interaction data and it is difficult to get reliable ball estimates around hitting time. We rely instead on Kalman smoothing using the trained flight model to estimate the ball velocities before and after hitting. In previous works, the outgoing velocity of the ball is calculated using a \emph{mirror law}: $o_{n} - v_{n} = -\epsilon_{R} (i_{n} - v_{n})$ with $v_{n}$ the speed of the racket along its normal and $\epsilon_{R} \in (0,1)$ the coefficient of restitution of the racket. Scalars $o_{n}$ and $i_{n}$ are the outgoing and incoming ball speeds along the racket normal, respectively. This model assumes an elastic momentum exchange and it is quite inaccurate, especially at high ball velocities.
+\noindent which depends on the incoming ball velocity $\dot{\ball}_{\mathrm{in}}(\hitTime)$, racket velocity $\dot{\racket}(\hitTime)$ and orientation $\orient(\hitTime)$ at hitting time $\hitTime$ 
+%
+\begin{align}
+\hitTime \! &= \inf\big(t \geq 0 | \ball(t) \in \hitEvent(t)\big) \label{hitTime} \\
+\hitEvent(t) \! &= \{\gamma | \racket(t) + \gamma \orient_{\perp}(t) + \ballRadius, \gamma < \racketRadius, \orient_{\perp}(t) \! \perp \! \normal(t)\}. \label{hitEvent}
+\end{align}
+%$\prob(\hitEvent) = \int_{0}^{T}\hitDist\textrm{d}\hitTime$. 
+%
+\noindent The contact model \eqref{ballRacketContactModel} is significantly harder to train compared to the previous models, as it requires ball-racket interaction data and it is difficult to get reliable ball estimates around hitting time. We rely instead on Kalman smoothing using the trained flight model to estimate the hitting time, the ball velocities before and after hitting. 
 % show that it is quite inaccurate with data
 % is this true? is the parallel o and i definitions correct?
 
-The accuracy of the models \eqref{flightModel} - \eqref{ballRacketContactModel} all depend on each other and for this reason, we train the parameters of these models with the smoothing Expectation-Maximization (EM) algorithm. Effects of angular velocity, or in other words spin, are not accounted for in these models.
+The accuracy of the models \eqref{flightModel}, \eqref{reboundModel}, and \eqref{ballRacketContactModel} all depend on each other and for this reason, we train the parameters of these models with the smoothing Expectation-Maximization (EM) algorithm. Effects of ball angular velocity, or in other words spin, are not accounted for in these models.
 % smoothing EM ref needed
 
-\subsection{Predicting with Probabilistic Modeling}
+\begin{figure}[t!]
+\centering
+\includegraphics[scale=0.25]{tableTennis3D.eps}			
+\caption{A schema for a three dimensional table tennis model. Ball is shown as an orange blob and the racket, in resting state, is shown in red. We predict the path of the ball inside the robot's workspace using models that we train from actual data. These models are the ballistic flight model, the rebound model and the ball-racket contact model respectively. The incoming and the outgoing distribution of the ball can also be calculated using these models.}
+\label{models}
+\end{figure}
+
+\subsection{Predicting with Probabilistic Modeling}\label{sectionPredict}
  
-During test time when running the trained models \eqref{flightModel} - \eqref{ballRacketContactModel} online, we use an Extended Kalman Filter (EKF) to perform prediction as well as filtering. Any other regression method to estimate initial ball position and velocity can also be used.
+During test time when running the trained models online, we use an Extended Kalman Filter (EKF) to perform prediction on the filtered ball state. Any other regression method to estimate initial ball position and velocity can also be used.
 % density or distribution
 Using an EKF for our nonlinear model \eqref{flightModel} generates at each time instant $t$ a probability distribution $p_t(\ball,\dot{\ball}|t)$ of incoming ball states parameterized by time, 
 %
 \begin{align}
 \ball_t &\sim \mathcal{N}(\vec{\mu}_{\textrm{in}}(t),\vec{\Sigma}_{\textrm{in}}(t)). 
+\label{ballProcess}
 \end{align}
 %
 % % % EXT. KALMAN FILTER EQUATIONS HERE % % %
@@ -299,44 +324,47 @@ Using an EKF for our nonlinear model \eqref{flightModel} generates at each time 
 \noindent Formally this is a stochastic process, and for the Kalman Filter with a noisy process model, a Brownian motion. However we set the process covariance to zero during prediction, as the sample paths of the exponential kernel used in the Kalman Filter framework are very rough, i.e. almost surely not differentiable.
 
 % Interaction probabilities (ball touching the racket)
-Prediction continues after a possible interaction with the racket trajectory. If the ball touches the racket, i.e. if the surface of the ball is located inside the radius $\racketRadius = 8$ cm of the racket plane, ball incoming velocities will be transformed according to the trained contact model \eqref{ballRacketContactModel}. Otherwise the ball with continue its previous projectile-like motion following \eqref{flightModel}. Prediction is stopped at landing time $\landTime$ when the ball hits the table plane with negative velocity in the $z$ direction: 
+%
+Prediction can be continued after a possible interaction with the racket trajectory. If the ball touches the racket according to \eqref{hitEvent}, i.e. if the surface of the ball is located inside the radius $\racketRadius = 8$ cm of the racket plane, ball incoming velocities will be transformed according to the trained contact model \eqref{ballRacketContactModel}. Otherwise the ball will continue along its previous motion without any impact. The landing time $\landTime$ when the ball hits the table plane with negative velocity in the $z$ direction: 
 %
 \begin{align}
-\landTime = \inf(t \geq 0 | b_z(t) = z_{\court} + \ballRadius \cap \dot{b}_z(t) < 0).
+\landTime = \inf(t \geq 0 | b_z(t) = z_{\court} + \ballRadius \cap \dot{b}_z(t) < 0),
 \label{landTime}
 \end{align}
 %
+can be used to determine the landing location of the ball. 
+
 \subsection{Optimal Control for Trajectory Generation}
 
 From a set point of view, for every point on the predicted ball trajectory, there is a range of admissible outgoing ball velocities that the racket can impart. This set is constricted by the stability region $\stabilityRegion$. 
 %the geometry of the table and the demands of the game: the ball has to avoid the net and the walls and should land on the opponents court.
-Putting a probability measure $\mu(\stabilityRegion)$ on this set is straightforward. For instance, the desired landing point distribution could be any distribution with compact support over the table. A uniform distribution $b_x, b_y \sim \mathcal{U}(\court) = \mathcal{U}(x_{a},x_{b})\mathcal{U}(y_{a},y_{b})$ or a truncated normal distribution are options that could be chosen as strategy demands. The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponent's court.
+Putting a probability measure $\mu(\stabilityRegion)$ on this set is straightforward. For instance, the desired landing point distribution could be any distribution with compact support over the opponent's court. A uniform distribution $b_x, b_y \sim \mathcal{U}(\court) = \mathcal{U}(x_{a},x_{b})\mathcal{U}(y_{a},y_{b})$ or a truncated normal distribution are possible distributions that can be chosen as the player strategy demands. The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponent's court.
 %
 
 Our optimization criterion of choice is to find the racket trajectory that minimizes the Kullback-Leibler (KL) divergence $\KL(p\|q) = \int_{\court}p(x,y)\log(\frac{p(x,y)}{q(x,y)})\textrm{d}x\textrm{d}y$ of 
 %
 \begin{align}
-p(b_x,b_y|\landEvent) = \int_{\landTime = 0}^{\infty} p_{\landTime}(b_x,b_y|\landEvent,\landTime)\landDist \textrm{d}\landTime
+p(b_x,b_y|\landEvent) = \int_{\landTime = 0}^{\infty} p_{\landTime}(b_x,b_y|\landEvent,\landTime)\landDist \textrm{d}\landTime,
 \label{marginalProcess}
 \end{align}
 %
-from the uniform distribution $q(b_x,b_y|\landEvent) = \mathcal{U}(\court)$. The distribution $p(b_x,b_y|\landEvent)$ is the marginal distribution over time of the ball process $p_t(\cdot)$ conditioned on the landing event $\landEvent$. Here $\landTime$ is the \emph{hitting time} as in \eqref{landTime}, a random variable with distribution $p(\landTime)$ corresponding to the event $\landEvent$ in \eqref{landingEvent}.
+\noindent from the uniform distribution $q(b_x,b_y|\landEvent) = \mathcal{U}(\court)$. Here $\landTime$ is the \emph{hitting time} as in \eqref{landTime}, a random variable with distribution $p(\landTime)$ corresponding to the event $\landEvent$ in \eqref{landingEvent}. The distribution $p(b_x,b_y|\landEvent)$ is the marginal distribution over time of the ball process $p_t(\cdot)$ in \eqref{ballProcess} conditioned on the landing event.
 
 % what about maximizing the probability of landing, regardless of any specified distribution?
 % is this true?
-Any specified distribution $q(\cdot)$ of compact support $\court$ will indirectly maximize the probability of landing on the table, $\prob(\landEvent) = \int_{0}^{\infty}\landDist\textrm{d}\landTime$. In addition, for maximal unpredictability, the robot player can choose the uniform distribution over the table as a desired distribution. In this case the optimization reduces to maximizing the entropy of the landing distribution on the table. 
+Any specified distribution $q(\cdot)$ of compact support $\court$ will indirectly maximize the probability of landing on the table, $\prob(\landEvent) = \int_{0}^{\infty}\landDist\textrm{d}\landTime$. In addition, choosing the uniform distribution over the table as a desired distribution will optimize the entropy of the landing distribution on the table, leading to increased unpredictability. 
 
-Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF.
+Other more agnostic optimization criteria could also be formulated to minimize the racket trajectory sensitivity to perturbations in the ball trajectory. However these would not take advantage of the uncertainty quantification of the ball trajectory, in our case supplied by EKF in \eqref{ballProcess}.
 
-For safety and efficiency, we would prefer trajectories with minimal acceleration or jerk, the derivative of acceleration. Combining the corresponding cost functional with the KL-divergence we get the following \emph{free-time} optimal control problem
+When generating striking trajectories for the robot, trajectories with minimal acceleration or jerk, the derivative of acceleration are preferred for safety and efficiency reasons. Combining the corresponding cost functional with the KL-divergence we get the following \emph{free-time} optimal control problem
 %
 \begin{align}
 \min_{\sysInput,T} & \int\limits_{0}^{T}\sysInput(t)^{\mathrm{T}}\vec{R}\sysInput(t) + \KL(p(b_x,b_y|\landEvent)|\mathcal{U}(\court)), \\
-& \textrm{s.t. } \ddot{\joint}(t) = \sysInput(t),
+& \textrm{s.t. } \joint^{(n)}(t) = \sysInput(t),
 \label{costFnc1}
 \end{align}
 %
-\noindent where the final time $T$ of the racket trajectory 
+\noindent where $n \in {2,3}$ and the final time $T$ of the racket trajectory 
 %
 \begin{align}
 \big(\racket(t),\orient(t)\big) &= \kin(\joint(t)),
@@ -350,7 +378,7 @@ p_{\landTime}(b_x,b_y|\landEvent,\landTime) &= \frac{ \int_{\dot{b}_z=-\infty}^{
 \label{marginalDistr2}
 \end{align}
 %
-\noindent Finally we can relate the integrand $p_{\landTime}(b_x,b_y,z_{\court},\dot{\ball}|\landTime)$ to the racket trajectory by marginalizing over the outgoing ball state $\big(\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}})$
+\noindent Finally we can relate the integrand $p_{\landTime}(b_x,b_y,z_{\court},\dot{\ball}|\landTime)$ to the racket trajectory $(\racket(t),\orient(t))$ by marginalizing over the outgoing ball state $(\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}})$
 %
 %& p_{\landTime}(b_x,b_y,z_{\court},\dot{\ball}|\landTime) = 
 \begin{align}
@@ -358,23 +386,17 @@ p_{\landTime}(b_x,b_y|\landEvent,\landTime) &= \frac{ \int_{\dot{b}_z=-\infty}^{
 \label{fullDistrMarginal1}
 \end{align}
 %
-\noindent where $p(\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}})$ can be calculated using the trained models \eqref{flightModel} - \eqref{ballRacketContactModel}
+\noindent where $p(\ball_{\textrm{out}},\dot{\ball}_{\textrm{out}})$ can be calculated using the trained flight, rebound and contact models
 %
 \begin{align}
-&\int_{0}^{T}\!\int_{\ball_{\textrm{in}},\dot{\ball}_{\textrm{in}}}\!p(\dot{\ball}_{\textrm{out}}|\dot{\ball}_{\textrm{in}},\dot{\racket}(\hitTime),\orient(\hitTime),\hitTime) p(\ball_{\textrm{out}}|\ball_{\textrm{in}},\racket(\hitTime),\orient(\hitTime),\hitTime)\textrm{d}\hitTime. %\hitDist
+&\int_{0}^{T}\!\int_{\ball_{\textrm{in}},\dot{\ball}_{\textrm{in}}}\!p(\dot{\ball}_{\textrm{out}}|\dot{\ball}_{\textrm{in}},\dot{\racket}(\hitTime),\orient(\hitTime),\hitTime) p(\ball_{\textrm{out}}|\ball_{\textrm{in}},\racket(\hitTime),\orient(\hitTime),\hitTime)\\
+&\textrm{d}\hitTime\textrm{d}\ball_{\textrm{in}}\textrm{d}\dot{\ball}_{\textrm{in}}. %\hitDist
 \label{fullDistrMarginal2}
 \end{align}
 % % % WORK ON THIS!!!
 %
-\noindent Here $\hitTime$ is the hitting time random variable corresponding to the time of ball-racket contact, i.e. 
 %
-\begin{align}
-\hitTime = \inf\big(t \geq 0 | \ball(t) = \racket(t) + \gamma \orient_{\perp}(t), \gamma < \racketRadius, \orient_{\perp}(t) \perp \normal(t)).
-\label{hitTime}
-\end{align}
-%$\prob(\hitEvent) = \int_{0}^{T}\hitDist\textrm{d}\hitTime$. 
-%
-By formulating \eqref{costFnc1} in joint space, we find the joint trajectory $\joint(t)$ that provides a suitable trade-off between minimum joint accelerations $\ddot{\joint}(t)$ and the KL-divergence. 
+\noindent Here $\hitTime$ is the hitting time in \eqref{hitTime} as a random variable corresponding to the time of ball-racket contact. By formulating \eqref{costFnc1} in joint space, we find the joint trajectory $\joint(t)$ that provides a suitable trade-off between minimum joint accelerations $\ddot{\joint}(t)$ or jerks $\joint^{(3)}(t)$ and the KL-divergence. 
 
 % Output
 % 
@@ -387,7 +409,7 @@ By formulating \eqref{costFnc1} in joint space, we find the joint trajectory $\j
 %
 
 % Refer to article for the simplest case when diving two Gaussians with nonzero mean.
-The equations \eqref{costFnc1}, \eqref{fullDistrMarginal1} and \eqref{fullDistrMarginal2} are functions of the racket trajectory. When optimizing for \eqref{costFnc1} we do not know of any way to compute the gradient of the KL-divergence with respect to the racket trajectory in closed form. However, the outgoing ball trajectory is an integral over the previous incoming ball distribution using the ball-racket contact model. Any sampling based approach (e.g. rejection sampling) may be used to simulate then the outgoing ball trajectory and approximate the resulting landing distribution. 
+The equations \eqref{costFnc1}, \eqref{fullDistrMarginal1} and \eqref{fullDistrMarginal2} are functions of the racket trajectory. When optimizing for \eqref{costFnc1} we do not know of any way to compute the gradient of the KL-divergence with respect to the racket trajectory in closed form. However, the outgoing ball trajectory is an integral over the previous incoming ball distribution using the ball-racket contact model. Any sampling based approach (e.g. rejection sampling) may be used to simulate then the outgoing ball trajectory and approximate the resulting landing distribution as described in \ref{sectionPredict}.
 
 
 \section{ALGORITHM}\label{alg}

@@ -88,7 +88,7 @@ figure;
 %uisetcolor is useful here
 orange = [0.9100 0.4100 0.1700];
 gray = [0.5020    0.5020    0.5020];
-h1 = scatter3(ball(1,1),ball(2,1),ball(3,1),20,orange,'filled');
+h1 = scatter3(ball(1,1),ball(2,1),ball(3,1),60,orange,'filled');
 hold on;
 
 h10 = plot3(j(:,1),j(:,2),j(:,3),'k','LineWidth',10);

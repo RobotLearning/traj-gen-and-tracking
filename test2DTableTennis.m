@@ -389,12 +389,12 @@ while numTrials < 50
             %%{
             % Compute VHP Trajectory here            
             [q,qd,~] = rrr.generateTTTwithVHP(VHP,ballPred,ballTime,desBall,time2reach,time2return,q0);            
-            M = 100;
-            ballInitVar = PSave;
-            bSamp = repmat(ballPred(:,1),1,M) + 0; %chol(ballInitVar)*randn(4,M);
-            tic;
-            probLand = calcProbOfLand(rrr,bSamp,q,qd)
-            toc
+%             M = 100;
+%             ballInitVar = PSave;
+%             bSamp = repmat(ballPred(:,1),1,M) + 0; %chol(ballInitVar)*randn(4,M);
+%             tic;
+%             probLand = calcProbOfLand(rrr,bSamp,q,qd)
+%             toc
             %computeMPfor2DTT;            
             %}
             
