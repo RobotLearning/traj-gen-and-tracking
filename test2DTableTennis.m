@@ -6,7 +6,7 @@ clc; clear; close all;
 % load table parameters
 loadTennisTableValues;
 ball(1:2,1) = ball_cannon(2:3);
-ball(3:4,1) = 1.1*[4.000 3.2] + 0.00 * randn(1,2);
+ball(3:4,1) = 1.1*[4.000 3.2] + 0.10 * randn(1,2);
 ballPred(1:4,1) = ball(1:4,1); % to initialize drawing of predicted balls
 
 % define virtual hitting plane (VHP)
@@ -268,7 +268,7 @@ while numTrials < 50
         net = false;        
         time2PassTable = 1.0;
         ball(1:2,1) = ball_cannon(2:3);
-        ball(3:4,1) = 1.1*[4.000; 3.2] + 0.0 * randn(2,1);
+        ball(3:4,1) = 1.1*[4.000; 3.2] + 0.1 * randn(2,1);
         ballNoisyVel = 1.1*[4.000; 3.2];
         filter.initState([ball(1:2,1);ballNoisyVel],eps);
     end

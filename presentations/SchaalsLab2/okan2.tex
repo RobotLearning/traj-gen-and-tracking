@@ -18,10 +18,8 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{epstopdf}
-\usepackage{pgfplots}
 \usepackage{color}
 \usepackage{subfig}
-\usepackage{tikzscale}
 \usepackage{hyperref}
 \usepackage{multimedia}
 
@@ -48,6 +46,7 @@ Robot Learning Lab \\
 \newcommand{\todo}{\textcolor{red}{TODO}} % TODO!
 \newcommand{\kin}{\mathcal{K}} % used to denote forward kinematics
 \newcommand{\invKin}{\mathcal{K}^{-1}} % used to denote inverse kinematics
+\newcommand{\jacobian}{\vec{J}(\joint)} % jacobian
 
 \newcommand{\joint}{\vec{q}} % used to denote robot state in joint space
 \newcommand{\state}{\vec{y}} % denotes the generalized coordinates - joint angles and angular velocities
@@ -137,7 +136,7 @@ Robot Learning Lab \\
 \begin{frame}{Optimizing Robot Striking Movement Primitives with ILC}
 \begin{itemize}
 \item Tracking a rhythmic DMP with ILC.
-\item Future work will focus on generalizing ILC.
+\item Future work will focus on generalizing ILC to different trajectories.
 \end{itemize}
 \begin{figure}[ht]
 \centering
@@ -161,7 +160,8 @@ Robot Learning Lab \\
 \end{itemize}
 \begin{figure}[t!]
 \center
-\includegraphics[scale=0.20]{tableTennis2D.eps}			
+%\includegraphics[scale=0.20]{tableTennis2D.eps}	
+\movie[externalviewer]{\includegraphics[scale=0.2]{tableTennis2D.eps}}{out.ogv}		
 \caption{2D Table Tennis with VHP}
 \label{robot1}
 \end{figure}
@@ -174,7 +174,7 @@ Robot Learning Lab \\
 \end{itemize}
 \begin{figure}[t!]
 \center
-\includegraphics[scale=0.20]{tableTennis3D.eps}			
+\includegraphics[scale=0.30]{tableTennis3D.eps}			
 \caption{3D Table Tennis}
 \label{robot2}
 \end{figure}
@@ -209,7 +209,7 @@ Robot Learning Lab \\
 \item \emph{Free-time} optimal control problem
 %
 \begin{align}
-\min_{\sysInput,T} & \int\limits_{0}^{T}\sysInput(t)^{\mathrm{T}}\vec{R}\sysInput(t) + \KL(p(b_x,b_y|\landEvent)|\mathcal{U}(\court)), \\
+\min_{\sysInput,T} & \int\limits_{0}^{T}\sysInput(t)^{\mathrm{T}}\vec{R}\sysInput(t) + \KL(p(b_x,b_y|\landEvent)||\mathcal{U}(\court)), \\
 & \textrm{s.t. } \ddot{\joint}(t) = \sysInput(t),
 \label{costFnc1}
 \end{align}
@@ -219,17 +219,38 @@ Robot Learning Lab \\
 \begin{align}
 \big(\racket(t),\orient(t)\big) &= \kin(\joint(t)),
 \end{align}
-%
-\item Difficult to solve! Closed-form gradients? Approximations? 
 \end{itemize}
+\end{frame}
+%
+%
+\begin{frame}{KL-divergence}
+\begin{itemize}
+%
+\item $\KL(p(b_x,b_y|\landEvent)|\mathcal{U}(\court))$ maximizes the probability of landing on the opponents court while ensuring unpredictability.
+\item Difficult to compute, and optimize!
+\end{itemize}
+\begin{figure}[t!]
+\center
+\includegraphics[scale=0.3]{tableTennis3DwithUncertainty.eps}			
+\caption{3D Table Tennis}
+\end{figure}
 \end{frame}
 %
 \section{Algorithm}
 %
 \begin{frame}{Algorithm}
 \begin{itemize}
-\item Initialize by solving maximum principle with transversality conditions.
-\item Optimize further by simulating, e.g. with rejection sampling based approach.
+\item Initialize by solving maximum principle with transversality conditions, e.g.
+%
+\begin{align}
+\min_{\sysInput,T} & \int\limits_{0}^{T}\sysInput(t)^{\mathrm{T}}\vec{R}\sysInput(t) \\
+\textrm{s.t. } & \ddot{\joint}(t) = \sysInput(t), \\
+& \kin(\joint(t)) = \ball(t), \\
+& \jacobian \dot{\joint}(t) = -\dot{\ball}(t).
+\label{costFnc2}
+\end{align}
+%
+\item Optimize further by simulating: sampling from an initial distribution $\ball_t \sim \mathcal{N}(\mu(t),\Sigma(t))$
 \end{itemize}
 \begin{align}
 p(b_x,b_y|\landEvent) = \int_{\landTime = 0}^{\infty} p_{\landTime}(b_x,b_y|\landEvent,\landTime)\landDist \textrm{d}\landTime
@@ -240,6 +261,7 @@ p(b_x,b_y|\landEvent) = \int_{\landTime = 0}^{\infty} p_{\landTime}(b_x,b_y|\lan
 %
 \begin{frame}{Future Work}
 \begin{itemize}
+\item (Approximate) closed form gradients ?
 \item Solve the optimization problem fast in real time.
 \item Compensate for tracking errors with ILC.
 \end{itemize}
