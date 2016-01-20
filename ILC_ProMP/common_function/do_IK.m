@@ -3,7 +3,7 @@ function [qi,T] = do_IK(bioRob, t, x, z, endEffOrient)
 
     % do inverse kinematics to get the joint angles (the robot is
     % controlled in joint space)
-    M  = [1 1 1   0 1 0];
+    M  = [1 1 1 0 1 0];
     q0 = [-0.0000  -63.3438  127.2693  -63.9255]; % initial guess
     
     

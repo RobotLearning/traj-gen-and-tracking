@@ -83,6 +83,7 @@ classdef BioRob < Robot
             obj.jac = [];
         end
         
+        %% Dynamics functions here
         % provides nominal model
         function [x_dot,varargout] = nominal(obj,~,x,u,flg)
             % differential equation of the forward dynamics
@@ -110,25 +111,13 @@ classdef BioRob < Robot
             x_dot = bioRobDynamics(x,u,par,false) + d(t);
             
             
-        end
+        end       
         
-        % run kinematics using an external function
-        function [x1,x2,x3,Ahmats] = kinematics(obj,q)
-            
-            [x1,x2,x3,Ahmats] = BioRobKinematics(q,obj.PAR);
-        end
-        
-        % call inverse kinematics from outside
-        function q = invKinematics(obj,x,Ahmat)
-            
-            % Ahmat is the last hom. matrix for the last joint
-            q = BioRobInvKinematics(x,phi,obj.PAR);
-        end
-                   
         % dynamics to get u
         function u = invDynamics(obj,q,qd,qdd)
-            % inverse dynamics model taken from SL
+            % inverse dynamics model taken from P.Corke toolbox
             u = bioRobInvDynamics(q,qd,qdd,obj.PAR);
+            u(1,:) = 0.0; % force torques for the 1st link to be zero 
         end
         
         % dynamics to qet Qd = [qd,qdd]
@@ -142,6 +131,64 @@ classdef BioRob < Robot
             end
         end
         
+        %% Kinematics functions here
+        % run kinematics using an external function
+        function [x1,x2,x3,Ahmats] = kinematics(obj,q)
+            
+            [x1,x2,x3,Ahmats] = bioRobKinematics(q,obj.PAR);
+        end
+        
+        % special inverse kinematics staying close to q_prev
+        function q = invKinematics(obj,x,phi)
+
+            % masking the x-z angles
+            M  = [1 1 1 0 1 0];
+            y = x(1,:);
+            z = x(2,:);
+            q0 = [-0.0000  -63.3438  127.2693  -63.9255]; % initial guess
+    
+            fprintf('Computing IK...\n'); tic;
+            for k = 1:1:size(x,2) 
+        
+                T(:,:,k) = transl(y(k),0,z(k))*troty(phi(k))*trotz(-angle(k).*pi/180 );
+                %T(:,:,k) = transl(x(k), 0, z(k)) * trotz(-angle(k).*pi/180) ;
+        
+                %q = bioRobInvKinematics(x,phi,obj.PAR);
+                q(:,k) = bioRobInvKinematics(T(:,:,k), q0, M, 'pinv');
+                q0 = q(:,k); % use previous joint values as initial guess for ikine
+            end
+            fprintf('finished IK in %g seconds.\n', toc);
+    
+            q = wrapToPi(q);
+            q = unwrap(q);
+        end            
+        
+        function trj = genReachingTraj(obj,tf,y,z,phi)
+            
+            f = 1/tf;
+            dt = obj.SIM.h;
+            t = 0:dt:tf;
+
+            Ay = y(2) - y(1);
+            Az = z(2) - z(1);
+            Aa = phi(2) - phi(1);
+
+            Y = y(1) + 0.5*Ay*(1 - cos(2*pi*f*t));
+            Z = z(1) + 0.5*Az*(1 - cos(2*pi*f*t));
+            X = [Y;Z];
+            Phi = phi(1) + 0.5*Aa*(1 - cos(2*pi*f*t)); % orientation of the end-effector
+            
+            q = obj.invKinematics(X,Phi);
+            qd = diff(q')' / dt; 
+            qd(:,end+1) = qd(:,end) + qd(:,end) - qd(:,end-1);
+            Q = [q;qd];
+            obj.flag_ref_jsp = true;
+            trj = obj.generateInputs(t,Q);
+            
+        end
+                   
+
+        %% Plots and animation
         % to draw the robots joints and endeffector 
         % for one posture only
         function [joints,endeff,racket] = drawPosture(obj,q)

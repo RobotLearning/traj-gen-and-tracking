@@ -20,7 +20,7 @@ SIM.dimy = 2*N_DOFS;
 % dimension of the control input
 SIM.dimu = N_DOFS;
 % time step h 
-SIM.h = 0.002; % 500 Hz recorded data
+SIM.h = 0.02; % 50 Hz recorded data
 % measurement noise covariance (eps_m * eye)
 SIM.eps_m = 0e-10;
 % integration method
@@ -59,6 +59,28 @@ rob = BioRob(PAR,CON,COST,SIM);
 
 %% Create or load trajectories
 
+dt = SIM.h;
+numRefs = 5;
+tf = 3.0;
+l = 0.25;
+X0 = [0.2;-0.1];
+A = [0.3;0.1];
+B = A + [0;l];
+C = A + [l;l];
+D = A + [l;0];
+squareVertices = [A,B,C,D];
+y = [X0(1)*ones(1,4);
+     squareVertices(1,:)];
+z = [X0(2)*ones(1,4);
+     squareVertices(2,:)];
+phi = [pi/3;0];
+
+% TODO: repair inverse kinematics, dynamics, implement forward kinematics
+
+% for i = 1:numRefs
+%     trj(i) = rob.genReachingTraj(tf,y(:,i),z(:,i),phi);
+% end
+
 % ===========================
 % Create trajectories without plotting them.
 % Find the IK and ID for different reaching positions.
@@ -82,12 +104,12 @@ else
 end
 
 h = rob.plot_outputs(refc);
-nRefs = numel(refc);
+numRefs = numel(refc);
 
 %% Learn torques with ILC for each trajectory
 
 % run this for loop for each of the reaching positions
-for k = 1:nRefs 
+for k = 1:numRefs 
     
     prm.plot.refAnimation=1;
     

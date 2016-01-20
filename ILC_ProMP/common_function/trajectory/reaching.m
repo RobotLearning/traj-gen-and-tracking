@@ -8,13 +8,11 @@ function [t, x, z, a ] = reaching(xz_i, xz_f, a_i, a_f, dt, tf)
     % first generate a trajectory that is little shorter than expected
     tf_safe = tf - t_discount ;
     f  = 1/tf_safe;
-    t  = 0:dt:tf_safe;
-        
+    t  = 0:dt:tf_safe;        
         
     Ax = xz_f(1)-xz_i(1);
     Az = xz_f(2)-xz_i(2);
-    Aa = a_f - a_i;
-    
+    Aa = a_f - a_i;    
     
     x = xz_i(1) + 0.5*Ax*(1 + cos(2*pi*f*t+pi));
     z = xz_i(2) + 0.5*Az*(1 + cos(2*pi*f*t+pi));

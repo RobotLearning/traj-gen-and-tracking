@@ -1,6 +1,7 @@
 %% Ball class for simulating all sorts of ball interactions
 
 % 2d as well as 3d models
+% TODO
 
 classdef Ball < handle
    

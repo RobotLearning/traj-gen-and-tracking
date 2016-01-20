@@ -83,6 +83,7 @@ classdef BarrettWAM < Robot
             obj.jac = [];
         end
         
+        %% Dynamics functions here
         % provides nominal model
         function [x_dot,varargout] = nominal(obj,~,x,u,flg)
             % differential equation of the forward dynamics
@@ -108,11 +109,29 @@ classdef BarrettWAM < Robot
             par.link0 = link0;
             par.links = links;
             d = @(t) 0.0; %0.2 + 0.5 * sin(10*t);
-            x_dot = barrettWamDynamicsArt(x,u,par,false) + d(t);
-            
+            x_dot = barrettWamDynamicsArt(x,u,par,false) + d(t);            
             
         end
         
+        % dynamics to get u
+        function u = invDynamics(obj,q,qd,qdd)
+            % inverse dynamics model taken from SL
+            u = barrettWamInvDynamicsNE(q,qd,qdd,obj.PAR);
+            %u = barrettWamInvDynamicsArt(q,qd,qdd,obj.PAR);
+        end
+        
+        % dynamics to qet Qd = [qd,qdd]
+        function [Qd, varargout] = dynamics(obj,Q,u,flag)
+            if flag
+                [Qd, dfdx, dfdu] = barrettWamDynamicsArt(Q,u,obj.PAR,flag);
+                varargout{1} = dfdx;
+                varargout{2} = dfdu;
+            else
+                Qd = barrettWamDynamicsArt(Q,u,obj.PAR,flag);
+            end
+        end
+        
+        %% Kinematics related functions here
         % Calculate the racket orientation based on quaternion
         function racketOrient = calcRacketOrientation(obj,cartOrient)
             
@@ -163,25 +182,8 @@ classdef BarrettWAM < Robot
             
             %TODO:
         end
-                   
-        % dynamics to get u
-        function u = invDynamics(obj,q,qd,qdd)
-            % inverse dynamics model taken from SL
-            u = barrettWamInvDynamicsNE(q,qd,qdd,obj.PAR);
-            %u = barrettWamInvDynamicsArt(q,qd,qdd,obj.PAR);
-        end
         
-        % dynamics to qet Qd = [qd,qdd]
-        function [Qd, varargout] = dynamics(obj,Q,u,flag)
-            if flag
-                [Qd, dfdx, dfdu] = barrettWamDynamicsArt(Q,u,obj.PAR,flag);
-                varargout{1} = dfdx;
-                varargout{2} = dfdu;
-            else
-                Qd = barrettWamDynamicsArt(Q,u,obj.PAR,flag);
-            end
-        end
-        
+        %% Drawing functions here
         % to draw the robots joints and endeffector 
         % for one posture only
         function [joints,endeff,racket] = drawPosture(obj,q)

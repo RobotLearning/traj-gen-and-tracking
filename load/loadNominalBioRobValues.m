@@ -11,9 +11,9 @@
 %
 
 deg = pi/180;
-linkLength  =   [0         .307    .310   .09;];
-gearRatio   = 1*[1000      100     100    100];
-linkMass    =   [1.5       1.35   .53    .35 ]; %original biorob
+linkLength  =   [0 .307 .310 .09;];
+gearRatio   = 1*[1000 100 100 100];
+linkMass    =   [1.5 1.35 .53 .35]; %original biorob
 linkInertia =  1/12*linkMass.*(linkLength).^2; % rod model
 
 
@@ -54,10 +54,10 @@ links(4).friction.coulomb = [11.2e-3, -16.9e-3];
 
 % some useful poses
 %
-some_postures.qany   = [0     -100    -10  +45]*deg;
-some_postures.qz     = [0      0      0   0]*deg; % zero angles, L shaped pose
-some_postures.qtop   = [0      pi/2   0   0]; % ready pose, arm up
-some_postures.qdown  = [0     -pi/2   0   0   0 ];
+some_postures.qany   = [0 -100 -10 +45] * deg;
+some_postures.qz     = [0 0 0 0] * deg; % zero angles, L shaped pose
+some_postures.qtop   = [0 pi/2 0 0]; % ready pose, arm up
+some_postures.qdown  = [0 -pi/2 0 0 0];
 
 %% Organize values
 
