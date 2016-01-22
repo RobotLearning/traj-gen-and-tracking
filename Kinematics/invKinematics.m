@@ -1,13 +1,14 @@
-%% Inverse Kinematics Function for the BioRob
+%% General Inverse Kinematics Function to be used for BarrettWAM
 
-% TODO: replace the jacobian and implement forward kinematics
-
+% Ahmats are the homogenous matrices of the last joint 
+% 
 % Taken and adapted from The Robotics Toolbox for Matlab (RTB) by
 % Guilherme Maeda, 2015.
 % Copyright (C) 1993-2011, by Peter I. Corke
 % http://www.petercorke.com
 
-function [qt, histout] = bioRobInvKinematics(tr, varargin)
+function qTotal = invKinematics(Ahmats, varargin)
+
     %  set default parameters for solution
     opt.ilimit = 1000;
     opt.tol = 1e-6;
@@ -17,20 +18,9 @@ function [qt, histout] = bioRobInvKinematics(tr, varargin)
     opt.varstep = true;
 
     [opt,args] = tb_optparse(opt, varargin);
-
-    numDofs = 4; % num of dofs
-
-    % robot.ikine(tr, q)
-    if ~isempty(args)
-        q = args{1};
-        if isempty(q)
-            q = zeros(1, numDofs);
-        else
-            q = q(:)';
-        end
-    else
-        q = zeros(1, numDofs);
-    end
+    q0 = args{1};
+    q = q0;
+    numDofs = size(q0,1); % num of dofs
 
     % robot.ikine(tr, q, m)
     m = args{2};
@@ -45,29 +35,30 @@ function [qt, histout] = bioRobInvKinematics(tr, varargin)
     % make this a logical array so we can index with it
     m = logical(m);
 
-    npoints = size(tr,3);    % number of points
-    qt = zeros(npoints, numDofs);  % preallocate space for results
-    tcount = 0;              % total iteration count
+    numPoints = size(Ahmats,3);    % number of points
+    qTotal = zeros(numPoints, numDofs);  % preallocate space for results
+    tcount = 0; % total iteration count
 
-    if ~ishomog(tr)
+    if ~ishomog(Ahmats)
         error('RTB:ikine:badarg', 'T is not a homog xform');
     end
 
-    J0 = jacob0(robot, q);
-    
-    % J0 = J0(m, m); %<================= WHY DO I HAVE TO DO THIS????
+    % compute jacobian of q0 to check for initial conditioning
+    [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q0,obj.PAR);
+    J0 = jacobian(xLink,xOrigin,xAxis);
 
     if cond(J0) > 100
-        warning('RTB:ikine:singular', 'Initial joint angles results in near-singular configuration, this may slow convergence');
+        warning('RTB:ikine:singular', ...
+        'Initial joint angles results in near-singular configuration, this may slow convergence');
     end
 
-    history = [];
-    failed = false;
-    for i = 1:npoints
-        T = tr(:,:,i);
+    for i = 1:numPoints
+        
+        T = Ahmats(:,:,i);
 
-        nm = Inf;
-        % initialize state for the ikine loop
+        normErr = Inf;
+        % initialize state for the inverse kinematics loop
+        % previous error
         eprev = Inf;
         save.e = [Inf Inf Inf Inf Inf Inf];
         save.q = [];
@@ -78,14 +69,15 @@ function [qt, histout] = bioRobInvKinematics(tr, varargin)
             count = count + 1;
             if count > opt.ilimit
                 warning('ikine: iteration limit %d exceeded (row %d), final err %f', ...
-                    opt.ilimit, i, nm);
-                failed = true;
+                    opt.ilimit, i, normErr);
                 q = NaN*ones(1,numDofs);
                 break
             end
 
             % compute the error
-            e = tr2delta(robot.fkine(q'), T);
+            [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q,obj.PAR);
+            x = xLink(6,:)';
+            e = tr2delta(x, T);
 
             % optionally adjust the step size
             if opt.varstep
@@ -113,12 +105,13 @@ function [qt, histout] = bioRobInvKinematics(tr, varargin)
             end
 
             % compute the Jacobian
-            J = jacob0(robot, q);
+            J = jacobian(xLink,xOrigin,xAxis);
+            %J = jacob0(obj, q);
 
             % compute change in joint angles to reduce the error, 
             % based on the square sub-Jacobian
             if opt.pinv
-                dq = opt.alpha * pinv( J(m,:) ) * e(m);
+                dq = opt.alpha * pinv(J(m,:)) * e(m);
             else
                 dq = J(m,:)' * e(m);
                 dq = opt.alpha * dq;
@@ -126,33 +119,34 @@ function [qt, histout] = bioRobInvKinematics(tr, varargin)
 
             % diagnostic stuff
             if opt.verbose > 1
-                fprintf('%d:%d: |e| = %f\n', i, count, nm);
+                fprintf('%d:%d: |e| = %f\n', i, count, normErr);
                 fprintf('       e  = '); disp(e');
                 fprintf('       dq = '); disp(dq');
             end
 
             % update the estimated solution
             q = q + dq';
-            nm = norm(e(m));
+            normErr = norm(e(m));
 
-            if norm(e) > 1.5*norm(eprev)
+            if norm(e) > 1.5 * norm(eprev)
                 warning('RTB:ikine:diverged', 'solution diverging, try reducing alpha');
             end
             eprev = e;
 
-            if nm <= opt.tol
+            if normErr <= opt.tol
                 break
             end
 
         end  % end ikine solution for tr(:,:,i)
-        qt(i,:) = q';
+        
+        qTotal(:,i) = q';
         tcount = tcount + count;
         if opt.verbose
             fprintf('%d iterations\n', count);
         end
     end
     
-    if opt.verbose && npoints > 1
+    if opt.verbose && numPoints > 1
         fprintf('TOTAL %d iterations\n', tcount);
     end
     

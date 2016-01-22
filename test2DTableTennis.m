@@ -1,6 +1,5 @@
 %% Test 2D table tennis with RRR arm
 % There won't be any X-coordinates in the 2d version
-% First considering hitting the ball only
 clc; clear; close all;
 
 % load table parameters
@@ -8,17 +7,6 @@ loadTennisTableValues;
 ball(1:2,1) = ball_cannon(2:3);
 ball(3:4,1) = 1.1*[4.000 3.2] + 0.10 * randn(1,2);
 ballPred(1:4,1) = ball(1:4,1); % to initialize drawing of predicted balls
-
-% define virtual hitting plane (VHP)
-VHP = -0.5;
-
-% land the ball on the centre of opponents court
-desBall(1) = dist_to_table - 3*table_y/2;
-desBall(2) = table_z + ball_radius;
-time2reach = 0.5; % time to reach desired point on opponents court
-time2return = 0.5; % time to return to initial configuration
-
-fprintf('Desired landing point: %f\n',desBall(1));
 
 %% Initialize the RRR robot
 % Simulation Values 
@@ -388,7 +376,7 @@ while numTrials < 50
             
             %%{
             % Compute VHP Trajectory here            
-            [q,qd,~] = rrr.generateTTTwithVHP(VHP,ballPred,ballTime,desBall,time2reach,time2return,q0);            
+            [q,qd,~] = rrr.generateTTTwithVHP(ballPred,ballTime,q0);            
 %             M = 100;
 %             ballInitVar = PSave;
 %             bSamp = repmat(ballPred(:,1),1,M) + 0; %chol(ballInitVar)*randn(4,M);

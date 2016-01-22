@@ -64,3 +64,12 @@ PD(6,6) = -10;
 PD(6,N_DOFS+6) = -0.3;
 PD(7,7) = -2.5;
 PD(7,N_DOFS+7) = -0.075;
+
+%% Initialize arm posture
+
+% initialize the arm with zero velocity on the right hand side
+q0 = [1.8; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
+qd0 = zeros(N_DOFS,1);
+Q0 = [q0; qd0];
+[x0,xd0] = wam.kinematics(Q0);
+X0 = [x0;xd0];

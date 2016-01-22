@@ -154,7 +154,7 @@ classdef BioRob < Robot
                 %T(:,:,k) = transl(x(k), 0, z(k)) * trotz(-angle(k).*pi/180) ;
         
                 %q = bioRobInvKinematics(x,phi,obj.PAR);
-                q(:,k) = bioRobInvKinematics(T(:,:,k), q0, M, 'pinv');
+                q(:,k) = invKinematics(T(:,:,k), q0, M, 'pinv');
                 q0 = q(:,k); % use previous joint values as initial guess for ikine
             end
             fprintf('finished IK in %g seconds.\n', toc);

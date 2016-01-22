@@ -1,18 +1,18 @@
-%% Testing minimum principle in table tennis
+%% Test 3D table tennis with Barrett WAM
 
 clc; clear; close all
 
-% 1. Estimate initial pos and vel with kalman smoother up to net/bounce
-% 2. Predict the ball trajectory after bounce
-% 3. Fix the center of the table as the goal position
+% 1. Estimate pos and vel of ball with Kalman filter up to net/bounce
+% 2. Predict the ball trajectory after net/bounce
+% 3. Fix the center of the table as the desired goal position
 %    Solve BVP problems (bvp4c) by sampling from the predicted traj.
 % 4. Using the contact model estimate racket vels. and feasible
-% orientations and interpolate through whole traj.
+%    orientations and interpolate through whole traj.
 %
 % 5. Using minimum principle
-% State the initial position of the robot
-% State the input penalties
-% State the transversality conditions
+%    State the initial position of the robot
+%    State the input penalties
+%    State the transversality conditions
 %
 % Transversality conditions:
 % - positions of the ball should touch the racket (tubular region around
@@ -39,17 +39,12 @@ loadTennisTableValues;
 %% Initialize Barrett WAM
 
 initializeWAM;
-% initialize the arm with zero velocity on the right hand side
-q0 = [1.8; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
-qd0 = zeros(N_DOFS,1);
-Q0 = [q0; qd0];
-[x0,xd0] = wam.kinematics(Q0);
-X0 = [x0;xd0];
-robot(:,1) = X0;
+
 % initialize ball on the ball cannon with a sensible vel
 ball(1:3,1) = ball_cannon;
 ball(4:6,1) = [-0.9 4.000 3.2] + 0.05 * randn(1,3);
 ballPred(1:6,1) = ball(1:6,1); % to initialize drawing of predicted balls
+
 % land the ball on the centre of opponents court
 desBall(1) = 0.0;
 desBall(2) = dist_to_table - 3*table_y/2;
@@ -72,12 +67,12 @@ params.CFTX = CFTX;
 params.CFTY = CFTY;
 params.CRT = CRT;
 
-funState = @(x,u,dt) symplecticFlightModel(x,dt,params);
+ballFlightFnc = @(x,u,dt) symplecticFlightModel(x,dt,params);
 % very small but nonzero value for numerical stability
 mats.O = eps * eye(dim);
 mats.C = C;
 mats.M = eps * eye(3);
-filter = EKF(dim,funState,mats);
+filter = EKF(dim,ballFlightFnc,mats);
 
 %% Prepare the animation
 
@@ -149,7 +144,7 @@ while ~finished
         filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
     end
     
-    ball(:,i+1) = funState(ball(:,i),0,dt);
+    ball(:,i+1) = ballFlightFnc(ball(:,i),0,dt);
     
     %TODO: check contact with racket
     if contact
@@ -202,72 +197,40 @@ while ~finished
             % for now only considering the ball positions after table
             tol = 5e-2;
             idxAfterTable = find(ballPred(2,:) > dist_to_table + tol);
-            ballIncoming = ballPred; %ballPred(:,idxAfterTable);
-            timeIncoming = (1:predictLen) * dt; %idxAfterTable * dt;
-            minTimeToHit = timeIncoming(1);
+            %ballPred(:,idxAfterTable);
+            ballTime = (1:predictLen) * dt; %idxAfterTable * dt;
+            minTimeToHit = ballTime(1);
 
-            %% Calculate ball outgoing velocities attached to each ball pos
+            % Calculate ball outgoing velocities attached to each ball pos
 
-            for j = 1:size(ballIncoming,2)
-                % desired pos is in the centre of opponents court
-                velBallOut(1) = (desBall(1) - ballIncoming(1,j))/time2reach;
-                velBallOut(2) = (desBall(2) - ballIncoming(2,j))/time2reach;
-                velBallOut(3) = (desBall(3) - ballIncoming(3,j) - ...
-                                0.5*gravity*time2reach^2)/time2reach;
-                % initialize using a linear model (no drag)
-                linFlightTraj = @(t) [ballIncoming(1:3,j) + velBallOut(:)*t;
-                                      velBallOut(:)] + ...
-                                      [0;0;0.5*gravity*t^2;0;0;gravity*t];
-                flightModel = @(t,x) [x(4);
-                                      x(5);
-                                      x(6);
-                              -Cdrag * x(4) * sqrt(x(4)^2 + x(5)^2 + x(6)^2);
-                              -Cdrag * x(5) * sqrt(x(4)^2 + x(5)^2 + x(6)^2);
-                      gravity - Cdrag * x(6) * sqrt(x(4)^2 + x(5)^2 + x(6)^2)];
-                % boundary value condition
-                bc = @(x0,xf) [x0(1) - ballIncoming(1,j);
-                               x0(2) - ballIncoming(2,j);
-                               x0(3) - ballIncoming(3,j);
-                               xf(1) - desBall(1);
-                               xf(2) - desBall(2);
-                               xf(3) - desBall(3)];
-                meshpoints = 50;
-                solinit = bvpinit(linspace(0,time2reach,meshpoints),...
-                                  linFlightTraj);
-                sol = bvp4c(flightModel,bc,solinit);
-                ballOut = deval(sol,0);
-                velOut(:,j) = ballOut(4:6);
-
-                %% Use the inverse contact model to compute racket vels and normal
-                % at every point
+            for j = 1:size(ballPred,2)
                 
-                % TODO: is this correct? normal computation may be wrong
-
-                % FOR NOW USING ONLY THE MIRROR LAW
-                normal(:,j) = (velOut(:,j) - ballIncoming(4:6,j)) ...
-                              ./ norm(velOut(:,j) - ballIncoming(4:6,j),2);
-                velOutAlongNormal = velOut(:,j)' * normal(:,j);
-                velInAlongNormal = ballIncoming(4:6,j)' * normal(:,j);
-                racketVelAlongNormal(j) = (velOutAlongNormal + ... 
-                    CRR * velInAlongNormal) / (1 + CRR);
-                % TO BE CHANGED 
-                racketVel(:,j) = racketVelAlongNormal(j) * normal(:,j);
+                velOut(:,j) = calcBallVelOut3D(desBall,ballPred(1:3,j),time2reach);              
+                % Use the inverse contact model to compute racket vels and normal
+                % at every point                
+                [rp,rv,ro] = calcDesRacketState(ballPred(1:3,j),velOut(:,j),ballPred(4:6,j));
+                racketPos(:,j) = rp;
+                racketNormal(:,j) = ro;
+                racketVel(:,j) = rv;
+                
             end
             
-            %% COMPUTE OPTIMAL TRAJECTORY HERE
-            % first computing in cartesian space assuming a cartesian robot
-            T0 = 0.5;
-            B0 = ballIncoming(:,1);
-            solve_method = 'BVP';
+            %% COMPUTE  TRAJECTORY HERE
             
+            % Compute VHP Trajectory here            
+            [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
+            
+            %{
+            % first computing in cartesian space assuming a cartesian robot
+            solve_method = 'BVP';            
             [tx,X,u,J] = mp(X0,timeIncoming,ballIncoming,racketVel,solve_method);
-            % interpolate to get equal dt increments
+            % interpolate to get equal dt increments            
             teq = dt:dt:tx(end);
             Xeq = interp1(tx,X',teq)';
+            %}
         end % end predict        
 
         %% Initiate the robot
-        robot(:,k+1) = Xeq(:,min(k+1,size(Xeq,2)));
         k = k + 1;
         
     end 
@@ -276,9 +239,9 @@ while ~finished
     set(h1,'XData',ball(1,i));
     set(h1,'YData',ball(2,i));
     set(h1,'ZData',ball(3,i));
-    set(h3,'XData',robot(1,k));
-    set(h3,'YData',robot(2,k));
-    set(h3,'ZData',robot(3,k));
+%     set(h3,'XData',robot(1,k));
+%     set(h3,'YData',robot(2,k));
+%     set(h3,'ZData',robot(3,k));
     drawnow;
     pause(0.002);
         
