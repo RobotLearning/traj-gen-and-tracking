@@ -1,6 +1,6 @@
 %% Test 3D table tennis with Barrett WAM
 
-clc; clear; close all
+clc; clear; close all; %dbstop if error;
 
 % 1. Estimate pos and vel of ball with Kalman filter up to net/bounce
 % 2. Predict the ball trajectory after net/bounce
@@ -77,7 +77,8 @@ filter = EKF(dim,ballFlightFnc,mats);
 %% Prepare the animation
 
 % get joints, endeffector pos and orientation
-[j,e,r] = wam.drawPosture(q0);
+[joint,ee,racket] = wam.drawPosture(q0);
+q = q0; qd = qd0;
 
 figure;
 %uisetcolor is useful here
@@ -86,13 +87,13 @@ gray = [0.5020    0.5020    0.5020];
 h1 = scatter3(ball(1,1),ball(2,1),ball(3,1),60,orange,'filled');
 hold on;
 
-h10 = plot3(j(:,1),j(:,2),j(:,3),'k','LineWidth',10);
-endeff = [j(end,:);e];
+h10 = plot3(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
+endeff = [joint(end,:); ee];
 h11 = plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
-h12 = fill3(r(1,:), r(2,:), r(3,:), 'r');
+h12 = fill3(racket(1,:), racket(2,:), racket(3,:), 'r');
 
 h2 = scatter3(ballPred(1,1),ballPred(2,1),ballPred(3,1),20,'b','filled');
-h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
+%h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
 title('Ball-robot interaction');
 grid on;
 axis equal;
@@ -106,6 +107,7 @@ zlim([table_z - tol_z, table_z + 2*tol_z]);
 legend('ball','robot');
 fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+net_width = 0.01;
 %scatter3(ball(1,:),ball(2,:),ball(3,:),'r');
 %scatter3(X(1,:),X(2,:),X(3,:),'k');
 %scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
@@ -114,54 +116,119 @@ fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 %% Main control and estimation loop
 
 % flags for the main loop
-finished = false;
 contact = false;
-collectData = 0;
+numTrials = 0;
+numHits = 0;
+numLands = 0;
 predict = false;
+hit = false;
+land = false;
+net = false;
+outside = false;
 % maximum horizon to predict
 time2PassTable = 1.0;
 maxTime2Hit = 0.6;
 maxPredictHorizon = 0.8;
+maxWaitAfterHit = 1.0;
 
 % initialize the filters state with sensible values
 filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
 
 % initialize indices and time
-i = 1; k = 1; t = 0.0;
+ballIdx = 1; robotIdx = 1; t = 0.0;
 dt = 0.01;
 ballNoisyPos = ball(1:3,1);
 
-while ~finished
+while numTrials < 50
     
     %% Evolve ball flight, table and racket contact interactions
-    if ball(3,i) <= floor_level
-        disp('Ball hit the floor. Resetting...');
-        t = 0.0; i = 1; k = 1;
+    
+    % Reset criterion
+    if ball(3,ballIdx) <= floor_level || land || net || outside
+        numTrials = numTrials + 1;
+        fprintf('Success: %d/%d\n',numLands,numTrials);
+        disp('Resetting...'); % ball hit the floor
+        t = 0.0; ballIdx = 1; robotIdx = 1; 
         predict = false;
+        hit = false;
+        land = false;
+        net = false;  
+        outside = false;
         time2PassTable = 1.0;
         ball(1:3,1) = ball_cannon;
         ball(4:6,1) = [-0.9 4.000 3.2] + 0.05 * randn(1,3);
         filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
     end
     
-    ball(:,i+1) = ballFlightFnc(ball(:,i),0,dt);
     
-    %TODO: check contact with racket
-    if contact
-        disp('A hit! Well done!');
-        % change ball velocity based on contact model
+    % check contact with racket    
+    tol = ball_radius;
+    l = min(robotIdx,size(q,2));
+    % get racket pos, vel and orientation (on plane)
+    [xRacket,velRacket,quatRacket] = wam.kinematics([q(:,l);qd(:,l)]);
+    racketRot = quat2Rot(quatRacket);
+    racketNormal = racketRot(1:3,3); % orientation along racket
+    vecFromRacketToBall = ball(1:3,ballIdx) - xRacket;
+    %racketPlane = racket_dir(:,l);
+    projNormal = racketNormal*racketNormal'/(racketNormal'*racketNormal);
+    projRacket = eye(3) - projNormal;
+    distToRacketPlane = norm(projNormal * vecFromRacketToBall);
+    distOnRacketPlane = norm(projRacket * vecFromRacketToBall);
+    if distToRacketPlane < tol && distOnRacketPlane < racket_radius && ~hit            
+        %disp('A hit! Well done!');
+        hit = true;
+        fprintf('Hit at x = %f, y = %f, z = %f\n',...
+            ball(1,ballIdx),ball(2,ballIdx),ball(3,ballIdx));
+        numHits = numHits + 1;
+        % Change ball velocity based on contact model
+        % get ball velocity
+        velIn = ball(4:6,ballIdx);
+        velInAlongNormal = projNormal * velIn;
+        velRacketAlongNormal = projNormal * velRacket;
+        % this is kept the same in mirror law
+        velInAlongRacket = projRacket * velIn; 
+        velOutAlongNormal = velRacketAlongNormal + ...
+            CRR * (velRacketAlongNormal - velInAlongNormal);
+        velOut = velOutAlongNormal + velInAlongRacket;
+        ball(4:6,ballIdx) = velOut;
     end
     
-    %TODO: check simulation criterion
-    if collectData == 50
-        disp('Finishing up...');
-        finished = true;
+    % check contact with net and landing
+    if hit
+        tol = 2*net_width;
+        % check contact with net
+        if abs(ball(2,ballIdx) - (dist_to_table - table_y)) <= tol 
+            if abs(ball(1,ballIdx)) > table_width/2
+                disp('Outside of the net! Resetting...');
+                outside = true;
+            else if ball(3,ballIdx) < (table_z + net_height) 
+                disp('Hit the net! Resetting...');
+                net = true;
+                end
+            end
+        end
+        % check for landing
+        tol = 0.01;
+        if ball(3,ballIdx) <= table_z + ball_radius + tol && ball(4,ballIdx) < 0             
+            land = true;
+            fprintf('Land at x = %f, y = %f\n', ball(1,ballIdx), ball(2,ballIdx));
+            if abs(ball(1,ballIdx)) < table_width/2 && ...
+               abs(ball(2,ballIdx) - (dist_to_table - 3*table_y/2)) < table_y/2
+                %disp('Ball landed! Amazing!'); 
+                numLands = numLands + 1;                
+                %else
+                %disp('Ball is not inside the court. Lost a point!')
+            end
+        end
     end
+
+    % evolve ball according to flight model
+    ball(:,ballIdx+1) = ballFlightFnc(ball(:,ballIdx),0,dt);
     
     %% Get noisy ball positions till ball passes the net
     if time2PassTable >= maxTime2Hit
         % add noise
-        ballNoisyPos = ball(1:3,i+1) + sqrt(eps) * randn(3,1);
+        ballNoisyPos = ball(1:3,ballIdx+1) + sqrt(eps) * randn(3,1);
         filter.linearize(dt,0);
         filter.update(ballNoisyPos,0);
         filter.predict(dt,0);
@@ -219,6 +286,7 @@ while ~finished
             
             % Compute VHP Trajectory here            
             [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
+            %[x,xd,o] = wam.kinematics(q);
             
             %{
             % first computing in cartesian space assuming a cartesian robot
@@ -231,22 +299,37 @@ while ~finished
         end % end predict        
 
         %% Initiate the robot
-        k = k + 1;
+        [joint,ee,racket] = wam.drawPosture(q(:,robotIdx));
+        endeff = [joint(end,:);ee];
+        robotIdx = robotIdx + 1;
         
     end 
     
     %% ANIMATE BOTH THE ROBOT AND THE BALL
-    set(h1,'XData',ball(1,i));
-    set(h1,'YData',ball(2,i));
-    set(h1,'ZData',ball(3,i));
-%     set(h3,'XData',robot(1,k));
-%     set(h3,'YData',robot(2,k));
-%     set(h3,'ZData',robot(3,k));
+    
+    % ball
+    set(h1,'XData',ball(1,ballIdx));
+    set(h1,'YData',ball(2,ballIdx));
+    set(h1,'ZData',ball(3,ballIdx));
+    
+    % robot joints
+    set(h10,'XData',joint(:,1));
+    set(h10,'YData',joint(:,2));
+    set(h10,'ZData',joint(:,3));
+    % robot endeffector
+    set(h11,'XData',endeff(:,1));
+    set(h11,'YData',endeff(:,2));
+    set(h11,'ZData',endeff(:,3));
+    % robot racket
+    set(h12,'XData',racket(1,:));
+    set(h12,'YData',racket(2,:));
+    set(h12,'ZData',racket(3,:));
+    
     drawnow;
     pause(0.002);
         
     t = t + dt;
-    i = i + 1;
+    ballIdx = ballIdx + 1;
     
     
 end

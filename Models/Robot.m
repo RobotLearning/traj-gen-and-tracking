@@ -95,27 +95,41 @@ classdef (Abstract) Robot < Model
             ballOutVelAtVHP = calcBallVelOut3D(ballDes,ballPosAtVHP,time2reach);            
             
             % GET RACKET DESIRED VEL AND ORIENTATION AT VHP 
-            [racketPos,racketVel,racketOrient] = calcDesRacketState ...
+            [racketPos,racketVel,racketNormal] = calcDesRacketState ...
                            (ballPosAtVHP,ballOutVelAtVHP,ballInVelAtVHP);
-            
+            % attach a suitable angular velocity to the racket
+            racketAngularVel = zeros(3,1);
+                       
             q0dot = zeros(dof,1);
             Q0 = [q0;q0dot];           
                        
             % feed to inverse kinematics to get qf
             try
-                % get the slide of the original orientation
+                % get the slide of the original racket orientation
                 [~,~,o] = obj.kinematics(Q0);
-                % add a comfortable approach angle
+                rotMatrix0 = quat2Rot(o);
+                slide0 = rotMatrix0(1:3,2);                
+                % add a comfortable slide close to original slide
+                a = racketNormal;
+                % project slide0 to the racket plane
+                projNormal = racketNormal*racketNormal';
+                projRacket = eye(3) - projNormal;
+                s = projRacket * slide0;
+                s = s./norm(s,2); % numerical problems due to projection
+                assert(s'*a < 1e-3,'slide calculation not working!');
+                n = crossProd(s,a);                
+                rotMatrix = [n,s,a];
                 quatRacket = rot2Quat(rotMatrix);
                 % get endeffector position and quaternion
                 ePos = racketPos;
                 rotBack = [cos(-pi/4); -sin(-pi/4); 0; 0];
                 eQuat = mult2Quat(quatRacket,rotBack);
                 qf = obj.invKinematics(ePos,eQuat,q0);
-                obj.calcJacobian(qf);
-                qfdot = obj.jac \ racketVel;
+                obj.calcJacobian(qf);                
+                qfdot = obj.jac \ [racketVel;racketAngularVel];
             catch ME
-                disp('Virtual Hitting Point outside of workspace');
+                disp(ME.message);
+                %disp('Virtual Hitting Point outside of workspace');
                 qf = q0;
                 qfdot = zeros(dof,1);
             end

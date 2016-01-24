@@ -184,21 +184,34 @@ classdef BarrettWAM < Robot
         % o is a quaternion
         function q = invKinematics(obj,x,o,q0)
             
-            % masking the x-z angles
-            M = [1 1 1 1 1 1];
+            % not masking any cartesian space variables
+            %M = [1 1 1 1 1 1];
     
             %fprintf('Computing IK for WAM...\n'); tic;
             for k = 1:1:size(x,2) 
         
                 T = [quat2Rot(o),x;zeros(1,3),1];
-                q(:,k) = invKinematics(T, q0, M, 'pinv');
+                q(:,k) = invKinematics(T, q0, obj.PAR);
                 q0 = q(:,k); % use previous joint values as initial guess for ikine
             end
             %fprintf('finished IK in %g seconds.\n', toc);
-    
-            q = wrapToPi(q);
-            q = unwrap(q);
             
+            % wrap to [-pi,pi];
+            %idx = (q < -pi) | (pi < q);
+            %lhs = q > -pi; % left hand side limit reached
+            %q(idx) = mod(q(idx) + pi, 2*pi) - pi; %mod to [-pi,pi]
+            %q(idx & (q == -pi) & lhs) = pi;
+            
+            %q = unwrap(q);
+            
+        end
+        
+        % calculate the geometric jacobian using the common jacabian function
+        function jac = calcJacobian(obj,q)
+            
+            [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q,obj.PAR);
+            jac = jacobian(xLink,xOrigin,xAxis);
+            obj.jac = jac; 
         end
         
         %% Drawing functions here

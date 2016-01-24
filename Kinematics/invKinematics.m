@@ -1,13 +1,15 @@
 %% General Inverse Kinematics Function to be used for BarrettWAM
 
-% Ahmats are the homogenous matrices of the last joint 
+% Ahmats are the homogenous matrix of the desired end effector pose 
 % 
 % Taken and adapted from The Robotics Toolbox for Matlab (RTB) by
-% Guilherme Maeda, 2015.
+% Guilherme Maeda, 2015
+% Okan Koc, 2016.
+%
 % Copyright (C) 1993-2011, by Peter I. Corke
 % http://www.petercorke.com
-
-function qTotal = invKinematics(Ahmats, varargin)
+%
+function qTotal = invKinematics(Ahmats, q0, PAR)
 
     %  set default parameters for solution
     opt.ilimit = 1000;
@@ -16,40 +18,30 @@ function qTotal = invKinematics(Ahmats, varargin)
     opt.plot = false;
     opt.pinv = false;
     opt.varstep = true;
+    opt.pinv = true;
+    opt.verbose = false;
 
-    [opt,args] = tb_optparse(opt, varargin);
-    q0 = args{1};
     q = q0;
     numDofs = size(q0,1); % num of dofs
-
-    % robot.ikine(tr, q, m)
-    m = args{2};
-    m = m(:);
-    if numel(m) ~= 6
-        error('Mask matrix should have 6 elements');
-    end
-    if numel(find(m)) ~= numDofs
-        error('Mask matrix must have same number of 1s as robot DOF')
-    end
+    m = ones(1,6); % not masking any variables as of now 
 
     % make this a logical array so we can index with it
     m = logical(m);
 
     numPoints = size(Ahmats,3);    % number of points
-    qTotal = zeros(numPoints, numDofs);  % preallocate space for results
+    qTotal = zeros(numDofs, numPoints);  % preallocate space for results
     tcount = 0; % total iteration count
 
     if ~ishomog(Ahmats)
-        error('RTB:ikine:badarg', 'T is not a homog xform');
+        error('T is not a homog xform');
     end
 
     % compute jacobian of q0 to check for initial conditioning
-    [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q0,obj.PAR);
+    [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q0,PAR);
     J0 = jacobian(xLink,xOrigin,xAxis);
 
     if cond(J0) > 100
-        warning('RTB:ikine:singular', ...
-        'Initial joint angles results in near-singular configuration, this may slow convergence');
+        warning('Initial joint angles results in near-singular configuration, this may slow convergence');
     end
 
     for i = 1:numPoints
@@ -68,16 +60,16 @@ function qTotal = invKinematics(Ahmats, varargin)
             % update the count and test against iteration limit
             count = count + 1;
             if count > opt.ilimit
-                warning('ikine: iteration limit %d exceeded (row %d), final err %f', ...
+                warning('InvKin: iteration limit %d exceeded (row %d), final err %f', ...
                     opt.ilimit, i, normErr);
                 q = NaN*ones(1,numDofs);
                 break
             end
 
             % compute the error
-            [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q,obj.PAR);
-            x = xLink(6,:)';
-            e = tr2delta(x, T);
+            [xLink,xOrigin,xAxis,As] = barrettWamKinematics(q,PAR);
+            Tnow = squeeze(As(6,:,:));
+            e = getDiffBetweenPoses(Tnow, T);
 
             % optionally adjust the step size
             if opt.varstep
@@ -125,11 +117,11 @@ function qTotal = invKinematics(Ahmats, varargin)
             end
 
             % update the estimated solution
-            q = q + dq';
+            q = q + dq;
             normErr = norm(e(m));
 
             if norm(e) > 1.5 * norm(eprev)
-                warning('RTB:ikine:diverged', 'solution diverging, try reducing alpha');
+                warning('solution diverging, try reducing alpha');
             end
             eprev = e;
 
@@ -139,7 +131,7 @@ function qTotal = invKinematics(Ahmats, varargin)
 
         end  % end ikine solution for tr(:,:,i)
         
-        qTotal(:,i) = q';
+        qTotal(:,i) = q;
         tcount = tcount + count;
         if opt.verbose
             fprintf('%d iterations\n', count);
@@ -150,4 +142,47 @@ function qTotal = invKinematics(Ahmats, varargin)
         fprintf('TOTAL %d iterations\n', tcount);
     end
     
+end
+
+% checks to see if the homogenous matrix tr is valid
+function h = ishomog(tr)
+
+    d = size(tr);
+    eps = 1e-3;
+    
+    if ndims(tr) >= 2
+        h =  all(d(1:2) == [4 4]);
+
+        if h 
+            h = abs(det(tr(1:3,1:3)) - 1) < eps;
+        end
+
+    else
+        h = false;
+    end
+    
+end
+
+% get differential difference between poses T0 and T1
+function delta = getDiffBetweenPoses(T0, T1)
+
+    eps = 1e-3;
+    R0 = T0(1:3,1:3); 
+    assert(abs(det(R0) - 1) < eps,'T0 is not valid!');
+    R1 = T1(1:3,1:3);
+    assert(abs(det(R1) - 1) < eps,'T1 is not valid!');
+    % in world frame
+    vec = T1(1:3,4) - T0(1:3,4);
+    delta = [vec; skewSymToVec(R1*R0'-eye(3,3))];
+
+end
+
+% convert skew symmetric matrix to vector
+% no checking done
+function vec = skewSymToVec(S)
+
+vec = 0.5*[S(3,2)-S(2,3); 
+           S(1,3)-S(3,1); 
+           S(2,1)-S(1,2)];
+
 end
