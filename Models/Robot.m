@@ -73,7 +73,7 @@ classdef (Abstract) Robot < Model
             dof = length(q0);
             
             % define virtual hitting plane (VHP)
-            VHP = -0.5;
+            VHP = -0.7;
             time2reach = 0.5; % time to reach desired point on opponents court
             time2return = 0.5; % time to return to initial configuration          
             dt = ballTime(2)-ballTime(1);
@@ -87,7 +87,7 @@ classdef (Abstract) Robot < Model
             vec = [1,3,4,5,6,7];
             ballAtVHP = interp1(ballFull(2,:)',ballFull(vec,:)',VHP);
             timeAtVHP = ballAtVHP(end);
-            ballAtVHP = [ballAtVHP(1);VHP;ballAtVHP(3:6)'];
+            ballAtVHP = [ballAtVHP(1);VHP;ballAtVHP(2:5)'];
             ballPosAtVHP = ballAtVHP(1:3);
             ballInVelAtVHP = ballAtVHP(4:6); 
             
@@ -106,7 +106,7 @@ classdef (Abstract) Robot < Model
             % feed to inverse kinematics to get qf
             try
                 % get the slide of the original racket orientation
-                [~,~,o] = obj.kinematics(Q0);
+                [~,~,o] = obj.calcRacketState(Q0);
                 rotMatrix0 = quat2Rot(o);
                 slide0 = rotMatrix0(1:3,2);                
                 % add a comfortable slide close to original slide
@@ -124,11 +124,12 @@ classdef (Abstract) Robot < Model
                 ePos = racketPos;
                 rotBack = [cos(-pi/4); -sin(-pi/4); 0; 0];
                 eQuat = mult2Quat(quatRacket,rotBack);
-                qf = obj.invKinematics(ePos,eQuat,q0);
+                qf = obj.invKinematics(ePos(:),eQuat(:),q0(:));
                 obj.calcJacobian(qf);                
                 qfdot = obj.jac \ [racketVel;racketAngularVel];
             catch ME
                 disp(ME.message);
+                disp('InvKin problem. Not moving the robot...');                
                 %disp('Virtual Hitting Point outside of workspace');
                 qf = q0;
                 qfdot = zeros(dof,1);
@@ -150,6 +151,11 @@ classdef (Abstract) Robot < Model
             q = [qStrike,qReturn];
             qd = [qdStrike,qdReturn];
             qdd = [qddStrike,qddReturn];
+            
+            % for debugging
+            %[x,xd,o] = obj.calcRacketState([q;qd]);
+            %rotMs = quat2Rot(o);
+            %normals = rotMs(1:3,3,:);
               
         end
         

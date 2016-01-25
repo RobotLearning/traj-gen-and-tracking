@@ -12,8 +12,8 @@
 function qTotal = invKinematics(Ahmats, q0, PAR)
 
     %  set default parameters for solution
-    opt.ilimit = 1000;
-    opt.tol = 1e-6;
+    opt.ilimit = 100;
+    opt.tol = 1e-3;
     opt.alpha = 1;
     opt.plot = false;
     opt.pinv = false;
@@ -60,7 +60,7 @@ function qTotal = invKinematics(Ahmats, q0, PAR)
             % update the count and test against iteration limit
             count = count + 1;
             if count > opt.ilimit
-                warning('InvKin: iteration limit %d exceeded (row %d), final err %f', ...
+                error('InvKin: iteration limit %d exceeded (row %d), final err %f', ...
                     opt.ilimit, i, normErr);
                 q = NaN*ones(1,numDofs);
                 break

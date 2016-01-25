@@ -69,6 +69,20 @@ PD(7,N_DOFS+7) = -0.075;
 
 % initialize the arm with zero velocity on the right hand side
 q0 = [1.8; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
+
+numIter = 100;
+s2 = 0.01;
+qs = repmat(q0,1,numIter) + sqrt(s2)*randn(N_DOFS,numIter);
+% choose posture around q0 minimizing jacobian
+
+for i = 1:numIter
+    J = wam.calcJacobian(qs(:,i));
+    c(i) = cond(J);
+end
+
+[jacCond,ind] = min(c);
+fprintf('Initial Jacobian condition: %f.\n',jacCond);
+q0 = qs(:,ind);
 qd0 = zeros(N_DOFS,1);
 Q0 = [q0; qd0];
 [x0,xd0] = wam.kinematics(Q0);

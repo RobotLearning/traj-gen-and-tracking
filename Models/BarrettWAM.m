@@ -158,10 +158,31 @@ classdef BarrettWAM < Robot
         end
         
         % run kinematics using an external function
-        % racket configurations and velocities are returned
-        % racket orientations are also returned as a quaternions
+        % return endeffector coordinates, vel and orientation
+        % TODO: should return what barrettWAMKinematics returns
         function [x,xd,o] = kinematics(obj,Q)
               
+            assert(size(Q,1) == 14, 'velocities not fed in!');
+            dim = size(Q,1)/2;
+            lenq = size(Q,2);
+            q = Q(1:dim,:);
+            qd = Q(dim+1:end,:);
+            x = zeros(3,lenq);
+            xd = zeros(3,lenq);
+            o = zeros(4,lenq);
+            for i = 1:lenq
+                [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(q(:,i),obj.PAR);
+                o(:,i) = rot2Quat(Amats(6,1:3,1:3));
+                obj.jac = jacobian(xLink,xOrigin,xAxis);
+                x(:,i) = xLink(6,:)';
+                xd(:,i) = obj.jac(1:3,:) * qd(:,i);
+            end
+        end
+        
+        % racket configurations and velocities are returned
+        % racket orientations are also returned as a quaternions        
+        function [x,xd,o] = calcRacketState(obj,Q)
+            
             assert(size(Q,1) == 14, 'velocities not fed in!');
             dim = size(Q,1)/2;
             lenq = size(Q,2);
@@ -190,7 +211,7 @@ classdef BarrettWAM < Robot
             %fprintf('Computing IK for WAM...\n'); tic;
             for k = 1:1:size(x,2) 
         
-                T = [quat2Rot(o),x;zeros(1,3),1];
+                T = [quat2Rot(o(:,k)),x(:,k);zeros(1,3),1];
                 q(:,k) = invKinematics(T, q0, obj.PAR);
                 q0 = q(:,k); % use previous joint values as initial guess for ikine
             end
@@ -222,7 +243,7 @@ classdef BarrettWAM < Robot
             [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(q,obj.PAR);
             quat = rot2Quat(Amats(6,1:3,1:3));
             orient = obj.calcRacketOrientation(quat);
-            R = quat2Rot(orient);
+            R = quat2Rot(orient(:));
             joints = xOrigin;
             endeff = xLink(6,:);
             

@@ -42,7 +42,7 @@ initializeWAM;
 
 % initialize ball on the ball cannon with a sensible vel
 ball(1:3,1) = ball_cannon;
-ball(4:6,1) = [-0.9 4.000 3.2] + 0.05 * randn(1,3);
+ball(4:6,1) = [-0.9 4.000 3.2];% + 0.05 * randn(1,3);
 ballPred(1:6,1) = ball(1:6,1); % to initialize drawing of predicted balls
 
 % land the ball on the centre of opponents court
@@ -53,7 +53,7 @@ time2reach = 0.5; % time to reach desired point on opponents court
 
 %% initialize EKF
 dim = 6;
-eps = 1e-3;
+eps = 1e-6; %1e-3;
 C = [eye(3),zeros(3)];
 
 params.C = Cdrag;
@@ -84,16 +84,25 @@ figure;
 %uisetcolor is useful here
 orange = [0.9100 0.4100 0.1700];
 gray = [0.5020    0.5020    0.5020];
-h1 = scatter3(ball(1,1),ball(2,1),ball(3,1),60,orange,'filled');
+numPoints = 100;
+[ballMeshX,ballMeshY,ballMeshZ] = sphere(numPoints);
+ballMeshX = ball_radius * ballMeshX;
+ballMeshY = ball_radius * ballMeshY;
+ballMeshZ = ball_radius * ballMeshZ;
+ballSurfX = ball(1,1) + ballMeshX;
+ballSurfY = ball(2,1) + ballMeshY;
+ballSurfZ = ball(3,1) + ballMeshZ;
+% transform into base coord.
+h1 = surf(ballSurfX,ballSurfY,ballSurfZ);
+set(h1,'FaceColor',orange,'FaceAlpha',1,'EdgeAlpha',0);
 hold on;
-
 h10 = plot3(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
 endeff = [joint(end,:); ee];
 h11 = plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
 h12 = fill3(racket(1,:), racket(2,:), racket(3,:), 'r');
 
 h2 = scatter3(ballPred(1,1),ballPred(2,1),ballPred(3,1),20,'b','filled');
-%h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
+h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
 title('Ball-robot interaction');
 grid on;
 axis equal;
@@ -122,9 +131,10 @@ numHits = 0;
 numLands = 0;
 predict = false;
 hit = false;
-land = false;
-net = false;
+landOnTable = false;
+touchNet = false;
 outside = false;
+cnt = 0.0; % counter
 % maximum horizon to predict
 time2PassTable = 1.0;
 maxTime2Hit = 0.6;
@@ -144,19 +154,25 @@ while numTrials < 50
     %% Evolve ball flight, table and racket contact interactions
     
     % Reset criterion
-    if ball(3,ballIdx) <= floor_level || land || net || outside
+    if ball(3,ballIdx) <= floor_level || touchNet || outside || cnt > maxWaitAfterHit %|| landOnTable
         numTrials = numTrials + 1;
-        fprintf('Success: %d/%d\n',numLands,numTrials);
-        disp('Resetting...'); % ball hit the floor
-        t = 0.0; ballIdx = 1; robotIdx = 1; 
+        fprintf('Lands: %d/%d. Resetting...\n',numLands,numTrials);
+        t = 0.0; ballIdx = 1; robotIdx = 1; cnt = 0.0;
         predict = false;
         hit = false;
-        land = false;
-        net = false;  
+        landOnTable = false;
+        touchNet = false;  
         outside = false;
         time2PassTable = 1.0;
+        % resetting the drawing
+        set(h2,'Visible','off');
+        set(h3,'Visible','off');
+        [joint,ee,racket] = wam.drawPosture(q0);
+        endeff = [joint(end,:); ee];
+        % resetting the ball generation
         ball(1:3,1) = ball_cannon;
-        ball(4:6,1) = [-0.9 4.000 3.2] + 0.05 * randn(1,3);
+        ball(4:6,1) = [-0.9 4.000 3.2];% + 0.05 * randn(1,3);
+        % reset the filter
         filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
     end
     
@@ -165,7 +181,7 @@ while numTrials < 50
     tol = ball_radius;
     l = min(robotIdx,size(q,2));
     % get racket pos, vel and orientation (on plane)
-    [xRacket,velRacket,quatRacket] = wam.kinematics([q(:,l);qd(:,l)]);
+    [xRacket,velRacket,quatRacket] = wam.calcRacketState([q(:,l);qd(:,l)]);
     racketRot = quat2Rot(quatRacket);
     racketNormal = racketRot(1:3,3); % orientation along racket
     vecFromRacketToBall = ball(1:3,ballIdx) - xRacket;
@@ -195,6 +211,7 @@ while numTrials < 50
     
     % check contact with net and landing
     if hit
+        cnt = cnt + dt; % run counter to terminate game
         tol = 2*net_width;
         % check contact with net
         if abs(ball(2,ballIdx) - (dist_to_table - table_y)) <= tol 
@@ -203,18 +220,19 @@ while numTrials < 50
                 outside = true;
             else if ball(3,ballIdx) < (table_z + net_height) 
                 disp('Hit the net! Resetting...');
-                net = true;
+                touchNet = true;
                 end
             end
         end
         % check for landing
-        tol = 0.01;
-        if ball(3,ballIdx) <= table_z + ball_radius + tol && ball(4,ballIdx) < 0             
-            land = true;
-            fprintf('Land at x = %f, y = %f\n', ball(1,ballIdx), ball(2,ballIdx));
+        tol = 1e-2;
+        if ~landOnTable && ball(3,ballIdx) <= table_z + ball_radius + tol && ball(6,ballIdx) < 0             
+            landOnTable = true;
+            %fprintf('Land on table at x = %f, y = %f\n', ball(1,ballIdx), ball(2,ballIdx));
             if abs(ball(1,ballIdx)) < table_width/2 && ...
                abs(ball(2,ballIdx) - (dist_to_table - 3*table_y/2)) < table_y/2
                 %disp('Ball landed! Amazing!'); 
+                fprintf('Land on table at x = %f, y = %f\n', ball(1,ballIdx), ball(2,ballIdx));
                 numLands = numLands + 1;                
                 %else
                 %disp('Ball is not inside the court. Lost a point!')
@@ -286,7 +304,7 @@ while numTrials < 50
             
             % Compute VHP Trajectory here            
             [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
-            %[x,xd,o] = wam.kinematics(q);
+            [x,xd,o] = wam.calcRacketState([q;qd]);
             
             %{
             % first computing in cartesian space assuming a cartesian robot
@@ -296,21 +314,26 @@ while numTrials < 50
             teq = dt:dt:tx(end);
             Xeq = interp1(tx,X',teq)';
             %}
+            
+            % Debugging the trajectory generation 
+            h3 = scatter3(x(1,:),x(2,:),x(3,:)); 
+            h2 = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
+            
         end % end predict        
 
         %% Initiate the robot
         [joint,ee,racket] = wam.drawPosture(q(:,robotIdx));
         endeff = [joint(end,:);ee];
-        robotIdx = robotIdx + 1;
+        robotIdx = min(robotIdx+1,size(q,2));
         
     end 
     
     %% ANIMATE BOTH THE ROBOT AND THE BALL
     
     % ball
-    set(h1,'XData',ball(1,ballIdx));
-    set(h1,'YData',ball(2,ballIdx));
-    set(h1,'ZData',ball(3,ballIdx));
+    set(h1,'XData',ball(1,ballIdx) + ballMeshX);
+    set(h1,'YData',ball(2,ballIdx) + ballMeshY);
+    set(h1,'ZData',ball(3,ballIdx) + ballMeshZ);
     
     % robot joints
     set(h10,'XData',joint(:,1));
