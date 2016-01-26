@@ -178,7 +178,7 @@ while numTrials < 50
     
     
     % check contact with racket    
-    tol = ball_radius;
+    tol = ball_radius + 1e-2;
     l = min(robotIdx,size(q,2));
     % get racket pos, vel and orientation (on plane)
     [xRacket,velRacket,quatRacket] = wam.calcRacketState([q(:,l);qd(:,l)]);
@@ -192,7 +192,8 @@ while numTrials < 50
     distOnRacketPlane = norm(projRacket * vecFromRacketToBall);
     if distToRacketPlane < tol && distOnRacketPlane < racket_radius && ~hit            
         %disp('A hit! Well done!');
-        hit = true;
+        hit = true;        
+        % TODO: find a precise hitting time with bisection                
         fprintf('Hit at x = %f, y = %f, z = %f\n',...
             ball(1,ballIdx),ball(2,ballIdx),ball(3,ballIdx));
         numHits = numHits + 1;
@@ -270,14 +271,14 @@ while numTrials < 50
             predictHorizon = maxPredictHorizon;
             predictLen = floor(predictHorizon / dt);
             ballPred = zeros(6,predictLen);
+            % FOR DEBUGGING
+            filter.initState(ball(:,ballIdx),PSave);
             for j = 1:predictLen
                 %filter.linearize(dt,0);
                 filter.predict(dt,0);
                 ballPred(:,j) = filter.x;
             end
             predict = true;        
-
-            %% Calculate the intersection of ball path with robot workspace
 
             % for now only considering the ball positions after table
             tol = 5e-2;
@@ -287,23 +288,30 @@ while numTrials < 50
             minTimeToHit = ballTime(1);
 
             % Calculate ball outgoing velocities attached to each ball pos
-
+            %%{
+            tic
+            fast = true; % compute outgoing vel with linear model for speed
             for j = 1:size(ballPred,2)
                 
-                velOut(:,j) = calcBallVelOut3D(desBall,ballPred(1:3,j),time2reach);              
+                velOut(:,j) = calcBallVelOut3D(desBall,ballPred(1:3,j),time2reach,fast);              
                 % Use the inverse contact model to compute racket vels and normal
                 % at every point                
                 [rp,rv,ro] = calcDesRacketState(ballPred(1:3,j),velOut(:,j),ballPred(4:6,j));
-                racketPos(:,j) = rp;
-                racketNormal(:,j) = ro;
-                racketVel(:,j) = rv;
+                racketDes.time(j) = ballTime(j);
+                racketDes.pos(:,j) = rp;
+                racketDes.normal(:,j) = ro;
+                racketDes.vel(:,j) = rv;
                 
             end
+            elapsedTimeForCalcDesRacket = toc;
+            fprintf('Elapsed time for racket computation: %f sec.\n',...
+                elapsedTimeForCalcDesRacket);
+            %}
             
-            %% COMPUTE  TRAJECTORY HERE
-            
-            % Compute VHP Trajectory here            
-            [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
+            %% COMPUTE TRAJECTORY HERE
+                      
+            %[q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
+            [q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
             [x,xd,o] = wam.calcRacketState([q;qd]);
             
             %{

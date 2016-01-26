@@ -12,8 +12,8 @@
 function qTotal = invKinematics(Ahmats, q0, PAR)
 
     %  set default parameters for solution
-    opt.ilimit = 100;
-    opt.tol = 1e-3;
+    opt.ilimit = 1000;
+    opt.tol = 1e-6;
     opt.alpha = 1;
     opt.plot = false;
     opt.pinv = false;

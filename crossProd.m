@@ -11,17 +11,17 @@ function out = crossProd(v1,v2)
     assert(length(v1) == 3);
     assert(length(v2) == 3);
     % make sure v1 and v2 are orthogonal
-    assert(v1'*v2 < eps,'Inputs must be orthogonal');
+    assert(v1'*v2 < eps,'CrossProd: Inputs must be orthogonal');
     
     % make sure v1 and v2 are unit norm    
     if v1'*v1 ~= 1.000
         % give warning and normalize
-        warning('First input not normalized! Normalizing...');
+        warning('CrossProd: First input not normalized! Normalizing...');
         v1 = v1./norm(v1,2);
     end
     
     if v2'*v2 ~= 1.000
-        warning('Second input not normalized! Normalizing...');
+        warning('CrossProd: Second input not normalized! Normalizing...');
         v2 = v2./norm(v2,2);
     end
     

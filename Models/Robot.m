@@ -37,105 +37,45 @@ classdef (Abstract) Robot < Model
         %% Table Tennis related functions
         
         % Generate optimal tt trajectories
-        function [q,qd] = generateOptimalTTT(obj,ballPred,ballTime,ballInitVar,...
-                                        ballDes,time2reach,time2return,q0)
-                       
+        function [q,qd,qdd] = generateOptimalTTT(obj,racket,ballPred,ballTime,q0)
+                  
             loadTennisTableValues();
-            % the weighting for the probability of landing vs. control
-            % effort
-            m = 1e6;            
-              
-            % sample ball initial states 
-            M = 100;
-            bSamp = repmat(ballPred(:,1),1,M) + 0; %chol(ballInitVar)*randn(4,M);                
-                                    
-            % consider different vhp trajectories and keep the optimal
-            N = 10;            
-            vhps = linspace(dist_to_table,dist_to_table/2,N);
-            Js = zeros(1,N);
-            for i = 1:N
-                [q,qd,qdd] = obj.generateTTTwithVHP(-0.5,ballPred,...
-                           ballTime,ballDes,time2reach,time2return,q0);
-                % compute the cost
-                J = trace(qdd'*qdd)*dt;          
-                probLand = obj.calcProbOfLand(bSamp,q,qd);                         
-                Js(i) = J + m * probLand;
-            end
-            [~,i] = min(Js);
-            [q,qd,~] = obj.generateTTTwithVHP(vhps(i),ballPred,ballTime,...
-                                        ballDes,time2reach,time2return,q0); 
+            dof = length(q0);
+            dt = ballTime(2) - ballTime(1);
+            time2return = 0.5;
+            
+            [qf,qfdot,time2hit] = calcOptimalPoly(obj,racket,ballTime,ballPred,q0);
+            q0dot = zeros(dof,1);
+            Q0 = [q0;q0dot];  
+            Qf = [qf;qfdot];
+            
+            % GET 3RD DEGREE POLYNOMIALS            
+            pStrike = obj.generatePoly3rd(Q0,Qf,dt,time2hit);
+            qStrike = pStrike(1:dof,:);
+            qdStrike = pStrike(dof+1:2*dof,:);
+            qddStrike = pStrike(2*dof+1:end,:);
+            
+            pReturn = obj.generatePoly3rd(Qf,Q0,dt,time2return);
+            qReturn = pReturn(1:dof,:);
+            qdReturn = pReturn(dof+1:2*dof,:);
+            qddReturn = pReturn(2*dof+1:end,:);
+            
+            q = [qStrike,qReturn];
+            qd = [qdStrike,qdReturn];
+            qdd = [qddStrike,qddReturn];            
+            
         end
         
         % Generate 3D table tennis trajectories with the VHP method
         function [q,qd,qdd] = generate3DTTTwithVHP(obj,ballPred,ballTime,q0)
                         
-            loadTennisTableValues();
             dof = length(q0);
-            
-            % define virtual hitting plane (VHP)
-            VHP = -0.7;
-            time2reach = 0.5; % time to reach desired point on opponents court
-            time2return = 0.5; % time to return to initial configuration          
-            dt = ballTime(2)-ballTime(1);
-            ballFull = [ballPred;ballTime];            
-
-            % land the ball on the centre of opponents court
-            ballDes(1) = 0.0;
-            ballDes(2) = dist_to_table - 3*table_y/2;
-            ballDes(3) = table_z + ball_radius;
-            % interpolate at VHP
-            vec = [1,3,4,5,6,7];
-            ballAtVHP = interp1(ballFull(2,:)',ballFull(vec,:)',VHP);
-            timeAtVHP = ballAtVHP(end);
-            ballAtVHP = [ballAtVHP(1);VHP;ballAtVHP(2:5)'];
-            ballPosAtVHP = ballAtVHP(1:3);
-            ballInVelAtVHP = ballAtVHP(4:6); 
-            
-            % GET DESIRED OUTGOING VELOCITY OF THE BALL AT VHP            
-            ballOutVelAtVHP = calcBallVelOut3D(ballDes,ballPosAtVHP,time2reach);            
-            
-            % GET RACKET DESIRED VEL AND ORIENTATION AT VHP 
-            [racketPos,racketVel,racketNormal] = calcDesRacketState ...
-                           (ballPosAtVHP,ballOutVelAtVHP,ballInVelAtVHP);
-            % attach a suitable angular velocity to the racket
-            racketAngularVel = zeros(3,1);
-                       
+            [qf,qfdot,timeAtVHP] = calcPolyAtVHP(obj,ballPred,ballTime,q0);
             q0dot = zeros(dof,1);
-            Q0 = [q0;q0dot];           
-                       
-            % feed to inverse kinematics to get qf
-            try
-                % get the slide of the original racket orientation
-                [~,~,o] = obj.calcRacketState(Q0);
-                rotMatrix0 = quat2Rot(o);
-                slide0 = rotMatrix0(1:3,2);                
-                % add a comfortable slide close to original slide
-                a = racketNormal;
-                % project slide0 to the racket plane
-                projNormal = racketNormal*racketNormal';
-                projRacket = eye(3) - projNormal;
-                s = projRacket * slide0;
-                s = s./norm(s,2); % numerical problems due to projection
-                assert(s'*a < 1e-3,'slide calculation not working!');
-                n = crossProd(s,a);                
-                rotMatrix = [n,s,a];
-                quatRacket = rot2Quat(rotMatrix);
-                % get endeffector position and quaternion
-                ePos = racketPos;
-                rotBack = [cos(-pi/4); -sin(-pi/4); 0; 0];
-                eQuat = mult2Quat(quatRacket,rotBack);
-                qf = obj.invKinematics(ePos(:),eQuat(:),q0(:));
-                obj.calcJacobian(qf);                
-                qfdot = obj.jac \ [racketVel;racketAngularVel];
-            catch ME
-                disp(ME.message);
-                disp('InvKin problem. Not moving the robot...');                
-                %disp('Virtual Hitting Point outside of workspace');
-                qf = q0;
-                qfdot = zeros(dof,1);
-            end
-            
+            Q0 = [q0;q0dot];  
             Qf = [qf;qfdot];
+            dt = ballTime(2)-ballTime(1);
+            time2return = 0.5; % time to return to initial configuration
             
             % GET 3RD DEGREE POLYNOMIALS            
             pStrike = obj.generatePoly3rd(Q0,Qf,dt,timeAtVHP);
@@ -156,7 +96,6 @@ classdef (Abstract) Robot < Model
             %[x,xd,o] = obj.calcRacketState([q;qd]);
             %rotMs = quat2Rot(o);
             %normals = rotMs(1:3,3,:);
-              
         end
         
         % Generate 2D table tennis trajectories with the VHP method 

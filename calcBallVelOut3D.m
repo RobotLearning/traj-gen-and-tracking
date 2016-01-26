@@ -4,7 +4,7 @@
 % Reverting the nonlinear flight model and solving BVP to calculate 
 % the initial outgoing velocity vout
 
-function velOut = calcBallVelOut3D(ballDes,ballPos,time2reach)
+function velOut = calcBallVelOut3D(ballDes,ballPos,time2reach,fast)
 
 loadTennisTableValues();
 
@@ -13,6 +13,12 @@ ballOutVel(1) = (ballDes(1) - ballPos(1))/time2reach;
 ballOutVel(2) = (ballDes(2) - ballPos(2))/time2reach;
 ballOutVel(3) = (ballDes(3) - ballPos(3) - ...
                 0.5*gravity*time2reach^2)/time2reach;
+            
+if fast
+    velOut = ballOutVel;
+    return;
+end
+            
 % initialize using a linear model (no drag)
 linFlightTraj = @(t) [ballPos(1:3) + ballOutVel(:)*t;
                       ballOutVel(:)] + ...
