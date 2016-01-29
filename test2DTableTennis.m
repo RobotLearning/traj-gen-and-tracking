@@ -5,7 +5,7 @@ clc; clear; close all;
 % load table parameters
 loadTennisTableValues;
 ball(1:2,1) = ball_cannon(2:3);
-ball(3:4,1) = 1.1*[4.000 3.2] + 0.10 * randn(1,2);
+ball(3:4,1) = 1.1*[4.000 3.2] + 0.00 * randn(1,2);
 ballPred(1:4,1) = ball(1:4,1); % to initialize drawing of predicted balls
 
 %% Initialize the RRR robot
@@ -106,7 +106,7 @@ rrr = RRR(PAR,CON,COST,SIM);
 
 %% initialize EKF
 dim = 4;
-eps = 1e-1;
+eps = 0.0001; %1e-1;
 C = [eye(2),zeros(2)];
 
 params.C = Cdrag;
@@ -256,7 +256,7 @@ while numTrials < 50
         net = false;        
         time2PassTable = 1.0;
         ball(1:2,1) = ball_cannon(2:3);
-        ball(3:4,1) = 1.1*[4.000; 3.2] + 0.1 * randn(2,1);
+        ball(3:4,1) = 1.1*[4.000; 3.2] + 0.0 * randn(2,1);
         ballNoisyVel = 1.1*[4.000; 3.2];
         filter.initState([ball(1:2,1);ballNoisyVel],eps);
     end
@@ -273,8 +273,8 @@ while numTrials < 50
     %racketPlane = racket_dir(:,l);
     projPlane = racketPlane*racketPlane'/(racketPlane'*racketPlane);
     projOrth = eye(2) - projPlane;
-    distToRacketPlane = norm(projOrth * vecFromRacketToBall);
-    distOnRacketPlane = norm(projPlane * vecFromRacketToBall);
+    distOnRacketPlane = abs(racketPlane'*vecFromRacketToBall);
+    distToRacketPlane = sqrt(abs(vecFromRacketToBall'*vecFromRacketToBall - distOnRacketPlane^2));
     if distToRacketPlane < tol && distOnRacketPlane < racket_radius && ~hit            
         %disp('A hit! Well done!');
         hit = true;
@@ -283,15 +283,18 @@ while numTrials < 50
         % Change ball velocity based on contact model
         % get ball velocity
         velIn = ball(3:4,ballIdx);
-        velInAlongNormal = projOrth * velIn;
-        velRacketAlongNormal = projOrth * velRacket;
-        % this is kept the same in mirror law
-        velInAlongRacket = projPlane * velIn; 
+        speedInAlongRacket = racketPlane'*velIn;
+        velInAlongRacket = speedInAlongRacket'* racketPlane;
+        velInAlongNormal = velIn - velInAlongRacket;
+        speedRacketAlongRacket = racketPlane'*velRacket;
+        velRacketAlongRacket = speedRacketAlongRacket'*racketPlane;
+        velRacketAlongNormal = velRacket - velRacketAlongRacket;
+        % this is kept the same in mirror law        
         velOutAlongNormal = velRacketAlongNormal + ...
             CRR * (velRacketAlongNormal - velInAlongNormal);
         velOut = velOutAlongNormal + velInAlongRacket;
         ball(3:4,ballIdx) = velOut;
-    end
+    end    
     
     % run counter to terminate game after hit
     if hit
@@ -350,6 +353,8 @@ while numTrials < 50
             predictHorizon = maxPredictHorizon;
             predictLen = floor(predictHorizon / dt);
             ballPred = zeros(4,predictLen);
+            % FOR DEBUGGING
+            filter.initState(ball(:,ballIdx),PSave);
             for j = 1:predictLen
                 %filter.linearize(dt,0);
                 filter.predict(dt,0);
@@ -376,7 +381,7 @@ while numTrials < 50
             
             %%{
             % Compute VHP Trajectory here            
-            [q,qd,~] = rrr.generateTTTwithVHP(ballPred,ballTime,q0);            
+            [q,qd,~] = rrr.generate2DTTTwithVHP(ballPred,ballTime,q0);            
 %             M = 100;
 %             ballInitVar = PSave;
 %             bSamp = repmat(ballPred(:,1),1,M) + 0; %chol(ballInitVar)*randn(4,M);

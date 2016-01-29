@@ -115,8 +115,9 @@ classdef (Abstract) Robot < Model
             R = [0 1; -1 0];
             % land the ball on the centre of opponents court
             ballDes(1) = dist_to_table - 3*table_y/2;
-            ballDes(2) = table_z + ball_radius;
-            %fprintf('Desired landing point: %f\n',ballDes(1));
+            ballDes(2) = table_z + ball_radius;            
+            fprintf('Desired landing point: %f\n',ballDes(1));
+            
             ballAtVHP = interp1(ballFull(1,:)',ballFull(2:5,:)',VHP);
             timeAtVHP = ballAtVHP(end);
             ballAtVHP = [VHP;ballAtVHP(1:end-1)'];

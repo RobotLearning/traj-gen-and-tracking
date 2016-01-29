@@ -18,6 +18,9 @@ ballFull = [ballPred;ballTime];
 ballDes(1) = 0.0;
 ballDes(2) = dist_to_table - 3*table_y/2;
 ballDes(3) = table_z + ball_radius;
+
+fprintf('Desired landing pos: x = %f, y = %f.\n', ballDes(1), ballDes(2));
+
 % interpolate at VHP
 vec = [1,3,4,5,6,7];
 ballAtVHP = interp1(ballFull(2,:)',ballFull(vec,:)',VHP);

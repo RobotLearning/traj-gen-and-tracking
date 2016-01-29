@@ -188,8 +188,8 @@ while numTrials < 50
     %racketPlane = racket_dir(:,l);
     projNormal = racketNormal*racketNormal'/(racketNormal'*racketNormal);
     projRacket = eye(3) - projNormal;
-    distToRacketPlane = norm(projNormal * vecFromRacketToBall);
-    distOnRacketPlane = norm(projRacket * vecFromRacketToBall);
+    distToRacketPlane = racketNormal'*vecFromRacketToBall;
+    distOnRacketPlane = sqrt(vecFromRacketToBall'*vecFromRacketToBall - distToRacketPlane^2);
     if distToRacketPlane < tol && distOnRacketPlane < racket_radius && ~hit            
         %disp('A hit! Well done!');
         hit = true;        
@@ -200,10 +200,12 @@ while numTrials < 50
         % Change ball velocity based on contact model
         % get ball velocity
         velIn = ball(4:6,ballIdx);
-        velInAlongNormal = projNormal * velIn;
-        velRacketAlongNormal = projNormal * velRacket;
+        speedInAlongNormal = racketNormal'*velIn;
+        speedRacketAlongNormal = racketNormal'*velRacket;
+        velInAlongNormal = speedInAlongNormal.*racketNormal;
+        velRacketAlongNormal = speedRacketAlongNormal.*racketNormal;
         % this is kept the same in mirror law
-        velInAlongRacket = projRacket * velIn; 
+        velInAlongRacket = velIn - velInAlongNormal;
         velOutAlongNormal = velRacketAlongNormal + ...
             CRR * (velRacketAlongNormal - velInAlongNormal);
         velOut = velOutAlongNormal + velInAlongRacket;
@@ -244,7 +246,7 @@ while numTrials < 50
     % evolve ball according to flight model
     ball(:,ballIdx+1) = ballFlightFnc(ball(:,ballIdx),0,dt);
     
-    %% Get noisy ball positions till ball passes the net
+    %% ESTIMATE BALL STATE
     if time2PassTable >= maxTime2Hit
         % add noise
         ballNoisyPos = ball(1:3,ballIdx+1) + sqrt(eps) * randn(3,1);
@@ -266,7 +268,7 @@ while numTrials < 50
         % revert back to saved state
         filter.initState(xSave,PSave);
     else
-        %% predict ball trajectory once
+        %% PREDICT BALL TRAJECTORY
         if ~predict            
             predictHorizon = maxPredictHorizon;
             predictLen = floor(predictHorizon / dt);
@@ -310,8 +312,8 @@ while numTrials < 50
             
             %% COMPUTE TRAJECTORY HERE
                       
-            %[q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
-            [q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
+            [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
+            %[q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
             [x,xd,o] = wam.calcRacketState([q;qd]);
             
             %{

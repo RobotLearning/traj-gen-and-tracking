@@ -1,30 +1,29 @@
 ROADMAP
 
-- Train Bounce and contact models
-- Train contact model based on step 3 and step 2
-- Train EKF on ball data with EM to find C and g
-- Get viable velocities based on Miki's code
-- Test stochastic maximum principle in SL
-- Write down draft for Table Tennis Performance Criterion
-
-MATLAB/SL list:
-- ATLAS/BLAS library integration with SL (wrapper?)
-- How does aILC perform based on updated Kalman filter code
-- test performance of ILC with linearization at each iteration
-- Why does ILC learning with feedback generate zero Finv?
-- Try IDM as fb in MATLAB
-- Test LQG and iLQR, DDP on MATLAB
-- Implement REPS, PI2 algorithms on MATLAB, variational Bayes
-- Articulate inverse dynamics in MATLAB does not match to SL! [in SL it is as good as NE]
-implement the test function in MATLAB that checks for differences
-- Why are two tracking LQRs not exactly the same (at the end)? 
-  [maybe R dependence is not correct, index difference?]
+- Test optimal traj gen in SL and real robot
 
 Robot list:
 - Experiment with Ballgun fixed.
 - Correct initial conditions of zero-phase filtering and test in MATLAB with ILC 
   [filtfilt is available in SL]
 - Implement/Learn RDMP first in MATLAB and then in SL
+
+MATLAB/SL list:
+- implement ball-racket contact inside the Ball class
+- kinematics calibration with ball-racket trajectories using camera?
+- how to make a new thread for optimization?
+- ATLAS/BLAS library integration with SL (wrapper?)
+
+ILC/control notes:
+- How does aILC perform based on updated Kalman filter code
+- test performance of ILC with linearization at each iteration
+- Why does ILC learning with feedback generate zero Finv?
+- Test LQG and iLQR, DDP on MATLAB
+- Implement REPS, PI2 algorithms on MATLAB, variational Bayes
+- Articulate inverse dynamics in MATLAB does not match to SL! [in SL it is as good as NE]
+implement the test function in MATLAB that checks for differences
+- Why are two tracking LQRs not exactly the same (at the end)? 
+  [maybe R dependence is not correct, index difference?]
 
 Extensions:
 - (Guilherme) Extrapolating ILC. Boosting ILC with weak learners?
