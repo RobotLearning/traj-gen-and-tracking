@@ -118,7 +118,7 @@ params.table_length = table_length;
 params.CFTY = CFTY;
 params.CRT = CRT;
 
-funState = @(x,u,dt) symplecticFlightModel2D(x,dt,params);
+funState = @(x,u,dt) discreteBallFlightModel2D(x,dt,params);
 % very small but nonzero value for numerical stability
 mats.O = eps * eye(dim);
 mats.C = C;

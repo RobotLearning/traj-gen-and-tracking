@@ -3,7 +3,7 @@
 % TODO: bounce model cannot be run backwards as of now!
 
 % incorporate bounce also
-function xNext = symplecticFlightModel(x,dt,params)
+function xNext = discreteBallFlightModel(x,dt,params)
 
 C = params.C;
 g = params.g;
@@ -15,10 +15,27 @@ tableWidth = params.table_width;
 K(1) = params.CFTX;
 K(2) = params.CFTY;
 K(3) = params.CRT;
+alg = params.ALG;
 
 xNext = zeros(6,1);
-xNext(4:6) = x(4:6) + dt * ballFlightModel(x(4:6),C,g);
-xNext(1:3) = x(1:3) + dt * xNext(4:6);
+
+switch alg
+    case 'Euler'
+        xNext(4:6) = x(4:6) + dt * ballFlightModel(x(4:6),C,g);
+        xNext(1:3) = x(1:3) + dt * xNext(4:6);
+    case 'RK4'
+        ballFlightFnc = @(x) [x(4:6);ballFlightModel(x(4:6),C,g)];
+        k1 = dt * ballFlightFnc(x);
+        x_k1 = x + k1/2;
+        k2 = dt * ballFlightFnc(x_k1);
+        x_k2 = x + k2/2;
+        k3 = dt * ballFlightFnc(x_k2);
+        x_k3 = x + k3;
+        k4 = dt * ballFlightFnc(x_k3);
+        xNext = x + (k1 + 2*k2 + 2*k3 + k4)/6;
+    otherwise
+        error('Not implemented!');
+end
 
 % condition for bouncing
 if xNext(3) < zTable && abs(xNext(2) - yNet) < tableLength/2 && abs(xNext(1)) < tableWidth/2
@@ -47,16 +64,6 @@ if xNext(3) < zTable && abs(xNext(2) - yNet) < tableLength/2 && abs(xNext(1)) < 
     xNext(1:3) = xBounce(1:3) + dt * xNext(4:6);
 end
 
-end
-
-function xddot = ballFlightModel(xdot,C,g)
-
-v = sqrt(xdot(1)^2 + xdot(2)^2 + xdot(3)^2);
-xddot(1) = -C * v * xdot(1);
-xddot(2) = -C * v * xdot(2);
-xddot(3) = g - C * v * xdot(3);
-
-xddot = xddot(:);
 end
 
 % K is the coefficient values in x-y-z directions

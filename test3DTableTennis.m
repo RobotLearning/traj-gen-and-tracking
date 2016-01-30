@@ -66,8 +66,9 @@ params.table_width = table_width;
 params.CFTX = CFTX;
 params.CFTY = CFTY;
 params.CRT = CRT;
+params.ALG = 'RK4'; %'Euler'
 
-ballFlightFnc = @(x,u,dt) symplecticFlightModel(x,dt,params);
+ballFlightFnc = @(x,u,dt) discreteBallFlightModel(x,dt,params);
 % very small but nonzero value for numerical stability
 mats.O = eps * eye(dim);
 mats.C = C;
