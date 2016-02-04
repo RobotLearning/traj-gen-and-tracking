@@ -313,8 +313,8 @@ while numTrials < 50
             
             %% COMPUTE TRAJECTORY HERE
                       
-            [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
-            %[q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
+            %[q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
+            [q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
             [x,xd,o] = wam.calcRacketState([q;qd]);
             
             %{

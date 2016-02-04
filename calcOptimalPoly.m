@@ -27,6 +27,7 @@ nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),x(end));
 % solve with a nonlinear optimizer
 %options = optimoptions('fmincon','Display','off');
 options = optimoptions('fmincon','Display','final-detailed');
+%options = optimoptions('fmincon','Display','iter-detailed');
 x = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
 
 % release the variables
