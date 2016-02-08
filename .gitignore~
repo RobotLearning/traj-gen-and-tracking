@@ -1,4 +1,3 @@
-matlab-zmq/config.m
 pathdef.m
 *.m~
 *.pdf

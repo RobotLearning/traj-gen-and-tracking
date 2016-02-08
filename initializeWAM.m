@@ -35,7 +35,7 @@ PAR.uex = uex;
 PAR.uex0 = uex0;
 PAR.C = eye(SIM.dimy,SIM.dimx);
 
-% form constraints
+% TODO: form constraints
 CON = [];
 
 % cost struc
