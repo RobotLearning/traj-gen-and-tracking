@@ -71,7 +71,7 @@ PD(7,N_DOFS+7) = -0.075;
 q0 = [1.8; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
 
 numIter = 100;
-s2 = 0.01;
+s2 = 0.00;
 qs = repmat(q0,1,numIter) + sqrt(s2)*randn(N_DOFS,numIter);
 % choose posture around q0 minimizing jacobian
 

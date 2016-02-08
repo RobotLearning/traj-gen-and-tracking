@@ -130,7 +130,7 @@ contact = false;
 numTrials = 0;
 numHits = 0;
 numLands = 0;
-predict = false;
+ballPredicted = false;
 hit = false;
 landOnTable = false;
 touchNet = false;
@@ -159,7 +159,7 @@ while numTrials < 50
         numTrials = numTrials + 1;
         fprintf('Lands: %d/%d. Resetting...\n',numLands,numTrials);
         t = 0.0; ballIdx = 1; robotIdx = 1; cnt = 0.0;
-        predict = false;
+        ballPredicted = false;
         hit = false;
         landOnTable = false;
         touchNet = false;  
@@ -270,7 +270,7 @@ while numTrials < 50
         filter.initState(xSave,PSave);
     else
         %% PREDICT BALL TRAJECTORY
-        if ~predict            
+        if ~ballPredicted            
             predictHorizon = maxPredictHorizon;
             predictLen = floor(predictHorizon / dt);
             ballPred = zeros(6,predictLen);
@@ -281,7 +281,7 @@ while numTrials < 50
                 filter.predict(dt,0);
                 ballPred(:,j) = filter.x;
             end
-            predict = true;        
+            ballPredicted = true;        
 
             % for now only considering the ball positions after table
             tol = 5e-2;

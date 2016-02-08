@@ -34,7 +34,6 @@ while offset < length(response)
             STR.robot.traj.qd = qd;
             STR.robot.traj.time = t;
         case 4
-            % TODO: get also camera status!
             % get observed ball positions
             vals = 4;
             numBallPos = typecast(response(offset:offset+vals-1),'uint32');
