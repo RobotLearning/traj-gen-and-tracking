@@ -317,15 +317,6 @@ while numTrials < 50
             %[q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
             [x,xd,o] = wam.calcRacketState([q;qd]);
             
-            %{
-            % first computing in cartesian space assuming a cartesian robot
-            solve_method = 'BVP';            
-            [tx,X,u,J] = mp(X0,timeIncoming,ballIncoming,racketVel,solve_method);
-            % interpolate to get equal dt increments            
-            teq = dt:dt:tx(end);
-            Xeq = interp1(tx,X',teq)';
-            %}
-            
             % Debugging the trajectory generation 
             h3 = scatter3(x(1,:),x(2,:),x(3,:)); 
             h2 = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));

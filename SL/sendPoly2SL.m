@@ -4,6 +4,7 @@
 % Start running the EKF and predict time2reach VHP
 % Continue getting ball estimates until time2reach < maxTime
 
+obj = onCleanup(@() disconnectFromSL(socket,address,context));
 clc; clear all; close all;
 
 %% Load table values
@@ -65,13 +66,33 @@ response = zmq.core.recv(socket);
 
 % get q,q0
 STR = decodeResponseFromSL(response);
-q0 = STR.robot.traj.q;
-qd0 = STR.robot.traj.qd;
-t0 = STR.robot.traj.time;
+qInit = STR.robot.traj.q;
+qdInit = STR.robot.traj.qd;
+tInit = STR.robot.traj.time;
+
+% Send to desired starting posture
+Qinit = [qInit;qdInit];
+dt = 0.002;
+tf = 2.0;
+p = generatePoly3rd(Qinit,Q0,dt,tf);
+timeSteps = size(p,2);
+ts = repmat(-1,1,timeSteps); % start immediately
+poly = [p;ts];
+poly = poly(:);
+poly = typecast(poly,'uint8');
+% 1 is for clear
+% 2 is for push back
+N = typecast(uint32(timeSteps),'uint8');
+poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
+data = typecast(poly_zmq, 'uint8');
+zmq.core.send(socket, data);
+response = zmq.core.recv(socket);
+pause(tf);
 
 %% Trajectory generation
 
-%cleanup = onCleanup(@() disconnectFromSL(socket,address,context));
+waiting = true;
+bufferLength = 20000; %bytes
 ballPredicted = false;
 ballPreTime = 0.0;
 maxTime2Hit = 0.6;
@@ -81,24 +102,43 @@ numTrials = 0;
 
 while numTrials < 5
     
-    % Get the ball positions
+    %% Get the ball positions
     msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
     zmq.core.send(socket,data);
-    response = zmq.core.recv(socket);
+    response = zmq.core.recv(socket,bufferLength);
     STR = decodeResponseFromSL(response);
     ballPos = STR.ball.pos;
     ballTime = STR.ball.time;
     camId = STR.ball.cam.id;
     
+    %% WAITING STAGE
+    
+    ballFinalDer = ballPos(:,end) - ballPos(:,end-1) ./ ...
+                   ballTime(end) - ballTime(end-1);
+    waiting = ballPos(2,end) > dist_to_table - table_y && ...
+              ballFinalDer(2) > 0;
+    
+    if waiting
+        ballPredicted = false;
+    end
+    
     %% ESTIMATE BALL STATE
     if time2PassTable >= maxTime2Hit
+        
+        % get the balls after current time
+        
+        ballAfterTime = ballTime(ballTime > ballPreTime);
+        ballPos = ballPos(:,ballTime > ballPreTime);
+        
         % predict balls current state
-        dt = ballTime - ballPreTime;
-        ballPreTime = ballTime;        
-        filter.linearize(dt,0);
-        filter.predict(dt,0);
-        filter.update(ballPos,0);
+        for i = 1:length(ballAfterTime)
+            dt = ballAfterTime(i) - ballPreTime;
+            filter.linearize(dt,0);
+            filter.predict(dt,0);
+            filter.update(ballPos(:,i),0);
+            ballPreTime = ballAfterTime(i);
+        end
         xSave = filter.x;
         PSave = filter.P;
         % update the time it takes to pass table
@@ -124,8 +164,7 @@ while numTrials < 5
                 %filter.linearize(dt,0);
                 filter.predict(dt,0);
                 ballPred(:,j) = filter.x;
-            end
-            ballPredicted = true;        
+            end    
 
             % for now only considering the ball positions after table
             tol = 5e-2;
@@ -171,13 +210,18 @@ while numTrials < 5
             poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
             data = typecast(poly_zmq, 'uint8');
             zmq.core.send(socket, data);
-            % response = zmq.core.recv(socket);
+            response = zmq.core.recv(socket);
+            
+            tf = timeSteps * 0.002;
+            sleep(tf);
 
             numTrials = numTrials + 1;
+            time2PassTable = 1.0;
+            
         end % end predict        
         
     end
 end
  
 % disconnect from zmq and SL
-disconnectFromSL(socket,address,context)
+disconnectFromSL(socket,address,context);
