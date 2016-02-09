@@ -66,6 +66,7 @@ while offset < length(response)
             STR.robot.time = tRobot;
         otherwise
             error('Operation code not recognized!');
+            STR = [];
     end
             
 end

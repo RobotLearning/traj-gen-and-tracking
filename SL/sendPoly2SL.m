@@ -92,53 +92,60 @@ pause(tf);
 %% Trajectory generation
 
 waiting = true;
-bufferLength = 20000; %bytes
-ballPredicted = false;
-ballPreTime = 0.0;
+bufferLength = 1e6; %bytes
+ballTime = [];
+ballPreTime = [];
+ballObs = [];
+ballPreObs = [];
 maxTime2Hit = 0.6;
 maxPredictHorizon = 0.8;
 time2PassTable = 1.0;
 numTrials = 0;
 
-while numTrials < 5
+% clear the ball positions
+msg = [uint8(5), uint8(0)];
+data = typecast(msg,'uint8');
+zmq.core.send(socket,data);
+response = zmq.core.recv(socket,bufferLength);
+
+while numTrials <= 5
     
-    %% Get the ball positions
+    %% GET BALL POSITIONS
     msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
     zmq.core.send(socket,data);
     response = zmq.core.recv(socket,bufferLength);
     STR = decodeResponseFromSL(response);
-    ballPos = STR.ball.pos;
+    ballPreObs = ballObs;
+    ballObs = STR.ball.pos;
+    ballPreTime = ballTime;
     ballTime = STR.ball.time;
-    camId = STR.ball.cam.id;
     
     %% WAITING STAGE
     
-    ballFinalDer = ballPos(:,end) - ballPos(:,end-1) ./ ...
-                   ballTime(end) - ballTime(end-1);
-    waiting = ballPos(2,end) > dist_to_table - table_y && ...
-              ballFinalDer(2) > 0;
-    
-    if waiting
-        ballPredicted = false;
+    if ~isempty(ballPreObs) && ~isempty(ballObs) && waiting
+        ballObsDer = (ballObs(:,end) - ballPreObs(:,end)) ./ ...
+                       (ballTime(end) - ballPreTime(end));
+        %fprintf('Derivative of ball = %f\n', ballObsDer);
+        tol = 1e-2;    
+        % if ball appears on opponent side coming towards the robot
+        if ballObs(2,end) > dist_to_table - table_y && ...
+                  ballObsDer(2) > tol
+            waiting = false;
+            numTrials = numTrials + 1;
+            time2PassTable = 1.0;
+            % reset the filter
+            filter.initState([ballObs(:,end);guessBallInitVel],eps);
+        end    
     end
-    
+
     %% ESTIMATE BALL STATE
-    if time2PassTable >= maxTime2Hit
-        
-        % get the balls after current time
-        
-        ballAfterTime = ballTime(ballTime > ballPreTime);
-        ballPos = ballPos(:,ballTime > ballPreTime);
-        
+    if time2PassTable >= maxTime2Hit && ~waiting
         % predict balls current state
-        for i = 1:length(ballAfterTime)
-            dt = ballAfterTime(i) - ballPreTime;
-            filter.linearize(dt,0);
-            filter.predict(dt,0);
-            filter.update(ballPos(:,i),0);
-            ballPreTime = ballAfterTime(i);
-        end
+        dt = ballTime(end) - ballPreTime(end);
+        filter.linearize(dt,0);
+        filter.predict(dt,0);
+        filter.update(ballObs(:,end),0);
         xSave = filter.x;
         PSave = filter.P;
         % update the time it takes to pass table
@@ -153,74 +160,68 @@ while numTrials < 5
         end
         % revert back to saved state
         filter.initState(xSave,PSave);
-    else
-        %% PREDICT BALL TRAJECTORY
-        if ~ballPredicted            
-            predictHorizon = maxPredictHorizon;
-            dt = 0.02;
-            predictLen = floor(predictHorizon / dt);
-            ballPred = zeros(6,predictLen);
-            for j = 1:predictLen
-                %filter.linearize(dt,0);
-                filter.predict(dt,0);
-                ballPred(:,j) = filter.x;
-            end    
-
-            % for now only considering the ball positions after table
-            tol = 5e-2;
-            idxAfterTable = find(ballPred(2,:) > dist_to_table + tol);
-            %ballPred(:,idxAfterTable);
-            ballTime = (1:predictLen) * dt; %idxAfterTable * dt;
-            minTimeToHit = ballTime(1);
-
-            % Calculate ball outgoing velocities attached to each ball pos
-            %%{
-            tic
-            fast = true; % compute outgoing vel with linear model for speed
-            velOut = zeros(3,size(ballPred,2));
-            for j = 1:size(ballPred,2)
-                
-                velOut(:,j) = calcBallVelOut3D(desBall,ballPred(1:3,j),time2reach,fast);              
-                % Use the inverse contact model to compute racket vels and normal
-                % at every point                
-                [rp,rv,ro] = calcDesRacketState(ballPred(1:3,j),velOut(:,j),ballPred(4:6,j));
-                racketDes.time(j) = ballTime(j);
-                racketDes.pos(:,j) = rp;
-                racketDes.normal(:,j) = ro;
-                racketDes.vel(:,j) = rv;
-                
-            end
-            elapsedTimeForCalcDesRacket = toc;
-            fprintf('Elapsed time for racket computation: %f sec.\n',...
-                elapsedTimeForCalcDesRacket);
-            %}
-            
-            %% COMPUTE TRAJECTORY HERE AND SEND TO SL
-                      
-            [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
-            %[q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
-            timeSteps = size(q,2);
-            ts = repmat(-1,1,timeSteps); % start immediately
-            poly = [q;qd;qdd;ts];
-            poly = poly(:);
-            poly = typecast(poly,'uint8');
-            % 1 is for clear
-            % 2 is for push back
-            N = typecast(uint32(timeSteps),'uint8');
-            poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
-            data = typecast(poly_zmq, 'uint8');
-            zmq.core.send(socket, data);
-            response = zmq.core.recv(socket);
-            
-            tf = timeSteps * 0.002;
-            sleep(tf);
-
-            numTrials = numTrials + 1;
-            time2PassTable = 1.0;
-            
-        end % end predict        
-        
     end
+    
+    %% PREDICT BALL TRAJECTORY
+    if ~waiting           
+        predictHorizon = maxPredictHorizon;
+        dt = 0.002;
+        predictLen = floor(predictHorizon / dt);
+        ballPred = zeros(6,predictLen);
+        for j = 1:predictLen
+            %filter.linearize(dt,0);
+            filter.predict(dt,0);
+            ballPred(:,j) = filter.x;
+        end    
+        ballTime = (1:predictLen) * dt;
+
+        % Calculate ball outgoing velocities attached to each ball pos
+        %{
+        tic
+        fast = true; % compute outgoing vel with linear model for speed
+        velOut = zeros(3,size(ballPred,2));
+        for j = 1:size(ballPred,2)
+
+            velOut(:,j) = calcBallVelOut3D(desBall,ballPred(1:3,j),time2reach,fast);              
+            % Use the inverse contact model to compute racket vels and normal
+            % at every point                
+            [rp,rv,ro] = calcDesRacketState(ballPred(1:3,j),velOut(:,j),ballPred(4:6,j));
+            racketDes.time(j) = ballTime(j);
+            racketDes.pos(:,j) = rp;
+            racketDes.normal(:,j) = ro;
+            racketDes.vel(:,j) = rv;
+
+        end
+        elapsedTimeForCalcDesRacket = toc;
+        fprintf('Elapsed time for racket computation: %f sec.\n',...
+            elapsedTimeForCalcDesRacket);
+        %}
+
+        %% COMPUTE TRAJECTORY HERE AND SEND TO SL
+
+        [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
+        %[q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
+        timeSteps = size(q,2);
+        ts = repmat(-1,1,timeSteps); % start immediately
+        poly = [q;qd;qdd;ts];
+        poly = poly(:);
+        poly = typecast(poly,'uint8');
+        % 1 is for clear
+        % 2 is for push back
+        N = typecast(uint32(timeSteps),'uint8');
+        poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
+        data = typecast(poly_zmq, 'uint8');
+        zmq.core.send(socket, data);
+        response = zmq.core.recv(socket);
+
+        tf = timeSteps * 0.002;
+        %pause(tf);
+
+        waiting = true;
+
+    end % end predict        
+        
+    %}
 end
  
 % disconnect from zmq and SL

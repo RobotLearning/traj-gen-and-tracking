@@ -71,11 +71,24 @@ classdef (Abstract) Robot < Model
                         
             dof = length(q0);
             [qf,qfdot,timeAtVHP] = calcPolyAtVHP(obj,ballPred,ballTime,q0);
+
             q0dot = zeros(dof,1);
             Q0 = [q0;q0dot];  
-            Qf = [qf;qfdot];
-            dt = ballTime(2)-ballTime(1);
+            Qf = [qf;qfdot];            
+            dt = ballTime(2) - ballTime(1);
             time2return = 0.5; % time to return to initial configuration
+            
+            % not moving in case calculation gone wrong
+            eps = 1e-2;
+            if norm(qf-q0, 2) < eps
+                disp('Not moving!');
+                totalTime = timeAtVHP + time2return;
+                N = floor(totalTime/dt);
+                q = q0 * ones(1,N);
+                qd = zeros(dof,N);
+                qdd = zeros(dof,N);
+                return;
+            end
             
             % GET 3RD DEGREE POLYNOMIALS            
             pStrike = generatePoly3rd(Q0,Qf,dt,timeAtVHP);
@@ -90,7 +103,7 @@ classdef (Abstract) Robot < Model
             
             q = [qStrike,qReturn];
             qd = [qdStrike,qdReturn];
-            qdd = [qddStrike,qddReturn];
+            qdd = [qddStrike,qddReturn];         
             
             % for debugging
             %[x,xd,o] = obj.calcRacketState([q;qd]);
