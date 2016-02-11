@@ -39,7 +39,6 @@ classdef (Abstract) Robot < Model
         % Generate optimal tt trajectories
         function [q,qd,qdd] = generateOptimalTTT(obj,racket,ballPred,ballTime,q0)
                   
-            loadTennisTableValues();
             dof = length(q0);
             dt = ballTime(2) - ballTime(1);
             time2return = 0.5;
@@ -67,10 +66,16 @@ classdef (Abstract) Robot < Model
         end
         
         % Generate 3D table tennis trajectories with the VHP method
-        function [q,qd,qdd] = generate3DTTTwithVHP(obj,ballPred,ballTime,q0)
+        function [q,qd,qdd] = generate3DTTTwithVHP(obj,VHP,ballPred,ballTime,q0)
                         
+            loadTennisTableValues();
             dof = length(q0);
-            [qf,qfdot,timeAtVHP] = calcPolyAtVHP(obj,ballPred,ballTime,q0);
+            time2reach = 0.5; % time to reach desired point on opponents court
+            % land the ball on the centre of opponents court
+            ballDes(1) = 0.0;
+            ballDes(2) = dist_to_table - 3*table_y/2;
+            ballDes(3) = table_z + ball_radius;
+            [qf,qfdot,timeAtVHP] = calcPolyAtVHP(obj,VHP,time2reach,ballDes,ballPred,ballTime,q0);
 
             q0dot = zeros(dof,1);
             Q0 = [q0;q0dot];  

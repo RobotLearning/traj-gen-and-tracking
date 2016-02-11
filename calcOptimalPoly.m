@@ -10,13 +10,26 @@ q0dot = zeros(dof,1);
 % parameters are qf,qfdot,T
 
 % initialize with a VHP method
-[qf_est,qfdot_est,timeAtVHP] = calcPolyAtVHP(robot,ballPred,ballTime,q0);
-x0 = [qf_est;qfdot_est;timeAtVHP];
-fprintf('Initializing optimization at T = %f.\n',timeAtVHP);
+% loadTennisTableValues();
+% time2reach = 0.5; % time to reach desired point on opponents court
+% % land the ball on the centre of opponents court
+% ballDes(1) = 0.0;
+% ballDes(2) = dist_to_table - 3*table_y/2;
+% ballDes(3) = table_z + ball_radius;
+% VHP = -0.5;
+% [qf_est,qfdot_est,timeEst] = calcPolyAtVHP(robot,VHP,time2reach,ballDes,ballPred,ballTime,q0);
+% x0 = [qf_est;qfdot_est;timeEst];
 
-% constraints on variables
-lb = [-Inf(dof*2,1);0]; % time must be positive
-ub = []; % TODO
+timeEst = 0.5;
+x0 = [q0;q0dot;timeEst];
+
+tic;
+fprintf('Initializing optimization at T = %f.\n',timeEst);
+
+% constraints on joint pos and vel and time
+con = robot.CON;
+lb = [con.q.min;con.qd.min;0.0]; % time must be positive
+ub = [con.q.max;con.qd.max;1.0];
 
 % cost function to be minimized
 fun = @(x) cost([q0;q0dot],x(1:end-1),x(end));
@@ -36,6 +49,7 @@ qfdot = x(dof+1:end-1);
 T = x(end);
 
 fprintf('Calculated optimal time at T = %f.\n',T);
+fprintf('Optimal Control for Table tennis took %f sec.\n',toc);
 
 end
 

@@ -293,7 +293,7 @@ while numTrials < 50
             % Calculate ball outgoing velocities attached to each ball pos
             %%{
             tic
-            fast = true; % compute outgoing vel with linear model for speed
+            fast = false; % compute outgoing vel with linear model for speed
             for j = 1:size(ballPred,2)
                 
                 velOut(:,j) = calcBallVelOut3D(desBall,ballPred(1:3,j),time2reach,fast);              
@@ -313,12 +313,16 @@ while numTrials < 50
             
             %% COMPUTE TRAJECTORY HERE
                       
-            [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
-            %[q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
+            % define virtual hitting plane (VHP)
+            VHP = -0.6;
+            %[q,qd,qdd] = wam.generate3DTTTwithVHP(VHP,ballPred,ballTime,q0);
+            [q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
             [x,xd,o] = wam.calcRacketState([q;qd]);
             
+            wam.checkJointLimits(q,qd,qdd);
+            
             % Debugging the trajectory generation 
-            h3 = scatter3(x(1,:),x(2,:),x(3,:)); 
+            h3 = scatter3(x(1,:),x(2,:),x(3,:));
             h2 = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
             
         end % end predict        

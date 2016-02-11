@@ -199,7 +199,9 @@ while numTrials <= 5
 
         %% COMPUTE TRAJECTORY HERE AND SEND TO SL
 
-        [q,qd,qdd] = wam.generate3DTTTwithVHP(ballPred,ballTime,q0); 
+        % define virtual hitting plane (VHP)
+        VHP = -0.2;
+        [q,qd,qdd] = wam.generate3DTTTwithVHP(VHP,ballPred,ballTime,q0); 
         %[q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
         timeSteps = size(q,2);
         ts = repmat(-1,1,timeSteps); % start immediately

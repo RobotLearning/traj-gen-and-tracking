@@ -201,6 +201,64 @@ classdef BarrettWAM < Robot
             end
         end
         
+        % calculate the geometric jacobian using the common jacabian function
+        function jac = calcJacobian(obj,q)
+            
+            [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q,obj.PAR);
+            jac = jacobian(xLink,xOrigin,xAxis);
+            obj.jac = jac; 
+        end
+        
+        %% Inverse Kinematics functions
+        
+        % Inverse Kinematics for table tennis
+        % Specifically, trying to keep initial slide of the racket
+        function [qf,qfdot] = invKinTableTennis1(obj,Q0,racket)
+            
+            racketPos = racket.pos;
+            racketNormal = racket.normal;
+            racketVel = racket.vel;
+            racketAngularVel = racket.angvel;
+            
+            try
+                tic;
+                % get the slide of the original racket orientation
+                [~,~,o] = obj.calcRacketState(Q0);
+                rotMatrix0 = quat2Rot(o);
+                slide0 = rotMatrix0(1:3,2);    
+                slide0 = slide0./norm(slide0,2);
+                % add a comfortable slide close to original slide
+                a = racketNormal;
+                % project slide0 to the racket plane
+                %projNormal = racketNormal*racketNormal';
+                %projRacket = eye(3) - projNormal;
+                %s = projRacket * slide0;    
+                s = slide0 - (racketNormal'*slide0).*racketNormal;    
+                assert(abs(norm(s,2)-1) < 1e-2,'slide not normalized');
+                s = s./norm(s,2);
+                assert(s'*a < 1e-3,'slide calculation not working!');
+                n = crossProd(s,a);                
+                rotMatrix = [n,s,a];
+                quatRacket = rot2Quat(rotMatrix);
+                % get endeffector position and quaternion
+                ePos = racketPos;
+                rotBack = [cos(-pi/4); -sin(-pi/4); 0; 0];
+                eQuat = mult2Quat(quatRacket,rotBack);
+                q0 = Q0(1:7);
+                qf = obj.invKinematics(ePos(:),eQuat(:),q0(:));
+                timeInvKin = toc;
+                fprintf('InvKin took %f sec.\n',timeInvKin);
+                obj.calcJacobian(qf);                
+                qfdot = obj.jac \ [racketVel;racketAngularVel];
+            catch ME
+                disp(ME.message);
+                disp('InvKin problem. Not moving the robot...');                
+                %disp('Virtual Hitting Point outside of workspace');
+                qf = q0;
+                qfdot = zeros(dof,1);
+            end
+        end
+        
         % call inverse kinematics from outside
         % o is a quaternion
         function q = invKinematics(obj,x,o,q0)
@@ -225,14 +283,24 @@ classdef BarrettWAM < Robot
             
             %q = unwrap(q);
             
-        end
+        end        
+
+        %% Check safety here
         
-        % calculate the geometric jacobian using the common jacabian function
-        function jac = calcJacobian(obj,q)
+        function checkJointLimits(obj,q,qd,qdd)
             
-            [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q,obj.PAR);
-            jac = jacobian(xLink,xOrigin,xAxis);
-            obj.jac = jac; 
+            len = size(q,2);
+            con = obj.CON;
+            qmax = repmat(con.q.max,1,len);            
+            qmin = repmat(con.q.min,1,len);
+            qdmax = repmat(con.qd.max,1,len);
+            qdmin = repmat(con.qd.min,1,len);
+            qddmax = repmat(con.qdd.max,1,len);
+            qddmin = repmat(con.qdd.min,1,len);            
+            assert(sum(sum((q > qmax) + (q < qmin))) == 0,'joint limits violated');
+            assert(sum(sum((qd > qdmax) + (qd < qdmin))) == 0, 'vel limits violated');
+            assert(sum(sum((qdd > qddmax) + (qdd < qddmin))) == 0, 'acc limits violated');
+             
         end
         
         %% Drawing functions here

@@ -18,7 +18,6 @@ function qTotal = invKinematics(Ahmats, q0, PAR)
     opt.plot = false;
     opt.pinv = false;
     opt.varstep = true;
-    opt.pinv = true;
     opt.verbose = false;
 
     q = q0;
@@ -60,10 +59,10 @@ function qTotal = invKinematics(Ahmats, q0, PAR)
             % update the count and test against iteration limit
             count = count + 1;
             if count > opt.ilimit
-                error('InvKin: iteration limit %d exceeded (row %d), final err %f', ...
+                warning('InvKin: iteration limit %d exceeded (row %d), final err %f', ...
                     opt.ilimit, i, normErr);
-                q = NaN*ones(1,numDofs);
-                break
+                %q = NaN*ones(1,numDofs);
+                break;
             end
 
             % compute the error
