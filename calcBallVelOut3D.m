@@ -15,7 +15,8 @@ ballOutVel(3) = (ballDes(3) - ballPos(3) - ...
                 0.5*gravity*time2reach^2)/time2reach;
             
 if fast
-    velOut = ballOutVel(:);
+    % hack for now
+    velOut = [1.1;1.1;1.2] .* ballOutVel(:);
     return;
 end
             

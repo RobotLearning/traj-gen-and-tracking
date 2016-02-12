@@ -41,8 +41,8 @@ loadTennisTableValues;
 initializeWAM;
 
 % initialize ball on the ball cannon with a sensible vel
-ball(1:3,1) = ball_cannon;
-ball(4:6,1) = [-0.9 4.000 3.2];% + 0.05 * randn(1,3);
+ball(1:3,1) = ball_cannon + 0.2 * randn(1,3);
+ball(4:6,1) = [-0.9 4.000 3.2] + 0.2 * randn(1,3);
 ballPred(1:6,1) = ball(1:6,1); % to initialize drawing of predicted balls
 
 % land the ball on the centre of opponents court
@@ -171,8 +171,8 @@ while numTrials < 50
         [joint,ee,racket] = wam.drawPosture(q0);
         endeff = [joint(end,:); ee];
         % resetting the ball generation
-        ball(1:3,1) = ball_cannon;
-        ball(4:6,1) = [-0.9 4.000 3.2];% + 0.05 * randn(1,3);
+        ball(1:3,1) = ball_cannon + 0.2 * randn(1,3);
+        ball(4:6,1) = [-0.9 4.000 3.2] + 0.2 * randn(1,3);
         % reset the filter
         filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
     end
@@ -293,7 +293,7 @@ while numTrials < 50
             % Calculate ball outgoing velocities attached to each ball pos
             %%{
             tic
-            fast = false; % compute outgoing vel with linear model for speed
+            fast = true; % compute outgoing vel with linear model for speed
             for j = 1:size(ballPred,2)
                 
                 velOut(:,j) = calcBallVelOut3D(desBall,ballPred(1:3,j),time2reach,fast);              
@@ -319,7 +319,9 @@ while numTrials < 50
             [q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
             [x,xd,o] = wam.calcRacketState([q;qd]);
             
+            tic
             wam.checkJointLimits(q,qd,qdd);
+            toc
             
             % Debugging the trajectory generation 
             h3 = scatter3(x(1,:),x(2,:),x(3,:));

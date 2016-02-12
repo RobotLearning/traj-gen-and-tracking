@@ -39,7 +39,7 @@ nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),x(end));
 
 % solve with a nonlinear optimizer
 %options = optimoptions('fmincon','Display','off');
-options = optimoptions('fmincon','Display','final-detailed');
+options = optimoptions('fmincon','Algorithm', 'sqp','Display','final-detailed');
 %options = optimoptions('fmincon','Display','iter-detailed');
 x = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
 
@@ -55,10 +55,19 @@ end
 
 function J = cost(Q0,Qf,T)
 
-a = calculatePolyCoeff(Q0,Qf,T);
-a3 = a(1,:);
-a2 = a(2,:);
-J = T * (3*T^2*(a3*a3') + 3*T*(a3*a2') + (a2*a2'));
+% a = calculatePolyCoeff(Q0,Qf,T);
+% a3 = a(1,:)';
+% a2 = a(2,:)';
+
+dof = 7;
+q0 = Q0(1:dof);
+q0dot = Q0(dof+1:end);
+qf = Qf(1:dof);
+qfdot = Qf(dof+1:end);
+a3 = (2/(T^3))*(q0-qf) + (1/T^2)*(q0dot + qfdot);
+a2 = (3/(T^2))*(qf-q0) - (1/T)*(qfdot + 2*q0dot);
+
+J = T * (3*T^2*(a3'*a3) + 3*T*(a3'*a2) + (a2'*a2));
 
 end
 
