@@ -10,18 +10,23 @@ q0dot = zeros(dof,1);
 % parameters are qf,qfdot,T
 
 % initialize with a VHP method
-% loadTennisTableValues();
-% time2reach = 0.5; % time to reach desired point on opponents court
-% % land the ball on the centre of opponents court
-% ballDes(1) = 0.0;
-% ballDes(2) = dist_to_table - 3*table_y/2;
-% ballDes(3) = table_z + ball_radius;
-% VHP = -0.5;
-% [qf_est,qfdot_est,timeEst] = calcPolyAtVHP(robot,VHP,time2reach,ballDes,ballPred,ballTime,q0);
-% x0 = [qf_est;qfdot_est;timeEst];
+%{
+loadTennisTableValues();
+time2reach = 0.5; % time to reach desired point on opponents court
+% land the ball on the centre of opponents court
+ballDes(1) = 0.0;
+ballDes(2) = dist_to_table - 3*table_y/2;
+ballDes(3) = table_z + ball_radius;
+VHP = -0.5;
+[qf_est,qfdot_est,timeEst] = calcPolyAtVHP(robot,VHP,time2reach,ballDes,ballPred,ballTime,q0);
+x0 = [qf_est;qfdot_est;timeEst];
+%}
 
-timeEst = 0.5;
-x0 = [q0;q0dot;timeEst];
+timeEst = 0.8;
+%x0 = [q0;q0dot;timeEst];
+qest = [2.25;-0.38;-1.27;1.33;-1.86;-0.19;0.77];
+qdest = [1.10;-0.53;-3.21;1.26;-0.44;-0.09;0.78];
+x0 = [qest;qdest;timeEst];
 
 tic;
 fprintf('Initializing optimization at T = %f.\n',timeEst);
@@ -34,40 +39,62 @@ ub = [con.q.max;con.qd.max;1.0];
 % cost function to be minimized
 fun = @(x) cost([q0;q0dot],x(1:end-1),x(end));
 
-% constraint function - ball must be intersected with desirable vel.
+% nonlinear equality constraint
+% ball must be intersected with desirable vel.
 nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),x(end));
 
-% solve with a nonlinear optimizer
+% solve with MATLAB nonlinear optimizer
+%%{
 %options = optimoptions('fmincon','Display','off');
-options = optimoptions('fmincon','Algorithm', 'sqp','Display','final-detailed');
+options = optimoptions('fmincon','Algorithm', 'sqp',...
+                       'Display','final-detailed', ...
+                       'TolX', 1e-6, ...
+                       'TolCon', 1e-6, ...
+                       'TolFun',1e-6, ...
+                       'GradObj','on');
+                       %'DerivativeCheck','on',...                       
 %options = optimoptions('fmincon','Display','iter-detailed');
-x = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
+profile on;
+xopt = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
+%}
 
 % release the variables
-qf = x(1:dof);
-qfdot = x(dof+1:end-1);
-T = x(end);
+profile viewer;
+qf = xopt(1:dof);
+qfdot = xopt(dof+1:end-1);
+T = xopt(end);
 
-fprintf('Calculated optimal time at T = %f.\n',T);
-fprintf('Optimal Control for Table tennis took %f sec.\n',toc);
+fprintf('Calc. opt. time at T = %f.\n',T);
+fprintf('Optim took %f sec.\n',toc);
 
 end
 
-function J = cost(Q0,Qf,T)
+% G is the gradient
+function [J,G] = cost(Q0,Qf,T)
 
 % a = calculatePolyCoeff(Q0,Qf,T);
 % a3 = a(1,:)';
 % a2 = a(2,:)';
 
 dof = 7;
-q0 = Q0(1:dof);
-q0dot = Q0(dof+1:end);
-qf = Qf(1:dof);
-qfdot = Qf(dof+1:end);
-a3 = (2/(T^3))*(q0-qf) + (1/T^2)*(q0dot + qfdot);
+q0 = Q0(1:dof); 
+q0dot = Q0(dof+1:end); 
+qf = Qf(1:dof); 
+qfdot = Qf(dof+1:end); 
+a3 = (2/(T^3))*(q0-qf) + (1/(T^2))*(q0dot + qfdot);
 a2 = (3/(T^2))*(qf-q0) - (1/T)*(qfdot + 2*q0dot);
 
 J = T * (3*T^2*(a3'*a3) + 3*T*(a3'*a2) + (a2'*a2));
+
+% supply gradient if algorithm supports it
+if nargout > 1
+    G = [(6/(T^3))*(qf-q0) - (3/T^2)*(q0dot + qfdot);
+         (-3/T^2)*(qf-q0) + (1/T)*(2*qfdot + q0dot)];
+    G(end+1) = (-9/(T^4))*((qf-q0)'*(qf-q0)) + ...
+               (6/(T^3))*((qf-q0)'*(q0dot+qfdot)) +...
+               (3/(T^2))*(q0dot'*(q0dot + qfdot)) +...
+               -(1/T^2)*((qfdot+2*q0dot)'*(qfdot+2*q0dot));
+end
 
 end
 
@@ -106,8 +133,6 @@ c = [];
 ceq = [xf - posDes(:); 
        xfd - velDes(:);
        nf - normalDes(:)];
-
-
 end
 
 % interpolate to find ball at time t

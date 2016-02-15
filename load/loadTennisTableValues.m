@@ -1,7 +1,7 @@
 %% Table Tennis parameters and values
 
 % Table Variables 
-dist_to_table= -0.8; %-0.87; %-3.50; %-3.34;%-3.6;%-3.34%-2.74 -0.5; %0.8;  %0.2
+dist_to_table= -0.8; % -1.15; %-3.50; 
 table_height = -0.76;
 table_length = 2.76; 
 net_height   = 0.144; %0.1525

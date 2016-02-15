@@ -1,22 +1,27 @@
-ROADMAP
+Simulation notes:
 
-- Test optimal traj gen in SL and real robot
+- Dont hit if it rebounds twice or does not rebound
+- Ball halts when it goes under the table
 
-Robot list:
-- Experiment with Ballgun fixed.
-- Correct initial conditions of zero-phase filtering and test in MATLAB with ILC 
-  [filtfilt is available in SL]
-- Implement/Learn RDMP first in MATLAB and then in SL
+Robot experiments (MATLAB/SL/REAL):
 
-MATLAB/SL list:
-- implement ball-racket contact inside the Ball class
-- kinematics calibration with ball-racket trajectories using camera?
-- how to make a new thread for optimization?
-- ATLAS/BLAS library integration with SL (wrapper?)
+- Test SL connection and correct frequency
+- Offline computation of optimal control trajectories for 
+  fixed ball distribution
+- Train distribution of landing as a Gaussian Process
+- Better InvKin that considers orientation and constraints
+  to be copied from SL and mexed to MATLAB
+- InvKin to find initial solution to speed up computation
+- MATLAB-coder on the optimization for speed up 
+- Options to speed up computation (including opt algorithm)
+- Implementing NLOPT in C ? [what to do with Kalman filter?]
+- Incorporate qmax qmin bounds in the optimization better
 
 ILC/control notes:
 - How does aILC perform based on updated Kalman filter code
 - test performance of ILC with linearization at each iteration
+- Correct initial conditions of zero-phase filtering and test in MATLAB with ILC 
+  [filtfilt is available in SL]
 - Why does ILC learning with feedback generate zero Finv?
 - Test LQG and iLQR, DDP on MATLAB
 - Implement REPS, PI2 algorithms on MATLAB, variational Bayes
@@ -46,6 +51,3 @@ Extensions:
 - Fast ways to parameterize LQR matrix K or ILC matrix F for different trajectories?
 - Riemannian statistics as a way to estimate f(x,u) based on learning different Fs (linearization)?
   riemannian singular values?
-- Chaos control to induce bifurcation to a stable orbit during learning? Does it apply only to human 
-  motor control?
-- Reduced rank approximation with Dirichlet process on Gaussian Process

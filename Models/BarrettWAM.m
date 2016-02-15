@@ -287,7 +287,7 @@ classdef BarrettWAM < Robot
 
         %% Check safety here
         
-        function checkJointLimits(obj,q,qd,qdd)
+        function [q,qd,qdd] = checkJointLimits(obj,q,qd,qdd)
             
             len = size(q,2);
             con = obj.CON;
@@ -296,11 +296,19 @@ classdef BarrettWAM < Robot
             qdmax = repmat(con.qd.max,1,len);
             qdmin = repmat(con.qd.min,1,len);
             qddmax = repmat(con.qdd.max,1,len);
-            qddmin = repmat(con.qdd.min,1,len);            
-            assert(sum(sum((q > qmax) + (q < qmin))) == 0,'joint limits violated');
-            assert(sum(sum((qd > qdmax) + (qd < qdmin))) == 0, 'vel limits violated');
-            assert(sum(sum((qdd > qddmax) + (qdd < qddmin))) == 0, 'acc limits violated');
-             
+            qddmin = repmat(con.qdd.min,1,len); 
+            try
+                assert(sum(sum((q > qmax) + (q < qmin))) == 0,'joint limits violated');
+                assert(sum(sum((qd > qdmax) + (qd < qdmin))) == 0, 'vel limits violated');
+                assert(sum(sum((qdd > qddmax) + (qdd < qddmin))) == 0, 'acc limits violated');
+            catch
+                disp('Limits violated! Not moving the robot!');
+                dof = length(con.q.max);
+                q0 = q(:,1);
+                q = q0 * ones(1,len);
+                qd = zeros(dof,len);
+                qdd = zeros(dof,len);
+            end
         end
         
         %% Drawing functions here

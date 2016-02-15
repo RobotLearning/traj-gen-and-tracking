@@ -24,7 +24,7 @@ function p = generatePoly3rd(Q0,Qf,dt,tf)
         a = M(0,tf) \ Qstrike;
         qStrike(m,:) = a(1)*t.^3 + a(2)*t.^2 + a(3)*t + a(4);
         qdStrike(m,:) = 3*a(1)*t.^2 + 2*a(2)*t + a(3);
-        qddStrike(m,:) = 3*a(1)*t + 2*a(2);
+        qddStrike(m,:) = 6*a(1)*t + 2*a(2);
     end
 
     p = [qStrike; qdStrike; qddStrike];

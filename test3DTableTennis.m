@@ -41,8 +41,8 @@ loadTennisTableValues;
 initializeWAM;
 
 % initialize ball on the ball cannon with a sensible vel
-ball(1:3,1) = ball_cannon + 0.2 * randn(1,3);
-ball(4:6,1) = [-0.9 4.000 3.2] + 0.2 * randn(1,3);
+ball(1:3,1) = ball_cannon + 0.0 * randn(1,3);
+ball(4:6,1) = [-0.9 4.000 3.2] + 0.0 * randn(1,3);
 ballPred(1:6,1) = ball(1:6,1); % to initialize drawing of predicted balls
 
 % land the ball on the centre of opponents court
@@ -102,8 +102,8 @@ endeff = [joint(end,:); ee];
 h11 = plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
 h12 = fill3(racket(1,:), racket(2,:), racket(3,:), 'r');
 
-h2 = scatter3(ballPred(1,1),ballPred(2,1),ballPred(3,1),20,'b','filled');
-h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
+%h2 = scatter3(ballPred(1,1),ballPred(2,1),ballPred(3,1),20,'b','filled');
+%h3 = scatter3(X0(1,1),X0(2,1),X0(3,1),20,'k','filled');
 title('Ball-robot interaction');
 grid on;
 axis equal;
@@ -171,8 +171,8 @@ while numTrials < 50
         [joint,ee,racket] = wam.drawPosture(q0);
         endeff = [joint(end,:); ee];
         % resetting the ball generation
-        ball(1:3,1) = ball_cannon + 0.2 * randn(1,3);
-        ball(4:6,1) = [-0.9 4.000 3.2] + 0.2 * randn(1,3);
+        ball(1:3,1) = ball_cannon + 0.1 * randn(1,3);
+        ball(4:6,1) = [-0.9 4.000 3.2] + 0.1 * randn(1,3);
         % reset the filter
         filter.initState([ball(1:3,1);ball(4:6,1) + sqrt(eps)*randn(3,1)],eps);
     end
@@ -314,14 +314,11 @@ while numTrials < 50
             %% COMPUTE TRAJECTORY HERE
                       
             % define virtual hitting plane (VHP)
-            VHP = -0.6;
+            %VHP = -0.6;
             %[q,qd,qdd] = wam.generate3DTTTwithVHP(VHP,ballPred,ballTime,q0);
-            [q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
+            [q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);            
+            [q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
             [x,xd,o] = wam.calcRacketState([q;qd]);
-            
-            tic
-            wam.checkJointLimits(q,qd,qdd);
-            toc
             
             % Debugging the trajectory generation 
             h3 = scatter3(x(1,:),x(2,:),x(3,:));
@@ -357,7 +354,7 @@ while numTrials < 50
     set(h12,'ZData',racket(3,:));
     
     drawnow;
-    pause(0.002);
+    pause(0.001);
         
     t = t + dt;
     ballIdx = ballIdx + 1;
