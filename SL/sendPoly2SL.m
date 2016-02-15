@@ -126,6 +126,7 @@ while numTrials <= 5
     if ~isempty(ballPreObs) && ~isempty(ballObs) && waiting
         ballObsDer = (ballObs(:,end) - ballPreObs(:,end)) ./ ...
                        (ballTime(end) - ballPreTime(end));
+        disp('Observed a ball!');
         %fprintf('Derivative of ball = %f\n', ballObsDer);
         tol = 1e-2;    
         % if ball appears on opponent side coming towards the robot
@@ -136,7 +137,11 @@ while numTrials <= 5
             time2PassTable = 1.0;
             % reset the filter
             filter.initState([ballObs(:,end);guessBallInitVel],eps);
-        end    
+        else
+            disp('Ball is not incoming!');
+        end
+    else
+        disp('No ball observations yet! Waiting...');
     end
 
     %% ESTIMATE BALL STATE
@@ -176,7 +181,7 @@ while numTrials <= 5
         ballTime = (1:predictLen) * dt;
 
         % Calculate ball outgoing velocities attached to each ball pos
-        %{
+        %%{
         tic
         fast = true; % compute outgoing vel with linear model for speed
         velOut = zeros(3,size(ballPred,2));
@@ -201,8 +206,9 @@ while numTrials <= 5
 
         % define virtual hitting plane (VHP)
         VHP = -0.2;
-        [q,qd,qdd] = wam.generate3DTTTwithVHP(VHP,ballPred,ballTime,q0); 
-        %[q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
+        %[q,qd,qdd] = wam.generate3DTTTwithVHP(VHP,ballPred,ballTime,q0); 
+        [q,qd,qdd] = wam.generateOptimalTTT(racketDes,ballPred,ballTime,q0);
+        [q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
         timeSteps = size(q,2);
         ts = repmat(-1,1,timeSteps); % start immediately
         poly = [q;qd;qdd;ts];

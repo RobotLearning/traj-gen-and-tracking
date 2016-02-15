@@ -21,18 +21,17 @@ for i = 1:n
     end
 end
 y = mu + chol(Sigma + hp.noise.var*eye(n)) * x;
-gp = GP(hp,x,y);
+gp = GP(hp,x',y);
 
 figure(1)
 set(gca, 'FontSize', 24)
-disp(' '); disp('plot(x, y, ''+'')')
 plot(x, y, '+', 'MarkerSize', 12)
-axis([-1.9 1.9 -0.9 3.9])
+%axis([-1.9 1.9 -0.9 3.9])
 grid on
 xlabel('input, x')
 ylabel('output, y')
 
-z = linspace(-1.9, 1.9, 101)';
+z = linspace(-2, 2, 100);
 for i = 1:length(z)
     [mean, var] = gp.predict(z(i));
     m(i) = mean;
@@ -41,15 +40,10 @@ end
 
 figure(2)
 set(gca, 'FontSize', 24)
-disp(' ')
-disp('f = [m+2*sqrt(s2); flipdim(m-2*sqrt(s2),1)];') 
 f = [m+2*sqrt(s2); flipdim(m-2*sqrt(s2),1)];
-disp('fill([z; flipdim(z,1)], f, [7 7 7]/8);')
-fill([z; flipdim(z,1)], f, [7 7 7]/8);
-
-disp('hold on; plot(z, m); plot(x, y, ''+'')')
+fill([z; flip(z,1)], f, [7 7 7]/8);
 hold on; plot(z, m, 'LineWidth', 2); plot(x, y, '+', 'MarkerSize', 12)
-axis([-1.9 1.9 -0.9 3.9])
+%axis([-1.9 1.9 -0.9 3.9])
 grid on
 xlabel('input, x')
 ylabel('output, y')

@@ -12,7 +12,6 @@ Robot experiments (MATLAB/SL/REAL):
 - Better InvKin that considers orientation and constraints
   to be copied from SL and mexed to MATLAB
 - InvKin to find initial solution to speed up computation
-- MATLAB-coder on the optimization for speed up 
 - Options to speed up computation (including opt algorithm)
 - Implementing NLOPT in C ? [what to do with Kalman filter?]
 - Incorporate qmax qmin bounds in the optimization better

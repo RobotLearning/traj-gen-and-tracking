@@ -43,7 +43,14 @@ classdef (Abstract) Robot < Model
             dt = ballTime(2) - ballTime(1);
             time2return = 1.0;
             
-            [qf,qfdot,time2hit] = calcOptimalPoly(obj,racket,ballTime,ballPred,q0);
+            qest = [2.25;-0.38;-1.27;1.33;-1.86;-0.19;0.77];
+            qdest = [1.10;-0.53;-3.21;1.26;-0.44;-0.09;0.78];
+            timeEst = 0.8;
+
+            qf = qest;
+            qfdot = qdest;
+            time2hit = timeEst;
+            %[qf,qfdot,time2hit] = calcOptimalPoly(obj,racket,ballTime,ballPred,q0);
             % round time2hit to nearest dt
             time2hit = dt * ceil(time2hit/dt);
             

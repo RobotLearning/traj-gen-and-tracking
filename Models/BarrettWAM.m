@@ -219,6 +219,7 @@ classdef BarrettWAM < Robot
             racketNormal = racket.normal;
             racketVel = racket.vel;
             racketAngularVel = racket.angvel;
+            q0 = Q0(1:7);
             
             try
                 tic;
@@ -244,7 +245,6 @@ classdef BarrettWAM < Robot
                 ePos = racketPos;
                 rotBack = [cos(-pi/4); -sin(-pi/4); 0; 0];
                 eQuat = mult2Quat(quatRacket,rotBack);
-                q0 = Q0(1:7);
                 qf = obj.invKinematics(ePos(:),eQuat(:),q0(:));
                 timeInvKin = toc;
                 fprintf('InvKin took %f sec.\n',timeInvKin);
@@ -255,7 +255,7 @@ classdef BarrettWAM < Robot
                 disp('InvKin problem. Not moving the robot...');                
                 %disp('Virtual Hitting Point outside of workspace');
                 qf = q0;
-                qfdot = zeros(dof,1);
+                qfdot = zeros(7,1);
             end
         end
         

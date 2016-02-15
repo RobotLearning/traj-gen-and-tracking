@@ -54,12 +54,12 @@ options = optimoptions('fmincon','Algorithm', 'sqp',...
                        'GradObj','on');
                        %'DerivativeCheck','on',...                       
 %options = optimoptions('fmincon','Display','iter-detailed');
-profile on;
+%profile on;
 xopt = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
 %}
 
 % release the variables
-profile viewer;
+%profile viewer;
 qf = xopt(1:dof);
 qfdot = xopt(dof+1:end-1);
 T = xopt(end);
