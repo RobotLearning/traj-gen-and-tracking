@@ -23,10 +23,10 @@ x0 = [qf_est;qfdot_est;timeEst];
 %}
 
 timeEst = 0.8;
-%x0 = [q0;q0dot;timeEst];
-qest = [2.25;-0.38;-1.27;1.33;-1.86;-0.19;0.77];
-qdest = [1.10;-0.53;-3.21;1.26;-0.44;-0.09;0.78];
-x0 = [qest;qdest;timeEst];
+x0 = [q0;q0dot;timeEst];
+% qest = [2.25;-0.38;-1.27;1.33;-1.86;-0.19;0.77];
+% qdest = [1.10;-0.53;-3.21;1.26;-0.44;-0.09;0.78];
+%x0 = [qest;qdest;timeEst];
 
 tic;
 fprintf('Initializing optimization at T = %f.\n',timeEst);

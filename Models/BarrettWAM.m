@@ -338,7 +338,7 @@ classdef BarrettWAM < Robot
         end
         
         % make an animation of the robot manipulator
-        %TODO
+        % TODO
         function animateArm(obj,qs)
             
             dim = 7;
