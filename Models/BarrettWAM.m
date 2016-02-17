@@ -291,12 +291,12 @@ classdef BarrettWAM < Robot
             
             len = size(q,2);
             con = obj.CON;
-            qmax = repmat(con.q.max,1,len);            
+            qmax = repmat(con.q.max,1,len);     
             qmin = repmat(con.q.min,1,len);
             qdmax = repmat(con.qd.max,1,len);
             qdmin = repmat(con.qd.min,1,len);
             qddmax = repmat(con.qdd.max,1,len);
-            qddmin = repmat(con.qdd.min,1,len); 
+            qddmin = repmat(con.qdd.min,1,len);
             try
                 assert(sum(sum((q > qmax) + (q < qmin))) == 0,'joint limits violated');
                 assert(sum(sum((qd > qdmax) + (qd < qdmin))) == 0, 'vel limits violated');
@@ -337,23 +337,8 @@ classdef BarrettWAM < Robot
             
         end
         
-        % make an animation of the robot manipulator
-        % TODO
-        function animateArm(obj,qs)
-            
-            dim = 7;
-            assert(size(qs,1) == dim, 'velocities not necessary!');
-            NCART = 3;
-            x = zeros(NCART,lenq);
-            o = zeros(4,lenq);
-            for i = 1:lenq
-                [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(qs(:,i),obj.PAR);
-                quat = rot2Quat(Amats(6,1:3,1:3));
-                o(:,i) = obj.calcRacketOrientation(quat);
-                x(:,:,i) = [xOrigin;xLink(6,:)];
-            end
-            
-            animateWAM(x,o);
+        function animateArm(obj) 
+            % TODO: 
         end
         
         % get lifted model constraints

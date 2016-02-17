@@ -39,6 +39,9 @@ loadTennisTableValues;
 %% Initialize Barrett WAM
 
 initializeWAM;
+% initialize the arm with zero velocity on the right hand side
+q0 = [1.8; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
+qd0 = zeros(N_DOFS,1);
 
 % initialize ball on the ball cannon with a sensible vel
 ball(1:3,1) = ball_cannon + 0.0 * randn(1,3);

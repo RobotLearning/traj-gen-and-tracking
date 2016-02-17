@@ -48,8 +48,9 @@ classdef Ball < handle
             
             % table related values
             obj.TABLE.Z = table_z;
+            obj.TABLE.WIDTH = table_width;
             obj.TABLE.LENGTH = table_length;
-            % coeff of restitution-friction vector            
+            % coeff of restitution-friction vector
             obj.TABLE.K = [CFTX; CFTY; -CRT];
             
             % floor
