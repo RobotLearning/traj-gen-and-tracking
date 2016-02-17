@@ -2,8 +2,6 @@
 
 % TODO:
 % check for 2d as well as 3d
-% implement bisection to find hitting times for all cases
-
 classdef Ball < handle
    
     % Fields necessary for all ball models
@@ -29,6 +27,8 @@ classdef Ball < handle
         NET
         % racket structure
         RACKET
+        % for drawing
+        MESH
     end
     
     % methods that all balls share
@@ -58,12 +58,22 @@ classdef Ball < handle
             % net y value and coeff of restitution of net
             obj.NET.Y = dist_to_table - table_y;
             obj.NET.Xmax = table_width/2 + net_overhang;
-            obj.NET.Zmax = table_height + net_height;
+            obj.NET.Zmax = table_z + net_height;
             obj.NET.CRN = net_restitution;
             
             % racket restitution
             obj.RACKET.CRR = CRR;
             obj.RACKET.R = racket_radius;
+            
+            % mesh for drawing the ball
+            numPoints = 100;
+            [ballMeshX,ballMeshY,ballMeshZ] = sphere(numPoints);
+            ballMeshX = ball_radius * ballMeshX;
+            ballMeshY = ball_radius * ballMeshY;
+            ballMeshZ = ball_radius * ballMeshZ;
+            obj.MESH.X = ballMeshX;
+            obj.MESH.Y = ballMeshY;
+            obj.MESH.Z = ballMeshZ;
         end
         
         %% Flight models  
@@ -132,18 +142,33 @@ classdef Ball < handle
             vel = M * vel;
         end
         
-        % TODO: give landing information
+        % Racket contact model
+        function velOut = racketContactModel(obj,velIn,racket)
+            % Change ball velocity based on contact model
+            racketNormal = racket.normal;
+            racketVel = racket.vel;
+            
+            speedInAlongNormal = racketNormal'*velIn;
+            speedRacketAlongNormal = racketNormal'*racketVel;
+            velInAlongNormal = speedInAlongNormal.*racketNormal;
+            velRacketAlongNormal = speedRacketAlongNormal.*racketNormal;
+            % this is kept the same in mirror law
+            velInAlongRacket = velIn - velInAlongNormal;
+            velOutAlongNormal = velRacketAlongNormal + ...
+                obj.RACKET.CRR * (velRacketAlongNormal - velInAlongNormal);
+            velOut = velOutAlongNormal + velInAlongRacket;
+        end
+        
+        % rebound for both on and under the table
         % check if rebound event happens within dt seconds
         function [posNext,velNext] = checkContactTable(obj,dt,posNext,velNext)
-            % condition for bouncing
 
             % if ball would cross the table
-            % consider rebound only
-            
+            % consider rebound only            
             cross = sign(posNext(3) - obj.TABLE.Z) ~= ...
                          sign(obj.pos(3) - obj.TABLE.Z);
                      
-            
+            % condition for bouncing      
             if cross && abs(posNext(2) - obj.NET.Y) < obj.TABLE.LENGTH/2
                 tol = 1e-4;
                 dt1 = 0;
@@ -171,36 +196,58 @@ classdef Ball < handle
             end
         end
         
+        % check contact with racket
+        % assumes racket normal stays constant throughout
         function [posNext,velNext] = checkContactRacket(obj,dt,posNext,velNext,racket)
-            % check contact with racket    
-            tol = obj.radius + 1e-2;
 
             racketPos = racket.pos;
             racketVel = racket.vel;
             racketNormal = racket.normal;
             racketRadius = obj.RACKET.R;
 
-            vecFromRacketToBall = obj.pos - racketPos;
-            distToRacketPlane = racketNormal'*vecFromRacketToBall;
-            distOnRacketPlane = sqrt(vecFromRacketToBall'*vecFromRacketToBall - distToRacketPlane^2);
+            diff = obj.pos - racketPos;
+            distToRacketPlane = racketNormal'*diff;
+            distOnRacketPlane = sqrt(diff'*diff - distToRacketPlane^2);
+            
+            % consider contact only  
+            % if ball would cross the racket 
+            racketPosNext = racketPos + dt * racketVel;
+            diffNext = posNext - racketPosNext;
+            cross = sign(diffNext'*racketNormal) ~= ...
+                         sign(diff'*racketNormal);
 
-            if distToRacketPlane < tol && distOnRacketPlane < racketRadius          
-                % TODO: find a precise hitting time with bisection                
+            % find the precise hitting time with bisection  
+            if cross && distOnRacketPlane < racketRadius       
+                
+                tol = 1e-4; % obj.radius
+                dt1 = 0;
+                dt2 = dt;
+                xContact = [obj.pos; obj.vel];
+                dtContact = 0.0;
+                % doing bisection to find the bounce time
+                while abs(distToRacketPlane) > tol
+                    dtContact = (dt1 + dt2) / 2;
+                    xContact(4:6) = obj.vel + dtContact * obj.ballFlightModel3D(obj.vel);
+                    xContact(1:3) = obj.pos + dtContact * xContact(4:6);
+                    racketContactPos = racketPos + dtContact * racketVel;
+                    diff = xContact(1:3) - racketContactPos;
+                    distToRacketPlane = racketNormal'*diff;
+                    if distToRacketPlane > 0
+                        % increase the time
+                        dt1 = dtContact;
+                    else
+                        dt2 = dtContact;
+                    end
+                end
+                % racket contact
+                xContact(4:6) = obj.racketContactModel(xContact(4:6),racket);
+                % integrate for the rest
+                dt = dt - dtContact;
+                velNext = xContact(4:6) + dt * obj.ballFlightModel3D(xContact(4:6));
+                posNext = xContact(1:3) + dt * velNext;                
+                              
                 fprintf('Hit at x = %f, y = %f, z = %f\n',...
-                     obj.pos(1),obj.pos(2),obj.pos(3));
-                % Change ball velocity based on contact model
-                % get ball velocity
-                velIn = obj.vel;
-                speedInAlongNormal = racketNormal'*velIn;
-                speedRacketAlongNormal = racketNormal'*racketVel;
-                velInAlongNormal = speedInAlongNormal.*racketNormal;
-                velRacketAlongNormal = speedRacketAlongNormal.*racketNormal;
-                % this is kept the same in mirror law
-                velInAlongRacket = velIn - velInAlongNormal;
-                velOutAlongNormal = velRacketAlongNormal + ...
-                    obj.RACKET.CRR * (velRacketAlongNormal - velInAlongNormal);
-                velOut = velOutAlongNormal + velInAlongRacket;
-                velNext = velOut;
+                     xContact(1),xContact(2),xContact(3));
             end
         end
         

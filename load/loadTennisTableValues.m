@@ -1,8 +1,8 @@
 %% Table Tennis parameters and values
 
 % Table Variables 
-dist_to_table= -0.8; % -1.15; %-3.50; 
-table_height = -0.76;
+dist_to_table = -0.8; % -1.15; %-3.50; 
+table_height = 0.76;
 table_length = 2.76; 
 net_height   = 0.144; %0.1525
 net_overhang = 0.1525;
@@ -49,7 +49,7 @@ gravity = -9.802;
 % for the second demo only
 %dist_to_table = dist_to_table - 0.25;
 
-table_z = floor_level - table_height;
+table_z = floor_level + table_height;
 table_x = table_center + table_width/2;
 table_y = table_length/2;
 
@@ -87,4 +87,4 @@ net = [net1,net2,net3,net4]';
 % initialize the ball gun
 ball_cannon(1) = table_center + 0.4;
 ball_cannon(2) = dist_to_table - table_length - 0.2; % since dist_to_table is negative
-ball_cannon(3) = floor_level - table_height + 0.15;
+ball_cannon(3) = floor_level + table_height + 0.15;

@@ -2,6 +2,14 @@
 
 clc; clear; close all; dbstop if error;
 
+% For a match run
+% 
+% initializeWAM;
+% % change base and initialize wam2
+% tt = TableTennis(wam,wam2);
+% tt.match();
+
+
 % VHP method vs. optimal control approach
 
 %% Load table values
@@ -113,16 +121,7 @@ ballNoisyPos = ball.pos;
 
 while numTrials < 50
     
-    %% Evolve ball flight, table and racket contact interactions
-    
-    racketStr.pos = x(:,robotIdx);
-    racketStr.vel = xd(:,robotIdx);
-    racketRot = quat2Rot(o(:,robotIdx));
-    racketStr.normal = racketRot(:,3);
-    ball.evolve(dt,racketStr);
-    tSim = tSim + dt;
-    
-    % Reset criterion
+    %% Reset criterion
     if tSim > maxWait 
         numTrials = numTrials + 1;
         tSim = 0.0; 
@@ -139,6 +138,15 @@ while numTrials < 50
         % reset the filter
         filter.initState([ball.pos;ball.vel + sqrt(eps)*randn(3,1)],eps);
     end
+    
+    %% Evolve ball flight, table and racket contact interactions
+    
+    racketStr.pos = x(:,robotIdx);
+    racketStr.vel = xd(:,robotIdx);
+    racketRot = quat2Rot(o(:,robotIdx));
+    racketStr.normal = racketRot(:,3);
+    ball.evolve(dt,racketStr);
+    tSim = tSim + dt;
     
     
     %% ESTIMATE BALL STATE
