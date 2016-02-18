@@ -17,12 +17,15 @@ classdef TableTennis < handle
         robot2
         % filter for robot 1
         filter1
+        % index for robot 1 (useful for animating fast)
+        idx
         % initial joint for robot 1
         q0
         % handle structure for drawing animation
         handle
         % finite state automaton for robot strategies
         FSA
+        
     end
     
     methods
@@ -47,6 +50,7 @@ classdef TableTennis < handle
             obj.initFilter();            
             
             obj.FSA = 0; % WAIT
+            obj.idx = 1;
             
             loadTennisTableValues();
             % table related values
@@ -61,87 +65,6 @@ classdef TableTennis < handle
             obj.NET.Xmax = table_width/2 + net_overhang;
             obj.NET.Zmax = table_z + net_height;
             obj.NET.CRN = net_restitution;
-            
-        end
-        
-        %% Animation functions here
-        function initAnimation(obj,q0)           
-
-            % Prepare the animation
-            loadTennisTableValues();
-            wam = obj.robot1;
-            b = obj.ball;
-
-            % get joints, endeffector pos and orientation
-            [joint,ee,racket] = wam.drawPosture(q0);
-
-            figure;
-            %uisetcolor is useful here
-            orange = [0.9100 0.4100 0.1700];
-            gray = [0.5020    0.5020    0.5020];
-            ballSurfX = b.pos(1) + b.MESH.X;
-            ballSurfY = b.pos(2) + b.MESH.Y;
-            ballSurfZ = b.pos(3) + b.MESH.Z;
-            % transform into base coord.
-            h.ball = surf(ballSurfX,ballSurfY,ballSurfZ);
-            set(h.ball,'FaceColor',orange,'FaceAlpha',1,'EdgeAlpha',0);
-            hold on;
-            h.robot.joints = plot3(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
-            endeff = [joint(end,:); ee];
-            h.robot.endeff = plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
-            h.robot.racket = fill3(racket(1,:), racket(2,:), racket(3,:), 'r');
-
-            obj.handle = h;
-            
-            title('Ball-robot interaction');
-            grid on;
-            axis equal;
-            xlabel('x');
-            ylabel('y');
-            zlabel('z');
-            tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
-            xlim([-table_x - tol_x, table_x + tol_x]);
-            ylim([dist_to_table - table_length - tol_y, tol_y]);
-            zlim([table_z - tol_z, table_z + 2*tol_z]);
-            legend('ball','robot');
-            fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
-            fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
-            
-        end
-        
-        % update the animation for robot and the ball
-        function updateAnimation(obj,q)
-            
-            % ANIMATE BOTH THE ROBOT AND THE BALL
-            b = obj.ball;
-            rob = obj.robot1;
-            hball = obj.handle.ball;
-            hrobotJ = obj.handle.robot.joints;
-            hrobotE = obj.handle.robot.endeff;
-            hrobotR = obj.handle.robot.racket;
-            [joint,ee,racket] = rob.drawPosture(q);
-            endeff = [joint(end,:);ee];
-    
-            % ball
-            set(hball,'XData',b.pos(1) + b.MESH.X);
-            set(hball,'YData',b.pos(2) + b.MESH.Y);
-            set(hball,'ZData',b.pos(3) + b.MESH.Z);
-
-            % robot joints
-            set(hrobotJ,'XData',joint(:,1));
-            set(hrobotJ,'YData',joint(:,2));
-            set(hrobotJ,'ZData',joint(:,3));
-            % robot endeffector
-            set(hrobotE,'XData',endeff(:,1));
-            set(hrobotE,'YData',endeff(:,2));
-            set(hrobotE,'ZData',endeff(:,3));
-            % robot racket
-            set(hrobotR,'XData',racket(1,:));
-            set(hrobotR,'YData',racket(2,:));
-            set(hrobotR,'ZData',racket(3,:));
-
-            drawnow;
-            %pause(0.001);
             
         end
         
@@ -161,13 +84,13 @@ classdef TableTennis < handle
             dt = 0.002;
             timeSim = 0.0;
             robotIdx = 1;
-            [q,racket,robotIdx] = obj.play(r1,robotIdx,tennisBall.pos);
+            %[q,racket,robotIdx] = obj.play(r1,robotIdx,tennisBall.pos);
             
-            while timeSim < 10.0 %max(points1,points) < 11 || abs(points1-points2) < 2
+            while timeSim < 4.0 %max(points1,points) < 11 || abs(points1-points2) < 2
 
                 %ballObs = obj.getBallObs();
                 %racket = obj.play(r1,ballObs);
-                %[q,racket,robotIdx] = obj.play(r1,robotIdx,tennisBall.pos);
+                [q,racket,robotIdx] = obj.play(r1,robotIdx,tennisBall.pos);
                 %[points1,points2] = obj.judge(points1,points2);
                 
                 tennisBall.evolve(dt,racket);
@@ -223,7 +146,7 @@ classdef TableTennis < handle
             
             %loadTennisTableValues();
             dt = 0.002;
-            q0 = obj.q0;
+            q = obj.q0;
             qs(:,1) = obj.q0;
             qds(:,1) = zeros(7,1);
             [x,xd,o] = robot.calcRacketState([qs;qds]);
@@ -235,6 +158,12 @@ classdef TableTennis < handle
             desBall(2) = obj.NET.Y - obj.TABLE.LENGTH/4;
             desBall(3) = obj.TABLE.Z;
             time2reach = 0.5; % time to reach desired point on opponents court
+            
+            % if movement finished revert to waiting
+            if robotIdx > size(qs,2)
+                robotIdx = 1;
+                stage = WAIT;
+            end
             
             % Estimate the ball state
             filter = obj.filter1;
@@ -248,7 +177,7 @@ classdef TableTennis < handle
             
             % If it is coming towards the robot consider moving
             velEst = filter.x(4:6);
-            if velEst(2) > 0
+            if velEst(2) > 0 && stage == WAIT
                 stage = PREDICT;
             end
             
@@ -316,7 +245,7 @@ classdef TableTennis < handle
                 %[qs,qds,qdds] = obj.generate3DVHPTraj(robot,VHP,ballPred,ballTime,q0);
                 [qs,qds,qdds] = obj.genOptimalTraj(robot,racketDes,ballPred,ballTime,q0);            
                 [qs,qds,qdds] = robot.checkJointLimits(qs,qds,qdds);
-                [x,xd,o] = wam.calcRacketState([qs;qds]);
+                [x,xd,o] = robot.calcRacketState([qs;qds]);
 
                 % Debugging the trajectory generation 
                 %h3 = scatter3(x(1,:),x(2,:),x(3,:));
@@ -325,25 +254,18 @@ classdef TableTennis < handle
             end
             
             % Move the robot
-            if stage == HIT
-                robotIdx = min(robotIdx+1,size(qs,2));
+            if stage == HIT 
+                q = qs(:,robotIdx);
+                racketStr.pos = x(:,robotIdx);
+                racketStr.vel = xd(:,robotIdx);
+                racketRot = quat2Rot(o(:,robotIdx));
+                racketStr.normal = racketRot(:,3);
+                robotIdx = robotIdx+1;
             else
                 robotIdx = 1;
-            end
+            end               
             
-            % if movement finished revert to waiting
-            if robotIdx == size(qs,2)
-                robotIdx = 1;
-                stage = WAIT;
-            end
-                            
-            q = qs(:,robotIdx);
-            racketStr.pos = x(:,robotIdx);
-            racketStr.vel = xd(:,robotIdx);
-            racketRot = quat2Rot(o(:,robotIdx));
-            racketStr.normal = racketRot(:,3);
             obj.FSA = stage;
-            
         end
         
         %% TRAJECTORY GENERATION FOR TABLE TENNIS
@@ -506,6 +428,86 @@ classdef TableTennis < handle
               
         end
         
+        %% Animation functions here
+        function initAnimation(obj,q0)           
+
+            % Prepare the animation
+            loadTennisTableValues();
+            wam = obj.robot1;
+            b = obj.ball;
+
+            % get joints, endeffector pos and orientation
+            [joint,ee,racket] = wam.drawPosture(q0);
+
+            figure;
+            %uisetcolor is useful here
+            orange = [0.9100 0.4100 0.1700];
+            gray = [0.5020    0.5020    0.5020];
+            ballSurfX = b.pos(1) + b.MESH.X;
+            ballSurfY = b.pos(2) + b.MESH.Y;
+            ballSurfZ = b.pos(3) + b.MESH.Z;
+            % transform into base coord.
+            h.ball = surf(ballSurfX,ballSurfY,ballSurfZ);
+            set(h.ball,'FaceColor',orange,'FaceAlpha',1,'EdgeAlpha',0);
+            hold on;
+            h.robot.joints = plot3(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
+            endeff = [joint(end,:); ee];
+            h.robot.endeff = plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
+            h.robot.racket = fill3(racket(1,:), racket(2,:), racket(3,:), 'r');
+
+            obj.handle = h;
+            
+            title('Ball-robot interaction');
+            grid on;
+            axis equal;
+            xlabel('x');
+            ylabel('y');
+            zlabel('z');
+            tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
+            xlim([-table_x - tol_x, table_x + tol_x]);
+            ylim([dist_to_table - table_length - tol_y, tol_y]);
+            zlim([table_z - tol_z, table_z + 2*tol_z]);
+            legend('ball','robot');
+            fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
+            fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+            
+        end
+        
+        % update the animation for robot and the ball
+        function updateAnimation(obj,q)
+            
+            % ANIMATE BOTH THE ROBOT AND THE BALL
+            b = obj.ball;
+            rob = obj.robot1;
+            hball = obj.handle.ball;
+            hrobotJ = obj.handle.robot.joints;
+            hrobotE = obj.handle.robot.endeff;
+            hrobotR = obj.handle.robot.racket;
+            [joint,ee,racket] = rob.drawPosture(q);
+            endeff = [joint(end,:);ee];
+    
+            % ball
+            set(hball,'XData',b.pos(1) + b.MESH.X);
+            set(hball,'YData',b.pos(2) + b.MESH.Y);
+            set(hball,'ZData',b.pos(3) + b.MESH.Z);
+
+            % robot joints
+            set(hrobotJ,'XData',joint(:,1));
+            set(hrobotJ,'YData',joint(:,2));
+            set(hrobotJ,'ZData',joint(:,3));
+            % robot endeffector
+            set(hrobotE,'XData',endeff(:,1));
+            set(hrobotE,'YData',endeff(:,2));
+            set(hrobotE,'ZData',endeff(:,3));
+            % robot racket
+            set(hrobotR,'XData',racket(1,:));
+            set(hrobotR,'YData',racket(2,:));
+            set(hrobotR,'ZData',racket(3,:));
+
+            drawnow;
+            %pause(0.001);
+            
+        end
         
     end
     
