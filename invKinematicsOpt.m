@@ -29,16 +29,16 @@ options = optimoptions('fmincon','Algorithm', 'sqp',...
 %profile on;
 [qf,~,exitflag,output] = fmincon(fun,qest,[],[],[],[],lb,ub,nonlcon,options);
 
-% if constraint is violated run it again
-iterMax = 10;
-iter = 0;
-while output.constrviolation > 1e-2 && iter < iterMax
-    disp('Running InvKin again');
-    qest = qest + 0.1 * randn(7,1);
-    iter = iter+1;
-    [qf,~,exitflag,output] = fmincon(fun,qest,[],[],[],[],lb,ub,nonlcon,options);
-end
-%}
+% % if constraint is violated run it again
+% iterMax = 10;
+% iter = 0;
+% while output.constrviolation > 1e-2 && iter < iterMax
+%     disp('Running InvKin again');
+%     qest = qest + 0.1 * randn(7,1);
+%     iter = iter+1;
+%     [qf,~,exitflag,output] = fmincon(fun,qest,[],[],[],[],lb,ub,nonlcon,options);
+% end
+% %}
 
 end
 

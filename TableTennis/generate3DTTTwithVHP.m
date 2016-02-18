@@ -4,18 +4,6 @@ function [q,qd,qdd] = generate3DTTTwithVHP(robot,VHP,ballPred,ballTime,q0)
     loadTennisTableValues();
     dof = length(q0);
 
-    % Check if ball will bounce twice
-    tol = 1e-2;
-    [M,I] = min(ballPred(3,:));
-    if M < table_z + tol && ballPred(2,I) < dist_to_table
-        disp('Ball will rebound twice on table! Not moving!');
-        N = 100;
-        q = q0 * ones(1,N);
-        qd = zeros(dof,N);
-        qdd = zeros(dof,N);
-        return;
-    end
-
     time2reach = 0.5; % time to reach desired point on opponents court
     % land the ball on the centre of opponents court
     ballDes(1) = 0.0;

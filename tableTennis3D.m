@@ -102,6 +102,7 @@ maxWait = 3.0;
 
 % initialize the filters state with sensible values
 filter.initState([ball.pos;ball.vel + sqrt(eps)*randn(3,1)],eps);
+ballObs = [];
 ballNoisyPos = ball.pos;
 
 while numTrials < 50
@@ -117,6 +118,7 @@ while numTrials < 50
         set(h3,'Visible','off');
         % reset the ball
         ball = Ball(0.1,0.1);
+        ballObs = [];
         % reset the filter
         filter.initState([ball.pos;ball.vel],eps);
     end
@@ -136,6 +138,7 @@ while numTrials < 50
     filter.linearize(dt,0);
     filter.predict(dt,0);
     filter.update(ball.pos,0); 
+    ballObs = [ballObs,ball.pos];
     
     % If it is coming towards the robot consider moving
     velEst = filter.x(4:6);
@@ -162,9 +165,8 @@ while numTrials < 50
     end
     
     %% GENERATE TRAJECTORY AND MOVE
-    if stage == PREDICT && time2PassTable <= maxTime2Hit 
+    if stage == PREDICT && time2PassTable <= maxTime2Hit         
         
-        stage = HIT;
         robotIdx = 0;
         predictHorizon = maxPredictHorizon;
         predictLen = floor(predictHorizon / dt);
@@ -176,9 +178,15 @@ while numTrials < 50
             filter.predict(dt,0);
             ballPred(:,j) = filter.x;
         end
-        ballPredicted = true;  
         % for now only considering the ball positions after table
         ballTime = (1:predictLen) * dt;
+
+        numBounce = estimateNumBounce(ballObs,ballPred);
+        if numBounce ~= 1
+            stage = FINISH;
+        else
+            stage = HIT;
+        end
 
         % Calculate ball outgoing velocities attached to each ball pos
         tic
