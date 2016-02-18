@@ -22,22 +22,22 @@ dof = 7; % seven degrees of freedom
 scale = 1e-3; % recorded in milliseconds
 
 % put everything in a structure
-demo = struct();
+demoss = struct();
 
 % load the data
 for i = 1:length(set)
-    demo(i).name = ['demo ',int2str(set(i))];
-    demo(i).raw = dlmread([demoFolder,int2str(set(i)),'.txt']);
+    demoss(i).name = ['demo ',int2str(set(i))];
+    demoss(i).raw = dlmread([demoFolder,int2str(set(i)),'.txt']);
     % extract time and the joints - last 14 variables
     %robot = demo(i).raw(:,end-14:end);
-    robot = demo(i).raw(:,end-20:end);
+    robot = demoss(i).raw(:,end-20:end);
     q = robot(:,2:dof+1);
     qd = robot(:,dof+2:dof+8);
     x_SL = robot(:,dof+9:dof+11);
     xd_SL = robot(:,dof+12:dof+14);
-    demo(i).t = scale * robot(:,1);
-    demo(i).Q = [q';qd'];
-    demo(i).x = [x_SL'; xd_SL'];
+    demoss(i).t = scale * robot(:,1);
+    demoss(i).Q = [q';qd'];
+    demoss(i).x = [x_SL'; xd_SL'];
 end
 
 %% Load table values
@@ -47,11 +47,11 @@ loadTennisTableValues;
 
 %% Extract reliable ball positions and estimate striking time
 
-for i = 2 %1:length(set)
+for i = 1:length(set)
 
-    M = demo(i).raw;
-    Q = demo(i).Q;
-    t = demo(i).t;
+    M = demoss(i).raw;
+    Q = demoss(i).Q;
+    t = demoss(i).t;
     
     % this is to throw away really bad observations as to not confuse the
     % filter
@@ -75,10 +75,11 @@ for i = 2 %1:length(set)
     % Estimate striking time
 
     % Get cartesian coordinates of robot trajectory
-    [x,xd,~] = wam.kinematics(Q);
+    [x,xd,o] = wam.kinematics(Q);
+    %{
     % Differentiate x
     xdiff = diff(x')';
-    xdiff = [xdiff, xdiff(:,end)];
+    xdiff = [xdiff, xdiff(:,end)];    
     % Compare with x coming from SL
     figure(3);
     view(3);
@@ -98,7 +99,7 @@ for i = 2 %1:length(set)
     plot(t,xd(2,:),t,demo(i).x(5,:));
     figure(6)
     plot(t,xd(3,:),t,demo(i).x(6,:));
-
+    %}
 
     camInfo = [tCam1,bx1,by1,bz1;
                 tCam3,bx3,by3,bz3];
@@ -117,9 +118,10 @@ for i = 2 %1:length(set)
     tCutStrike = t(idxD);
     
     % for discrete DMPs
-    demo(i).t_strike = tCutStrike;
-    demo(i).x_strike = x(:,idxD);
-    demo(i).Q_strike = Q(:,idxD);
+    demoss(i).t_strike = tCutStrike;
+    demoss(i).o_strike = o(:,idxD);
+    demoss(i).x_strike = x(:,idxD);
+    demoss(i).Q_strike = Q(:,idxD);
     
     % for rhythmic DMPs we need to segment differently
     Treturn = t(end) - tStrike;
@@ -131,8 +133,8 @@ for i = 2 %1:length(set)
     idxStrikeReturn = [idxStrike',idxStrike(end)+1:idxStrike(end)+length(idxReturn)];
     tStrikeReturn = t(idxStrikeReturn);
     
-    demo(i).t_rdmp = tStrikeReturn;
-    demo(i).Q_rdmp = Q(:,idxR);
+    demoss(i).t_rdmp = tStrikeReturn;
+    demoss(i).Q_rdmp = Q(:,idxR);
 
 end
 

@@ -9,7 +9,7 @@
 % Copyright (C) 1993-2011, by Peter I. Corke
 % http://www.petercorke.com
 %
-function qTotal = invKinematics(Ahmats, q0, PAR)
+function qTotal = invKinematicsGen(Ahmats, q0, PAR)
 
     %  set default parameters for solution
     opt.ilimit = 1000;

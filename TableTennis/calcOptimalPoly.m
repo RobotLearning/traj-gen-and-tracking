@@ -1,9 +1,9 @@
-%% Solve the minimum principle with boundary conditions directly 
+% Solve the minimum principle with boundary conditions directly 
 % mp gives 3rd degree polynomials
 % q0 and q0dot are given
 % using fmincon optimizing for their parameters qf,qfdot,T
 
-function [qf,qfdot,T] = calcOptimalPoly(robot,racket,ballTime,ballPred,q0)
+function [qf,qfdot,T] = calcOptimalPoly(robot,racket,q0)
 
 dof = length(q0);
 q0dot = zeros(dof,1);

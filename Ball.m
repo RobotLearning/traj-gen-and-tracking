@@ -29,17 +29,21 @@ classdef Ball < handle
         RACKET
         % for drawing
         MESH
+        % to give landing information
+        isLANDED
     end
     
     % methods that all balls share
     methods (Access = public)   
         
         %% Initialize ball on the ball gun
-        function obj = Ball()
+        % Randomness is due to initial standard deviation initStd
+        function obj = Ball(initStdPos,initStdVel)
             
             loadTennisTableValues();
-            obj.pos = ball_cannon(:);
-            obj.vel = [-0.9; 4.000; 3.2];
+            
+            obj.pos = ball_cannon(:) + initStdPos*randn(3,1);
+            obj.vel = [-0.9; 4.000; 3.2] + initStdVel*randn(3,1);
             
             obj.C = Cdrag;
             obj.g = gravity;
@@ -75,6 +79,8 @@ classdef Ball < handle
             obj.MESH.X = ballMeshX;
             obj.MESH.Y = ballMeshY;
             obj.MESH.Z = ballMeshZ;
+            
+            obj.isLANDED = false;
         end
         
         %% Flight models  
@@ -188,6 +194,11 @@ classdef Ball < handle
                         dt2 = dtBounce;
                     end
                 end
+                % did the ball land on opponents court?
+                if ~obj.isLANDED && xBounce(2) < obj.NET.Y
+                    obj.isLANDED = true;
+                    fprintf('Ball landed at x = %f, y = %f.\n', xBounce(1),xBounce(2));
+                end
                 % rebound
                 xBounce(4:6) = obj.reboundModel(xBounce(4:6));
                 % integrate for the rest
@@ -199,12 +210,14 @@ classdef Ball < handle
         
         % check contact with racket
         % assumes racket normal stays constant throughout
+        % TODO: sometimes does not terminate!
         function [posNext,velNext] = checkContactRacket(obj,dt,posNext,velNext,racket)
 
             racketPos = racket.pos;
             racketVel = racket.vel;
             racketNormal = racket.normal;
             racketRadius = obj.RACKET.R;
+            tol = obj.radius;
 
             diff = obj.pos - racketPos;
             distToRacketPlane = racketNormal'*diff;
@@ -214,19 +227,22 @@ classdef Ball < handle
             % if ball would cross the racket 
             racketPosNext = racketPos + dt * racketVel;
             diffNext = posNext - racketPosNext;
-            cross = sign(diffNext'*racketNormal) ~= ...
-                         sign(diff'*racketNormal);
+            %cross = sign(diffNext'*racketNormal) ~= ...
+            %             sign(diff'*racketNormal);
+                     
+            distNextToRacketPlane = racketNormal'*diffNext;
 
             % find the precise hitting time with bisection  
-            if cross && distOnRacketPlane < racketRadius       
+            if distOnRacketPlane < racketRadius && distNextToRacketPlane < 0 %cross
                 
                 tol = 1e-4; % obj.radius
                 dt1 = 0;
                 dt2 = dt;
                 xContact = [obj.pos; obj.vel];
                 dtContact = 0.0;
+                iter = 0;
                 % doing bisection to find the bounce time
-                while abs(distToRacketPlane) > tol
+                while iter < 5 %abs(distToRacketPlane) > tol
                     dtContact = (dt1 + dt2) / 2;
                     xContact(4:6) = obj.vel + dtContact * obj.ballFlightModel3D(obj.vel);
                     xContact(1:3) = obj.pos + dtContact * xContact(4:6);
@@ -239,6 +255,7 @@ classdef Ball < handle
                     else
                         dt2 = dtContact;
                     end
+                    iter = iter + 1;
                 end
                 % racket contact
                 xContact(4:6) = obj.racketContactModel(xContact(4:6),racket);

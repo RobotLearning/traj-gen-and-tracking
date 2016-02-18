@@ -1,8 +1,9 @@
 %% Ball flight model and symplectic integration functions
 % Note: can also be run backwards in time by specifying -dt
-% TODO: bounce model cannot be run backwards as of now!
+% TODO: bounce time calculation problematic sometimes! Iterating to five
+%       for now!
 
-% incorporate bounce also
+
 function xNext = discreteBallFlightModel(x,dt,params)
 
 C = params.C;
@@ -44,8 +45,9 @@ if xNext(3) < zTable && abs(xNext(2) - yNet) < tableLength/2 && abs(xNext(1)) < 
     dt2 = dt;
     xBounce = x;
     dtBounce = 0.0;
+    iter = 0;
     % doing bisection to find the bounce time
-    while abs(xBounce(3) - zTable) > tol
+    while iter < 5 %abs(xBounce(3) - zTable) > tol
         dtBounce = (dt1 + dt2) / 2;
         xBounce(4:6) = x(4:6) + dtBounce * ballFlightModel(x(4:6),C,g);
         xBounce(1:3) = x(1:3) + dtBounce * xBounce(4:6);
@@ -55,6 +57,7 @@ if xNext(3) < zTable && abs(xNext(2) - yNet) < tableLength/2 && abs(xNext(1)) < 
         else
             dt2 = dtBounce;
         end
+        iter = iter + 1;
     end
     % rebound
     xBounce(4:6) = reboundModel(xBounce(4:6),K);
