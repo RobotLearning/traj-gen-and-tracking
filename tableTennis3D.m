@@ -1,6 +1,7 @@
 %% 3D table tennis : Barrett WAM practicing
 
 clc; clear; close all; %dbstop if error;
+draw = false;
 
 %% Load table values
 loadTennisTableValues;
@@ -8,7 +9,14 @@ loadTennisTableValues;
 %% Initialize Barrett WAM and the ball
 
 initializeWAM;
-ball = Ball(0.1,0.1);
+% get joints, endeffector pos and orientation
+[x,xd,o] = wam.calcRacketState([q0;qd0]);
+[joint,ee,racket] = wam.drawPosture(q0);
+q = q0; qd = qd0;
+% initialize ball and and all interaction models
+stdPos = 0.1;
+stdVel = 0.1;
+ball = Ball(stdPos,stdVel);
 
 %% Initialize EKF
 dim = 6;
@@ -38,11 +46,7 @@ ballPred(1:6,1) = [ball.pos;ball.vel];
 
 %% Prepare the animation
 
-% get joints, endeffector pos and orientation
-[x,xd,o] = wam.calcRacketState([q0;qd0]);
-[joint,ee,racket] = wam.drawPosture(q0);
-q = q0; qd = qd0;
-
+if draw
 figure;
 %uisetcolor is useful here
 orange = [0.9100 0.4100 0.1700];
@@ -80,6 +84,7 @@ legend('ball','robot');
 fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 net_width = 0.01;
+end
 
 %% Main control and estimation loop
 
@@ -95,14 +100,12 @@ dt = 0.01;
 
 % flags for the main loop
 numTrials = 0;
-% maximum horizon to predict
 maxTime2Hit = 0.6;
-maxPredictHorizon = 0.8;
 maxWait = 3.0;
+numLands = 0;
 
 % initialize the filters state with sensible values
 filter.initState([ball.pos;ball.vel + sqrt(eps)*randn(3,1)],eps);
-ballObs = [];
 ballNoisyPos = ball.pos;
 
 while numTrials < 50
@@ -113,12 +116,17 @@ while numTrials < 50
         tSim = 0.0; 
         robotIdx = 1; 
         stage = 0;
+        clc;
         % resetting the drawing
+        if draw && numBounce == 1
         set(h2,'Visible','off');
         set(h3,'Visible','off');
+        end
         % reset the ball
-        ball = Ball(0.1,0.1);
-        ballObs = [];
+        if ball.isLANDED
+            numLands = numLands+1;
+        end
+        ball = Ball(stdPos,stdVel);
         % reset the filter
         filter.initState([ball.pos;ball.vel],eps);
     end
@@ -132,13 +140,12 @@ while numTrials < 50
     ball.evolve(dt,racketStr);
     tSim = tSim + dt;
     
-    %% WAIT IF BALL IS INCOMING OR OUTGOING
+    %% WAIT IF BALL IS INCOMING
     
     % Estimate the ball state
     filter.linearize(dt,0);
     filter.predict(dt,0);
-    filter.update(ball.pos,0); 
-    ballObs = [ballObs,ball.pos];
+    filter.update(ball.pos,0);     
     
     % If it is coming towards the robot consider moving
     velEst = filter.x(4:6);
@@ -150,6 +157,13 @@ while numTrials < 50
     if stage == PREDICT
         xSave = filter.x;
         PSave = filter.P;
+        % if filter state goes below threshold bounce is highly likely
+        tol = 1e-2;
+        if filter.x(3) < table_z + tol
+            % if it bounces do not hit
+            disp('Ball is not valid! Not hitting!');
+            stage = FINISH;
+        end
         % update the time it takes to pass table
         yBallEst = filter.x(2);
         tPredIncrement = dt;
@@ -167,51 +181,43 @@ while numTrials < 50
     %% GENERATE TRAJECTORY AND MOVE
     if stage == PREDICT && time2PassTable <= maxTime2Hit         
         
-        robotIdx = 0;
-        predictHorizon = maxPredictHorizon;
-        predictLen = floor(predictHorizon / dt);
-        ballPred = zeros(6,predictLen);
-        % FOR DEBUGGING
+        % FOR DEBUGGING INIT TO ACTUAL POS AND VEL
         filter.initState([ball.pos;ball.vel],PSave);
-        for j = 1:predictLen
-            %filter.linearize(dt,0);
-            filter.predict(dt,0);
-            ballPred(:,j) = filter.x;
-        end
-        % for now only considering the ball positions after table
-        ballTime = (1:predictLen) * dt;
-
-        numBounce = estimateNumBounce(ballObs,ballPred);
+        [ballPred,ballTime,numBounce] = predictBallPath(dt,filter);
+        filter.initState([ball.pos;ball.vel],PSave);
         if numBounce ~= 1
+            disp('Ball is not valid! Not hitting!');
             stage = FINISH;
         else
-            stage = HIT;
+            robotIdx = 0;
+            stage = HIT;       
+            % Calculate ball outgoing velocities attached to each ball pos
+            tic
+            fast = true;
+            % land the ball on the centre of opponents court
+            desBall(1) = 0.0;
+            desBall(2) = dist_to_table - 3*table_y/2;
+            desBall(3) = table_z + ball_radius;
+            time2reach = 0.5; % time to reach desired point on opponents court
+            racketDes = calcRacketStrategy(desBall,ballPred,ballTime,time2reach,fast);
+            elapsedTimeForCalcDesRacket = toc;
+            fprintf('Elapsed time for racket computation: %f sec.\n',...
+                elapsedTimeForCalcDesRacket);
+
+            % Compute traj here
+            % define virtual hitting plane (VHP)
+            VHP = -0.4;
+            [q,qd,qdd] = generate3DTTTwithVHP(wam,VHP,ballPred,ballTime,q0);
+            %[q,qd,qdd] = generateOptimalTTT(wam,racketDes,dt,q0);            
+            [q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
+            [x,xd,o] = wam.calcRacketState([q;qd]);
+
+            if draw
+            % Debugging the trajectory generation 
+            h3 = scatter3(x(1,:),x(2,:),x(3,:));
+            h2 = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
+            end
         end
-
-        % Calculate ball outgoing velocities attached to each ball pos
-        tic
-        fast = true;
-        % land the ball on the centre of opponents court
-        desBall(1) = 0.0;
-        desBall(2) = dist_to_table - 3*table_y/2;
-        desBall(3) = table_z + ball_radius;
-        time2reach = 0.5; % time to reach desired point on opponents court
-        racketDes = calcRacketStrategy(desBall,ballPred,ballTime,time2reach,fast);
-        elapsedTimeForCalcDesRacket = toc;
-        fprintf('Elapsed time for racket computation: %f sec.\n',...
-            elapsedTimeForCalcDesRacket);
-
-        % Compute traj here
-        % define virtual hitting plane (VHP)
-        VHP = -0.6;
-        [q,qd,qdd] = generate3DTTTwithVHP(wam,VHP,ballPred,ballTime,q0);
-        %[q,qd,qdd] = generateOptimalTTT(wam,racketDes,dt,q0);            
-        [q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
-        [x,xd,o] = wam.calcRacketState([q;qd]);
-
-        % Debugging the trajectory generation 
-        h3 = scatter3(x(1,:),x(2,:),x(3,:));
-        h2 = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
 
     end % end predict        
 
@@ -230,6 +236,8 @@ while numTrials < 50
     
     [joint,ee,racket] = wam.drawPosture(q(:,robotIdx));
     endeff = [joint(end,:);ee];
+    
+    if draw
     
     % ball
     set(h1,'XData',ball.pos(1) + ballMeshX);
@@ -251,6 +259,7 @@ while numTrials < 50
     
     drawnow;
     pause(0.001);
+    end
     
     
 end
