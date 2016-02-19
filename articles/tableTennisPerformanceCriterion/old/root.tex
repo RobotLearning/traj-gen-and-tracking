@@ -120,9 +120,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 
-% Highly dynamic tasks ... require planning?
-In highly dynamic tasks that involve moving targets, planning is necessary to figure out when, where and how to intercept the target. In robotic table tennis in particular, conventional planning algorithms often rely on the virtual hitting plane hypothesis to construct robot striking trajectories. These algorithms however are vulnerable to modeling and execution errors. %For example, the trajectories they generate are not robust to uncertainty in ball position and velocity at hitting time. 
-Moreover, they do not take advantage of the inherent task redundancy when planning trajectories. In this paper, we address these two issues by introducing a new performance criterion for robotic table tennis. We use a free-time optimal control approach to construct a novel trajectory generation algorithm that does not involve a fixed hitting plane. Furthermore, by augmenting our cost functional with a probabilistic final-cost we incorporate the uncertainties in modeling, estimation and execution as well as task redundancy. Our algorithm returns the balls with a higher probability to the opponents court in two and three dimensional table tennis with different robot models when compared with the state of the art planning approach. 
+In highly dynamics tasks that involve moving targets, planning is necessary to figure out when, where and how to intercept the target. In robotic table tennis in particular, conventional planning algorithms often rely on the virtual hitting plane hypothesis to construct robot striking trajectories. These algorithms however are vulnerable to modeling and execution errors. %For example, the trajectories they generate are not robust to uncertainty in ball position and velocity at hitting time. 
+Moreover, they do not take advantage of the inherent task redundancy when planning trajectories. In this paper, we address these two issues by introducing a new performance criterion for robotic table tennis. We use an optimal control approach to construct a novel inverse-kinematics algorithm that does not involve a fixed hitting plane. Furthermore, by augmenting our cost functional with a probabilistic final-cost we incorporate the uncertainties in modeling, estimation and execution as well as task redundancy. Our algorithm returns the balls with a higher probability to the opponents court in two and three dimensional table tennis with different robot models when compared with the state of the art planning approach. 
 
 % better term for task redundancy?
 % certainty-equivalent, cautious
@@ -148,13 +147,12 @@ An aspect in table tennis that strengthens this point is the uncertainty in ball
 % But nobody should blame them if they land the ball precisely on a target point but only within a certain region of it: they do not have to! Even humans with very agile striking capabilities are not able to return the ball to a precise location.
 % mention human studies in this aspect
 
-In this paper, we incorporate probabilistic modeling for robust trajectory generation and come up with a new performance criterion in table tennis that exploits the game's natural stability criterion. The cost functional that we try to minimize is not \emph{certainty-equivalent} and naturally leads to \emph{cautious} strategies. Moreover it is particularly suitable for employing adaptive strategies as the robot gets more data and refines its internal model of the environment. 
+In this paper, we incorporate probabilistic modeling for robust trajectory generation and come up with a new performance criterion in table tennis that exploits the game's natural stability criterion. The cost functional that we try to minimize is not \emph{certainty-equivalent} and naturally leads to \emph{cautious} strategies. Moreover it is particularly suitable for employing adaptive strategies as the robot gets more data and refines its internal models of the environment. 
 
-%Our approach involves probabilistic modeling of task-relevant quantities from data, e.g. ball flight, bounce models and ball-racket contact modeling. The last one especially can be hard to train from missing data. However, 
-Our approach involves probabilistic modeling of ball landing positions from data, i.e. sample incoming ball paths and racket demonstrations. We keep the uncertainty of our trained model and use it also in our decision-making process. This cautious design is an asset that differentiates our approach from previous approaches (e.g. \cite{Matsushima05}, \cite{Muelling13}) that are less robust to modeling and estimation uncertainty.
+Our approach involves intensive modeling of task-relevant quantities from data, e.g. ball flight, bounce models and ball-racket contact modeling. The last one especially can be hard to train from missing data. However, we keep the uncertainty of all of our models and use them also in our decision-making process. This cautious design is an asset that differentiates our approach from previous approaches (e.g. \cite{Matsushima05}, \cite{Muelling13}) that are less robust to modeling and estimation uncertainty.
 % from missing data and can even be misleading when given example ball trajectories with high spin.
 
-To summarize our reasons for introducing uncertainty and probabilistic modeling to trajectory generation in table tennis: \textit{i)} Table tennis balls are very light and cannot be estimated or predicted well with simple physical models. \textit{ii)} Racket-ball interaction is generally not known well and the elasticity of the momentum exchange differentiates it from the mirror laws used in the literature so far. \textit{iii)} The set of allowed landing point specifications in the opponent's side can be incorporated to design robust algorithms that return the ball with a higher probability, when under the influence of various effects mentioned in \textit{(i)} and \textit{(ii)}. See Figure~\ref{mainIdea} for an illustration.% ref needed obviously 
+To summarize our reasons for introducing uncertainty and probabilistic modeling to trajectory generation in table tennis: \textit{i)} Table tennis balls are very light and cannot be estimated or predicted precisely. \textit{ii)} Racket-ball interaction is generally not known well and the elasticity of the momentum exchange differentiates it from the mirror laws used in the literature so far. \textit{iii)} The set of allowed landing point specifications in the opponent's side can be incorporated to design robust algorithms that return the ball with a higher probability, when under the influence of various effects mentioned in \textit{(i)} and \textit{(ii)}. See Figure~\ref{mainIdea} for an illustration.% ref needed obviously 
 % velocity dependent coefficient of restitution
 
 % The choice of the the desired landing point of the ball on the opponent's court is generally left to a higher level strategy or policy of the robot. However in this paper we argue that landing the ball successfully on the opponent's court is the \emph{fundamental goal} in table tennis. Therefore policies or the strategies involved in striking movement generation should be combined in one unitary whole.
@@ -167,23 +165,19 @@ To summarize our reasons for introducing uncertainty and probabilistic modeling 
 \end{figure}
 % REPLACE PHOTO WITH ANOTHER ONE INCLUDING CAMERAS
 
-In the rest of this paper, we elaborate on this notion of robustness, giving more examples and the necessary intuition where needed. In Section~\ref{relatedWork} we introduce previous work on table tennis and other relevant trajectory generation frameworks. In Section~\ref{method} we formalize robot trajectory generation as a specific optimal control problem and incorporate probabilistic modeling within this framework. We do not know of any closed-form solutions even in simplified cases. In Section~\ref{alg} we cast it as a constrained nonlinear optimization problem and propose an algorithm that can be implemented on our robotic system. In Section~\ref{results} we evaluate the performance of this approach and compare it with previous inverse kinematics (IK) based methods. When the inverse dynamics models are not known well for the robot, robustness with respect to trajectory \emph{execution} must be additionally considered. In the final section~\ref{end} we discuss several promising extensions in this regard. %VHP-based
-
-% we discuss a rejection sampling approach for optimizing the previously introduced cost functional.
+In the rest of this paper, we elaborate on this notion of robustness, giving more examples and the necessary intuition where needed. In Section~\ref{relatedWork} we introduce previous work on table tennis and other relevant trajectory generation frameworks. In Section~\ref{method} we formalize robot trajectory generation as a specific optimal control problem and incorporate probabilistic modeling within this framework. We do not know of any closed-form solutions even in simplified cases. In Section~\ref{alg} we discuss a rejection sampling approach for optimizing the previously introduced cost functional. In Section~\ref{results} we evaluate the performance of this approach and compare it with previous inverse kinematics (IK) approaches. When the inverse dynamics models are not known well for the robot, robustness with respect to trajectory \emph{execution} must be additionally considered. In the final section~\ref{end} we discuss several promising extensions in this regard. %VHP-based
 
 \begin{figure}[t!]
 \centering
 \includegraphics[scale=0.4]{drawing.eps}			
-\caption{Illustrating the main idea behind this paper: from the ball's point of view, a racket trajectory in table tennis has a certain probability of hitting the ball and a significantly smaller probability of landing it on the opponents court. From the racket's point of view, the ball motion is a certain stochastic process and it should be intercepted such that the probability of returning the sampled balls from this stochastic process to the opponents court is maximized.
-%the marginal probability distribution at hitting time is transformed at landing time to a desired marginal distribution. 
-Racket trajectory and the mean of the ball trajectory are shown in black and red, respectively.}
+\caption{Illustrating the main idea behind this paper: from the ball's point of view, a racket trajectory in table tennis has a certain probability of hitting the ball and a significantly smaller probability of landing it (legally) on the opponents court. From the racket's point of view, the ball motion is a certain stochastic process and it should be intercepted such that the marginal probability distribution at hitting time is transformed at landing time to a desired marginal distribution. Racket trajectory and the mean of the ball trajectory are shown in black and red, respectively.}
 \label{mainIdea}
 \end{figure}
 
 \section{RELATED WORK}\label{relatedWork}
 
 % this doesn't fit here so well
-We will summarize the Virtual Hitting Plane (VHP) framework here only very briefly. In this approach, the trajectory of the incoming ball is estimated and filtered from a stream of ball position estimates. Usually a physical flight model is used to predict the intersection point of the ball trajectory with a comfortably chosen plane along the vertical axis. This procedure determines the hitting time as well as the hitting point. For safety reasons, a minimum hitting time $T_{\textrm{min}}$ is also specified in addition to the coordinates of the hitting plane. The estimation process has to be terminated at least $T_{\textrm{min}}$ before the expected hitting time, to give the robot enough reaction time. This prevents high accelerations and any risk of damage to the robot. For more details see \cite{Muelling13}, or \cite{Matsushima05} for a more general discussion. 
+We will summarize the Virtual Hitting Point (VHP) framework here only very briefly. In this approach, the trajectory of the incoming ball is estimated and filtered from a stream of ball position estimates. Usually a physical flight model is used to predict the intersection point of the ball trajectory with a comfortably chosen VHP. For safety reasons, a minimum hitting time $T_{\textrm{min}}$ is also specified in addition to the coordinates of the hitting plane. The estimation process has to be terminated at least $T_{\textrm{min}}$ before the expected hitting time, to give the robot enough reaction time. This prevents high accelerations and any risk of damage to the robot. For more details see \cite{Muelling13}, or \cite{Matsushima05} for a more general discussion. 
 
 Table tennis algorithms so far neglect to account for any uncertainty in ball estimation or the geometry of the task specification. 
 %underspecification of the landing point. 
@@ -221,32 +215,34 @@ Moreover the determination of a hitting time can be arbitrary, and the algorithm
 
 % cite Yanlong's paper
 
-\section{TRAJECTORY GENERATION}\label{method}
+\section{METHOD}\label{method}
 
 In table tennis, one needs to specify when, where and how to intercept the incoming ball trajectory. After a successful hit however, the landing point of the ball is not completely specified. This \emph{task redundancy} in table tennis can be captured more formally, from a ball dynamics point of view, as a stability region $\stabilityRegion$ in phase space. As a set of desired ball positions and velocities, the geometry of $\stabilityRegion$ is approximately affine
 %
 \begin{align}
-(\ball,\dot{\ball}) \in \stabilityRegion \approx \courtOpponent \times \mathbb{R}^{3} \subset \mathbb{R}^{6},
+(\ball,\dot{\ball}) \in \stabilityRegion \subset \courtOpponent \times \mathbb{R}^{3} \subset \mathbb{R}^{6},
 \label{stabilityRegion}
 \end{align}
 %
-\noindent where $\courtOpponent$ is the set of Cartesian coordinates of the opponent's court. The net and any other environmental constraints such as walls are the environmental factors constraining the set of allowed landing velocities. 
-
-
-%Any algorithm that can return the ball to the fixed region $\stabilityRegion \approx \courtOpponent \times \mathbb{R}^3$ in phase space can be said to be \emph{stable}. The table $\court$ is a rectangle with a fixed vertical distance $z_{\court}$ from origin, hence
+\noindent where $\courtOpponent$ is the set of Cartesian coordinates of the ball when it is in contact with the opponent's court. Any algorithm that can return the ball to the fixed region $\stabilityRegion \approx \courtOpponent \times \mathbb{R}^3$ in phase space can be said to be \emph{stable}. The table $\court$ is a rectangle with a fixed vertical distance $z_{\court}$ from origin, hence
 %
-%\begin{align}
-%\courtOpponent = \{(x,y,z_{\court} + \ballRadius)|x_a \leq x \leq x_b, y_a \leq y \leq y_b\}.
-%\label{courtOpponent}
-%\end{align}
+\begin{align}
+\courtOpponent = \{(x,y,z_{\court} + \ballRadius)|x_a \leq x \leq x_b, y_a \leq y \leq y_b\}.
+\label{courtOpponent}
+\end{align}
 %
-%The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponent's court. 
-%The ball has a radius of $\ballRadius = 1$ cm and for the simplicity of presentation will be neglected. 
-%The robot's side of the table, $\courtRobot$, is defined similarly, i.e. $\court = \courtOpponent \cup \courtRobot$. 
+The limiting values $x_{a},x_{b},y_{a},y_{b}$ are obtained from the rectangular geometry of the opponent's court. The ball has a radius of $\ballRadius = 1$ cm and for the simplicity of presentation will be neglected. The robot's side of the table, $\courtRobot$, is defined similarly, i.e. $\court = \courtOpponent \cup \courtRobot$. The net and any other environmental constraints such as walls are the environmental factors constraining the set of desired ball velocities. To ease readability, we will not define or mention them explicitly in the following. 
 
+% it reduces approximately to
+%
 %So far, most of the algorithms for robotic table tennis \cite{Matsushima05}, \cite{Muelling13} calculate the intersection point of an estimated ball trajectory with a Virtual Hitting Plane (VHP) to determine the space and time coordinates of the hitting point. 
 % do we really need a fixed event such as bounce to terminate the estimation process?
 %It is possible to eliminate this termination event altogether and vary the robot trajectory launch times based on ball estimates.
+
+% impact time, ball position and velocity
+% time to contact
+
+% or a similar event such as passing over the net
 
 \subsection{Learning Models From Data}
 
