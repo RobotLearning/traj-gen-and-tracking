@@ -1,7 +1,7 @@
 %% 3D table tennis : Barrett WAM practicing
 
 clc; clear; close all; %dbstop if error;
-draw = false;
+draw = true;
 
 %% Load table values
 loadTennisTableValues;
@@ -99,6 +99,7 @@ tSim = 0.0;
 dt = 0.01;
 
 % flags for the main loop
+numBounce = 0;
 numTrials = 0;
 maxTime2Hit = 0.6;
 maxWait = 3.0;
@@ -119,8 +120,8 @@ while numTrials < 50
         clc;
         % resetting the drawing
         if draw && numBounce == 1
-        set(h2,'Visible','off');
-        set(h3,'Visible','off');
+            set(h2,'Visible','off');
+            set(h3,'Visible','off');
         end
         % reset the ball
         if ball.isLANDED
@@ -159,9 +160,11 @@ while numTrials < 50
         PSave = filter.P;
         % if filter state goes below threshold bounce is highly likely
         tol = 1e-2;
-        if filter.x(3) < table_z + tol
+        if filter.x(3) < table_z + tol && ...
+           abs(filter.x(2) - (dist_to_table - table_length/2)) < table_length/2 && ...
+           abs(filter.x(1)) < table_width/2           
             % if it bounces do not hit
-            disp('Ball is not valid! Not hitting!');
+            disp('Ball bounces on opp table! Not hitting!');
             stage = FINISH;
         end
         % update the time it takes to pass table
@@ -183,7 +186,11 @@ while numTrials < 50
         
         % FOR DEBUGGING INIT TO ACTUAL POS AND VEL
         filter.initState([ball.pos;ball.vel],PSave);
-        [ballPred,ballTime,numBounce] = predictBallPath(dt,filter);
+        TABLE.DIST = dist_to_table;
+        TABLE.LENGTH = table_length;
+        TABLE.Z = table_z;
+        TABLE.WIDTH = table_width;
+        [ballPred,ballTime,numBounce,~] = predictBallPath(dt,filter,TABLE);
         filter.initState([ball.pos;ball.vel],PSave);
         if numBounce ~= 1
             disp('Ball is not valid! Not hitting!');

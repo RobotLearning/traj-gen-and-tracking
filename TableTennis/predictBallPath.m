@@ -1,16 +1,33 @@
-function [ballPred,ballTime,numBounce] = predictBallPath(dt,filter)
+% Predict the ball path for a fixed seconds into the future
+% maxPredictHorizon indicates the fixed time
+% includes also bounce prediction (num of estimated bounces)
 
-loadTennisTableValues();
+function [ballPred,ballTime,numBounce,time2PassTable] = predictBallPath(dt,filter,table)
+
+dist_to_table = table.DIST;
+table_length = table.LENGTH;
+table_z = table.Z;
+table_width = table.WIDTH;
 robotTableCenterY = dist_to_table - table_length/4;
-% comingDown variable is used because z-derivative estimate might not
-% be valid to predict number of bounces correctly
-numBounce = 0;
-comingDown = true;
+
+% init necessary variables
 tol = 2e-2;
 maxPredictHorizon = 0.8;
 predictHorizon = maxPredictHorizon;
 predictLen = floor(predictHorizon / dt);
 ballPred = zeros(6,predictLen);       
+ballTime = (1:predictLen) * dt;
+time2PassTable = Inf;
+
+% save filter state before prediction
+xSave = filter.x;
+PSave = filter.P;
+
+% comingDown variable is used because z-derivative estimate might not
+% be valid to predict number of bounces correctly
+numBounce = 0;
+comingDown = true;
+
 for j = 1:predictLen
     %filter.linearize(dt,0);
     filter.predict(dt,0);
@@ -27,6 +44,13 @@ for j = 1:predictLen
         comingDown = true;
         end
     end
+    
+    % update the time it takes to pass table
+    if filter.x(2) > dist_to_table && time2PassTable == Inf
+        time2PassTable = j * dt;
+    end
+    
 end
-% for now only considering the ball positions after table
-ballTime = (1:predictLen) * dt;
+
+% revert back to saved state
+filter.initState(xSave,PSave);

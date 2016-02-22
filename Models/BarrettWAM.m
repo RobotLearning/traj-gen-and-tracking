@@ -330,13 +330,14 @@ classdef BarrettWAM < Robot
             qddmax = repmat(con.qdd.max,1,len);
             qddmin = repmat(con.qdd.min,1,len); 
             try
-                assert(sum(sum((q > qmax) + (q < qmin))) == 0,'joint limits violated');
-                assert(sum(sum((qd > qdmax) + (qd < qdmin))) == 0, 'vel limits violated');
-                assert(sum(sum((qdd > qddmax) + (qdd < qddmin))) == 0, 'acc limits violated');
-            catch
-                disp('Limits violated! Not moving the robot!');
+                assert(sum(sum((q > qmax) + (q < qmin))) == 0,'Joint limits violated!');
+                assert(sum(sum((qd > qdmax) + (qd < qdmin))) == 0, 'Vel limits violated!');
+                assert(sum(sum((qdd > qddmax) + (qdd < qddmin))) == 0, 'Acc limits violated!');
+            catch ME
+                disp(ME.message);
+                disp('Not moving the robot!');
                 dof = length(con.q.max);
-                q0 = q(:,1);
+                q0 = q(:,end);
                 q = q0 * ones(1,len);
                 qd = zeros(dof,len);
                 qdd = zeros(dof,len);
@@ -348,6 +349,10 @@ classdef BarrettWAM < Robot
             con = obj.CON;
             q = min(con.q.max,q);
             q = max(con.q.min,q);
+        end
+        
+        function q = checkContactWithTable(obj,q)
+            % TODO:
         end
         
         %% Drawing functions here

@@ -41,7 +41,7 @@ fun = @(x) cost([q0;q0dot],x(1:end-1),x(end));
 
 % nonlinear equality constraint
 % ball must be intersected with desirable vel.
-nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),x(end));
+nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),x(end),[q0;q0dot]);
 
 % solve with MATLAB nonlinear optimizer
 %%{
@@ -123,13 +123,38 @@ end
 % boundary conditions
 % racket centre at the ball 
 % racket velocity negative of incoming ball vel
-function [c,ceq] = calculateRacketDev(robot,racket,Qf,T)
+function [c,ceq] = calculateRacketDev(robot,racket,Qf,T,Q0)
 
+% enforce joint limits as inequality constraints throughout trajectory
+dof = 7;
+q0 = Q0(1:dof); 
+q0dot = Q0(dof+1:end); 
+qf = Qf(1:dof); 
+qfdot = Qf(dof+1:end); 
+a3 = (2/(T^3))*(q0-qf) + (1/(T^2))*(q0dot + qfdot);
+a2 = (3/(T^2))*(qf-q0) - (1/T)*(qfdot + 2*q0dot);
+% compute the extrema
+t1 = (-a2 + sqrt(a2 - 3*a3.*q0dot))./(3*a3);
+t2 = (-a2 - sqrt(a2 - 3*a3.*q0dot))./(3*a3);
+% discard if complex and clamp to [0,1]
+tMax = 1;
+t1 = min(max(isreal(t1) .* t1, 0),1);
+t2 = min(max(isreal(t2) .* t2, 0),1);
+
+% enforce both minima and maxima
+qext = @(T) a3.*(T.^3) + a2.*(T.^2) + q0dot.*T + q0;
+con = robot.CON;
+c = [qext(t1) - con.q.max;
+     con.q.min - qext(t1);
+     qext(t2) - con.q.max;
+     con.q.min - qext(t2)];
+
+
+% equality constraints
 [xf,xfd,of] = robot.calcRacketState(Qf);
 rot = quat2Rot(of);
 nf = rot(1:3,3);
 [posDes,velDes,normalDes] = calculateDesRacket(racket,T);
-c = [];
 ceq = [xf - posDes(:); 
        xfd - velDes(:);
        nf - normalDes(:)];

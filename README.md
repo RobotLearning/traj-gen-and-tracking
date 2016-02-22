@@ -1,7 +1,6 @@
 Simulation notes:
 
-- Dont hit if it rebounds twice or does not rebound
-- Ball halts when it goes under the table
+- Should wam have a filter or not?
 
 Robot experiments (MATLAB/SL/REAL):
 
@@ -9,10 +8,6 @@ Robot experiments (MATLAB/SL/REAL):
 - Offline computation of optimal control trajectories for 
   fixed ball distribution
 - Train distribution of landing as a Gaussian Process
-- Better InvKin that considers orientation and constraints
-  to be copied from SL and mexed to MATLAB
-- InvKin to find initial solution to speed up computation
-- Options to speed up computation (including opt algorithm)
 - Implementing NLOPT in C ? [what to do with Kalman filter?]
 - Incorporate qmax qmin bounds in the optimization better
 
