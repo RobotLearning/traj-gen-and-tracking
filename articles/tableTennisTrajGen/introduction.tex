@@ -1,6 +1,11 @@
 \section{INTRODUCTION}
 
-Table tennis is a game that is challenging and particularly interesting for robotics. It is possible to combine different automation, planning and movement generation schemes and study how close they come to imitating expert human behaviour. Optimality plays an important role in the improvement of striking trajectories.
+% It is a challenging testbed for robotics algorithms
+Table tennis is a game that is particularly interesting for robotics. For humans it is a challenging game to master, for robots it serves as a testbed to study and validate the effectiveness of different movement generation algorithms. Combining different estimation, movement generation and execution schemes and studying how close they come to imitating expert human behaviour will yield important insights for robotics research.
+
+Optimality plays an important role in the search for efficient and feasible striking trajectories. However, so far, most of the robots used for table tennis were too specialized to require any nontrivial planning. Furthermore, most algorithms for robotic table tennis focused on simplifications of the game that fixed any additional degrees of freedom in order to quickly come up with a movement plan. In this paper, we show the advantages of incorporating optimality in coming up with more flexible movement, at the cost of some additional computation. 
+
+Our robotic setup with an anthropomorphic seven degree of freedom (DoF) Barrett WAM arm is shown in Figure~\ref{robot}. The redundant arm is custom made and capable of high speeds and accelerations. It is a good platform to study different movement generation schemes. Optimal control based approaches have to potential to make use of all degrees of freedom in planning, contributing to more natural and efficient generation of strikes.
 
 \begin{figure}[t!]
 \center
@@ -9,6 +14,8 @@ Table tennis is a game that is challenging and particularly interesting for robo
 \label{robot}
 \end{figure}
 % REPLACE PHOTO WITH ANOTHER ONE INCLUDING CAMERAS
+
+Our contributions are two-fold. Firstly, we come up with an optimal control framework where the generation of striking trajectories are the result of an optimization problem. As opposed to previous works, we do not use any inverse kinematics or any fixed plane when computing joint trajectories. Secondly, we do not rely on the simplistic racket-ball reflection model when computing desired racket velocities and orientations. Instead, we train a probabilistic model based on human ball-racket demonstrations and use it to calculate cautious strategies for returning the ball.
 
 In the rest of this paper, we describe the trajectory generation framework in detail, giving more examples and the necessary intuition where needed. In Section~\ref{relatedWork} we introduce previous work on table tennis and other relevant trajectory generation frameworks. In Section~\ref{method} we formalize robot trajectory generation as a specific optimal control problem and incorporate probabilistic modeling within this framework. In Section~\ref{alg} we discuss a two-stage optimization approach for optimizing the previously introduced cost functional. In Section~\ref{results} we evaluate the performance of this approach and compare it with previous inverse kinematics (IK) approaches. Experiments in our robotic table tennis setup are given. In the final section~\ref{end} we discuss several promising extensions on this framework. %VHP-based
 

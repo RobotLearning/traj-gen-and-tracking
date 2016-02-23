@@ -1,1 +1,41 @@
 \section{ALGORITHM}\label{alg}
+
+In this section we give the details of the nonlinear constrained optimization~\eqref{costFnc1}. We include additionally the joint position $\jointMax, \jointMin$ in the optimization as inequality constraints. 
+
+As explained in the previous section, we parametrize the third degree joint-space polynomials for each degree of freedom of the robot. That is, along with the striking time $T$ as a free parameter, we have a $2n+1$ dimensional problem with nonlinear equality and inequality constraints. Rewriting~\eqref{costFnc1} in terms of these free parameters, we get the following optimization problem
+%
+\begin{align}
+\min_{\joint_f,\dot{\joint}_f, T} & \, T(3T^2 \vec{a}_3^{\mathrm{T}}\vec{a}_3 + 3T \vec{a}_3^{\mathrm{T}}\vec{a}_2 + \vec{a}_2^{\mathrm{T}}\vec{a}_2)  \label{costFnc2} \\
+\textrm{s.t. \ } & \kin(\joint_f) = [\normal_{\mathrm{des}}(t),\ballEst(t)], \\
+&\jac(\joint_f)\dot{\joint}_f = \racketVel_{\mathrm{des}}(t), \\
+& \jointMin \leq \joint_{\mathrm{ext}}(t_{\mathrm{ext}}^{i}) \leq \jointMax, i = 1,2,
+\end{align}
+%
+\noindent where for simplicity we write 
+%
+\begin{align}
+\vec{a}_3 &= \frac{2}{T^3}(\joint_0 - \joint_f) + \frac{1}{T^2}(\dot{\joint}_0 + \dot{\joint}_f), \\
+\vec{a}_2 &= \frac{3}{T^2}(\joint_f - \joint_0) - \frac{1}{T}(\dot{\joint}_f + 2\dot{\joint}_0).
+\end{align}
+%
+The joint extrema candidates $\joint_{\mathrm{ext}}(t) = \vec{a}_3 t^3  + \vec{a}_2 t^2 + \dot{\joint}_0 t + \joint_0$ at times $t_{\mathrm{ext}}^{i}$, $i = 1,2$ are checked to satisfy constraints. We clamp the values $t_{\mathrm{ext}}$ to $0$ and $T$ if they are imaginary or outside the interval $[0,T]$. Gradients of the cost function~\eqref{costFnc2} can be easily calculated and fed to a constrained nonlinear optimizer, e.g. a sequential quadratic programming (SQP) based solver. 
+
+We can run this optimizer whenever we have enough ball samples available to estimate the ball coming towards the robot. We stop the estimation procedure whenever the expected time to pass over the table $T_{\mathrm{table}}$ is less than a maximum threshold $T_{\mathrm{max}}$. The full trajectory generation framework is summarized in Algorithm ~\ref{alg1}.
+
+\begin{algorithm}[tb]
+   \caption{OPTIMAL TABLE TENNIS}
+   \label{alg1}
+\begin{algorithmic}
+   \STATE {\bfseries Input:} $T_{\mathrm{max}} > 0$, 
+   \STATE Initialize EKF
+   \STATE Train GP models from demonstrations
+   \STATE Move to $\joint_0$
+   \REPEAT 
+	   \STATE Predict $\ballEst(t)$ with EKF till $T_{\mathrm{table}} < T_{\mathrm{max}}$
+	   \STATE Predict optimal $\racketVel_{\mathrm{des}}, \normal_{\mathrm{des}}$ using GP
+	   \STATE Compute optimal $\joint_f, \dot{\joint}_f, T$ with SQP
+	   \STATE Form polynomial $\joint(t), 0 \leq t \leq T$ and move
+	   \STATE Update GP with $\ballLand$	
+   \UNTIL opponent stops playing
+\end{algorithmic}
+\end{algorithm}

@@ -129,7 +129,7 @@ Robot Learning Lab \\
 \begin{figure}[t!]
 \center
 %\includegraphics[scale=0.20]{tableTennis2D.eps}	
-\movie[externalviewer]{\includegraphics[scale=0.2]{tableTennis2D.eps}}{out.ogv}		
+\movie[externalviewer]{\includegraphics[scale=0.2]{tableTennis2D.eps}}{tt2D.ogv}		
 \caption{2D Table Tennis with VHP}
 \label{robot1}
 \end{figure}
@@ -142,7 +142,8 @@ Robot Learning Lab \\
 \end{itemize}
 \begin{figure}[t!]
 \center
-\includegraphics[scale=0.30]{tableTennis3D.eps}			
+%\includegraphics[scale=0.30]{tableTennis3D.eps}		
+\movie[externalviewer]{\includegraphics[scale=0.3]{tableTennis3D.eps}}{tt3D.ogv}		
 \caption{3D Table Tennis}
 \label{robot2}
 \end{figure}
@@ -167,7 +168,7 @@ Robot Learning Lab \\
 \begin{figure}[t!]
 \centering
 \includegraphics[scale=0.3]{drawingBallsEye.eps}			
-\caption{Illustrating the main idea. From the ball's point of view, a racket trajectory $r(t)$ has a certain probability of hitting the ball and a significantly smaller probability of landing it on the opponents court.}
+\caption{From the ball's point of view, a racket trajectory $r(t)$ is like a mirror.}
 \label{mainIdea2}
 \end{figure}
 \end{frame}
@@ -177,31 +178,33 @@ Robot Learning Lab \\
 \item \emph{Maximize} the probability of landing
 %
 \begin{align}
-\min_{\joint,T} & \int\limits_{0}^{T}\ddot{\joint}(t)^{\mathrm{T}}\vec{R}\ddot{\joint}(t) + \prob(b_x,b_y \in \court|\landEvent), \\
+\min_{\joint,T} & \int\limits_{0}^{T}\ddot{\joint}(t)^{\mathrm{T}}\vec{R}\ddot{\joint}(t) + \prob(b_x,b_y \in \court|\landEvent)
 \label{costFnc1}
 \end{align}
-%
-\item \emph{Minimize} the KL-divergence from a desired distribution
-%
-\begin{align}
-\min_{\joint,T} & \int\limits_{0}^{T}\ddot{\joint}(t)^{\mathrm{T}}\vec{R}\ddot{\joint}(t) + \KL(p(b_x,b_y|\landEvent)|\mathcal{U}(\court)), \\
-\label{costFnc2}
-\end{align}
-\end{itemize}
-\end{frame}
-%
-%
-\begin{frame}{KL-divergence}
-\begin{itemize}
-%
-\item $\KL(p(b_x,b_y|\landEvent)|\mathcal{U}(\court))$ maximizes the probability of landing on the opponents court while ensuring unpredictability.
-\item Difficult to compute, and optimize!
 \end{itemize}
 \begin{figure}[t!]
 \center
-\includegraphics[scale=0.3]{tableTennis3DwithUncertainty.eps}			
+\includegraphics[scale=0.25]{probLand.eps}		
+%\caption{Maximize the probability}
+\label{robot2}
+\end{figure}
+\end{frame}
+%
+\begin{frame}{Method}
+\begin{itemize}
+\item \emph{Minimize} the KL-divergence from a desired distribution
+%
+\begin{align}
+\min_{\joint,T} & \int\limits_{0}^{T}\ddot{\joint}(t)^{\mathrm{T}}\vec{R}\ddot{\joint}(t) + \KL(p(b_x,b_y|\landEvent)|\mathcal{U}(\court)),
+\label{costFnc2}
+\end{align}
+\item $\KL(p(b_x,b_y|\landEvent)|\mathcal{U}(\court))$ maximizes the probability of landing on the opponents court while ensuring unpredictability.
+\begin{figure}[t!]
+\center
+\includegraphics[scale=0.25]{tableTennis3DwithUncertainty.eps}			
 \caption{3D Table Tennis}
 \end{figure}
+\end{itemize}
 \end{frame}
 %
 \section{Algorithm}
@@ -211,14 +214,14 @@ Robot Learning Lab \\
 \item Fix a joint-trajectory and use kinematics to compute racket positions and orientations
 %
 \begin{align}
-\kin(\joint(t)) = \big(\racket(t), \orient(t)\big) \\
+\kin(\joint(t)) = \big(\racket(t), \orient(t)\big)
 \end{align}
 %
 \item Find $p(b_x,b_y|\landEvent)$ by simulating: sampling from an initial distribution $\ball_t \sim \mathcal{N}(\mu(t),\Sigma(t))$
 \end{itemize}
 \begin{align}
 p(b_x,b_y|\landEvent) = \int_{\landTime = 0}^{\infty} p_{\landTime}(b_x,b_y|\landEvent,\landTime)\landDist \textrm{d}\landTime
-\label{marginalProcess} \\
+\label{marginalProcess} 
 \end{align}
 % put the sampling based algorithm here
 \end{frame}
@@ -226,6 +229,7 @@ p(b_x,b_y|\landEvent) = \int_{\landTime = 0}^{\infty} p_{\landTime}(b_x,b_y|\lan
 \begin{frame}{Analytical approach}
 \begin{itemize}
 \item Approximate the marginal of the stochastic ball process by a Gaussian.
+\item Marginalize over two \emph{hitting time} distributions.
 \end{itemize}
 \end{frame}
 %

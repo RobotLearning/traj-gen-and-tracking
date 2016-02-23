@@ -49,11 +49,22 @@
 \newcommand{\threshold}{\epsilon}
 \newcommand{\alg}{\emph{ttOpt}} % optimal table tennis
 \newcommand{\dataset}{\mathcal{D}}
+\newcommand{\dataMatrix}{\vec{X}} % human-ball interaction
+\newcommand{\observations}{\vec{y}} 
+
+% pos,vel and acc constraints
+\newcommand{\jointMax}{\joint_{\textrm{max}}}
+\newcommand{\jointMin}{\joint_{\textrm{min}}}
+\newcommand{\velMax}{\dot{\joint}_{\textrm{max}}}
+\newcommand{\velMin}{\dot{\joint}_{\textrm{min}}}
+\newcommand{\accMax}{\ddot{\joint}_{\textrm{max}}}
+\newcommand{\accMin}{\ddot{\joint}_{\textrm{min}}}
 
 % % % % % % % % Table tennis notation % % % % % %
 \newcommand{\ballFull}{\vec{x}_{B}} % ball cartesian state
 \newcommand{\ball}{\vec{b}} % ball positions
 \newcommand{\ballEst}{\vec{b}_{\mathrm{est}}} % ball estimates (provided by EKF)
+\newcommand{\ballLand}{\vec{b}_{\mathrm{land}}} % ball landing position (provided by EKF smoothing)
 \newcommand{\ballRadius}{r_B}
 \newcommand{\ballVel}{v} 
 \newcommand{\ballDynamics}{\vec{D}} % ball dynamics
@@ -74,6 +85,8 @@
 % % % % % % % % Probability notation % % % % % % %
 \newcommand{\prob}{\mathbb{P}} % probability
 \newcommand{\landEvent}{\mathcal{L}} % land on table
+\newcommand{\hitTime}{\tau_{\textrm{hit}}} % hitting or striking time
+\newcommand{\landTime}{\tau_{\textrm{land}}} % landing time on table
 
 
 % Set the paths where all figures are taken from:

@@ -14,7 +14,7 @@ When generating striking trajectories for the robot, trajectories with minimal a
 &\dot{\joint}(0) = \dot{\joint}_{0}, \label{initCond2}
 \end{align}
 %
-\noindent where the final time $T$ of the racket trajectory is an additional variable to be optimized along with the joint accelerations $\ddot{\joint}(t) \in \mathbb{R}^{n}$. The direct kinematics function $\kin(\cdot)  \in \mathbb{R}^{3 \times 2}$ is the relevant submatrix of the homogeneous transformation $\vec{T}(\cdot) \in \mathbb{R}^{4 \times 4}$ giving the desired racket normal and racket center position at striking time. The sub-Jacobian $\jac(\joint(T)) \in \mathbb{R}^{3 \times n}$ gives the condition for the desired Cartesian racket velocities. $\vec{R} \succeq 0 \in \mathbb{R}^{n \times n}$ is a positive definite weighting matrix for the accelerations. Initial conditions for the robot are the joint positions $\joint_0$ and joint velocities $\dot{\joint}_0$.
+\noindent where the final time $T$ of the racket trajectory is an additional variable to be optimized along with the joint accelerations $\ddot{\joint}(t) \in \mathbb{R}^{n}$. The direct kinematics function $\kin(\cdot)  \in \mathbb{R}^{3 \times 2}$ is the relevant submatrix of the homogeneous transformation $\vec{T}(\cdot) \in \mathbb{R}^{4 \times 4}$ giving the desired racket normal $\normal_{\mathrm{des}}$ and racket center position $\ballEst$ at striking time. The sub-Jacobian $\jac(\joint(T)) \in \mathbb{R}^{3 \times n}$ gives the condition for the desired Cartesian racket velocities $\racketVel_{\mathrm{des}}$. $\vec{R} \succeq 0 \in \mathbb{R}^{n \times n}$ is a positive definite weighting matrix for the accelerations. Initial conditions for the robot are the joint positions $\joint_0$ and joint velocities $\dot{\joint}_0$.
 
 Solution of \eqref{costFnc1} using Pontryagin's maximum principle is well known in the optimal control literature: the solution $\joint(t)$ is a third degree polynomial for each degree of freedom, with the \emph{transversality conditions} \eqref{transCond1} - \eqref{transCond2} imposing another condition on the Hamiltonian to satisfy at striking time~\cite{Schaettler12}. See Figure~\ref{mainIdea} for an illustration. % which figure 
 
@@ -57,10 +57,25 @@ In this framework, we require three models to determine the equality constraints
 The accuracy of the rebound model~\eqref{reboundModel} clearly depends on that of the flight model~\eqref{flightModel}, so we first train the parameters of the flight model using nonlinear least squares. Secondly, we use the trained flight model to smoothen the ball path before rebound and after rebound. Using an Extended Kalman Smoother, we can calculate the ball velocities before and after rebound and then use linear least squares to estimate the rebound parameters. A more comprehensive approach would be to train the two models together with a smoothing Expectation-Maximization (EM) algorithm, at no apparent advantage. % cite needed
 Effects of ball angular velocity, or in other words spin, are not accounted for in these models.
 
-During test time we use the same trained Extended Kalman Filter (EKF) to perform prediction on the filtered ball state. Any other regression method to estimate initial ball position and velocity can also be used. Using an EKF for our nonlinear model \eqref{flightModel} generates at each time instant $t$ a probability distribution $p_t(\ball,\dot{\ball}|t)$ of incoming ball states parameterized by time, 
+During test time we use the same trained Extended Kalman Filter (EKF) to perform prediction on the filtered ball state. 
+% Any other regression method to estimate initial ball position and velocity can also be used. 
+Using an EKF for our nonlinear model \eqref{flightModel} generates at each time instant $t$ a probability distribution $p_t(\ball,\dot{\ball}|t)$ of incoming ball states parameterized by time, 
 %
 \begin{align}
-\ball(t) &\sim \mathcal{N}(\vec{\mu}_{\textrm{in}}(t),\vec{\Sigma}_{\textrm{in}}(t)). 
+\ball(t) &\sim \mathcal{N}(\vec{\mu}_{\textrm{est}},\vec{\Sigma}_{\textrm{est}}(t)),
 \label{ballProcess}
 \end{align}
+%
+\noindent where $\vec{\mu}_{\textrm{est}} = (\ballEst,\dot{\ballEst})$ is the mean ball position and velocity estimates.
+%
+The incoming ball mean $\ballEst(t)$ and covariance $\vec{\Sigma}_{\textrm{est}}(t)$ of the normal distribution can be used to generate task-space strategies $\normal_{\textrm{des}}(t), \racketVel_{\textrm{des}}(t)$ to return the ball in a more cautious way. Given a noisy dataset of human table-tennis demonstrations of size $N$, i.e. $\dataset = \{\ball(\hitTime^i), \dot{\ball}(\hitTime^i), \racketVel(\hitTime^i), \normal(\hitTime^i), \ball(\landTime^i)\}_{i=1}^{N}$ we can train a probabilistic model between human-ball interactions $\dataMatrix = \{\ball(\hitTime^i), \dot{\ball}(\hitTime^i), \racketVel(\hitTime^i), \normal(\hitTime^i)\}_{i=1}^{N} \in \mathbb{R}^{N \times 12}$ and ball landing locations $\observations = \{b_x(\landTime^i), b_y(\landTime^i)\}_{i=1}^{N} \in \mathbb{R}^{N \times 2}$. The striking time $\hitTime$ and the landing time $\landTime$ encode events when the racket intercepts the ball and the ball bounces on the table, respectively.  	
+
+In previous works, the outgoing velocity of the ball as a result of contact is calculated using a \emph{mirror law}: 
+%
+\begin{align}
+o_{n} - v_{n} = -\epsilon_{R} (i_{n} - v_{n}),
+\label{mirrorLaw}
+\end{align}
+%
+\noindent with $v_{n}$ the speed of the racket along its normal $\normal(t)$ and $\epsilon_{R} \in (0,1)$ the coefficient of restitution of the racket. Scalars $o_{n}$ and $i_{n}$ are the outgoing and incoming ball speeds along the racket normal, respectively. This model \eqref{mirrorLaw} assumes an elastic momentum exchange and it is quite inaccurate, especially at high ball velocities. Strategies to calculate $\normal_{\textrm{des}}(t), \racketVel_{\textrm{des}}(t)$ that use such simplistic modeling can render any trajectory generation framework purporting to be optimal, ineffective.
 

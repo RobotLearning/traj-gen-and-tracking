@@ -137,7 +137,6 @@ a2 = (3/(T^2))*(qf-q0) - (1/T)*(qfdot + 2*q0dot);
 t1 = (-a2 + sqrt(a2 - 3*a3.*q0dot))./(3*a3);
 t2 = (-a2 - sqrt(a2 - 3*a3.*q0dot))./(3*a3);
 % discard if complex and clamp to [0,1]
-tMax = 1;
 t1 = min(max(isreal(t1) .* t1, 0),1);
 t2 = min(max(isreal(t2) .* t2, 0),1);
 
