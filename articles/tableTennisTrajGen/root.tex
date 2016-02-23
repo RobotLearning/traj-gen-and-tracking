@@ -30,6 +30,7 @@
 \let\vec\boldvec
 \newcommand\at[2]{\left.#1\right|_{#2}} % the at differential sign
 \newcommand\scalemath[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}} % scaling matrices
+\newcommand{\rpm}{\raisebox{.2ex}{$\scriptstyle\pm$}} % plus minus sign
 
 %% custom macros
 
@@ -53,12 +54,12 @@
 \newcommand{\observations}{\vec{y}} 
 
 % pos,vel and acc constraints
-\newcommand{\jointMax}{\joint_{\textrm{max}}}
-\newcommand{\jointMin}{\joint_{\textrm{min}}}
-\newcommand{\velMax}{\dot{\joint}_{\textrm{max}}}
-\newcommand{\velMin}{\dot{\joint}_{\textrm{min}}}
-\newcommand{\accMax}{\ddot{\joint}_{\textrm{max}}}
-\newcommand{\accMin}{\ddot{\joint}_{\textrm{min}}}
+\newcommand{\jointMax}{\joint_{\mathrm{max}}}
+\newcommand{\jointMin}{\joint_{\mathrm{min}}}
+\newcommand{\velMax}{\dot{\joint}_{\mathrm{max}}}
+\newcommand{\velMin}{\dot{\joint}_{\mathrm{min}}}
+\newcommand{\accMax}{\ddot{\joint}_{\mathrm{max}}}
+\newcommand{\accMin}{\ddot{\joint}_{\mathrm{min}}}
 
 % % % % % % % % Table tennis notation % % % % % %
 \newcommand{\ballFull}{\vec{x}_{B}} % ball cartesian state
@@ -85,8 +86,8 @@
 % % % % % % % % Probability notation % % % % % % %
 \newcommand{\prob}{\mathbb{P}} % probability
 \newcommand{\landEvent}{\mathcal{L}} % land on table
-\newcommand{\hitTime}{\tau_{\textrm{hit}}} % hitting or striking time
-\newcommand{\landTime}{\tau_{\textrm{land}}} % landing time on table
+\newcommand{\hitTime}{\tau_{\mathrm{hit}}} % hitting or striking time
+\newcommand{\landTime}{\tau_{\mathrm{land}}} % landing time on table
 
 
 % Set the paths where all figures are taken from:

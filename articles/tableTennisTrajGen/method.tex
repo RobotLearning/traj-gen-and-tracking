@@ -1,9 +1,9 @@
 \section{TRAJECTORY GENERATION}\label{method}
-
+%
 In table tennis, one needs to specify when, where and how to intercept the incoming ball trajectory $\ball(t)$. So far, most of the algorithms for robotic table tennis \cite{Matsushima05}, \cite{Muelling13} calculate the intersection point of an estimated ball trajectory $\ballEst(t)$ with a virtual hitting plane $z = z_{\mathrm{VHP}}$ to determine the space and time coordinates of the hitting point. It is possible to eliminate this plane altogether and include the striking time as another parameter to be determined in an optimization problem.
-
+%
 \subsection{Optimal Control for Trajectory Generation}
-
+%
 When generating striking trajectories for the robot, trajectories with minimal acceleration or jerk can be preferred for safety and efficiency reasons. We therefore consider the following \emph{free-time} optimal control problem~\cite{Liberzon11}
 %
 \begin{align}
@@ -62,13 +62,13 @@ During test time we use the same trained Extended Kalman Filter (EKF) to perform
 Using an EKF for our nonlinear model \eqref{flightModel} generates at each time instant $t$ a probability distribution $p_t(\ball,\dot{\ball}|t)$ of incoming ball states parameterized by time, 
 %
 \begin{align}
-\ball(t) &\sim \mathcal{N}(\vec{\mu}_{\textrm{est}},\vec{\Sigma}_{\textrm{est}}(t)),
+\ball(t) &\sim \mathcal{N}(\vec{\mu}_{\mathrm{est}},\vec{\Sigma}_{\mathrm{est}}(t)),
 \label{ballProcess}
 \end{align}
 %
-\noindent where $\vec{\mu}_{\textrm{est}} = (\ballEst,\dot{\ballEst})$ is the mean ball position and velocity estimates.
+\noindent where $\vec{\mu}_{\mathrm{est}} = (\ballEst,\dot{\ballEst})$ is the mean ball position and velocity estimates.
 %
-The incoming ball mean $\ballEst(t)$ and covariance $\vec{\Sigma}_{\textrm{est}}(t)$ of the normal distribution can be used to generate task-space strategies $\normal_{\textrm{des}}(t), \racketVel_{\textrm{des}}(t)$ to return the ball in a more cautious way. Given a noisy dataset of human table-tennis demonstrations of size $N$, i.e. $\dataset = \{\ball(\hitTime^i), \dot{\ball}(\hitTime^i), \racketVel(\hitTime^i), \normal(\hitTime^i), \ball(\landTime^i)\}_{i=1}^{N}$ we can train a probabilistic model between human-ball interactions $\dataMatrix = \{\ball(\hitTime^i), \dot{\ball}(\hitTime^i), \racketVel(\hitTime^i), \normal(\hitTime^i)\}_{i=1}^{N} \in \mathbb{R}^{N \times 12}$ and ball landing locations $\observations = \{b_x(\landTime^i), b_y(\landTime^i)\}_{i=1}^{N} \in \mathbb{R}^{N \times 2}$. The striking time $\hitTime$ and the landing time $\landTime$ encode events when the racket intercepts the ball and the ball bounces on the table, respectively.  	
+The incoming ball mean $\ballEst(t)$ and covariance $\vec{\Sigma}_{\mathrm{est}}(t)$ of the normal distribution can be used to generate task-space strategies $\normal_{\mathrm{des}}(t), \racketVel_{\mathrm{des}}(t)$ to return the ball in a more cautious way. Given a noisy dataset of human table-tennis demonstrations of size $N$, i.e. $\dataset = \{\ball(\hitTime^i), \dot{\ball}(\hitTime^i), \racketVel(\hitTime^i), \normal(\hitTime^i), \ball(\landTime^i)\}_{i=1}^{N}$ we can train a probabilistic model between human-ball interactions $\dataMatrix = \{\ball(\hitTime^i), \dot{\ball}(\hitTime^i), \racketVel(\hitTime^i), \normal(\hitTime^i)\}_{i=1}^{N} \in \mathbb{R}^{N \times 12}$ and ball landing locations $\observations = \{b_x(\landTime^i), b_y(\landTime^i)\}_{i=1}^{N} \in \mathbb{R}^{N \times 2}$. The striking time $\hitTime$ and the landing time $\landTime$ denote the times when the racket intercepts the ball and the ball bounces on the table, respectively.  	
 
 In previous works, the outgoing velocity of the ball as a result of contact is calculated using a \emph{mirror law}: 
 %
@@ -77,5 +77,5 @@ o_{n} - v_{n} = -\epsilon_{R} (i_{n} - v_{n}),
 \label{mirrorLaw}
 \end{align}
 %
-\noindent with $v_{n}$ the speed of the racket along its normal $\normal(t)$ and $\epsilon_{R} \in (0,1)$ the coefficient of restitution of the racket. Scalars $o_{n}$ and $i_{n}$ are the outgoing and incoming ball speeds along the racket normal, respectively. This model \eqref{mirrorLaw} assumes an elastic momentum exchange and it is quite inaccurate, especially at high ball velocities. Strategies to calculate $\normal_{\textrm{des}}(t), \racketVel_{\textrm{des}}(t)$ that use such simplistic modeling can render any trajectory generation framework purporting to be optimal, ineffective.
+\noindent with $v_{n}$ the speed of the racket along its normal $\normal(t)$ and $\epsilon_{R} \in (0,1)$ the coefficient of restitution of the racket. Scalars $o_{n}$ and $i_{n}$ are the outgoing and incoming ball speeds along the racket normal, respectively. This model \eqref{mirrorLaw} assumes an elastic momentum exchange and it is quite inaccurate, especially at high ball velocities. Strategies to calculate $\normal_{\mathrm{des}}(t), \racketVel_{\mathrm{des}}(t)$ that use such simplistic modeling can render any trajectory generation framework purporting to be optimal, ineffective.
 

@@ -1,4 +1,25 @@
 \section{EXPERIMENTS}\label{results}
 
+\subsection{Comparison with the Virtual Hitting Plane method}
+
+In this subsection, we compare in simulation the ball returning performance of our new approach with the virtual hitting plane (VHP) method. The VHP method that we implement is a close variant of \cite{Muelling13}. In this approach, the specification of the VHP fixes the hitting point and the hitting time for the racket trajectory. The remaining parameters, the racket velocity $\racketVel(\hitTime)$ and the desired racket normal at hitting time $\normal(\hitTime)$ are found by using the models~\eqref{flightModel} and \eqref{mirrorLaw}. First, a desired ball outgoing velocity is found by solving the boundary value problem for the flight model~\eqref{flightModel} after specifying a desired landing point $\ballLand$ and a desired time duration $\landTime$
+%
+\begin{align}
+&\ddot{\ball} = \ballDynamics(\dot{\ball}), \\
+&\ball(\hitTime) = \ballEst(\hitTime), \\
+&\ball(\landTime) = \ballLand.
+\label{bvp}
+\end{align}
+%
+Afterwards, the desired racket velocity $\racketVel(\hitTime)$ and the desired racket normal at hitting time $\normal(\hitTime)$ can be calculated by inverting the linear contact model~\eqref{mirrorLaw}. The inversion results in the racket velocity along the normal $v_n$ and the desired normal $\normal$. Racket velocity along the other two directions are fixed to zero to minimize spin.
+%
+We further specify a desired racket slide by rotating the initial racket normal to the final desired racket normal. After specifying the full orientation of the final robot posture at hitting time, we can run inverse kinematics (IK) to specify the final joint positions. Final joint velocities are found by using the Jacobian at hitting time and the desired racket velocities as in~\eqref{transCond2}. After generating a third degree polynomial in joint space, we check for joint limitations, and the Cartesian constraints due to the table. When the ball is coming close to the robots initial posture, this simple IK procedure results in feasible trajectories.
+%
+To make a fair comparison between the VHP approach with our algorithm $\alg$, in our simulation environment~\footnote{Code for our 3D simulation can be found in our git repository: https://github.com/RobotLearning/traj-gen-and-tracking.git} we fix the initial ball state variance such that most ball end up close to the initial robot posture. This ensures that we make a fair evaluation between the two algorithms. Both methods filter the incoming stream of ball position estimates with the same EKF and equally predict the time to pass over the table $T_{\mathrm{table}}$. If this value is less than the specified $T_{\mathrm{max}} = 0.8$ sec, trajectory generation is launched.
+
+\subsection{Robot experiments}
+
+
+
 % vision system operates in a semi-structured and human-inhabited environment
 % Finite State Automaton: four stages: awaiting stage, preparation, hitting and finishing stage
