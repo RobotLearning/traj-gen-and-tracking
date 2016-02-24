@@ -17,3 +17,6 @@ for j = 1:size(ballPred,2)
     racketDes.vel(:,j) = rv;
 
 end
+
+% 8 cm radius
+racketDes.radius = 0.08;

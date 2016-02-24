@@ -43,7 +43,7 @@ classdef Ball < handle
             loadTennisTableValues();
             
             obj.pos = ball_cannon(:) + initStdPos*randn(3,1);
-            obj.vel = [-0.9; 4.000; 3.2] + initStdVel*randn(3,1);
+            obj.vel = 1.2*[-0.9; 4.000; 3.2] + initStdVel*randn(3,1);
             
             obj.C = Cdrag;
             obj.g = gravity;

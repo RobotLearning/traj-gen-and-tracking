@@ -47,15 +47,16 @@ nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),x(end),[q0;q0dot]);
 %%{
 %options = optimoptions('fmincon','Display','off');
 options = optimoptions('fmincon','Algorithm', 'sqp',...
-                       'Display','final-detailed', ...
+                       'Display','notify-detailed', ...
                        'TolX', 1e-6, ...
                        'TolCon', 1e-6, ...
                        'TolFun',1e-6, ...
+                       'MaxFunEvals',2e3,...
                        'GradObj','on');
                        %'DerivativeCheck','on',...                       
 %options = optimoptions('fmincon','Display','iter-detailed');
 %profile on;
-xopt = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
+[xopt,fval,exitflag,output] = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
 %}
 
 % release the variables
@@ -134,19 +135,16 @@ qfdot = Qf(dof+1:end);
 a3 = (2/(T^3))*(q0-qf) + (1/(T^2))*(q0dot + qfdot);
 a2 = (3/(T^2))*(qf-q0) - (1/T)*(qfdot + 2*q0dot);
 % compute the extrema
-t1 = (-a2 + sqrt(a2 - 3*a3.*q0dot))./(3*a3);
-t2 = (-a2 - sqrt(a2 - 3*a3.*q0dot))./(3*a3);
+t1 = (-a2 + sqrt(a2.^2 - 3*a3.*q0dot))./(3*a3);
+t2 = (-a2 - sqrt(a2.^2 - 3*a3.*q0dot))./(3*a3);
 % discard if complex and clamp to [0,1]
-t1 = min(max(isreal(t1) .* t1, 0),1);
-t2 = min(max(isreal(t2) .* t2, 0),1);
+t1 = min(max(~logical(imag(t1)) .* t1, 0),1);
+t2 = min(max(~logical(imag(t2)) .* t2, 0),1);
 
 % enforce both minima and maxima
-qext = @(T) a3.*(T.^3) + a2.*(T.^2) + q0dot.*T + q0;
+qext = @(t) a3.*(t.^3) + a2.*(t.^2) + q0dot.*t + q0;
 con = robot.CON;
-c = [qext(t1) - con.q.max;
-     con.q.min - qext(t1);
-     qext(t2) - con.q.max;
-     con.q.min - qext(t2)];
+
 
 
 % equality constraints
@@ -154,9 +152,26 @@ c = [qext(t1) - con.q.max;
 rot = quat2Rot(of);
 nf = rot(1:3,3);
 [posDes,velDes,normalDes] = calculateDesRacket(racket,T);
-ceq = [xf - posDes(:); 
-       xfd - velDes(:);
-       nf - normalDes(:)];
+vecFromBallToRacket = rot'*(posDes(:) - xf); % in racket coordinates
+
+% inequality constraints
+% last one makes sure ball touches the racket
+c = [qext(t1) - con.q.max;
+     con.q.min - qext(t1);
+     qext(t2) - con.q.max;
+     con.q.min - qext(t2);
+     vecFromBallToRacket(1:2)'*vecFromBallToRacket(1:2) - racket.radius^2];
+
+% first one makes sure ball is at racket dist 
+% 2cm is ball radius is not considered
+ceq =   [vecFromBallToRacket(3) - 0.02;
+        xfd - velDes(:);
+        nf - normalDes(:)];
+
+% no longer trying to get racket centre to ball 
+%ceq = [xf - posDes(:); 
+%       xfd - velDes(:);
+%       nf - normalDes(:)];
 end
 
 % interpolate to find ball at time t

@@ -35,7 +35,7 @@ PAR.uex = uex;
 PAR.uex0 = uex0;
 PAR.C = eye(SIM.dimy,SIM.dimx);
 
-% TODO: form constraints
+% form constraints
 MAX_VEL = 200;
 MAX_ACC = 200;
 CON.q.max = [2.60; 2.00; 2.80; 3.10; 1.30; 1.60; 2.20];
@@ -75,11 +75,27 @@ PD(7,7) = -2.5;
 PD(7,N_DOFS+7) = -0.075;
 
 % initialize the arm with zero velocity on the right hand side
-q0 = [1.8; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
+q0 = [1.0; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
 qd0 = zeros(7,1);
 
 % to help with inverse kin
 wam.regressOnFinalJointsFromDemo();
+
+% construct robot workspace by using mesh
+% tic;
+% numPt = 5;
+% for i = 1:N_DOFS
+%     mesh{i} = linspace(CON.q.min(i),CON.q.max(i),numPt);
+% end
+% [x1,x2,x3,x4,x5,x6,x7] = ndgrid(mesh{:});
+% Qworkspace = [x1(:),x2(:),x3(:),x4(:),x5(:),x6(:),x7(:)];
+% [xw,~,~] = wam.kinematics([Qworkspace';zeros(7,numPt^7)]);
+% Del = delaunay(xw(1,:),xw(2,:),xw(3,:));
+% trisurf(Del,xw(1,:),xw(2,:),xw(3,:));
+% save('BarrettWorkspace.mat','Del');
+% toc
+
+load('BarrettWorkspace.mat','Del');
 
 %{
 % Search for an initial posture with less jacobian condition number

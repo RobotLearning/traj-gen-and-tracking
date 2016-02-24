@@ -219,7 +219,7 @@ classdef TableTennis < handle
             params.CFTX = obj.TABLE.K(1); 
             params.CFTY = obj.TABLE.K(2); 
             params.CRT = -obj.TABLE.K(3);
-            params.ALG = 'RK4'; %'Euler'
+            params.ALG = 'Euler'; %'RK4'; 
 
             ballFlightFnc = @(x,u,dt) discreteBallFlightModel(x,dt,params);
             % very small but nonzero value for numerical stability
