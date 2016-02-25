@@ -1,7 +1,11 @@
 \section{CONCLUSION}\label{end}
 
+In this paper we have presented a new optimal-control based approach for generating table tennis striking trajectories. The strike and return trajectories are third order polynomials that intercept at the optimized hitting point at the optimized hitting time. Unlike previous approaches like the VHP-method, our optimization based framework respects the joint limitations and any velocity or acceleration safety limits imposed on our Barrett WAM arm. Furthermore by varying the hitting time $T$ we simplify the problem of finding feasible joint trajectories. 
 % online computation
 % MPC-like online computation
 % offline computation
+
+Unfortunately, our optimization takes currently about a second on our system on average. On our robotic setup we had to build offline a lookup table for a fixed initial posture $\joint_0$ to overcome this limitation. However, if we can push the optimization to millisecond range, we can use nonlinear model predictive control (MPC) where we optimize~\eqref{costFnc2} repeatedly given new joint position and ball position measurements. MPC-like approach involving repeated optimization has the potential to make the method more robust to both execution errors and inaccuracies in ball estimation. 
+% ref needed for MPC
 
 The cost functional to be minimized considers the accelerations as the quantity to be minimized. It assumes that the feedback linearization of the robot is perfect, that is the inverse dynamics model for the robot is exact. Whenever the cancellation is imperfect due to inaccurate robot control, execution error will prevent the robot from achieving the desired trajectories. A robust way to handle execution errors will be considered in future work.

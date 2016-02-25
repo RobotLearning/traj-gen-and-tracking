@@ -28,7 +28,7 @@ classdef TableTennis < handle
     methods
         
         %% CONSTRUCTOR
-        function obj = TableTennis(wam,wam2,q0,std,draw,lookup)
+        function obj = TableTennis(wam,wam2,q0,std,draw,train,lookup)
             
             % initialize two robots
             obj.robot1 = wam;
@@ -43,11 +43,13 @@ classdef TableTennis < handle
             obj.ball = Ball(0.0,0.0); 
             
             % shall we train an offline lookup table
-            obj.offline.train = false;
+            obj.offline.train = train;
             obj.offline.use = lookup;
             obj.offline.savefile = 'OfflineTrajGenLookupTable.mat';
+            obj.offline.X = [];
+            obj.offline.Y = [];
             
-            if obj.offline.train || obj.offline.use
+            if obj.offline.use
                 % load the savefile
                 load(obj.offline.savefile,'X','Y');
                 obj.offline.X = X;
@@ -169,7 +171,7 @@ classdef TableTennis < handle
                         idx = 0;
                         stage = HIT;
                         % If we're training an offline model save optimization result
-                        if obj.offline.train
+                        if obj.offline.train || obj.offline.use
                             obj.offline.b0 = filter.x';
                         end
                         [q,x,xd,o] = obj.plan(r1,ballPred,ballTime,q0,dt);            
@@ -209,7 +211,16 @@ classdef TableTennis < handle
             time2return = 1.0;
             
             if obj.offline.use
-                val = obj.offline.b0 * obj.offline.B;
+                %val = obj.offline.b0 * obj.offline.B;
+                Xs = obj.offline.X;
+                Ys = obj.offline.Y;
+                bstar = obj.offline.b0;
+                N = size(Xs,1);
+                % find the closest point among Xs
+                diff = repmat(bstar,N,1) - Xs;
+                [~,idx] = min(diag(diff*diff'));
+                val = Ys(idx,:);
+                        
                 qf = val(1:dofs)';
                 qfdot = val(dofs+1:2*dofs)';
                 T = val(end);

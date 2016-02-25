@@ -31,13 +31,13 @@ For the return polynomial $\joint_{\mathrm{return}}(t) = \vec{\tilde{a}}_3 t^3  
 %
 \noindent to make sure we satisfy the joint limits both for the strike trajectory, $i = 1,2$ and for the return trajectory, $i = 3,4$. We clamp the values $\vec{t}^{1,2}_{\mathrm{ext}}$ to the interval $[0, \, T]$ and $\vec{t}^{3,4}_{\mathrm{ext}}$ to $[T, \, T + T_{\mathrm{return}}]$ if they are imaginary or outside their corresponding intervals. Joint velocity and acceleration constraints, although not shown in \eqref{costFnc2}, are enforced in a similar way.
 
-Gradients of the cost function~\eqref{costFnc2} can be easily calculated and fed to a constrained nonlinear optimizer, e.g. a sequential quadratic programming (SQP) based solver. We can run this optimizer whenever we have enough ball samples available to estimate the ball coming towards the robot. One simple solution that we like is to stop the estimation procedure whenever the expected time to pass over the table $T_{\mathrm{table}}$ is less than a maximum threshold $T_{\mathrm{max}}$. The full trajectory generation framework is summarized in Algorithm ~\ref{alg1}.
+Gradients of the cost function~\eqref{costFnc2} can be easily calculated and fed to a constrained nonlinear optimizer, e.g. a sequential quadratic programming (SQP) based solver. We can run this optimizer whenever we have enough ball samples available to estimate the ball coming towards the robot. One simple solution that we like is to stop the estimation procedure whenever the expected time to pass over the table $T_{\mathrm{table}}$ is less than a maximum threshold $T_{\mathrm{max}}$. The full trajectory generation framework is summarized in Algorithm~\ref{alg1}.
 
 \begin{algorithm}[tb]
    \caption{OPTIMAL TABLE TENNIS ($\alg$)}
    \label{alg1}
 \begin{algorithmic}
-   \STATE {\bfseries Input:} $T_{\mathrm{max}} > 0, T_{\mathrm{return}}$ 
+   \STATE {\bfseries Input:} $T_{\mathrm{max}}, T_{\mathrm{return}}, \joint_0$ 
    \STATE Initialize EKF
    \STATE Train GP models from demonstrations
    \STATE Move to $\joint_0$
@@ -45,7 +45,7 @@ Gradients of the cost function~\eqref{costFnc2} can be easily calculated and fed
 	   \STATE Predict $\ballEst(t)$ with EKF till $T_{\mathrm{table}} < T_{\mathrm{max}}$
 	   \STATE Predict optimal $\racketVel_{\mathrm{des}}, \normal_{\mathrm{des}}$ using GP
 	   \STATE Compute optimal $\joint_f, \dot{\joint}_f, T$ with SQP
-	   \STATE Form polynomial $\joint(t), 0 \leq t \leq T$
+	   \STATE Form polynomials $\joint_{\mathrm{strike}}(t), \joint_{\mathrm{return}}(t)$, $t \leq T + T_{\mathrm{return}}$
 	   \STATE Check for constraints, if feasible move
 	   \STATE Update GP with $\ballLand$	
    \UNTIL no more balls
