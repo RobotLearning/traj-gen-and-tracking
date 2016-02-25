@@ -16,17 +16,19 @@ classdef TableTennis < handle
         robot2
         % handle structure for drawing animation
         handle
-        % draw flag
-        drawFlag
+        % draw flag (structure)
+        draw
         % noise models (as a structure)
         noise
+        % build offline policy (a structure)
+        offline
         
     end
     
     methods
         
         %% CONSTRUCTOR
-        function obj = TableTennis(wam,wam2,q0,std,draw)
+        function obj = TableTennis(wam,wam2,q0,std,draw,lookup)
             
             % initialize two robots
             obj.robot1 = wam;
@@ -39,11 +41,25 @@ classdef TableTennis < handle
             
             % initialize a ball            
             obj.ball = Ball(0.0,0.0); 
+            
+            % shall we train an offline lookup table
+            obj.offline.train = false;
+            obj.offline.use = lookup;
+            obj.offline.savefile = 'OfflineTrajGenLookupTable.mat';
+            
+            if obj.offline.train || obj.offline.use
+                % load the savefile
+                load(obj.offline.savefile,'X','Y');
+                obj.offline.X = X;
+                obj.offline.Y = Y;
+                obj.offline.B = X \ Y;
+                obj.offline.GP = [];
+            end
                        
             % initialize animation
-            obj.drawFlag = draw;
+            obj.draw.flag = draw;
             if draw
-                obj.initAnimation(q0);  
+                obj.initAnimation(q0);
             else
                 obj.handle = [];
             end
@@ -68,7 +84,7 @@ classdef TableTennis < handle
         %% MAIN LOOP
         
         % first robot practices 
-        function numLands = practice(obj,numTimes)
+        function numLands = practice(obj,q0,numTimes)
         
             stdPos = obj.noise.ballInit.pos.std;
             stdVel = obj.noise.ballInit.vel.std;
@@ -76,26 +92,33 @@ classdef TableTennis < handle
             eps = 0.0;
             maxSimTime = 3.0;
             
-            % Initialize arm posture
-            % initialize the arm with zero velocity on the right hand side
-            q0 = [1.8; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
-            
             % Init filter
             filter = obj.initFilter();
             
-            for i = 1:numTimes
-                                               
+            for i = 1:numTimes                                               
                 % initialize a ball
                 obj.ball = Ball(stdPos,stdVel);
                 % initialize filter state
                 filter.initState([obj.ball.pos;obj.ball.vel],eps);
                 % play one turn
-                obj.play(q0,filter,maxSimTime);
-                
+                obj.play(q0,filter,maxSimTime);                
                 % check landing
                 if obj.ball.isLANDED
                     numLands = numLands + 1;
+                    % build offline policy
+                    if obj.offline.train                        
+                        obj.offline.X = [obj.offline.X; obj.offline.b0];
+                        obj.offline.Y = [obj.offline.Y; obj.offline.xf];
+                    end                    
                 end
+            end
+            
+            fprintf('Landed %d/%d.\n',numLands,numTimes);
+            if obj.offline.train && ~obj.offline.use
+                % save them
+                X = obj.offline.X;
+                Y = obj.offline.Y;
+                save(obj.offline.savefile,'X','Y');
             end
         end
         
@@ -118,7 +141,7 @@ classdef TableTennis < handle
             q = q0; qd0 = zeros(7,1);
             [x,xd,o] = r1.calcRacketState([q0;qd0]);
 
-            while timeSim < timeMax
+            while timeSim < timeMax      
                 
                 % evolve ball according to racket and get estimate
                 filter = obj.getBallEstimate(dt,filter,x(:,idx),xd(:,idx),o(:,idx));
@@ -130,47 +153,26 @@ classdef TableTennis < handle
                 end    
                 
                 if stage == PREDICT
-                    [ballPred,ballTime,numBounce,time2PassTable] = predictBallPath(dt,filter,obj.TABLE);
+                    predictTime = 1.2;
+                    [ballPred,ballTime,numBounce,time2PassTable] = ...
+                        obj.predictBall(dt,predictTime,filter);
                     if checkBounceOnOppTable(filter,obj.TABLE)
                         stage = FINISH;
                     end
                 end
                 
-                if stage == PREDICT && time2PassTable <= maxTime2Hit         
-                                       
+                if stage == PREDICT && time2PassTable <= maxTime2Hit       
                     if numBounce ~= 1
                         disp('Ball is not valid! Not hitting!');
                         stage = FINISH;
                     else
                         idx = 0;
                         stage = HIT;
-                        
-                        % Calculate ball outgoing velocities attached to each ball pos
-                        tic
-                        fast = true;
-                        % land the ball on the centre of opponents court
-                        desBall(1) = 0.0;
-                        desBall(2) = obj.TABLE.DIST - 3*obj.TABLE.LENGTH/4;
-                        desBall(3) = obj.TABLE.Z;
-                        time2reach = 0.5; % time to reach desired point on opponents court
-                        racketDes = calcRacketStrategy(desBall,ballPred,ballTime,time2reach,fast);
-                        elapsedTimeForCalcDesRacket = toc;
-                        fprintf('Elapsed time for racket computation: %f sec.\n',...
-                            elapsedTimeForCalcDesRacket);
-
-                        % Compute traj here
-                        %VHP = -0.4;
-                        %[q,qd,qdd] = generate3DTTTwithVHP(r1,VHP,ballPred,ballTime,q0);
-                        [q,qd,qdd] = generateOptimalTTT(r1,racketDes,dt,q0);
-                        [q,qd,qdd] = r1.checkJointLimits(q,qd,qdd);
-                        [x,xd,o] = r1.calcRacketState([q;qd]);
-
-                        if obj.drawFlag
-                            % Debugging the trajectory generation 
-                            h3 = scatter3(x(1,:),x(2,:),x(3,:));
-                            h2 = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
+                        % If we're training an offline model save optimization result
+                        if obj.offline.train
+                            obj.offline.b0 = filter.x';
                         end
-                    
+                        [q,x,xd,o] = obj.plan(r1,ballPred,ballTime,q0,dt);            
                     end
 
                 end % end predict      
@@ -179,24 +181,103 @@ classdef TableTennis < handle
                 if stage == HIT 
                     idx = idx+1;
                 end
-
                 % if movement finished revert to waiting
-                if idx > size(q,2)
-                    idx = size(q,2);
+                if idx > size(x,2)
+                    idx = size(x,2);
                     stage = FINISH;
                 end
                 
-                if obj.drawFlag
+                if obj.draw.flag
                     obj.updateAnimation(q(:,idx));
                 end
-                timeSim = timeSim + dt;
-                
+                timeSim = timeSim + dt;                
             end
             
-            if obj.drawFlag && exist('h2')
-                set(h2,'Visible','off');
-                set(h3,'Visible','off');
+            % clear the ball path predicted and robot generated traj
+            if obj.draw.flag && isfield(obj.handle,'ballPred')
+                set(obj.handle.robotCartesian,'Visible','off');
+                set(obj.handle.ballPred,'Visible','off');
             end
+        end
+        
+        %% HITTING STRATEGY METHODS FOR TABLE TENNIS
+        
+        function [q,x,xd,o] = plan(obj,robot,ballPred,ballTime,q0,dt)
+            
+            dofs = 7;
+            q0dot = zeros(dofs,1);
+            time2return = 1.0;
+            
+            if obj.offline.use
+                val = obj.offline.b0 * obj.offline.B;
+                qf = val(1:dofs)';
+                qfdot = val(dofs+1:2*dofs)';
+                T = val(end);
+            else
+                % Calculate ball outgoing velocities attached to each ball pos
+                tic
+                fast = true;
+                % land the ball on the centre of opponents court
+                desBall(1) = 0.0;
+                desBall(2) = obj.TABLE.DIST - 3*obj.TABLE.LENGTH/4;
+                desBall(3) = obj.TABLE.Z;
+                time2reach = 0.5; % time to reach desired point on opponents court
+                racketDes = calcRacketStrategy(desBall,ballPred,ballTime,time2reach,fast);
+                elapsedTimeForCalcDesRacket = toc;
+                fprintf('Elapsed time for racket computation: %f sec.\n',...
+                    elapsedTimeForCalcDesRacket);
+
+                % Compute traj here
+                %VHP = -0.7;
+                %[q,qd,qdd] = generate3DTTTwithVHP(robot,VHP,ballPred,ballTime,q0);
+                [qf,qfdot,T] = calcOptimalPoly(robot,racketDes,q0,time2return);
+            end
+            [q,qd,qdd] = obj.generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
+            %[q,qd,qdd] = robot.checkJointLimits(q,qd,qdd);
+            [x,xd,o] = robot.calcRacketState([q;qd]);
+
+            if obj.draw.flag
+                % Debugging the trajectory generation 
+                obj.handle.robotCartesian = scatter3(x(1,:),x(2,:),x(3,:));
+                obj.handle.ballPred = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
+            end
+        end
+        
+        %% TRAJECTORY GENERATION FOR TABLE TENNIS
+        
+        % Generate a striking and a returning trajectory
+        % Based on optimization results qf,qfdot,T and given q0,q0dot
+        function [q,qd,qdd] = generateSpline(obj,dt,q0,q0dot,qf,qfdot,T,Tret)
+
+            dof = length(q0);
+            time2hit = T;
+            time2return = Tret;
+            Q0 = [q0;q0dot];  
+            Qf = [qf;qfdot];
+            
+            % If we're training an offline model save optimization result
+            if obj.offline.train
+                obj.offline.xf = [Qf',time2hit];
+            end
+            
+            % round time2hit to nearest dt
+            time2hit = dt * ceil(time2hit/dt);
+
+            % GET 3RD DEGREE POLYNOMIALS            
+            pStrike = generatePoly3rd(Q0,Qf,dt,time2hit);
+            qStrike = pStrike(1:dof,:);
+            qdStrike = pStrike(dof+1:2*dof,:);
+            qddStrike = pStrike(2*dof+1:end,:);
+
+            pReturn = generatePoly3rd(Qf,Q0,dt,time2return);
+            qReturn = pReturn(1:dof,:);
+            qdReturn = pReturn(dof+1:2*dof,:);
+            qddReturn = pReturn(2*dof+1:end,:);
+
+            q = [qStrike,qReturn];
+            qd = [qdStrike,qdReturn];
+            qdd = [qddStrike,qddReturn];            
+
         end
         
         %% FILTERING FOR ROBOTS TO GET BALL OBSERVATION
@@ -251,8 +332,69 @@ classdef TableTennis < handle
             filter.update(obs,0);                
         end
         
+        %% PREDICTION OF THE BALL 
+        
+        % Predict the ball path for a fixed seconds into the future
+        % maxPredictHorizon indicates the fixed time
+        % includes also bounce prediction (num of estimated bounces)
+
+        function [ballPred,ballTime,numBounce,time2PassTable] = ...
+                    predictBall(obj,dt,predictHorizon,filter)
+
+            table = obj.TABLE;
+            dist_to_table = table.DIST;
+            table_length = table.LENGTH;
+            table_z = table.Z;
+            table_width = table.WIDTH;
+            robotTableCenterY = dist_to_table - table_length/4;
+
+            % init necessary variables
+            tol = 2e-2;
+            predictLen = floor(predictHorizon / dt);
+            ballPred = zeros(6,predictLen);       
+            ballTime = (1:predictLen) * dt;
+            time2PassTable = Inf;
+
+            % save filter state before prediction
+            xSave = filter.x;
+            PSave = filter.P;
+
+            % comingDown variable is used because z-derivative estimate might not
+            % be valid to predict number of bounces correctly
+            numBounce = 0;
+            comingDown = true;
+
+            for j = 1:predictLen
+                %filter.linearize(dt,0);
+                filter.predict(dt,0);
+                ballPred(:,j) = filter.x;
+
+                % This part is for estimating num of bounces
+                if filter.x(3) < table_z + tol && ...
+                   abs(filter.x(1)) < table_width/2 && ...
+                   abs(filter.x(2) - robotTableCenterY) < table_length/4 && comingDown
+
+                    numBounce = numBounce + 1;
+                    comingDown = false;
+                else if filter.x(6) < 0 && ~comingDown
+                    comingDown = true;
+                    end
+                end
+
+                % update the time it takes to pass table
+                if filter.x(2) > dist_to_table && time2PassTable == Inf
+                    time2PassTable = j * dt;
+                end
+
+            end
+
+            % revert back to saved state
+            filter.initState(xSave,PSave);
+            
+        end
+        
         %% Animation functions here
-        function initAnimation(obj,q)           
+        function initAnimation(obj,q)       
 
             % Prepare the animation
             loadTennisTableValues();

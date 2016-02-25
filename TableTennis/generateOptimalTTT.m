@@ -13,7 +13,7 @@ function [q,qd,qdd] = generateOptimalTTT(robot,racket,dt,q0)
     %qf = qest;
     %qfdot = qdest;
     %time2hit = timeEst;
-    [qf,qfdot,time2hit] = calcOptimalPoly(robot,racket,q0);
+    [qf,qfdot,time2hit] = calcOptimalPoly(robot,racket,q0,time2return);
     % round time2hit to nearest dt
     time2hit = dt * ceil(time2hit/dt);
 

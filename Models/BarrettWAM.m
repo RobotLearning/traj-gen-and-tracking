@@ -272,7 +272,7 @@ classdef BarrettWAM < Robot
         function regressOnFinalJointsFromDemo(obj)
             
             try 
-                load('Bdemo.mat','Bdemo');
+                load('InvKinDemo.mat','Bdemo');
                 obj.Bdemo = Bdemo;
             catch
                 analyzeTableTennisDemonstrations;

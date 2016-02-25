@@ -38,8 +38,9 @@ PAR.C = eye(SIM.dimy,SIM.dimx);
 % form constraints
 MAX_VEL = 200;
 MAX_ACC = 200;
-CON.q.max = [2.60; 2.00; 2.80; 3.10; 1.30; 1.60; 2.20];
-CON.q.min = [-2.60; -2.00; -2.80; -0.90; -4.80; -1.60; -2.20];
+SLACK = 0.05;
+CON.q.max = [2.60; 2.00; 2.80; 3.10; 1.30; 1.60; 2.20] - SLACK;
+CON.q.min = [-2.60; -2.00; -2.80; -0.90; -4.80; -1.60; -2.20] + SLACK;
 CON.qd.max = MAX_VEL * ones(7,1);
 CON.qd.min = -MAX_VEL * ones(7,1);
 CON.qdd.max = MAX_ACC * ones(7,1);
@@ -94,8 +95,8 @@ wam.regressOnFinalJointsFromDemo();
 % trisurf(Del,xw(1,:),xw(2,:),xw(3,:));
 % save('BarrettWorkspace.mat','Del');
 % toc
-
-load('BarrettWorkspace.mat','Del');
+% 
+% load('BarrettWorkspace.mat','Del');
 
 %{
 % Search for an initial posture with less jacobian condition number

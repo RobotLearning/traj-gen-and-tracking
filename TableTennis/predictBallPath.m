@@ -2,7 +2,8 @@
 % maxPredictHorizon indicates the fixed time
 % includes also bounce prediction (num of estimated bounces)
 
-function [ballPred,ballTime,numBounce,time2PassTable] = predictBallPath(dt,filter,table)
+function [ballPred,ballTime,numBounce,time2PassTable] = ...
+            predictBallPath(dt,predictHorizon,filter,table)
 
 dist_to_table = table.DIST;
 table_length = table.LENGTH;
@@ -12,8 +13,6 @@ robotTableCenterY = dist_to_table - table_length/4;
 
 % init necessary variables
 tol = 2e-2;
-maxPredictHorizon = 0.8;
-predictHorizon = maxPredictHorizon;
 predictLen = floor(predictHorizon / dt);
 ballPred = zeros(6,predictLen);       
 ballTime = (1:predictLen) * dt;

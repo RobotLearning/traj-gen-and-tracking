@@ -3,7 +3,7 @@
 % q0 and q0dot are given
 % using fmincon optimizing for their parameters qf,qfdot,T
 
-function [qf,qfdot,T] = calcOptimalPoly(robot,racket,q0)
+function [qf,qfdot,T] = calcOptimalPoly(robot,racket,q0,Tret)
 
 dof = length(q0);
 q0dot = zeros(dof,1);
@@ -41,13 +41,14 @@ fun = @(x) cost([q0;q0dot],x(1:end-1),x(end));
 
 % nonlinear equality constraint
 % ball must be intersected with desirable vel.
-nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),x(end),[q0;q0dot]);
+nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),...
+                                  x(end),[q0;q0dot],Tret);
 
 % solve with MATLAB nonlinear optimizer
 %%{
 %options = optimoptions('fmincon','Display','off');
 options = optimoptions('fmincon','Algorithm', 'sqp',...
-                       'Display','notify-detailed', ...
+                       'Display','off', ...
                        'TolX', 1e-6, ...
                        'TolCon', 1e-6, ...
                        'TolFun',1e-6, ...
@@ -58,6 +59,7 @@ options = optimoptions('fmincon','Algorithm', 'sqp',...
 %profile on;
 [xopt,fval,exitflag,output] = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
 %}
+output
 
 % release the variables
 %profile viewer;
@@ -124,7 +126,7 @@ end
 % boundary conditions
 % racket centre at the ball 
 % racket velocity negative of incoming ball vel
-function [c,ceq] = calculateRacketDev(robot,racket,Qf,T,Q0)
+function [c,ceq] = calculateRacketDev(robot,racket,Qf,T,Q0,Tret)
 
 % enforce joint limits as inequality constraints throughout trajectory
 dof = 7;
@@ -137,22 +139,31 @@ a2 = (3/(T^2))*(qf-q0) - (1/T)*(qfdot + 2*q0dot);
 % compute the extrema
 t1 = (-a2 + sqrt(a2.^2 - 3*a3.*q0dot))./(3*a3);
 t2 = (-a2 - sqrt(a2.^2 - 3*a3.*q0dot))./(3*a3);
-% discard if complex and clamp to [0,1]
-t1 = min(max(~logical(imag(t1)) .* t1, 0),1);
-t2 = min(max(~logical(imag(t2)) .* t2, 0),1);
+% discard if complex and clamp to [0,T]
+t1 = min(max(~logical(imag(t1)) .* t1, 0),T);
+t2 = min(max(~logical(imag(t2)) .* t2, 0),T);
+
+% do the same for the return trajectory
+a3ret = (2/(Tret^3))*(qf-q0) + (1/(Tret^2))*(qfdot + q0dot);
+a2ret = (3/(Tret^2))*(q0-qf) - (1/Tret)*(q0dot + 2*qfdot);
+% compute the extrema
+t1ret = (-a2ret + sqrt(a2ret.^2 - 3*a3ret.*qfdot))./(3*a3ret);
+t2ret = (-a2ret - sqrt(a2ret.^2 - 3*a3ret.*qfdot))./(3*a3ret);
+% discard if complex and clamp to [T,T+return]
+t1ret = min(max(~logical(imag(t1ret)) .* t1ret, T),T+Tret);
+t2ret = min(max(~logical(imag(t2ret)) .* t2ret, T),T+Tret);
 
 % enforce both minima and maxima
 qext = @(t) a3.*(t.^3) + a2.*(t.^2) + q0dot.*t + q0;
+qext_ret = @(t) a3ret.*(t.^3) + a2ret.*(t.^2) + qfdot.*t + qf;
 con = robot.CON;
-
-
 
 % equality constraints
 [xf,xfd,of] = robot.calcRacketState(Qf);
 rot = quat2Rot(of);
 nf = rot(1:3,3);
 [posDes,velDes,normalDes] = calculateDesRacket(racket,T);
-vecFromBallToRacket = rot'*(posDes(:) - xf); % in racket coordinates
+% vecFromBallToRacket = rot'*(posDes(:) - xf); % in racket coordinates
 
 % inequality constraints
 % last one makes sure ball touches the racket
@@ -160,18 +171,22 @@ c = [qext(t1) - con.q.max;
      con.q.min - qext(t1);
      qext(t2) - con.q.max;
      con.q.min - qext(t2);
-     vecFromBallToRacket(1:2)'*vecFromBallToRacket(1:2) - racket.radius^2];
+     qext_ret(t1ret) - con.q.max;
+     con.q.min - qext_ret(t1ret);
+     qext_ret(t2ret) - con.q.max;
+     con.q.min - qext_ret(t2ret)];
+     %vecFromBallToRacket(1:2)'*vecFromBallToRacket(1:2) - racket.radius^2];
 
 % first one makes sure ball is at racket dist 
 % 2cm is ball radius is not considered
-ceq =   [vecFromBallToRacket(3) - 0.02;
-        xfd - velDes(:);
-        nf - normalDes(:)];
+% ceq =   [vecFromBallToRacket(3) - 0.02;
+%         xfd - velDes(:);
+%         nf - normalDes(:)];
 
 % no longer trying to get racket centre to ball 
-%ceq = [xf - posDes(:); 
-%       xfd - velDes(:);
-%       nf - normalDes(:)];
+ceq = [xf - posDes(:); 
+      xfd - velDes(:);
+      nf - normalDes(:)];
 end
 
 % interpolate to find ball at time t
