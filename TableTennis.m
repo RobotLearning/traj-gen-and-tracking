@@ -244,7 +244,7 @@ classdef TableTennis < handle
                 [qf,qfdot,T] = calcOptimalPoly(robot,racketDes,q0,time2return);
             end
             [q,qd,qdd] = obj.generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
-            %[q,qd,qdd] = robot.checkJointLimits(q,qd,qdd);
+            [q,qd,qdd] = robot.checkJointLimits(q,qd,qdd);
             [x,xd,o] = robot.calcRacketState([q;qd]);
 
             if obj.draw.flag
