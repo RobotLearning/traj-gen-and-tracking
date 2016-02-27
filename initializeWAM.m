@@ -78,6 +78,7 @@ PD(7,N_DOFS+7) = -0.075;
 % initialize the arm with zero velocity on the right hand side
 q0 = [1.0; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
 qd0 = zeros(7,1);
+Q0 = [q0;qd0];
 
 % to help with inverse kin
 wam.regressOnFinalJointsFromDemo();

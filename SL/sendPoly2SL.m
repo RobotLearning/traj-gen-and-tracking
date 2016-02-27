@@ -51,7 +51,9 @@ filter.initState([ball_cannon(:); guessBallInitVel],eps);
 initializeWAM;
 
 %% Create the socket
-host = 'localhost'; 
+
+% wam or localhost
+host = 'wam'; 
 port = '7646';
 address = sprintf('tcp://%s:%s',host,port);
 context = zmq.core.ctx_new();
@@ -104,6 +106,7 @@ load(savefile,'X','Y');
 
 %% Trajectory generation
 
+%{
 % initialize indices and time
 WAIT = 0;
 PREDICT = 1;
@@ -227,3 +230,4 @@ end
  
 % disconnect from zmq and SL
 disconnectFromSL(socket,address,context);
+%}
