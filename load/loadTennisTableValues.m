@@ -1,7 +1,7 @@
 %% Table Tennis parameters and values
 
 % Table Variables 
-dist_to_table = -1.15; %-3.50; % -0.80;
+dist_to_table = -0.80; %-1.15; %-3.50; % -0.80;
 table_height = 0.76;
 table_length = 2.76; 
 net_height   = 0.144; %0.1525
@@ -33,16 +33,34 @@ stand_z	      = 0.9;
 floor_level   = -1.71;
 
 % Contact parameters
-CRT = 0.86; %0.88; % coeff of restitution for table (i.e. for z-dir)
-CFTY = 0.72; % coeff of friction on Y-dir
-CFTX = 0.68; % coefficient of friction on X-dir
-CRR = 0.78; % coeff of restitution for racket
+
+% old coefficients from Katharina's cheating times :D
+% CRT = 0.86;
+% CFTY = 0.72;
+% CFTX = 0.68;
+
+% First dataset is noisy here
+CRT = 0.8553; % coeff of restitution for table (i.e. for z-dir)
+CFTY = 0.6892; % coeff of friction on Y-dir
+CFTX = 0.6677; % coefficient of friction on X-dir
+
+% Second dataset is not noisy
+% CRT = 0.8156;
+% CFTY = 0.7016;
+% CFTX = 0.6780; 
+
+% coeff of restitution for racket
+CRR = 0.78; 
 
 % Air drag coefficients
-Cdrag = 0.1414;
+% Cdrag = 0.1414;
+% 
+% % gravity
+% gravity = -9.802;
 
-% gravity
-gravity = -9.802;
+Cdrag = 0.1476;
+% probably due to top spin
+gravity = -10.37;
 
 %% Values for drawing the table
 

@@ -8,12 +8,12 @@ initializeWAM;
 
 %% Load table values, ball and robot data
 
-%demoFolder = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
-demoFolder = '../Desktop/okanKinestheticTeachin_20151124/unifyData';
-%set = 15:65; % dataset of demonstrations
-set = 2:64;
-%dropSet = [17,20,22,23,24,29,56]; % bad recordings
-dropSet = [5,6,9,10,14,26,27,32,38,42,55,56,57];
+demoFolder = '../Desktop/okanKinestheticTeachin_20141210/unifyData';
+%demoFolder = '../Desktop/okanKinestheticTeachin_20151124/unifyData';
+set = 15:65; % dataset of demonstrations
+%set = 2:64;
+dropSet = [17,20,22,23,24,29,56]; % bad recordings
+%dropSet = [5,6,9,10,14,26,27,32,38,42,55,56,57];
 for i = 1:length(dropSet)
     set = set(set ~= dropSet(i));
 end
@@ -22,22 +22,22 @@ dof = 7; % seven degrees of freedom
 scale = 1e-3; % recorded in milliseconds
 
 % put everything in a structure
-demoss = struct();
+demoBallRacket = struct();
 
 % load the data
 for i = 1:length(set)
-    demoss(i).name = ['demo ',int2str(set(i))];
-    demoss(i).raw = dlmread([demoFolder,int2str(set(i)),'.txt']);
+    demoBallRacket(i).name = ['demo ',int2str(set(i))];
+    demoBallRacket(i).raw = dlmread([demoFolder,int2str(set(i)),'.txt']);
     % extract time and the joints - last 14 variables
-    %robot = demo(i).raw(:,end-14:end);
-    robot = demoss(i).raw(:,end-20:end);
+    robot = demoBallRacket(i).raw(:,end-14:end);
+    %robot = demoBallRacket(i).raw(:,end-20:end);
     q = robot(:,2:dof+1);
     qd = robot(:,dof+2:dof+8);
-    x_SL = robot(:,dof+9:dof+11);
-    xd_SL = robot(:,dof+12:dof+14);
-    demoss(i).t = scale * robot(:,1);
-    demoss(i).Q = [q';qd'];
-    demoss(i).x = [x_SL'; xd_SL'];
+    %x_SL = robot(:,dof+9:dof+11);
+    %xd_SL = robot(:,dof+12:dof+14);
+    demoBallRacket(i).t = scale * robot(:,1);
+    demoBallRacket(i).Q = [q';qd'];
+    %demoBallRacket(i).x = [x_SL'; xd_SL'];
 end
 
 %% Load table values
@@ -49,9 +49,9 @@ loadTennisTableValues;
 
 for i = 1:length(set)
 
-    M = demoss(i).raw;
-    Q = demoss(i).Q;
-    t = demoss(i).t;
+    M = demoBallRacket(i).raw;
+    Q = demoBallRacket(i).Q;
+    t = demoBallRacket(i).t;
     
     % this is to throw away really bad observations as to not confuse the
     % filter
@@ -105,9 +105,9 @@ for i = 1:length(set)
                 tCam3,bx3,by3,bz3];
 
     % find closest points in space as a first estimate
-    distBallRobot = [sqrt((bx1-x(1,idxCam1)').^2 + (by1-x(2,idxCam1)').^2 + (bz1-x(3,idxCam1)').^2);
-                     sqrt((bx3-x(1,idxCam3)').^2 + (by3-x(2,idxCam3)').^2 + (bz3-x(3,idxCam3)').^2)];
-    [minDist,idx] = min(distBallRobot);
+    % best to use first camera in the vicinity of robot workspace
+    distBallRobotSqr = (bx1-x(1,idxCam1)').^2 + (by1-x(2,idxCam1)').^2 + (bz1-x(3,idxCam1)').^2;
+    [minDist,idx] = min(distBallRobotSqr);
     tStrike = camInfo(idx,1);
     fprintf('Striking time est. for demo %d: %f\n',set(i),tStrike);
 
@@ -118,10 +118,10 @@ for i = 1:length(set)
     tCutStrike = t(idxD);
     
     % for discrete DMPs
-    demoss(i).t_strike = tCutStrike;
-    demoss(i).o_strike = o(:,idxD);
-    demoss(i).x_strike = x(:,idxD);
-    demoss(i).Q_strike = Q(:,idxD);
+    demoBallRacket(i).t_strike = tCutStrike;
+    demoBallRacket(i).o_strike = o(:,idxD);
+    demoBallRacket(i).x_strike = x(:,idxD);
+    demoBallRacket(i).Q_strike = Q(:,idxD);
     
     % for rhythmic DMPs we need to segment differently
     Treturn = t(end) - tStrike;
@@ -133,12 +133,37 @@ for i = 1:length(set)
     idxStrikeReturn = [idxStrike',idxStrike(end)+1:idxStrike(end)+length(idxReturn)];
     tStrikeReturn = t(idxStrikeReturn);
     
-    demoss(i).t_rdmp = tStrikeReturn;
-    demoss(i).Q_rdmp = Q(:,idxR);
+    demoBallRacket(i).t_rdmp = tStrikeReturn;
+    demoBallRacket(i).Q_rdmp = Q(:,idxR);
+    
+    demoBallRacket(i).plot.tCam1 = tCam1;
+    demoBallRacket(i).plot.tCam3 = tCam3;
+    demoBallRacket(i).plot.b1 = [bx1,by1,bz1];
+    demoBallRacket(i).plot.b3 = [bx3,by3,bz3];
+    demoBallRacket(i).plot.idxD = idxD;
 
 end
 
 %% Plot cartesian coordinates of robot ball interaction for last data
+
+clc; clear; close all
+loadTennisTableValues;
+load('demoBallRacket.mat');
+
+idx = 2;
+tCam1 = demoBallRacket(idx).plot.tCam1;
+tCam3 = demoBallRacket(idx).plot.tCam3;
+b1 = demoBallRacket(idx).plot.b1;
+bx1 = b1(:,1);
+by1 = b1(:,2);
+bz1 = b1(:,3);
+b3 = demoBallRacket(idx).plot.b3;
+bx3 = b3(:,1);
+by3 = b3(:,2);
+bz3 = b3(:,3);
+idxD = demoBallRacket(idx).plot.idxD;
+tCutStrike = demoBallRacket(idx).t_strike;
+x = demoBallRacket(idx).x_strike;
 
 % draw ball every Xth estimate
 drawBallIter = 20;
@@ -171,9 +196,9 @@ for i = 1:length(tRobotCell)
     tRobotCell{i} = num2str(tRobotCell{i});
 end
 % annotate some of the robot positions
-rxDraw = x(1,idxD(1:drawRobotIter:end));
-ryDraw = x(2,idxD(1:drawRobotIter:end));
-rzDraw = x(3,idxD(1:drawRobotIter:end));
+rxDraw = x(1,1:drawRobotIter:end);
+ryDraw = x(2,1:drawRobotIter:end);
+rzDraw = x(3,1:drawRobotIter:end);
 
 for j = 1:3
     cartpos{j} = ['cart\_', int2str(j)];
@@ -185,7 +210,7 @@ end
 figure(1);
 for j = 1:3
     s(j) = subplot(3,1,j);
-    plot(t,x(j,:));
+    plot(tCutStrike,x(j,:));
     legend(cartpos{j});
 end
 title(s(1),'Robot cartesian trajectory x-y-z vs. t');
@@ -196,7 +221,7 @@ hold on;
 text(bx1Draw,by1Draw,bz1Draw,tCam1Cell);
 scatter3(bx3,by3,bz3,'b');
 text(bx3Draw,by3Draw,bz3Draw,tCam3Cell);
-scatter3(x(1,idxD),x(2,idxD),x(3,idxD),'k');
+scatter3(x(1,:),x(2,:),x(3,:),'k');
 text(rxDraw,ryDraw,rzDraw,tRobotCell);
 title('Robot and Ball cartesian trajectories');
 grid on;
