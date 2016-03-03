@@ -35,14 +35,14 @@ floor_level   = -1.71;
 % Contact parameters
 
 % old coefficients from Katharina's cheating times :D
-% CRT = 0.86;
-% CFTY = 0.72;
-% CFTX = 0.68;
+CRT = 0.86;
+CFTY = 0.72;
+CFTX = 0.68;
 
 % First dataset is noisy here
-CRT = 0.8553; % coeff of restitution for table (i.e. for z-dir)
-CFTY = 0.6892; % coeff of friction on Y-dir
-CFTX = 0.6677; % coefficient of friction on X-dir
+% CRT = 0.8553; % coeff of restitution for table (i.e. for z-dir)
+% CFTY = 0.6892; % coeff of friction on Y-dir
+% CFTX = 0.6677; % coefficient of friction on X-dir
 
 % Second dataset is not noisy
 % CRT = 0.8156;
@@ -53,14 +53,14 @@ CFTX = 0.6677; % coefficient of friction on X-dir
 CRR = 0.78; 
 
 % Air drag coefficients
-% Cdrag = 0.1414;
-% 
-% % gravity
-% gravity = -9.802;
+Cdrag = 0.1414;
 
-Cdrag = 0.1476;
-% probably due to top spin
-gravity = -10.37;
+% gravity
+gravity = -9.802;
+
+% Cdrag = 0.1476;
+% % probably due to top spin
+% gravity = -10.37;
 
 %% Values for drawing the table
 

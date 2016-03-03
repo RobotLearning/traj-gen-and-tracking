@@ -53,7 +53,7 @@ initializeWAM;
 %% Create the socket
 
 % wam or localhost
-host = 'wam'; 
+host = 'localhost'; 
 port = '7646';
 address = sprintf('tcp://%s:%s',host,port);
 context = zmq.core.ctx_new();
@@ -106,12 +106,10 @@ load(savefile,'X','Y');
 
 %% Trajectory generation
 
-%{
 % initialize indices and time
 WAIT = 0;
 PREDICT = 1;
-HIT = 2;
-FINISH = 3; % only when practicing solo
+FINISH = 2;
 stage = WAIT;
 dt = 0.002;
 
@@ -121,10 +119,18 @@ table.Z = table_z;
 table.WIDTH = table_width;
 
 % flags for the main loop
-ball = [];
+ballTime = [];
+ballRaw = [];
 numBounce = 0;
 numTrials = 0;
 minTime2Hit = 0.6;
+lastBallPos = zeros(3,1);
+lastBallTime = 0.0;
+j = 1;
+firsttime = true;
+maxBallSize = 100;
+minBall2Predict = 5;
+predictTime = 0.6;
 %numLands = 0; % not used for now
 
 %* q0 should be set somewhere
@@ -132,99 +138,108 @@ minTime2Hit = 0.6;
 %* correct finite state machine
 %* check joint limits was commented - run table tennis again with lookup 100 times 
 
-while numTrials <= 5
-    
-    %% GET BALL POSITIONS
-    while isempty(ballTime)
-        msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
-        data = typecast(msg,'uint8');
-        zmq.core.send(socket,data);
-        response = zmq.core.recv(socket);
-        STR = decodeResponseFromSL(response);
-        ballObs = STR.ball.pos;
-        ballTime = STR.ball.time;
-    end
-    
-    %% WAITING FOR INCOMING BALL
-    
-    % prefilter balls
-    [filter,balls,numObs] = prefilter(filter,ballObs,ballTime);
-       
-    for i = 1:numObs
-        dt = balls(i) - curTime;
-        filter.linearize(dt,0);
-        filter.predict(dt,0);
-        filter.update(ballObs(:,i),0);
-        curTime = ballTime(i);
-    end 
-    
-    % If it is coming towards the robot consider moving
-    velEst = filter.x(4:6);
-    posEst = filter.x(1:3);
-    
-    % consider restarting if ball appears on the other side
-    if posEst(2) < dist_to_table - table_length/2 && stage == FINISH
-        numTrials = numTrials + 1;
-        stage = WAIT;
-    end
-    
-    if velEst(2) > 0 && stage == WAIT
-        stage = PREDICT;
-    end    
-    
-    
-    if stage == PREDICT
-        predictTime = 1.2;
-        [ballPred,~,numBounce,time2PassTable] = ...
-            predictBall(dt,predictTime,filter,table);
-        if checkBounceOnOppTable(filter,table)
-            stage = FINISH;
-        end
-    end
-
-    %% HIT THE BALL IF VALID
-    if stage == PREDICT && time2PassTable <= minTime2Hit       
-        if numBounce ~= 1
-            disp('Ball is not valid! Not hitting!');
-            stage = FINISH;
-        else
-            stage = HIT;
-            % If we're training an offline model save optimization result
-            b0 = filter.x';
-            N = size(X,1);
-            % find the closest point among Xs
-            diff = repmat(b0,N,1) - X;
-            [~,idx] = min(diag(diff*diff'));
-            val = Y(idx,:);
-            qf = val(1:7)';
-            qfdot = val(7+1:2*7)';
-            T = val(end);
-            q0dot = zeros(7,1);
-            Tret = 1.0;
-            [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,Tret);
-            [q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
-            
-            timeSteps = size(q,2);
-            ts = repmat(-1,1,timeSteps); % start immediately
-            poly = [q;qd;qdd;ts];
-            poly = poly(:);
-            poly = typecast(poly,'uint8');
-            % 1 is for clear
-            % 2 is for push back
-            N = typecast(uint32(timeSteps),'uint8');
-            poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
-            data = typecast(poly_zmq, 'uint8');
-            zmq.core.send(socket, data);
-            response = zmq.core.recv(socket);
-            stage = FINISH;
-        end
-    end       
-
-    %% Clear the ball positions
-    msg = [uint8(5), uint8(0)];
+while numTrials < 1
+     
+    msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
     zmq.core.send(socket,data);
-    response = zmq.core.recv(socket);   
+    response = zmq.core.recv(socket);
+    STR = decodeResponseFromSL(response);
+    ballObs = STR.ball.pos;
+    ballTime = STR.ball.time;
+    ballCam = STR.ball.cam.id;
+    
+    [ballObs,ballTime,lastBallPos,lastBallTime] = ...
+        prefilter(ballObs,ballTime,lastBallPos,lastBallTime,table);
+    
+    if ~isempty(ballTime)
+        % get number of observations
+        disp('Processing data...');
+        numObs = length(ballTime);
+
+        if firsttime
+            curTime = ballTime(1);
+            filter.initState([ballObs(:,1); guessBallInitVel],eps);           
+            ballFilt(:,1) = ballObs(:,1);
+            ballRaw(:,1) = ballObs(:,1);
+            cam(:,1) = ballCam(:,1);
+            firsttime = false;
+            numObs = numObs - 1;
+        end
+
+        % keep the observed balls
+        for i = 1:numObs
+            ballRaw(:,j+i) = ballObs(:,i);
+            cam(:,j+i) = ballCam(:,i);
+            t(j+i) = ballTime(i);
+        end
+
+        % filter up to a point
+        for i = 1:numObs
+            dt = ballTime(i) - curTime;
+            filter.linearize(dt,0);
+            filter.predict(dt,0);
+            filter.update(ballObs(:,i),0);
+            curTime = ballTime(i);
+            ballFilt(:,j+i) = filter.x(1:3);
+        end 
+
+        j = j + numObs;
+    end
+
+    if size(ballRaw,2) > minBall2Predict && stage == WAIT && ...
+            filter.x(2) > dist_to_table - table_length/2    
+    % otherwise predict
+        %dtPred = 0.01;
+        %[ballPred,~,numBounce,time2PassTable] = ...
+        %    predictBall(dtPred,predictTime,filter,table);
+        %checkBounceOnOppTable(filter,table);
+        stage = PREDICT;
+    end
+
+
+    % HIT THE BALL IF VALID
+    if stage == PREDICT
+        disp('Sending data');
+        stage = FINISH;
+        numTrials = numTrials + 1;
+        filter.initState([ballRaw(:,end); guessBallInitVel],eps);
+        ballRaw = []; ballFilt = []; cam = [];
+        j = 1;
+        % If we're training an offline model save optimization result
+        b0 = filter.x';
+        N = size(X,1);
+        % find the closest point among Xs
+        diff = repmat(b0,N,1) - X;
+        [~,idx] = min(diag(diff*diff'));
+        val = Y(idx,:);
+        qf = val(1:7)';
+        qfdot = val(7+1:2*7)';
+        T = val(end);
+        q0dot = zeros(7,1);
+        Tret = 1.0;
+        [q,qd,qdd] = generateSpline(0.002,q0,q0dot,qf,qfdot,T,Tret);
+        [q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
+
+        timeSteps = size(q,2);
+        ts = repmat(-1,1,timeSteps); % start immediately
+        poly = [q;qd;qdd;ts];
+        poly = poly(:);
+        poly = typecast(poly,'uint8');
+        % 1 is for clear
+        % 2 is for push back
+        N = typecast(uint32(timeSteps),'uint8');
+        poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
+        data = typecast(poly_zmq, 'uint8');
+        zmq.core.send(socket, data);
+        response = zmq.core.recv(socket);
+        %pause(T);
+        
+%         msg = [uint8(5), uint8(0)];
+%         data = typecast(msg,'uint8');
+%         zmq.core.send(socket,data);
+%         response = zmq.core.recv(socket,bufferLength);
+    end       
     
 end
  

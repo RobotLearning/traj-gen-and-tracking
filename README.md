@@ -1,15 +1,8 @@
-Simulation notes:
-
-- Should wam have a filter or not?
-
 Robot experiments (MATLAB/SL/REAL):
 
 - Test SL connection and correct frequency
-- Offline computation of optimal control trajectories for 
-  fixed ball distribution
-- Train distribution of landing as a Gaussian Process
 - Implementing NLOPT in C ? [what to do with Kalman filter?]
-- Incorporate qmax qmin bounds in the optimization better
+- Can we incorporate table constraints?
 
 ILC/control notes:
 - How does aILC perform based on updated Kalman filter code

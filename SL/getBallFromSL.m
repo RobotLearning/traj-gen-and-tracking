@@ -6,7 +6,7 @@ clc; clear all; close all;
 %% Create the socket
 
 % wam or localhost
-host = 'wam';
+host = 'localhost';
 port = '7646';
 address = sprintf('tcp://%s:%s',host,port);
 context = zmq.core.ctx_new();
@@ -62,10 +62,10 @@ filter.initState([ball_cannon(:); guessBallInitVel],eps);
 
 %% Clear the ball positions
 bufferLength = 1e6; %bytes
-msg = [uint8(5), uint8(0)];
-data = typecast(msg,'uint8');
-zmq.core.send(socket,data);
-response = zmq.core.recv(socket,bufferLength);
+% msg = [uint8(5), uint8(0)];
+% data = typecast(msg,'uint8');
+% zmq.core.send(socket,data);
+% response = zmq.core.recv(socket,bufferLength);
 
 %% GET BALL POSITIONS
 
@@ -89,7 +89,7 @@ table.LENGTH = table_length;
 table.Z = table_z;
 table.WIDTH = table_width;
 
-while ~reset || size(ballRaw,2) > maxBallSize
+while ~reset || size(ballRaw,2) < maxBallSize
 
     msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
@@ -98,6 +98,7 @@ while ~reset || size(ballRaw,2) > maxBallSize
     STR = decodeResponseFromSL(response);
     ballObs = STR.ball.pos;
     ballTime = STR.ball.time;
+    ballCam = STR.ball.cam.id;
     
     if ~isempty(ballTime)
         % get number of observations
@@ -108,16 +109,18 @@ while ~reset || size(ballRaw,2) > maxBallSize
         
         if firsttime
             curTime = ballTime(1);
-            filter.initState([ballObs(:,1); guessBallInitVel],eps);           
+            %filter.initState([ballObs(:,1); guessBallInitVel],eps);           
             ballFilt(:,1) = ballObs(:,1);
             ballRaw(:,1) = ballObs(:,1);
+            cam(:,1) = ballCam(:,1);
             firsttime = false;
             numObs = numObs - 1;
         end
-        
+         
         % keep the observed balls
         for i = 1:numObs
             ballRaw(:,j+i) = ballObs(:,i);
+            cam(:,j+i) = ballCam(:,i);
             t(j+i) = ballTime(i);
         end
         
@@ -132,7 +135,7 @@ while ~reset || size(ballRaw,2) > maxBallSize
         end 
         
         if size(ballRaw,2) > minBall2Predict && ...
-                filter.x(2) > dist_to_table - table_length/2  + 0.4     
+                filter.x(2) > dist_to_table - table_length/2    
         % otherwise predict
             if ~predicted
                 dtPred = 0.01;
@@ -145,24 +148,18 @@ while ~reset || size(ballRaw,2) > maxBallSize
         j = j + numObs;
     end
     
-    tol = 3e-1;
-    if filter.x(3) - floor_level < tol
-        reset = true;
-    end
-    
     % if suddenly there's a jump backwards stop
-    tol2 = 1.0;
-    if size(ballRaw,2) > 2 && abs(ballRaw(2,end) - ballRaw(2,end-1)) > tol2
-        break;
-    end
-        
+    tol = 1.0;
+    if size(ballRaw,2) > 2 && abs(ballRaw(2,end) - ballRaw(2,end-1)) > tol
+        reset = true;
+    end        
 
 
 end
 
-scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:));
-scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'r');
-scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'k');
+scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
+scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
+scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
 
 % disconnect from zmq and SL
 disconnectFromSL(socket,address,context);
