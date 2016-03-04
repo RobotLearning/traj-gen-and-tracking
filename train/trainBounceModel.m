@@ -259,19 +259,19 @@ for i = 1:3
     hold off;
 end
 
-% figure(4);
-% scatter3(bx1,by1,bz1,'r');
-% hold on;
-% scatter3(bx3,by3,bz3,'b');
-% %scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
-% scatter3(ballEKFSmooth(1,:),ballEKFSmooth(2,:),ballEKFSmooth(3,:));
-% title('Filtered ball trajectory');
-% grid on;
-% axis equal;
-% xlabel('x');
-% ylabel('y');
-% zlabel('z');
-% legend('cam1','cam3','EKF smooth');
-% fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
-% fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
-% hold off;
+figure(4);
+scatter3(bx1,by1,bz1,'r');
+hold on;
+scatter3(bx3,by3,bz3,'b');
+%scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
+scatter3(ballEKFSmooth(1,:),ballEKFSmooth(2,:),ballEKFSmooth(3,:));
+title('Filtered ball trajectory');
+grid on;
+axis equal;
+xlabel('x');
+ylabel('y');
+zlabel('z');
+legend('cam1','cam3','EKF smooth');
+fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
+fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+hold off;

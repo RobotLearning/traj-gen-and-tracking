@@ -138,7 +138,7 @@ predictTime = 0.6;
 %* correct finite state machine
 %* check joint limits was commented - run table tennis again with lookup 100 times 
 
-while numTrials < 1
+while numTrials < 5
      
     msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
@@ -156,6 +156,15 @@ while numTrials < 1
         % get number of observations
         disp('Processing data...');
         numObs = length(ballTime);
+        
+        % if suddenly there's a jump backwards stop
+        tol = 1.0;
+        if size(ballRaw,2) > 2 && abs(ballRaw(2,end) - ballRaw(2,end-1)) > tol
+            firsttime = true;
+            stage = WAIT;
+            ballRaw = []; ballFilt = []; cam = [];
+            j = 1;
+        end        
 
         if firsttime
             curTime = ballTime(1);
@@ -187,8 +196,10 @@ while numTrials < 1
         j = j + numObs;
     end
 
+    tol = 0.4;
     if size(ballRaw,2) > minBall2Predict && stage == WAIT && ...
-            filter.x(2) > dist_to_table - table_length/2    
+            filter.x(2) > dist_to_table - table_length/2  && ...
+            filter.x(2) < dist_to_table - table_length/2 + tol;
     % otherwise predict
         %dtPred = 0.01;
         %[ballPred,~,numBounce,time2PassTable] = ...
@@ -203,9 +214,6 @@ while numTrials < 1
         disp('Sending data');
         stage = FINISH;
         numTrials = numTrials + 1;
-        filter.initState([ballRaw(:,end); guessBallInitVel],eps);
-        ballRaw = []; ballFilt = []; cam = [];
-        j = 1;
         % If we're training an offline model save optimization result
         b0 = filter.x';
         N = size(X,1);
@@ -219,7 +227,7 @@ while numTrials < 1
         q0dot = zeros(7,1);
         Tret = 1.0;
         [q,qd,qdd] = generateSpline(0.002,q0,q0dot,qf,qfdot,T,Tret);
-        [q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
+        %[q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
 
         timeSteps = size(q,2);
         ts = repmat(-1,1,timeSteps); % start immediately
@@ -233,12 +241,12 @@ while numTrials < 1
         data = typecast(poly_zmq, 'uint8');
         zmq.core.send(socket, data);
         response = zmq.core.recv(socket);
-        %pause(T);
+        pause(T);
         
-%         msg = [uint8(5), uint8(0)];
-%         data = typecast(msg,'uint8');
-%         zmq.core.send(socket,data);
-%         response = zmq.core.recv(socket,bufferLength);
+        msg = [uint8(5), uint8(0)];
+        data = typecast(msg,'uint8');
+        zmq.core.send(socket,data);
+        response = zmq.core.recv(socket,bufferLength);
     end       
     
 end
