@@ -1,3 +1,0 @@
-Contents: 
-
-Supplementary video attachment for the paper 'Optimizing Robot Striking Movement Primitives with Iterative Learning Control' accepted in Humanoids'15. 

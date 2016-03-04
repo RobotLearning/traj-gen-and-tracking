@@ -1,7 +1,7 @@
 Robot experiments (MATLAB/SL/REAL):
 
 - Test SL connection and correct frequency
-- Implementing NLOPT in C ? [what to do with Kalman filter?]
+- Implementing optimal poly computation with NLOPT in C ?
 - Can we incorporate table constraints?
 
 ILC/control notes:

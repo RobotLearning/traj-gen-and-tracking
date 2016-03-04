@@ -2,8 +2,8 @@
 % assumes wam has been initialized
 
 %file = [save_folder,'dmp_strike.txt']; % this is 1.5 sec traj
-%file = 'dmp_strike.txt'; % about half a second dmp striking trajectory 
-file = 'dmp.txt';% another 1.5 sec traj
+file = 'dmp_strike.txt'; % about half a second dmp striking trajectory 
+%file = 'dmp.txt';% another 1.5 sec traj
 M = dlmread(file);
 perc = 1.0; % learning on whole traj can be unstable unless LQR is used
 len = size(M,1);
