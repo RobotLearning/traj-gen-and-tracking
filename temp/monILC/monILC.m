@@ -17,8 +17,36 @@
 % Xt = interp1(T,X,t);
 % plot(t,a*t,'--',t,Xt,'-r');
 
+%% 2 by 2 linear system
+
+clc; clear; close all;
+n = 2;
+N = 3;
+K = 4; % number of trials
+B = rand(n);
+A = rand(n);
+F = [B, zeros(n), zeros(n);
+     A*B, B, zeros(n);
+     zeros(n,2*n), B];
+u = rand(N*n,K);
+e = F*u;
+
+% estimate F
+for i = 1:K
+    U((N*(i-1))+1:(N*(i-1))+N,1:n*N^2) = kron(eye(N),u(:,i)');
+    E((N*(i-1))+1:(N*(i-1))+N,1:n) = reshape(e(:,i)',n,N)';
+end
+D = duplicateVech(N,n,n);
+M = U * D';
+Est = pinv(M) * E;
+EstAddZero = Est' * D;
+% FIXME: this part should be automated
+F_est = [EstAddZero(:,1:N*n); EstAddZero(:,N*n+1:2*N*n)]
+errNorm = norm(F-F_est)
+
 %% Performance for a linear system
 
+%{
 clc; clear; close all;
 n = 1; % dim_x
 m = 1; % dim_u
@@ -48,11 +76,12 @@ a = 2;
 t = linspace(0.02,1,N);
 ref = a*t(:);
 
+alpha = 0.1;
 % we assume no noise for now
 for i = 1:numTrials
     % get error
     err(:,i) = F_act * us(:,i) - ref;
-    us(:,i+1) = us(:,i) - F \ err(:,i);
+    us(:,i+1) = us(:,i) + alpha* err(:,i);
     err_norm(i) = norm(err(:,i),2);
 end
 
@@ -65,10 +94,12 @@ D = duplicateVech(N,n,m);
 
 % assuming d is zero
 Ubar = us(:,1:numTrials);
-M = kron(Ubar,eye(numTrials))' * D;
+M = kron(Ubar,eye(N*m))' * D;
 E = err;
 vecE = E(:);
 vechF = M \ vecE;
 % duplicate to vecF
-vecF = D * vecF;
-% duplicate back to F with 2 repmat operations
+vecF = D * vechF;
+% duplicate back to F
+F_est = reshapeF(vecF,n,m,N);
+%}

@@ -122,6 +122,11 @@ classdef TableTennis < handle
                 Y = obj.offline.Y;
                 save(obj.offline.savefile,'X','Y');
             end
+            
+            % make sure recording is closed
+            if obj.draw.flag
+                close(obj.handle.recordFile);
+            end
         end
         
         % first robot plays solo once
@@ -416,10 +421,14 @@ classdef TableTennis < handle
             [joint,ee,racket] = wam.drawPosture(q);
             endeff = [joint(end,:); ee];
 
-            figure;
+            scrsz = get(groot,'ScreenSize');
+            figure('Position',[1 scrsz(4) scrsz(3) scrsz(4)]);
             %uisetcolor is useful here to determine these 3-vectors
             orange = [0.9100 0.4100 0.1700];
             gray = [0.5020 0.5020 0.5020];
+            white = [0.9412 0.9412 0.9412];
+            black2 = [0.3137    0.3137    0.3137];
+            red = [1.0000    0.2500    0.2500];
             ballSurfX = b.pos(1) + b.MESH.X;
             ballSurfY = b.pos(2) + b.MESH.Y;
             ballSurfZ = b.pos(3) + b.MESH.Z;
@@ -429,23 +438,85 @@ classdef TableTennis < handle
             hold on;
             h.robot.joints = plot3(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
             h.robot.endeff = plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
-            h.robot.racket = fill3(racket(1,:), racket(2,:), racket(3,:), 'r');
+            h.robot.racket = fill3(racket(1,:), racket(2,:), racket(3,:),red);
 
             obj.handle = h;
             
-            title('Ball-robot interaction');
+            %title('Ball-robot interaction');
             grid on;
             axis equal;
             xlabel('x');
             ylabel('y');
             zlabel('z');
-            tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
+            tol_x = 0.2; tol_y = 0.1; tol_z = 0.3;
             xlim([-table_x - tol_x, table_x + tol_x]);
-            ylim([dist_to_table - table_length - tol_y, tol_y]);
-            zlim([table_z - tol_z, table_z + 2*tol_z]);
-            legend('ball','robot');
-            fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
-            fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+            ylim([dist_to_table - table_length - tol_y, 3*tol_y]);
+            zlim([floor_level, table_z + 3*tol_z]);
+            %legend('ball','robot');
+            %fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
+            % faces matrix 6x4
+            F = [1 2 3 4;
+                 5 6 7 8;
+                 1 2 6 5;
+                 2 3 7 6;
+                 3 4 8 7;
+                 4 1 5 8];
+            patch('Faces',F,'Vertices',T,'FaceColor',[0 0.7 0.3]);
+            
+            % plot the four stands
+            patch('Faces',F,'Vertices',SA,'FaceColor',black2);
+            patch('Faces',F,'Vertices',SB,'FaceColor',black2);
+            patch('Faces',F,'Vertices',SC,'FaceColor',black2);
+            patch('Faces',F,'Vertices',SD,'FaceColor',black2);
+            
+            % instead draw 14 black thin lines
+            numpts = 1000;
+            num_horz_lines = 10;
+            num_vert_lines = 50;
+            tol = 0.02;
+            x_nets = repmat(linspace(-table_x-net_overhang,table_x + net_overhang,numpts),num_horz_lines,1);
+            y_nets = repmat(linspace(dist_to_table - table_y,dist_to_table - table_y,numpts),num_horz_lines,1);
+            z_nets = repmat(linspace(table_z+tol,table_z+net_height-tol,num_horz_lines)',1,numpts);
+            plot3(x_nets',y_nets',z_nets','Color',black2,'LineWidth',0.5);
+            x_nets = repmat(linspace(-table_x-net_overhang,table_x + net_overhang,num_vert_lines)',1,100);
+            y_nets = repmat(linspace(dist_to_table - table_y,dist_to_table - table_y,100),num_vert_lines,1);
+            z_nets = repmat(linspace(table_z+tol,table_z+net_height-tol,100),num_vert_lines,1);
+            plot3(x_nets',y_nets',z_nets','Color',black2,'LineWidth',0.5);
+            topline_x = linspace(-table_x-net_overhang,table_x+net_overhang,numpts);
+            topline_y = (dist_to_table-table_y) * ones(1,numpts);
+            topline_z = (table_z + net_height) * ones(1,numpts);
+            plot3(topline_x,topline_y,topline_z,'Color',white,'LineWidth',2);
+            botline_x = linspace(-table_x-net_overhang,table_x+net_overhang,numpts);
+            botline_y = (dist_to_table-table_y) * ones(1,numpts);
+            botline_z = (table_z+tol) * ones(1,numpts);
+            plot3(botline_x,botline_y,botline_z,'k','LineWidth',2);
+            lefthang_x = (-table_x-net_overhang) * ones(1,100);
+            lefthang_y = (dist_to_table-table_y) * ones(1,100);
+            lefthang_z = linspace(table_z+tol,table_z+net_height,100);
+            plot3(lefthang_x,lefthang_y,lefthang_z,'k','LineWidth',4);
+            righthang_x = (table_x+net_overhang) * ones(1,100);
+            plot3(righthang_x,lefthang_y,lefthang_z,'k','LineWidth',4);
+            %fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+            
+            % three white vert lines and two horizontal lines
+            tol = 0.012;
+            line1_x = repmat(linspace(-table_x+tol,table_x-tol,3)',1,numpts);
+            line1_y = repmat(linspace(dist_to_table-table_length,dist_to_table,numpts),3,1);
+            line1_z = repmat(table_z * ones(1,numpts),3,1);
+            plot3(line1_x',line1_y',line1_z','w','LineWidth',5);
+            line2_x = repmat(linspace(-table_x,table_x,numpts),2,1);
+            line2_y = repmat(linspace(dist_to_table-table_length+tol,dist_to_table-tol,2)',1,numpts);
+            line2_z = repmat(table_z * ones(1,numpts),2,1);
+            plot3(line2_x',line2_y',line2_z','w','LineWidth',5);
+            
+            % change view angle
+            az = -81.20; % azimuth
+            el = 16.40; % elevation
+            % angles manually tuned
+            view(az,el);
+            
+            obj.handle.recordFile = VideoWriter('tableTennisSim.avi');
+            open(obj.handle.recordFile);
             
         end
         
@@ -482,6 +553,9 @@ classdef TableTennis < handle
 
             drawnow;
             %pause(0.001);
+            
+            frame = getframe(gcf);
+            writeVideo(obj.handle.recordFile,frame);
             
         end
         
