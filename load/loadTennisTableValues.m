@@ -5,10 +5,10 @@ dist_to_table = -0.80; %-1.15; %-3.50; % -0.80;
 table_height = 0.76;
 table_length = 2.76; 
 net_height   = 0.144; %0.1525
-net_overhang = 0.1525;
+net_overhang = 0.12; %0.1525;
 net_thickness = 0.01;
 table_width  = 1.525; 
-table_thickness = 0.056;
+table_thickness = 0.02; %0.056;
 net_restitution = 0.05;
 table_center = 0.0;
 
@@ -22,12 +22,9 @@ ball_contact_spring = 0;  % filled in SimBall
 racket_radius = 0.076; %not 0.08
 
 % Stand Variables 
-stand_height  = -1.16; %-0.95;
-radius_bottom = 0.1;
-radius_top    = 0.02;
-stand_x       = 0.02;  %-0.85
+stand_radius = 0.02;
+stand_x       = -0.45;
 stand_y       = -0.59;
-stand_z	      = 0.9;
 
 % Floor 
 floor_level   = -1.71;
@@ -83,7 +80,19 @@ T3 = [table_center + table_x;
 T4 = [table_center - table_x;
     dist_to_table;
     table_z];
-T = [T1,T2,T3,T4]';
+T5 = [table_center - table_x; 
+    dist_to_table - table_length; 
+    table_z - table_thickness];
+T6 = [table_center + table_x;
+    dist_to_table - table_length;
+    table_z - table_thickness];
+T7 = [table_center + table_x;
+    dist_to_table;
+    table_z - table_thickness];
+T8 = [table_center - table_x;
+    dist_to_table;
+    table_z - table_thickness];
+T = [T1,T2,T3,T4,T5,T6,T7,T8]';
 
 net1 = [table_center - table_x;
         dist_to_table - table_y;
@@ -97,6 +106,8 @@ net3 = [table_center + table_x;
 net4 = [table_center - table_x;
         dist_to_table - table_y;
         table_z + net_height];
+    
+loadStandValues;
 
 net = [net1,net2,net3,net4]';
 

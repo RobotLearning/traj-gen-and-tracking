@@ -1,13 +1,16 @@
-% Produce duplication matrix for transforming vech to vec
+% Produce duplication matrix for transforming n-dim block vech to vec
 
 function D = duplicateVech(N,n,m)
 
 % assuming A matrix is nxm
-D = zeros(N^2 * n * m, (N*(N-1)/2 + N)*(n*m));
 
-% assuming for now that n,m are the same
-for i = 1:N
-    D((i-1)*N*n + 1:i*N*n,:) = [zeros((i-1)*n, (N*(N-1)/2 + N)*(n*m)); ...
-                  zeros((N-i+1)*n,(i-1)*N),eye((N-i+1)*n), zeros(N*n,(N*(N-1)/2) * (n*m))];
-
+pos = ones(1,N^2*n);
+vec = [];
+for i = 1:N-1
+    val = ((i-1)*n*(N+1))+n+1:i*N*n; %i*N*n*m+1:i*(N+1)*n*m;
+    vec = [vec,val]; 
+    pos(val) = 0;
 end
+
+D = diag(pos);
+D = D(setdiff(1:N^2*n,vec),:);
