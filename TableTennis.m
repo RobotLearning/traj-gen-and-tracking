@@ -22,13 +22,15 @@ classdef TableTennis < handle
         noise
         % build offline policy (a structure)
         offline
+        % VHP strategy (y location and flag)
+        VHP
         
     end
     
     methods
         
         %% CONSTRUCTOR
-        function obj = TableTennis(wam,wam2,q0,std,draw,train,lookup)
+        function obj = TableTennis(wam,wam2,q0,std,opt)
             
             % initialize two robots
             obj.robot1 = wam;
@@ -41,6 +43,13 @@ classdef TableTennis < handle
             
             % initialize a ball            
             obj.ball = Ball(0.0,0.0); 
+            
+            % options is a structure
+            train = opt.train;
+            lookup = opt.lookup;
+            draw = opt.draw;
+            record = opt.record;
+            obj.VHP.flag = opt.vhp;
             
             % shall we train an offline lookup table
             obj.offline.train = train;
@@ -57,14 +66,6 @@ classdef TableTennis < handle
                 obj.offline.B = X \ Y;
                 obj.offline.GP = [];
             end
-                       
-            % initialize animation
-            obj.draw.flag = draw;
-            if draw
-                obj.initAnimation(q0);
-            else
-                obj.handle = [];
-            end
             
             loadTennisTableValues();
             % table related values
@@ -80,6 +81,23 @@ classdef TableTennis < handle
             obj.NET.Xmax = table_width/2 + net_overhang;
             obj.NET.Zmax = table_z + net_height;
             obj.NET.CRN = net_restitution;           
+            
+            % in case robot uses vhp strategy
+            obj.VHP.Y = vhp;
+            
+            % initialize animation
+            obj.draw.flag = draw;
+            if draw
+                obj.initAnimation(q0);
+                if record
+                    obj.handle.record = true;
+                    filename = sprintf('tableTennisSim%d.avi',randi(100));
+                    obj.handle.recordFile = VideoWriter(filename);
+                    open(obj.handle.recordFile);
+                end
+            else
+                obj.handle = [];
+            end
             
         end
         
@@ -124,7 +142,7 @@ classdef TableTennis < handle
             end
             
             % make sure recording is closed
-            if obj.draw.flag
+            if obj.handle.record
                 close(obj.handle.recordFile);
             end
         end
@@ -244,16 +262,18 @@ classdef TableTennis < handle
                     elapsedTimeForCalcDesRacket);
 
                 % Compute traj here
-                %VHP = -0.7;
-                %[q,qd,qdd] = generate3DTTTwithVHP(robot,VHP,ballPred,ballTime,q0);
-                [qf,qfdot,T] = calcOptimalPoly(robot,racketDes,q0,time2return);
+                if obj.VHP.flag
+                    [qf,qfdot,T] = calcPolyAtVHP(robot,obj.VHP.Y,time2reach,desBall,ballPred,ballTime,q0);
+                else
+                    [qf,qfdot,T] = calcOptimalPoly(robot,racketDes,q0,time2return);
+                end
             end
             [q,qd,qdd] = obj.generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
             [q,qd,qdd] = robot.checkJointLimits(q,qd,qdd);
             [x,xd,o] = robot.calcRacketState([q;qd]);
 
             if obj.draw.flag
-                % Debugging the trajectory generation 
+                % Debugging the trajectory generation                 
                 obj.handle.robotCartesian = scatter3(x(1,:),x(2,:),x(3,:));
                 obj.handle.ballPred = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
             end
@@ -426,6 +446,7 @@ classdef TableTennis < handle
             %uisetcolor is useful here to determine these 3-vectors
             orange = [0.9100 0.4100 0.1700];
             gray = [0.5020 0.5020 0.5020];
+            lightgray = [0.8627    0.8627    0.8627];
             white = [0.9412 0.9412 0.9412];
             black2 = [0.3137    0.3137    0.3137];
             red = [1.0000    0.2500    0.2500];
@@ -451,7 +472,7 @@ classdef TableTennis < handle
             tol_x = 0.2; tol_y = 0.1; tol_z = 0.3;
             xlim([-table_x - tol_x, table_x + tol_x]);
             ylim([dist_to_table - table_length - tol_y, 3*tol_y]);
-            zlim([floor_level, table_z + 3*tol_z]);
+            zlim([floor_level, table_z + 5*tol_z]);
             %legend('ball','robot');
             %fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
             % faces matrix 6x4
@@ -461,13 +482,21 @@ classdef TableTennis < handle
                  2 3 7 6;
                  3 4 8 7;
                  4 1 5 8];
-            patch('Faces',F,'Vertices',T,'FaceColor',[0 0.7 0.3]);
+            table = patch('Faces',F,'Vertices',T,'FaceColor',[0 0.7 0.3]);
+            cdata = [0 0.7 0.3;
+                     0 0.7 0.3;
+                     repmat(black2,4,1)];
+            set(table,'FaceColor','flat','FaceVertexCData',cdata);
             
             % plot the four stands
             patch('Faces',F,'Vertices',SA,'FaceColor',black2);
             patch('Faces',F,'Vertices',SB,'FaceColor',black2);
             patch('Faces',F,'Vertices',SC,'FaceColor',black2);
             patch('Faces',F,'Vertices',SD,'FaceColor',black2);
+            
+            % plot the robot stand
+            patch('Faces',F,'Vertices',SR,'FaceColor',black2);
+            
             
             % instead draw 14 black thin lines
             numpts = 1000;
@@ -509,14 +538,31 @@ classdef TableTennis < handle
             line2_z = repmat(table_z * ones(1,numpts),2,1);
             plot3(line2_x',line2_y',line2_z','w','LineWidth',5);
             
+            % fill also the virtual hitting plane
+            if obj.VHP.flag
+                V1 = [table_center - table_x; 
+                    obj.VHP.Y; 
+                    table_z - 2*tol_z];
+                V2 = [table_center + table_x;
+                    obj.VHP.Y;
+                    table_z - 2*tol_z];
+                V3 = [table_center + table_x;
+                    obj.VHP.Y;
+                    table_z + 2*tol_z];
+                V4 = [table_center - table_x;
+                    obj.VHP.Y;
+                    table_z + 2*tol_z];
+                V = [V1,V2,V3,V4]';
+                text(table_center-table_x,obj.VHP.Y,table_z+2*tol_z-0.05,'VHP')
+                fill3(V(:,1),V(:,2),V(:,3),[0 0.7 0.3],'FaceAlpha',0.2);
+            end
+            
             % change view angle
             az = -81.20; % azimuth
             el = 16.40; % elevation
             % angles manually tuned
             view(az,el);
             
-            obj.handle.recordFile = VideoWriter('tableTennisSim.avi');
-            open(obj.handle.recordFile);
             
         end
         
@@ -554,8 +600,10 @@ classdef TableTennis < handle
             drawnow;
             %pause(0.001);
             
-            frame = getframe(gcf);
-            writeVideo(obj.handle.recordFile,frame);
+            if obj.handle.record
+                frame = getframe(gcf);
+                writeVideo(obj.handle.recordFile,frame);
+            end
             
         end
         

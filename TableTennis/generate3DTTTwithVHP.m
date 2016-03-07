@@ -15,7 +15,7 @@ function [q,qd,qdd] = generate3DTTTwithVHP(robot,VHP,ballPred,ballTime,q0)
     Q0 = [q0;q0dot];  
     Qf = [qf;qfdot];            
     dt = ballTime(2) - ballTime(1);
-    time2return = 0.5; % time to return to initial configuration
+    time2return = 1.0; % time to return to initial configuration
 
     % not moving in case calculation gone wrong
 %     eps = 1e-2;

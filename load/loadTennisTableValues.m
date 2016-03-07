@@ -1,7 +1,7 @@
 %% Table Tennis parameters and values
 
 % Table Variables 
-dist_to_table = -0.80; %-1.15; %-3.50; % -0.80;
+dist_to_table = -1.15; %-1.15; %-3.50; % -0.80;
 table_height = 0.76;
 table_length = 2.76; 
 net_height   = 0.144; %0.1525
@@ -58,6 +58,9 @@ gravity = -9.802;
 % Cdrag = 0.1476;
 % % probably due to top spin
 % gravity = -10.37;
+
+% virtual hitting plane y level
+vhp = -0.6;
 
 %% Values for drawing the table
 

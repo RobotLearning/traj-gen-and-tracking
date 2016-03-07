@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mlt title="Anonymous Submission" version="0.9.0" root="/is/ei/okoc" LC_NUMERIC="de_DE.UTF-8">
+ <profile width="1440" display_aspect_den="9" colorspace="709" frame_rate_den="1" description="HDV 1440x1080i 25 fps" height="1080" display_aspect_num="16" frame_rate_num="25" progressive="0" sample_aspect_num="4" sample_aspect_den="3"/>
+ <producer in="0" out="500" id="black">
+  <property name="mlt_type">producer</property>
+  <property name="length">15000</property>
+  <property name="eof">pause</property>
+  <property name="resource">black</property>
+  <property name="aspect_ratio">0</property>
+  <property name="mlt_service">colour</property>
+ </producer>
+ <playlist id="black_track">
+  <entry in="0" out="1" producer="black"/>
+ </playlist>
+ <playlist id="playlist1"/>
+ <playlist id="playlist2"/>
+ <playlist id="playlist3"/>
+ <playlist id="playlist4"/>
+ <playlist id="playlist5"/>
+ <tractor title="Anonymous Submission" global_feed="1" in="0" out="1" id="maintractor">
+  <property name="meta.volume">1</property>
+  <track producer="black_track"/>
+  <track hide="video" producer="playlist1"/>
+  <track hide="video" producer="playlist2"/>
+  <track producer="playlist3"/>
+  <track producer="playlist4"/>
+  <track producer="playlist5"/>
+  <transition id="transition0">
+   <property name="a_track">1</property>
+   <property name="b_track">2</property>
+   <property name="mlt_type">transition</property>
+   <property name="mlt_service">mix</property>
+   <property name="always_active">1</property>
+   <property name="combine">1</property>
+   <property name="internal_added">237</property>
+  </transition>
+  <transition id="transition1">
+   <property name="a_track">1</property>
+   <property name="b_track">3</property>
+   <property name="mlt_type">transition</property>
+   <property name="mlt_service">mix</property>
+   <property name="always_active">1</property>
+   <property name="combine">1</property>
+   <property name="internal_added">237</property>
+  </transition>
+  <transition id="transition2">
+   <property name="a_track">1</property>
+   <property name="b_track">4</property>
+   <property name="mlt_type">transition</property>
+   <property name="mlt_service">mix</property>
+   <property name="always_active">1</property>
+   <property name="combine">1</property>
+   <property name="internal_added">237</property>
+  </transition>
+  <transition id="transition3">
+   <property name="a_track">1</property>
+   <property name="b_track">5</property>
+   <property name="mlt_type">transition</property>
+   <property name="mlt_service">mix</property>
+   <property name="always_active">1</property>
+   <property name="combine">1</property>
+   <property name="internal_added">237</property>
+  </transition>
+ </tractor>
+ <kdenlivedoc profile="hdv_1080_50i" kdenliveversion="0.9.6" version="0,88" projectfolder="/is/ei/okoc/kdenlive">
+  <customeffects/>
+  <documentproperties proxyimageminsize="2000" zonein="0" enableproxy="0" zoneout="559" generateproxy="0" zoom="7" verticalzoom="1" proxyextension="ts" position="1" documentid="1457370900948" generateimageproxy="0" proxyminsize="1000" proxyparams="-f mpegts -acodec libmp3lame -ac 2 -ab 128k -ar 48000 -vcodec mpeg2video -g 5 -deinterlace -s 480x270 -vb 400k"/>
+  <documentmetadata/>
+  <documentnotes>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+&lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;style type="text/css">
+p, li { white-space: pre-wrap; }
+&lt;/style>&lt;/head>&lt;body style=" font-family:'Sans Serif'; font-size:8pt; font-weight:400; font-style:normal;">
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">&lt;br />&lt;/p>&lt;/body>&lt;/html></documentnotes>
+  <profileinfo width="1440" display_aspect_den="9" frame_rate_den="1" description="HDV 1440x1080i 25 fps" height="1080" frame_rate_num="25" display_aspect_num="16" progressive="0" sample_aspect_num="4" sample_aspect_den="3"/>
+  <tracksinfo>
+   <trackinfo blind="1" mute="0" locked="0" trackname="Audio 2" type="audio"/>
+   <trackinfo blind="1" mute="0" locked="0" trackname="Audio 1" type="audio"/>
+   <trackinfo blind="0" mute="0" locked="0" trackname="Video 3"/>
+   <trackinfo blind="0" mute="0" locked="0" trackname="Video 2"/>
+   <trackinfo blind="0" mute="0" locked="0" trackname="Video 1"/>
+  </tracksinfo>
+  <kdenlive_producer audio_max="0" id="1" pix_fmt="yuvj420p" default_video="0" fps="30" analysisdata="" name="tableTennisSim.avi" videocodecid="mjpeg" colorspace="709" videocodec="MJPEG (Motion JPEG)" resource="/is/ei/okoc/traj-gen-and-tracking/tableTennisSim.avi" default_audio="-1" duration="1254" file_hash="d98b89529b3b7110b913f28db7243db7" aspect_ratio="1" video_max="0" progressive="1" type="2" frame_size="2462x1349" file_size="203802620"/>
+  <kdenlive_producer duration="125" transparency="1" frame_size="1440x1080" thumbnail="100" in="0" analysisdata="" aspect_ratio="0" out="124" xmldata="&lt;kdenlivetitle width=&quot;1920&quot; duration=&quot;125&quot; height=&quot;1080&quot; LC_NUMERIC=&quot;de_DE.UTF-8&quot;>&#xa; &lt;item z-index=&quot;2&quot; type=&quot;QGraphicsTextItem&quot;>&#xa;  &lt;position x=&quot;492,1052631578948&quot; y=&quot;881,5789473684212&quot;>&#xa;   &lt;transform>1,0,0,0,1,0,0,0,1&lt;/transform>&#xa;  &lt;/position>&#xa;  &lt;content font-color=&quot;0,0,0,255&quot; font-outline-color=&quot;0,0,0,255&quot; font-pixel-size=&quot;50&quot; font-italic=&quot;0&quot; font-underline=&quot;0&quot; font-weight=&quot;50&quot; font=&quot;Sans Serif&quot; font-outline=&quot;0&quot;>Okan Koc, Jan Peters, Guilherme Maeda&lt;/content>&#xa; &lt;/item>&#xa; &lt;item z-index=&quot;0&quot; type=&quot;QGraphicsTextItem&quot;>&#xa;  &lt;position x=&quot;300&quot; y=&quot;263,6842105263158&quot;>&#xa;   &lt;transform>1,0,0,0,1,0,0,0,1&lt;/transform>&#xa;  &lt;/position>&#xa;  &lt;content font-color=&quot;0,0,0,255&quot; font-outline-color=&quot;0,0,0,255&quot; font-pixel-size=&quot;100&quot; font-italic=&quot;0&quot; font-underline=&quot;0&quot; font-weight=&quot;50&quot; font=&quot;Sans Serif&quot; font-outline=&quot;0&quot;>                A NEW &#xa;TRAJECTORY GENERATION &#xa;           FRAMEWORK&#xa;IN ROBOTIC TABLE TENNIS&lt;/content>&#xa; &lt;/item>&#xa; &lt;startviewport rect=&quot;0,0,1920,1080&quot;/>&#xa; &lt;endviewport rect=&quot;0,0,1920,1080&quot;/>&#xa; &lt;background color=&quot;0,0,0,0&quot;/>&#xa;&lt;/kdenlivetitle>&#xa;" type="6" id="2" name="Title clip"/>
+  <kdenlive_producer duration="125" transparency="1" frame_size="1440x1080" thumbnail="100" in="0" analysisdata="" aspect_ratio="0" out="124" xmldata="&lt;kdenlivetitle width=&quot;1920&quot; duration=&quot;125&quot; height=&quot;1080&quot; LC_NUMERIC=&quot;de_DE.UTF-8&quot;>&#xa; &lt;item z-index=&quot;0&quot; type=&quot;QGraphicsTextItem&quot;>&#xa;  &lt;position x=&quot;384&quot; y=&quot;235,5263157894737&quot;>&#xa;   &lt;transform>1,0,0,0,1,0,0,0,1&lt;/transform>&#xa;  &lt;/position>&#xa;  &lt;content font-color=&quot;0,0,0,255&quot; font-pixel-size=&quot;100&quot; font-italic=&quot;0&quot; font-underline=&quot;0&quot; font-weight=&quot;50&quot; font=&quot;Sans Serif&quot;>       5 demo trials&#xa;      using the new &#xa;    Optimal Trajectory &#xa;Generation Framework&lt;/content>&#xa; &lt;/item>&#xa; &lt;startviewport rect=&quot;0,0,1920,1080&quot;/>&#xa; &lt;endviewport rect=&quot;0,0,1920,1080&quot;/>&#xa; &lt;background color=&quot;0,0,0,0&quot;/>&#xa;&lt;/kdenlivetitle>&#xa;" type="6" id="3" name="Title clip"/>
+  <kdenlive_producer duration="125" transparency="1" frame_size="1440x1080" thumbnail="100" in="0" analysisdata="" aspect_ratio="0" out="124" xmldata="&lt;kdenlivetitle width=&quot;1920&quot; duration=&quot;125&quot; height=&quot;1080&quot; LC_NUMERIC=&quot;de_DE.UTF-8&quot;>&#xa; &lt;item z-index=&quot;0&quot; type=&quot;QGraphicsTextItem&quot;>&#xa;  &lt;position x=&quot;408&quot; y=&quot;244,7368421052632&quot;>&#xa;   &lt;transform>1,0,0,0,1,0,0,0,1&lt;/transform>&#xa;  &lt;/position>&#xa;  &lt;content font-color=&quot;0,0,0,255&quot; font-outline-color=&quot;0,0,0,255&quot; font-pixel-size=&quot;100&quot; font-italic=&quot;0&quot; font-underline=&quot;0&quot; font-weight=&quot;50&quot; font=&quot;Sans Serif&quot; font-outline=&quot;0&quot;>       5 demo trials&#xa;             using&#xa;   Virtual Hitting Plane&#xa;        at y = -0.6&lt;/content>&#xa; &lt;/item>&#xa; &lt;startviewport rect=&quot;0,0,1920,1080&quot;/>&#xa; &lt;endviewport rect=&quot;0,0,1920,1080&quot;/>&#xa; &lt;background color=&quot;0,0,0,0&quot;/>&#xa;&lt;/kdenlivetitle>&#xa;" type="6" id="4" name="Title clip"/>
+  <markers/>
+  <groups/>
+ </kdenlivedoc>
+</mlt>
