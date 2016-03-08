@@ -75,8 +75,10 @@ tInit = STR.robot.traj.time;
 % Send to desired starting posture
 Qinit = [qInit;qdInit];
 dt = 0.002;
-tf = 2.0;
+tf = 1.0;
 p = generatePoly3rd(Qinit,Q0,dt,tf);
+% change last velocity and acc command to zero
+% p(8:end,end) = 0.0;
 timeSteps = size(p,2);
 ts = repmat(-1,1,timeSteps); % start immediately
 poly = [p;ts];
@@ -89,7 +91,7 @@ poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
 data = typecast(poly_zmq, 'uint8');
 zmq.core.send(socket, data);
 response = zmq.core.recv(socket);
-pause(tf);
+pause(2.0); % wait 5sec to decr to qd0 to 10^-7 range
 
 %% Clear the ball positions
 bufferLength = 1e6; %bytes
@@ -143,7 +145,7 @@ while numTrials < 5
     msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
     zmq.core.send(socket,data);
-    response = zmq.core.recv(socket);
+    response = zmq.core.recv(socket,bufferLength);
     STR = decodeResponseFromSL(response);
     ballObs = STR.ball.pos;
     ballTime = STR.ball.time;
@@ -211,28 +213,66 @@ while numTrials < 5
 
     % HIT THE BALL IF VALID
     if stage == PREDICT
-        disp('Sending data');
+        tic
+        disp('Sending trj data');
         stage = FINISH;
         numTrials = numTrials + 1;
         % If we're training an offline model save optimization result
-        b0 = filter.x';
+        %b0 = filter.x';
+        v0 = (ballRaw(:,end) - ballRaw(:,end-1)) ./ dt;
+        b0 = [ballRaw(:,end);v0(:)]';
+        
+        %%{
+        msg = [uint8(3), typecast(uint32(1),'uint8'), uint8(0)];
+        data = typecast(msg, 'uint8'); 
+        zmq.core.send(socket, data);
+        response = zmq.core.recv(socket,bufferLength);
+
+        % get q,q0
+        STR = decodeResponseFromSL(response);
+        qInit = STR.robot.traj.q;
+        qdInit = STR.robot.traj.qd;
+        tInit = STR.robot.traj.time;
+        %}
+        
         N = size(X,1);
         % find the closest point among Xs
-        diff = repmat(b0,N,1) - X;
-        [~,idx] = min(diag(diff*diff'));
+        dif = repmat(b0,N,1) - X;
+        [~,idx] = min(diag(dif*dif'));
         val = Y(idx,:);
         qf = val(1:7)';
         qfdot = val(7+1:2*7)';
         T = val(end);
         q0dot = zeros(7,1);
         Tret = 1.0;
-        [q,qd,qdd] = generateSpline(0.002,q0,q0dot,qf,qfdot,T,Tret);
+        dt = 0.002;
+        %[q,qd,qdd] = generateSpline(0.002,qInit,qdInit,qf,qfdot,T,Tret);
+        [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,Tret);
         %[q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
+        %q = qInit * ones(1,length(q));  
+        %qd = qdInit * ones(1,length(q));
+        %qdd = zeros(7,1) * ones(1,length(q));
+        
+        %{
+        figure;
+        subplot(3,2,1);
+        plot(q');
+        subplot(3,2,3);
+        plot(qd');
+        subplot(3,2,5);
+        plot(qdd');
+        subplot(3,2,2);
+        plot(q');
+        subplot(3,2,4);
+        plot(diff(q')./dt);
+        subplot(3,2,6);
+        plot(diff(diff(q'))./(dt)^2);
+        %}
 
         timeSteps = size(q,2);
         ts = repmat(-1,1,timeSteps); % start immediately
         poly = [q;qd;qdd;ts];
-        poly = poly(:);
+        poly = poly(:); 
         poly = typecast(poly,'uint8');
         % 1 is for clear
         % 2 is for push back
@@ -240,13 +280,18 @@ while numTrials < 5
         poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
         data = typecast(poly_zmq, 'uint8');
         zmq.core.send(socket, data);
-        response = zmq.core.recv(socket);
-        pause(T);
+        response = zmq.core.recv(socket,bufferLength);
+        toc
+        pause(4.0);
+        %pause(T+Tret);
+        
+        disp('Finished sending trj');
         
         msg = [uint8(5), uint8(0)];
         data = typecast(msg,'uint8');
         zmq.core.send(socket,data);
         response = zmq.core.recv(socket,bufferLength);
+
     end       
     
 end

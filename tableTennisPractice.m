@@ -19,11 +19,6 @@ tt.practice(q0,5);
 % Things to do for simulation
 %
 %{
-add robot top?
 can we find better sim for Barrett WAM?
-
 can we add 4-link robot sim?
-
-put virtual hitting plane for the 2nd method
-
 %}
