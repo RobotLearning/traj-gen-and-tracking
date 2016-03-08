@@ -102,6 +102,7 @@ S7 = [table_center + stand_x + stand_radius;
 S8 = [table_center + stand_x - stand_radius;
       dist_to_table - table_y - stand_y - stand_radius; 
       floor_level];
+
 SD = [S1,S2,S3,S4,S5,S6,S7,S8]';
 
 %% Load robot stand

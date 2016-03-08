@@ -488,15 +488,8 @@ classdef TableTennis < handle
                      repmat(black2,4,1)];
             set(table,'FaceColor','flat','FaceVertexCData',cdata);
             
-            % plot the four stands
-            patch('Faces',F,'Vertices',SA,'FaceColor',black2);
-            patch('Faces',F,'Vertices',SB,'FaceColor',black2);
-            patch('Faces',F,'Vertices',SC,'FaceColor',black2);
-            patch('Faces',F,'Vertices',SD,'FaceColor',black2);
-            
             % plot the robot stand
             patch('Faces',F,'Vertices',SR,'FaceColor',black2);
-            
             
             % instead draw 14 black thin lines
             numpts = 1000;
@@ -604,6 +597,7 @@ classdef TableTennis < handle
                 frame = getframe(gcf);
                 writeVideo(obj.handle.recordFile,frame);
             end
+
             
         end
         
