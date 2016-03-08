@@ -11,6 +11,7 @@ clc; clear all; close all;
 
 % load table parameters
 loadTennisTableValues;
+tennisTable = T;
 
 % land the ball on the centre of opponents court
 desBall(1) = 0.0;
@@ -140,7 +141,7 @@ predictTime = 0.6;
 %* correct finite state machine
 %* check joint limits was commented - run table tennis again with lookup 100 times 
 
-while numTrials < 5
+while numTrials < 1
      
     msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
@@ -253,6 +254,7 @@ while numTrials < 5
         %qd = qdInit * ones(1,length(q));
         %qdd = zeros(7,1) * ones(1,length(q));
         
+        
         %{
         figure;
         subplot(3,2,1);
@@ -295,6 +297,26 @@ while numTrials < 5
     end       
     
 end
+
+figure;
+scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
+hold on;
+scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
+title('Ball observations');
+hold on;
+grid on;
+axis equal;
+xlabel('x');
+ylabel('y');
+zlabel('z');
+tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
+xlim([-table_x - tol_x, table_x + tol_x]);
+ylim([dist_to_table - table_length - tol_y, tol_y]);
+zlim([table_z - tol_z, table_z + 2*tol_z]);
+fill3(tennisTable(1:4,1),tennisTable(1:4,2),tennisTable(1:4,3),[0 0.7 0.3]);
+fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+net_width = 0.01;
+
  
 % disconnect from zmq and SL
 disconnectFromSL(socket,address,context);

@@ -1,4 +1,6 @@
-%% Testing monotonic learning in 1d nonlinear system
+%% Testing monotonic learning 
+
+% 1d nonlinear system
 
 % clc; clear; close all;
 % 
@@ -17,34 +19,40 @@
 % Xt = interp1(T,X,t);
 % plot(t,a*t,'--',t,Xt,'-r');
 
-%% 2 by 2 linear system
+%% Estimate linear system with least squares
+
+% assumption is that the trials are exactly the same
+% for linear time varying system F
+% and random inputs
 
 clc; clear; close all;
-n = 2;
-N = 3;
-K = 4; % number of trials
-B = rand(n);
-A = rand(n);
-F = [B, zeros(n), zeros(n);
-     A*B, B, zeros(n);
-     zeros(n,2*n), B];
-u = rand(N*n,K);
+m = 2;
+n = 4;
+N = 4;
+K = 8; % number of trials has to be N*m
+B = rand(n,m,N);
+A = rand(n,n,N);
+F = liftDyn(A,B);
+u = rand(N*m,K);
 e = F*u;
 
 % estimate F
 for i = 1:K
-    U((N*(i-1))+1:(N*(i-1))+N,1:n*N^2) = kron(eye(N),u(:,i)');
+    U((N*(i-1))+1:(N*(i-1))+N,1:m*N*N) = kron(eye(N),u(:,i)');
     E((N*(i-1))+1:(N*(i-1))+N,1:n) = reshape(e(:,i)',n,N)';
 end
-D = duplicateVech(N,n,n);
+D = duplicateVech(N,m);
 M = U * D';
 Est = pinv(M) * E;
 EstAddZero = Est' * D;
-% FIXME: this part should be automated
-F_est = [EstAddZero(:,1:N*n); EstAddZero(:,N*n+1:2*N*n)]
+
+for i = 1:N
+    F_est((i-1)*n+1:i*n,:) = EstAddZero(:,N*m*(i-1)+1:N*m*i);
+end
+
 errNorm = norm(F-F_est)
 
-%% Performance for a linear system
+%% Apply ILC
 
 %{
 clc; clear; close all;
