@@ -1,8 +1,9 @@
 %% Testing monotonic learning 
 
+clc; clear; close all;
+
 % 1d nonlinear system
 
-% clc; clear; close all;
 % 
 % eps = 0.2;
 % dyn = @(x,u) x^2 + eps*x - u;
@@ -25,7 +26,7 @@
 % for linear time varying system F
 % and random inputs
 
-clc; clear; close all;
+%{
 m = 2;
 n = 4;
 N = 4;
@@ -51,29 +52,49 @@ for i = 1:N
 end
 
 errNorm = norm(F-F_est)
+%}
+
 
 %% Apply ILC
 
-%{
-clc; clear; close all;
+%%{
 n = 1; % dim_x
 m = 1; % dim_u
 T = 1.0; % final time
 N = 50;
 dt = T/N; % discretization
-A = randn(n,n,N);
-B = randn(n,m,N);
+A = rand(n,n,N);
+B = rand(n,m,N);
 % TODO: make sure they are correlated not purely random
-A_act = A - 0.01;
-B_act = A - 0.01;
+A_act = A + 0.001*rand(n,n,N);
+B_act = A + 0.001*rand(n,m,N);
 
 [Ad,Bd] = discretizeDyn(A,B,dt);
 [Ad_act,Bd_act] = discretizeDyn(A_act,B_act,dt);
-F = liftDyn(Ad,Bd);
-F_act = liftDyn(Ad_act,Bd_act);
+% the unknown system
+Z = liftDyn(Ad_act,Bd_act);
+% the nominal system
+F = liftDyn(Ad,Bd); %0.80 * F_act; %liftDyn(Ad,Bd);
+
+% theoretical computations
+try
+    s_nom = svd(F,'econ');
+    s_diff = svd(Z-F,'econ');
+    s_max_nom = max(s_nom);
+    s_min_nom = min(s_nom);
+    s_max_diff = max(s_diff);
+    mu = (1 + sqrt(5))/2;
+    BOUND = s_min_nom^2 / (mu * s_max_nom + mu * s_min_nom + s_min_nom);
+    spectral_radius = abs(max(eig(eye(size(Z,2)) - pinv(F)*Z)));
+    assert(s_max_diff < BOUND,'no monotonic convergence!');
+    assert(spectral_radius < 1, 'no asymptotic convergence!');
+catch ME
+    disp(ME.message);
+end
+    
 
 % observe errors
-numTrials = 10; % trials 
+numTrials = 100; % trials 
 err = zeros(N,numTrials);
 x0 = zeros(n,1);
 us = zeros(N,numTrials+1);
@@ -88,26 +109,9 @@ alpha = 0.1;
 % we assume no noise for now
 for i = 1:numTrials
     % get error
-    err(:,i) = F_act * us(:,i) - ref;
-    us(:,i+1) = us(:,i) + alpha* err(:,i);
+    err(:,i) = Z * us(:,i) - ref;
+    us(:,i+1) = us(:,i) - pinv(F,0.05) * err(:,i);
     err_norm(i) = norm(err(:,i),2);
 end
 
-plot(err_norm);
-
-%% Estimate system dynamics along traj
-
-% produce duplication matrix
-D = duplicateVech(N,n,m);
-
-% assuming d is zero
-Ubar = us(:,1:numTrials);
-M = kron(Ubar,eye(N*m))' * D;
-E = err;
-vecE = E(:);
-vechF = M \ vecE;
-% duplicate to vecF
-vecF = D * vechF;
-% duplicate back to F
-F_est = reshapeF(vecF,n,m,N);
-%}
+scatter(1:numTrials,err_norm);
