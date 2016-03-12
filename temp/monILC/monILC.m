@@ -55,9 +55,9 @@ errNorm = norm(F-F_est)
 %}
 
 
-%% Apply ILC
+%% Apply plant inversion ILC
 
-%%{
+%{
 n = 1; % dim_x
 m = 1; % dim_u
 T = 1.0; % final time
@@ -77,20 +77,20 @@ Z = liftDyn(Ad_act,Bd_act);
 F = liftDyn(Ad,Bd); %0.80 * F_act; %liftDyn(Ad,Bd);
 
 % theoretical computations
-try
-    s_nom = svd(F,'econ');
-    s_diff = svd(Z-F,'econ');
-    s_max_nom = max(s_nom);
-    s_min_nom = min(s_nom);
-    s_max_diff = max(s_diff);
-    mu = (1 + sqrt(5))/2;
-    BOUND = s_min_nom^2 / (mu * s_max_nom + mu * s_min_nom + s_min_nom);
-    spectral_radius = abs(max(eig(eye(size(Z,2)) - pinv(F)*Z)));
-    assert(s_max_diff < BOUND,'no monotonic convergence!');
-    assert(spectral_radius < 1, 'no asymptotic convergence!');
-catch ME
-    disp(ME.message);
-end
+% try
+%     s_nom = svd(F,'econ');
+%     s_diff = svd(Z-F,'econ');
+%     s_max_nom = max(s_nom);
+%     s_min_nom = min(s_nom);
+%     s_max_diff = max(s_diff);
+%     mu = (1 + sqrt(5))/2;
+%     BOUND = s_min_nom^2 / (mu * s_max_nom + mu * s_min_nom + s_min_nom);
+%     spectral_radius = abs(max(eig(eye(size(Z,2)) - pinv(F)*Z)));
+%     assert(s_max_diff < BOUND,'no monotonic convergence!');
+%     assert(spectral_radius < 1, 'no asymptotic convergence!');
+% catch ME
+%     disp(ME.message);
+% end
     
 
 % observe errors
@@ -111,6 +111,57 @@ for i = 1:numTrials
     % get error
     err(:,i) = Z * us(:,i) - ref;
     us(:,i+1) = us(:,i) - pinv(F,0.05) * err(:,i);
+    err_norm(i) = norm(err(:,i),2);
+end
+
+scatter(1:numTrials,err_norm);
+%}
+
+%% Apply adaptive ilc
+
+n = 1; % dim_x
+m = 1; % dim_u
+T = 1.0; % final time
+N = 20;
+dt = T/N; % discretization
+A = rand(n,n,N);
+B = rand(n,m,N);
+% TODO: make sure they are correlated not purely random
+A_act = A + 0.001*rand(n,n,N);
+B_act = A + 0.001*rand(n,m,N);
+
+[Ad,Bd] = discretizeDyn(A,B,dt);
+[Ad_act,Bd_act] = discretizeDyn(A_act,B_act,dt);
+% the unknown system
+Z = liftDyn(Ad_act,Bd_act);
+% the nominal system
+F = liftDyn(Ad,Bd); %0.80 * F_act; %liftDyn(Ad,Bd);    
+
+% observe errors
+numTrials = 10; % trials 
+err = zeros(N,numTrials);
+x0 = zeros(n,1);
+us = zeros(N,numTrials+1);
+err_norm = zeros(1,numTrials);
+
+% reference traj
+a = 2;
+t = linspace(0.02,1,N);
+ref = a*t(:);
+
+% initialize Gamma matrix and a, b 
+var_nom = 1;
+a = 2; 
+b = var_nom;
+Gamma = 100.0 * eye(n); % prior precision matrix, akin to saying we have 100 data points
+
+% we assume no noise for now
+for i = 1:numTrials
+    % get error
+    err(:,i) = Z * us(:,i) - ref;
+    % estimate system
+    F = estimatePlantBayes(F,G,a,b,us(:,1:i),err(:,1:i),N);
+    us(:,i+1) = us(:,i) - pinv(F_est,0.05) * err(:,i);
     err_norm(i) = norm(err(:,i),2);
 end
 
