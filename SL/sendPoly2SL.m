@@ -1,11 +1,11 @@
-%% Sending polynomials to SL with the VHP method
+%% Sending polynomials to SL
 
 % First get the ball and time and status 
 % Start running the EKF and predict time2reach VHP
 % Continue getting ball estimates until time2reach < maxTime
 
 obj = onCleanup(@() disconnectFromSL(socket,address,context));
-clc; clear all; close all;
+clc; clear all; close all; %dbstop if error;
 
 %% Load table values
 
@@ -133,7 +133,8 @@ j = 1;
 firsttime = true;
 maxBallSize = 100;
 minBall2Predict = 5;
-predictTime = 0.6;
+predictTime = 1.0;
+Tret = 1.0;
 %numLands = 0; % not used for now
 
 %* q0 should be set somewhere
@@ -202,7 +203,7 @@ while numTrials < 1
     tol = 0.4;
     if size(ballRaw,2) > minBall2Predict && stage == WAIT && ...
             filter.x(2) > dist_to_table - table_length/2  && ...
-            filter.x(2) < dist_to_table - table_length/2 + tol;
+            filter.x(2) < dist_to_table - table_length/2 + tol
     % otherwise predict
         %dtPred = 0.01;
         %[ballPred,~,numBounce,time2PassTable] = ...
@@ -219,9 +220,9 @@ while numTrials < 1
         stage = FINISH;
         numTrials = numTrials + 1;
         % If we're training an offline model save optimization result
-        %b0 = filter.x';
-        v0 = (ballRaw(:,end) - ballRaw(:,end-1)) ./ dt;
-        b0 = [ballRaw(:,end);v0(:)]';
+        b0 = filter.x';
+        %v0 = (ballRaw(:,end) - ballRaw(:,end-1)) ./ dt;
+        %b0 = [ballRaw(:,end);v0(:)]';
         
         %%{
         msg = [uint8(3), typecast(uint32(1),'uint8'), uint8(0)];
@@ -236,6 +237,21 @@ while numTrials < 1
         tInit = STR.robot.traj.time;
         %}
         
+        % for debugging
+        %%{
+        dtPred = 0.01;
+        [ballPred,ballTime,numBounce,time2PassTable] = predictBall(dtPred,predictTime,filter,table);
+        % land the ball on the centre of opponents court
+        desBall(1) = 0.0;
+        desBall(2) = table.DIST - 3*table.LENGTH/4;
+        desBall(3) = table.Z;
+        time2reach = 0.5; % time to reach desired point on opponents court
+        fast = true;
+        racketDes = calcRacketStrategy(desBall,ballPred,ballTime,time2reach,fast);
+        [qf,qfdot,T] = calcOptimalPoly(wam,racketDes,q0,Tret);
+        %}
+        
+        %{
         N = size(X,1);
         % find the closest point among Xs
         dif = repmat(b0,N,1) - X;
@@ -244,11 +260,13 @@ while numTrials < 1
         qf = val(1:7)';
         qfdot = val(7+1:2*7)';
         T = val(end);
+        %}
         q0dot = zeros(7,1);
-        Tret = 1.0;
         dt = 0.002;
+        
         %[q,qd,qdd] = generateSpline(0.002,qInit,qdInit,qf,qfdot,T,Tret);
         [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,Tret);
+        [x,xd,o] = wam.calcRacketState([q;qd]);
         %[q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
         %q = qInit * ones(1,length(q));  
         %qd = qdInit * ones(1,length(q));
@@ -293,30 +311,39 @@ while numTrials < 1
         data = typecast(msg,'uint8');
         zmq.core.send(socket,data);
         response = zmq.core.recv(socket,bufferLength);
+        
 
     end       
     
 end
 
+% seperate x into hit and return segments
+Nhit = floor(T/dt);
+
+% load ball.mat
+load('ball.mat');
+
 figure;
 scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
 hold on;
 scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
+scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'y');
+scatter3(x(1,1:Nhit),x(2,1:Nhit),x(3,1:Nhit),'r');
+scatter3(x(1,Nhit+1:end),x(2,Nhit+1:end),x(3,Nhit+1:end),'k');
 title('Ball observations');
-hold on;
 grid on;
 axis equal;
 xlabel('x');
 ylabel('y');
 zlabel('z');
-tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
+tol_x = 0.1; tol_y = 0.4; tol_z = 0.3;
 xlim([-table_x - tol_x, table_x + tol_x]);
 ylim([dist_to_table - table_length - tol_y, tol_y]);
-zlim([table_z - tol_z, table_z + 2*tol_z]);
+zlim([table_z - 2*tol_z, table_z + 2*tol_z]);
 fill3(tennisTable(1:4,1),tennisTable(1:4,2),tennisTable(1:4,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 net_width = 0.01;
-
+hold off;
  
 % disconnect from zmq and SL
 disconnectFromSL(socket,address,context);

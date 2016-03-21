@@ -1,7 +1,7 @@
 %% Table Tennis parameters and values
 
 % Table Variables 
-dist_to_table = -1.15; %-1.15; %-3.50; % -0.80;
+dist_to_table = -1.15; %-3.50; % -0.80;
 table_height = 0.76;
 table_length = 2.76; 
 net_height   = 0.144; %0.1525
@@ -31,7 +31,7 @@ floor_level   = -1.71;
 
 % Contact parameters
 
-% old coefficients from Katharina's cheating times :D
+% old coefficients from Katharina's times :D
 CRT = 0.86;
 CFTY = 0.72;
 CFTX = 0.68;

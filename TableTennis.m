@@ -64,7 +64,7 @@ classdef TableTennis < handle
                 obj.offline.X = X;
                 obj.offline.Y = Y;
                 obj.offline.B = X \ Y;
-                obj.offline.GP = [];
+                %obj.offline.GP = [];
             end
             
             loadTennisTableValues();
@@ -86,9 +86,10 @@ classdef TableTennis < handle
             obj.VHP.Y = vhp;
             
             % initialize animation
-            obj.draw.flag = draw;
-            if draw
+            obj.draw.flag = draw;            
+            if draw                
                 obj.initAnimation(q0);
+                obj.handle.record = false;
                 if record
                     obj.handle.record = true;
                     filename = sprintf('tableTennisSim%d.avi',randi(100));
@@ -97,6 +98,7 @@ classdef TableTennis < handle
                 end
             else
                 obj.handle = [];
+                obj.handle.record = false;
             end
             
         end
