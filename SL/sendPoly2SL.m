@@ -104,7 +104,7 @@ response = zmq.core.recv(socket,bufferLength);
 %% Load lookup table
 
 % load the savefile
-savefile = 'OfflineTrajGenLookupTable.mat';
+savefile = 'LookupTable.mat';
 load(savefile,'X','Y');
 
 %% Trajectory generation
@@ -135,12 +135,6 @@ maxBallSize = 100;
 minBall2Predict = 5;
 predictTime = 1.0;
 Tret = 1.0;
-%numLands = 0; % not used for now
-
-%* q0 should be set somewhere
-%* how to do prefilter
-%* correct finite state machine
-%* check joint limits was commented - run table tennis again with lookup 100 times 
 
 while numTrials < 1
      
@@ -224,7 +218,7 @@ while numTrials < 1
         %v0 = (ballRaw(:,end) - ballRaw(:,end-1)) ./ dt;
         %b0 = [ballRaw(:,end);v0(:)]';
         
-        %%{
+        %{
         msg = [uint8(3), typecast(uint32(1),'uint8'), uint8(0)];
         data = typecast(msg, 'uint8'); 
         zmq.core.send(socket, data);
@@ -238,7 +232,7 @@ while numTrials < 1
         %}
         
         % for debugging
-        %%{
+        %{
         dtPred = 0.01;
         [ballPred,ballTime,numBounce,time2PassTable] = predictBall(dtPred,predictTime,filter,table);
         % land the ball on the centre of opponents court
@@ -251,7 +245,7 @@ while numTrials < 1
         [qf,qfdot,T] = calcOptimalPoly(wam,racketDes,q0,Tret);
         %}
         
-        %{
+        %${
         N = size(X,1);
         % find the closest point among Xs
         dif = repmat(b0,N,1) - X;
@@ -265,29 +259,8 @@ while numTrials < 1
         dt = 0.002;
         
         %[q,qd,qdd] = generateSpline(0.002,qInit,qdInit,qf,qfdot,T,Tret);
-        [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,Tret);
-        [x,xd,o] = wam.calcRacketState([q;qd]);
+        [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,Tret);        
         %[q,qd,qdd] = wam.checkJointLimits(q,qd,qdd);
-        %q = qInit * ones(1,length(q));  
-        %qd = qdInit * ones(1,length(q));
-        %qdd = zeros(7,1) * ones(1,length(q));
-        
-        
-        %{
-        figure;
-        subplot(3,2,1);
-        plot(q');
-        subplot(3,2,3);
-        plot(qd');
-        subplot(3,2,5);
-        plot(qdd');
-        subplot(3,2,2);
-        plot(q');
-        subplot(3,2,4);
-        plot(diff(q')./dt);
-        subplot(3,2,6);
-        plot(diff(diff(q'))./(dt)^2);
-        %}
 
         timeSteps = size(q,2);
         ts = repmat(-1,1,timeSteps); % start immediately
@@ -301,6 +274,7 @@ while numTrials < 1
         data = typecast(poly_zmq, 'uint8');
         zmq.core.send(socket, data);
         response = zmq.core.recv(socket,bufferLength);
+        
         toc
         pause(4.0);
         %pause(T+Tret);
@@ -321,7 +295,12 @@ end
 Nhit = floor(T/dt);
 
 % load ball.mat
+ballRaw2 = ballRaw;
+ballFilt2 = ballFilt;
 load('ball.mat');
+ballRaw = ballRaw2;
+ballFilt = ballFilt2;
+[x,xd,o] = wam.calcRacketState([q;qd]);
 
 figure;
 scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');

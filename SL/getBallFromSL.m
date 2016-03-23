@@ -28,7 +28,7 @@ tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
 xlim([-table_x - tol_x, table_x + tol_x]);
 ylim([dist_to_table - table_length - tol_y, tol_y]);
 zlim([table_z - tol_z, table_z + 2*tol_z]);
-fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
+fill3(T(1:4,1),T(1:4,2),T(1:4,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 net_width = 0.01;
 
@@ -62,10 +62,10 @@ filter.initState([ball_cannon(:); guessBallInitVel],eps);
 
 %% Clear the ball positions
 bufferLength = 1e6; %bytes
-% msg = [uint8(5), uint8(0)];
-% data = typecast(msg,'uint8');
-% zmq.core.send(socket,data);
-% response = zmq.core.recv(socket,bufferLength);
+msg = [uint8(5), uint8(0)];
+data = typecast(msg,'uint8');
+zmq.core.send(socket,data);
+response = zmq.core.recv(socket,bufferLength);
 
 %% GET BALL POSITIONS
 
@@ -150,7 +150,7 @@ while ~reset || size(ballRaw,2) < maxBallSize
     
     % if suddenly there's a jump backwards stop
     tol = 1.0;
-    if size(ballRaw,2) > 2 && abs(ballRaw(2,end) - ballRaw(2,end-1)) > tol
+    if size(ballRaw,2) > 2 && max(abs(diff(ballRaw(2,:)))) > tol
         reset = true;
     end        
 
@@ -160,6 +160,7 @@ end
 scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
 scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
 scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
+hold off;
 
 % disconnect from zmq and SL
 disconnectFromSL(socket,address,context);

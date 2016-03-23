@@ -1,4 +1,4 @@
-%% Table Tennis class for simulating a match between two robots!
+%% Table Tennis class for simulating a solo game
 
 classdef TableTennis < handle
     
@@ -54,17 +54,24 @@ classdef TableTennis < handle
             % shall we train an offline lookup table
             obj.offline.train = train;
             obj.offline.use = lookup;
-            obj.offline.savefile = 'OfflineTrajGenLookupTable.mat';
+            obj.offline.savefile = 'LookupTable.mat';
             obj.offline.X = [];
             obj.offline.Y = [];
             
-            if obj.offline.use
-                % load the savefile
-                load(obj.offline.savefile,'X','Y');
-                obj.offline.X = X;
-                obj.offline.Y = Y;
-                obj.offline.B = X \ Y;
-                %obj.offline.GP = [];
+            if obj.offline.use || obj.offline.train
+                try
+                    % load the savefile
+                    load(obj.offline.savefile,'X','Y');
+                    obj.offline.X = X;
+                    obj.offline.Y = Y;
+                    obj.offline.B = X \ Y;
+                    %obj.offline.GP = [];
+                catch
+                    warning('No lookup table found!');
+                    obj.offline.X = [];
+                    obj.offline.Y = [];
+                end
+
             end
             
             loadTennisTableValues();
@@ -156,7 +163,7 @@ classdef TableTennis < handle
             dt = 0.01;
             timeSim = 0.0;
             idx = 1;
-            maxTime2Hit = 0.6;
+            minTime2Hit = 0.4;
             
             WAIT = 0;
             PREDICT = 1;
@@ -188,7 +195,7 @@ classdef TableTennis < handle
                     end
                 end
                 
-                if stage == PREDICT && time2PassTable <= maxTime2Hit       
+                if stage == PREDICT && time2PassTable <= minTime2Hit       
                     if numBounce ~= 1
                         disp('Ball is not valid! Not hitting!');
                         stage = FINISH;
