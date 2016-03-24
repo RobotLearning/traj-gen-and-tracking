@@ -89,7 +89,7 @@ table.LENGTH = table_length;
 table.Z = table_z;
 table.WIDTH = table_width;
 
-while ~reset || size(ballRaw,2) < maxBallSize
+while ~reset && (size(ballRaw,2) < maxBallSize)
 
     msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
@@ -150,8 +150,10 @@ while ~reset || size(ballRaw,2) < maxBallSize
     
     % if suddenly there's a jump backwards stop
     tol = 1.0;
-    if size(ballRaw,2) > 2 && max(abs(diff(ballRaw(2,:)))) > tol
+    if (size(ballRaw,2) > 2) && (abs(ballRaw(2,end) - ballRaw(2,end-1)) > tol)
         reset = true;
+        % kick the last ball away
+        ballRaw = ballRaw(:,1:end-1);
     end        
 
 

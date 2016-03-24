@@ -1,4 +1,4 @@
-%% Sending polynomials to SL
+%% Sending striking and returning polynomials to SL
 
 % First get the ball and time and status 
 % Start running the EKF and predict time2reach VHP
@@ -156,11 +156,13 @@ while numTrials < 1
         numObs = length(ballTime);
         
         % if suddenly there's a jump backwards stop
-        tol = 1.0;
+        tol = 0.1;
         if size(ballRaw,2) > 2 && abs(ballRaw(2,end) - ballRaw(2,end-1)) > tol
             firsttime = true;
             stage = WAIT;
-            ballRaw = []; ballFilt = []; cam = [];
+            ballRaw = []; 
+            ballFilt = []; 
+            cam = [];
             j = 1;
         end        
 

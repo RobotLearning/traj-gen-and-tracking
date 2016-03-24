@@ -1,7 +1,5 @@
 %% Table Tennis ball class for simulating all sorts of ball interactions
 
-% TODO:
-% check for 2d as well as 3d
 classdef Ball < handle
    
     % Fields necessary for all ball models

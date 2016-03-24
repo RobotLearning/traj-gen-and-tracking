@@ -1,0 +1,57 @@
+\section{ALGORITHM}\label{alg}
+
+In this section we give the details of the nonlinear constrained optimization~\eqref{costFnc1}. We include additionally the joint position, velocity and acceleration constraints $\jointMax^{(j)}, \jointMin^{(j)}$, $j = 0, 1, 2$ as inequality constraints in the optimization.
+
+As explained in the previous section, we parametrize third order polynomials in joint-space for each degree of freedom of the robot. That is, along with the striking time $T$ as a free parameter, we have a $2n+1$ dimensional problem with nonlinear equality and inequality constraints. Rewriting~\eqref{costFnc1} in terms of these free parameters with $\vec{R}$ as the identity matrix, we get the following optimization problem
+%
+\begin{align}
+\min_{\joint_f,\dot{\joint}_f, T} & \, 3T^3 \vec{a}_3^{\mathrm{T}}\vec{a}_3 + 3T^2 \vec{a}_3^{\mathrm{T}}\vec{a}_2 + T\vec{a}_2^{\mathrm{T}}\vec{a}_2 \label{costFnc3} \\
+\textrm{s.t. \ }
+& \kin_p(\joint_f) = \ballEst(T), \\
+& \kin_n(\joint_f) = \normal_{\mathrm{des}}(T), \\
+&\jac(\joint_f)\dot{\joint}_f = \racketVel_{\mathrm{des}}(T), \\
+& \jointMin \leq \joint_{\mathrm{strike}}(\vec{t}_{\mathrm{ext}}^{i}) \leq \jointMax, \, i = 1,2, \\
+& \jointMin \leq \joint_{\mathrm{return}}(\vec{t}_{\mathrm{ext}}^{i}) \leq \jointMax, \, i = 3,4,
+\end{align}
+%
+\noindent where the coefficients of the polynomial $\joint_{\mathrm{strike}}(t) = \vec{a}_3 t^3  + \vec{a}_2 t^2 + \dot{\joint}_0 t + \joint_0$ are related to the parameters as 
+%
+\begin{align}
+\vec{a}_3 &= \frac{2}{T^3}(\joint_0 - \joint_f) + \frac{1}{T^2}(\dot{\joint}_0 + \dot{\joint}_f), \\
+\vec{a}_2 &= \frac{3}{T^2}(\joint_f - \joint_0) - \frac{1}{T}(\dot{\joint}_f + 2\dot{\joint}_0).
+\label{coeffs}
+\end{align}
+%
+For the return polynomial $\joint_{\mathrm{return}}(t) = \vec{\tilde{a}}_3 t^3  + \vec{\tilde{a}}_2 t^2 + \dot{\joint}_0 t + \joint_0$ the coefficients $\vec{\tilde{a}}_3, \vec{\tilde{a}}_2$ are as in \eqref{coeffs} but with $\joint_0, \joint_f$ and $\dot{\joint}_0, \dot{\joint}_f$ reversed. The joint extrema candidates are checked at times
+%
+\begin{align}
+\vec{t}_{\mathrm{ext}}^{1,2}(j) = \frac{-\vec{a}_2(j) \rpm \sqrt{\vec{a}_2^2(j) - 3\vec{a}_3(j)\dot{\joint}_0(j)})}{3\vec{a}_3(j)}, \\
+\vec{t}_{\mathrm{ext}}^{3,4}(j) = \frac{-\vec{\tilde{a}}_2(j) \rpm \sqrt{\vec{\tilde{a}}_2^2(j) - 3\vec{\tilde{a}}_3(j)\dot{\joint}_f(j)})}{3\vec{\tilde{a}}_3(j)},
+\label{jointPosExtrema}
+\end{align}
+%
+\noindent for each $j = 1, \ldots, n$ to make sure we satisfy the joint limits both for the striking trajectory ($i = 1,2$)  and for the return trajectory ($i = 3,4$). We clamp the values $\vec{t}^{1,2}_{\mathrm{ext}}$ to the interval $[0, \, T]$ and $\vec{t}^{3,4}_{\mathrm{ext}}$ to $[T, \, T + T_{\mathrm{return}}]$ if they are imaginary or outside their corresponding intervals. Joint velocity and acceleration constraints, although not shown in \eqref{costFnc3}, are enforced in a similar way. % add also cartesian constraints for the table
+
+Gradients of the cost function~\eqref{costFnc3} can be easily calculated and fed to a constrained nonlinear optimizer, e.g. a sequential quadratic programming (SQP) based solver. We can run this optimizer whenever we have enough ball samples available to estimate the ball coming towards the robot. One simple solution that we like is to stop the estimation procedure whenever the expected time to pass over the table $T_{\mathrm{table}}$ is less than a maximum threshold $T_{\mathrm{max}}$. The full trajectory generation framework and the resulting table tennis playing algorithm is summarized in Algorithm~\ref{alg1}.
+
+% shall I talk more about the algorithm here? Maybe the training 
+
+\begin{algorithm}[tb]
+   \caption{OPTIMAL PLAYER ($\alg$)}
+   \label{alg1}
+\begin{algorithmic}[1]
+   \STATE {\bfseries Input:} $T_{\mathrm{max}}, T_{\mathrm{return}}, \joint_0$ 
+   \STATE Initialize EKF
+   \STATE Estimate model parameters from demonstrations
+   \STATE Move to $\joint_0$
+   \LOOP
+	   \STATE Predict $\ballEst(t)$ with EKF till $T_{\mathrm{table}} < T_{\mathrm{max}}$
+	   \STATE Predict optimal $\racketVel_{\mathrm{des}}(t), \normal_{\mathrm{des}}(t)$ using racket model
+	   \STATE Compute optimal $\joint_f, \dot{\joint}_f, T$ with SQP
+	   \STATE Form polynomials $\joint_{\mathrm{des}}(t) = [\joint_{\mathrm{strike}}(t), \joint_{\mathrm{return}}(t)]$ %$t \leq T + T_{\mathrm{return}}$
+	   \STATE Execute with InvDyn $\vec{\tau} = f(\joint_{\mathrm{des}},\dot{\joint}_{\mathrm{des}},\ddot{\joint}_{\mathrm{des}})$
+   \ENDLOOP
+\end{algorithmic}
+\end{algorithm}
+
+Feasible striking and return trajectories are computed in line $8-9$ in Algorithm~\ref{alg1}, which are then executed with an existing inverse dynamics controller (InvDyn) in line $10$. In actual table tennis experiments, high gain PD-control is typically applied whenever the inverse dynamics models are not very precise.

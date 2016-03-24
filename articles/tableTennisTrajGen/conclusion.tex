@@ -1,0 +1,11 @@
+\section{CONCLUSION}\label{end}
+
+In this paper we have presented a new optimal-control based approach for generating table tennis striking trajectories. The striking and return trajectories are third order polynomials that intercept at the optimized hitting point at the optimized hitting time. Unlike previous approaches, our optimization based framework respects the joint limitations and any velocity or acceleration safety limits imposed on the robot. Furthermore by varying the hitting time $T$ we simplify the problem of finding feasible joint trajectories. Further constraints can be easily imposed on the system.
+% online computation
+% MPC-like online computation
+% offline computation
+
+Our optimization currently cannot be run online in our robotic setup shown in Figure~\ref{robot} due to computational constraints. One way to overcome this limitation is to use a lookup table. However, if we can push the optimization down to millisecond range, we can also use nonlinear model predictive control (MPC) to optimize~\eqref{costFnc2} repeatedly given new joint position and ball position measurements. MPC-like approach involving repeated optimization has the potential to make the method more robust to both execution errors and inaccuracies in ball estimation. Lastly, we think that reinforcement learning~\cite{Sutton98} using observed ball landing positions as rewards, provides another suitable framework to tune the computed trajectory parameters online.
+% ref needed for MPC
+
+%The cost functional to be minimized considers the accelerations as the quantity to be minimized. It assumes that the feedback linearization of the robot is perfect, that is the inverse dynamics model for the robot is exact. Whenever the cancellation is imperfect due to inaccurate robot control, execution error will prevent the robot from achieving the desired trajectories. A robust way to handle execution errors will be considered in future work.
