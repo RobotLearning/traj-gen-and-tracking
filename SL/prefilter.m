@@ -25,14 +25,16 @@ function [ballCleanObs,ballCleanTime,lastBallPos,lastBallTime] = ...
         end
     end
 
-%     % check for different ball pos
-%     if size(balls,2) >= 2 && balls(4,end) ~= balls(4,end-1)
-%         ballObsDer = (balls(1:3,end) - balls(1:3,end-1)) ./ ...
-%                        (balls(4,end) - balls(4,end-1));
-%         tol = 1e-2;
-%         eps = 0.001;
-%         % if ball appears to be coming towards the robot
-%         if ballObsDer(2) > tol
-%             filter.initState([balls(1:3,1); ballObsDer(:)],eps);
-%         end
-%     end
+    %{
+    % check for different ball pos
+    if size(balls,2) >= 2 && balls(4,end) ~= balls(4,end-1)
+        ballObsDer = (balls(1:3,end) - balls(1:3,end-1)) ./ ...
+                       (balls(4,end) - balls(4,end-1));
+        tol = 1e-2;
+        eps = 0.001;
+        % if ball appears to be coming towards the robot
+        if ballObsDer(2) > tol
+            filter.initState([balls(1:3,1); ballObsDer(:)],eps);
+        end
+    end
+    %}

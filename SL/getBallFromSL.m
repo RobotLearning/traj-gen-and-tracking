@@ -30,12 +30,8 @@ ylim([dist_to_table - table_length - tol_y, tol_y]);
 zlim([table_z - tol_z, table_z + 3*tol_z]);
 fill3(T(1:4,1),T(1:4,2),T(1:4,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
-net_width = 0.01;
 
 %% Initialize EKF
-dim = 6;
-eps = 1e-6; %1e-3;
-C = [eye(3),zeros(3)];
 
 params.C = Cdrag;
 params.g = gravity;
@@ -51,8 +47,10 @@ params.ALG = 'RK4'; %'Euler'
 
 ballFlightFnc = @(x,u,dt) discreteBallFlightModel(x,dt,params);
 % very small but nonzero value for numerical stability
+dim = 6;
+eps = 1e-6; %1e-3;
 mats.O = eps * eye(dim);
-mats.C = C;
+mats.C = [eye(3),zeros(3)];
 mats.M = eps * eye(3);
 filter = EKF(dim,ballFlightFnc,mats);
 
@@ -62,25 +60,24 @@ filter.initState([ball_cannon(:); guessBallInitVel],eps);
 
 %% Clear the ball positions
 bufferLength = 1e6; %bytes
-msg = [uint8(5), uint8(0)];
-data = typecast(msg,'uint8');
-zmq.core.send(socket,data);
-response = zmq.core.recv(socket,bufferLength);
+% msg = [uint8(5), uint8(0)];
+% data = typecast(msg,'uint8');
+% zmq.core.send(socket,data);
+% response = zmq.core.recv(socket,bufferLength);
 
 %% GET BALL POSITIONS
 
-t = [];
 ballObs = [];
 ballTime = [];
 ballRaw = [];
 ballFilt = [];
+curTime = 0.0;
 lastBallPos = zeros(3,1);
 lastBallTime = 0.0;
-j = 1;
+j = 0;
 reset = false;
 firsttime = true;
 predicted = false;
-maxBallSize = 100;
 minBall2Predict = 5;
 predictTime = 1.0;
 
@@ -89,7 +86,7 @@ table.LENGTH = table_length;
 table.Z = table_z;
 table.WIDTH = table_width;
 
-while ~reset && (size(ballRaw,2) < maxBallSize)
+while ~reset 
 
     msg = [uint8(4), typecast(uint32(1),'uint8'),uint8(0)];
     data = typecast(msg,'uint8');
@@ -107,6 +104,7 @@ while ~reset && (size(ballRaw,2) < maxBallSize)
             prefilter(ballObs,ballTime,lastBallPos,lastBallTime,table);
         numObs = length(ballTime);
         
+        %{
         if firsttime
             curTime = ballTime(1);
             %filter.initState([ballObs(:,1); guessBallInitVel],eps);           
@@ -115,13 +113,14 @@ while ~reset && (size(ballRaw,2) < maxBallSize)
             cam(:,1) = ballCam(:,1);
             firsttime = false;
             numObs = numObs - 1;
+            j = 1;
         end
+        %}
          
         % keep the observed balls
         for i = 1:numObs
             ballRaw(:,j+i) = ballObs(:,i);
             cam(:,j+i) = ballCam(:,i);
-            t(j+i) = ballTime(i);
         end
         
         % filter up to a point
@@ -154,6 +153,7 @@ while ~reset && (size(ballRaw,2) < maxBallSize)
         reset = true;
         % kick the last ball away
         ballRaw = ballRaw(:,1:end-1);
+        ballFilt = ballFilt(:,1:end-1);
     end        
 
 
@@ -161,7 +161,7 @@ end
 
 scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
 scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
-scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
+%scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
 hold off;
 
 % disconnect from zmq and SL

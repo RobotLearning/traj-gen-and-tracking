@@ -93,7 +93,7 @@ classdef TableTennis < handle
             obj.VHP.Y = vhp;
             
             % initialize animation
-            obj.draw.flag = draw;            
+            obj.draw.flag = draw;
             if draw                
                 obj.initAnimation(q0);
                 obj.handle.record = false;
@@ -130,7 +130,7 @@ classdef TableTennis < handle
                 % initialize filter state
                 filter.initState([obj.ball.pos;obj.ball.vel],eps);
                 % play one turn
-                obj.play(q0,filter,maxSimTime);                
+                obj.play(dt,q0,filter,maxSimTime);                
                 % check landing
                 if obj.ball.isLANDED
                     numLands = numLands + 1;
@@ -157,10 +157,9 @@ classdef TableTennis < handle
         end
         
         % first robot plays solo once
-        function play(obj,q0,filter,timeMax)
+        function play(obj,dt,q0,filter,timeMax)
             
             r1 = obj.robot1;
-            dt = 0.01;
             timeSim = 0.0;
             idx = 1;
             minTime2Hit = 0.4;
