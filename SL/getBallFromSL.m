@@ -27,7 +27,7 @@ zlabel('z');
 tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
 xlim([-table_x - tol_x, table_x + tol_x]);
 ylim([dist_to_table - table_length - tol_y, tol_y]);
-zlim([table_z - tol_z, table_z + 2*tol_z]);
+zlim([table_z - tol_z, table_z + 3*tol_z]);
 fill3(T(1:4,1),T(1:4,2),T(1:4,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 net_width = 0.01;
@@ -57,7 +57,7 @@ mats.M = eps * eye(3);
 filter = EKF(dim,ballFlightFnc,mats);
 
 % initialize the filters state with sensible values
-guessBallInitVel = 1.0 * [-0.80; 7.0; 2.0];
+guessBallInitVel = [-1.08; 4.80; 3.84]; %1.0 * [-0.80; 7.0; 2.0];
 filter.initState([ball_cannon(:); guessBallInitVel],eps);
 
 %% Clear the ball positions
@@ -82,7 +82,7 @@ firsttime = true;
 predicted = false;
 maxBallSize = 100;
 minBall2Predict = 5;
-predictTime = 0.6;
+predictTime = 1.0;
 
 table.DIST = dist_to_table;
 table.LENGTH = table_length;

@@ -44,7 +44,7 @@ mats.M = eps * eye(3);
 filter = EKF(dim,ballFlightFnc,mats);
 
 % initialize the filters state with sensible values
-guessBallInitVel = [-0.80; 7.0; 2.0];
+guessBallInitVel = [-1.08; 4.80; 3.84];
 filter.initState([ball_cannon(:); guessBallInitVel],eps);
 
 %% Initialize Barrett WAM
@@ -234,9 +234,10 @@ while numTrials < 1
         %}
         
         % for debugging
-        %{
+        %%{
         dtPred = 0.01;
-        [ballPred,ballTime,numBounce,time2PassTable] = predictBall(dtPred,predictTime,filter,table);
+        [ballPred,ballTime,numBounce,time2PassTable] = ...
+            predictBall(dtPred,predictTime,filter,table);
         % land the ball on the centre of opponents court
         desBall(1) = 0.0;
         desBall(2) = table.DIST - 3*table.LENGTH/4;
@@ -247,7 +248,7 @@ while numTrials < 1
         [qf,qfdot,T] = calcOptimalPoly(wam,racketDes,q0,Tret);
         %}
         
-        %${
+        %{
         N = size(X,1);
         % find the closest point among Xs
         dif = repmat(b0,N,1) - X;
@@ -293,16 +294,24 @@ while numTrials < 1
     
 end
 
+%% Plot the results
+
+% some useful colors
+orange = [0.9100 0.4100 0.1700];
+gray = [0.5020 0.5020 0.5020];
+lightgray = [0.8627    0.8627    0.8627];
+white = [0.9412 0.9412 0.9412];
+black2 = [0.3137    0.3137    0.3137];
+red = [1.0000    0.2500    0.2500];
+
 % seperate x into hit and return segments
 Nhit = floor(T/dt);
 
 % load ball.mat
-ballRaw2 = ballRaw;
-ballFilt2 = ballFilt;
-load('ball.mat');
-ballRaw = ballRaw2;
-ballFilt = ballFilt2;
+% load('ball.mat');
 [x,xd,o] = wam.calcRacketState([q;qd]);
+[joint,ee,racket] = wam.drawPosture(q0);
+endeff = [joint(end,:); ee];
 
 figure;
 scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
@@ -320,12 +329,14 @@ zlabel('z');
 tol_x = 0.1; tol_y = 0.4; tol_z = 0.3;
 xlim([-table_x - tol_x, table_x + tol_x]);
 ylim([dist_to_table - table_length - tol_y, tol_y]);
-zlim([table_z - 2*tol_z, table_z + 2*tol_z]);
+zlim([table_z - 2*tol_z, table_z + 3*tol_z]);
 fill3(tennisTable(1:4,1),tennisTable(1:4,2),tennisTable(1:4,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
-net_width = 0.01;
+plot3(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
+plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
+fill3(racket(1,:), racket(2,:), racket(3,:),red);
 hold off;
  
-% disconnect from zmq and SL
+%% Disconnect from zmq and SL
 disconnectFromSL(socket,address,context);
 %}

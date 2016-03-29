@@ -6,7 +6,7 @@ wam2 = [];
 OPT.draw = false; % draw the simulation
 OPT.record = false; % record the simulation
 OPT.train = false; % train a lookup table using optimization results
-OPT.lookup = true; % use lookup table instead of optimizing online
+OPT.lookup = false; % use lookup table instead of optimizing online
 OPT.vhp = false; % use vhp strategy
 % initial ball pos and vel standard deviation
 STD.pos = 0.1;

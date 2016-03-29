@@ -3,7 +3,7 @@
 A New Trajectory Generation Framework in Robotic Table Tennis
 
 1. Run tableTennisPractice.m
-2. OPT structure encodes the following options:
+2. OPT structure includes the following flags:
 
     DRAW - draw simulation of table tennis if true.
     LOOKUP - use lookup table instead of generating trajectories online.
