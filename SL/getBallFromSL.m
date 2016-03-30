@@ -161,7 +161,7 @@ end
 
 scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
 scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
-%scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
+scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
 hold off;
 
 % disconnect from zmq and SL
