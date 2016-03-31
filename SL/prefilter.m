@@ -8,6 +8,7 @@ function [ballCleanObs,ballCleanTime,lastBallPos,lastBallTime] = ...
     % filter
     zMax = 0.5;
     zMin = table.Z;
+    xMax = table.WIDTH/2;
     assert(size(ballObs,2) == length(ballTime), 'time and obs num doesnt match!');
     tolTime = 1e-3;
     tolPos = 1e-2;
@@ -16,7 +17,8 @@ function [ballCleanObs,ballCleanTime,lastBallPos,lastBallTime] = ...
     for i = 1:length(ballTime)
         if (ballTime(i) - lastBallTime) > tolTime && ...
            abs(ballObs(2,i) - lastBallPos(2)) > tolPos && ...
-            ballObs(3,i) < zMax && ballObs(3,i) > zMin
+            ballObs(3,i) < zMax && ballObs(3,i) > zMin && ...
+            abs(ballObs(1,i)) < xMax 
             % update the stack
             lastBallPos = ballObs(1:3,i);
             lastBallTime = ballTime(i);

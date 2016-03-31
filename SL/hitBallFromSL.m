@@ -35,6 +35,20 @@ T = val(end);
 q0dot = zeros(7,1);
 dt = 0.002;
 
+TexpDelay = 0.2;
+T = T - TexpDelay;
+
+% just send the parameters
+qfdotdot = zeros(7,1);
+poly = [qf;qfdot;qfdotdot;T];
+poly = typecast(poly,'uint8');
+N = typecast(uint32(1),'uint8');
+poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
+data = typecast(poly_zmq, 'uint8');
+zmq.core.send(socket, data);
+response = zmq.core.recv(socket,bufferLength);
+
+%{
 % remove expected delay 
 TexpDelay = 0.2;
 T = T - TexpDelay;
@@ -55,12 +69,13 @@ poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
 data = typecast(poly_zmq, 'uint8');
 zmq.core.send(socket, data);
 response = zmq.core.recv(socket,bufferLength);
+%}
 
 toc
-pause(4.0);
+% pause(4.0);
 %pause(T+Tret);
 
-disp('Finished sending trj');
+disp('Finished sending');
 
 msg = [uint8(5), uint8(0)];
 data = typecast(msg,'uint8');

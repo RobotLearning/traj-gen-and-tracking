@@ -6,7 +6,7 @@ clc; clear all; close all;
 %% Create the socket
 
 % wam or localhost
-host = 'localhost';
+host = 'wam';
 port = '7646';
 address = sprintf('tcp://%s:%s',host,port);
 context = zmq.core.ctx_new();
@@ -60,10 +60,10 @@ filter.initState([ball_cannon(:); guessBallInitVel],eps);
 
 %% Clear the ball positions
 bufferLength = 1e6; %bytes
-% msg = [uint8(5), uint8(0)];
-% data = typecast(msg,'uint8');
-% zmq.core.send(socket,data);
-% response = zmq.core.recv(socket,bufferLength);
+msg = [uint8(5), uint8(0)];
+data = typecast(msg,'uint8');
+zmq.core.send(socket,data);
+response = zmq.core.recv(socket,bufferLength);
 
 %% GET BALL POSITIONS
 
@@ -133,16 +133,16 @@ while ~reset
             ballFilt(:,j+i) = filter.x(1:3);
         end 
         
-        if size(ballRaw,2) > minBall2Predict && ...
-                filter.x(2) > dist_to_table - table_length/2    
-        % otherwise predict
-            if ~predicted
-                dtPred = 0.01;
-                [ballPred,~,numBounce,time2PassTable] = ...
-                    predictBall(dtPred,predictTime,filter,table);
-                predicted = true;
-            end
-        end
+%         if size(ballRaw,2) > minBall2Predict && ...
+%                 filter.x(2) > dist_to_table - table_length/2    
+%         % otherwise predict
+%             if ~predicted
+%                 dtPred = 0.01;
+%                 [ballPred,~,numBounce,time2PassTable] = ...
+%                     predictBall(dtPred,predictTime,filter,table);
+%                 predicted = true;
+%             end
+%         end
 
         j = j + numObs;
     end
@@ -161,7 +161,7 @@ end
 
 scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
 scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
-scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
+%scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
 hold off;
 
 % disconnect from zmq and SL

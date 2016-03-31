@@ -76,37 +76,37 @@ guessBallInitVel = [-1.08; 4.80; 3.84]; %1.0 * [-0.80; 7.0; 2.0];
 filter.initState([ball_cannon(:); guessBallInitVel],eps);
 
 %% Get initial positioning of robot
-msg = [uint8(3), typecast(uint32(1),'uint8'), uint8(0)];
-data = typecast(msg, 'uint8'); 
-zmq.core.send(socket, data);
-response = zmq.core.recv(socket);
-
-% get q,q0
-STR = decodeResponseFromSL(response);
-qInit = STR.robot.traj.q;
-qdInit = STR.robot.traj.qd;
-tInit = STR.robot.traj.time;
-
-% Send to desired starting posture
-Qinit = [qInit;qdInit];
-dt = 0.002;
-tf = 1.0;
-p = generatePoly3rd(Qinit,Q0,dt,tf);
-% change last velocity and acc command to zero
-% p(8:end,end) = 0.0;
-timeSteps = size(p,2);
-ts = repmat(-1,1,timeSteps); % start immediately
-poly = [p;ts];
-poly = poly(:);
-poly = typecast(poly,'uint8');
-% 1 is for clear
-% 2 is for push back
-N = typecast(uint32(timeSteps),'uint8');
-poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
-data = typecast(poly_zmq, 'uint8');
-zmq.core.send(socket, data);
-response = zmq.core.recv(socket);
-pause(2.0);
+% msg = [uint8(3), typecast(uint32(1),'uint8'), uint8(0)];
+% data = typecast(msg, 'uint8'); 
+% zmq.core.send(socket, data);
+% response = zmq.core.recv(socket);
+% 
+% % get q,q0
+% STR = decodeResponseFromSL(response);
+% qInit = STR.robot.traj.q;
+% qdInit = STR.robot.traj.qd;
+% tInit = STR.robot.traj.time;
+% 
+% % Send to desired starting posture
+% Qinit = [qInit;qdInit];
+% dt = 0.002;
+% tf = 1.0;
+% p = generatePoly3rd(Qinit,Q0,dt,tf);
+% % change last velocity and acc command to zero
+% % p(8:end,end) = 0.0;
+% timeSteps = size(p,2);
+% ts = repmat(-1,1,timeSteps); % start immediately
+% poly = [p;ts];
+% poly = poly(:);
+% poly = typecast(poly,'uint8');
+% % 1 is for clear
+% % 2 is for push back
+% N = typecast(uint32(timeSteps),'uint8');
+% poly_zmq = [uint8(1), uint8(2), N, poly', uint8(0)];
+% data = typecast(poly_zmq, 'uint8');
+% zmq.core.send(socket, data);
+% response = zmq.core.recv(socket);
+% pause(2.0);
 
 %% Clear the ball positions
 bufferLength = 1e6; %bytes
@@ -179,18 +179,18 @@ end
 %% Plot the results
 
 % seperate x into hit and return segments
-Nhit = floor(T/dt);
-
-% load ball.mat
-load('ball.mat');
-[x,xd,o] = wam.calcRacketState([q;qd]);
-
-scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
-scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
-scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
-scatter3(x(1,1:Nhit),x(2,1:Nhit),x(3,1:Nhit),'r');
-scatter3(x(1,Nhit+1:end),x(2,Nhit+1:end),x(3,Nhit+1:end),'k');
-hold off;
+% Nhit = floor(T/dt);
+% 
+% % load ball.mat
+% load('ball.mat');
+% [x,xd,o] = wam.calcRacketState([q;qd]);
+% 
+% scatter3(ballRaw(1,:),ballRaw(2,:),ballRaw(3,:),'r');
+% scatter3(ballFilt(1,:),ballFilt(2,:),ballFilt(3,:),'y');
+% scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
+% scatter3(x(1,1:Nhit),x(2,1:Nhit),x(3,1:Nhit),'r');
+% scatter3(x(1,Nhit+1:end),x(2,Nhit+1:end),x(3,Nhit+1:end),'k');
+% hold off;
  
 %% Disconnect from zmq and SL
 disconnectFromSL(socket,address,context);
