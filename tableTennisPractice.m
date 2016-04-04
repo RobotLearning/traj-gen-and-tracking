@@ -15,10 +15,3 @@ STD.vel = 0.1;
 STD.camera = 0.0;
 tt = TableTennis(wam,wam2,q0,STD,OPT);
 tt.practice(q0,1);
-
-% Things to do for simulation
-%
-%{
-can we find better sim for Barrett WAM?
-can we add 4-link robot sim?
-%}

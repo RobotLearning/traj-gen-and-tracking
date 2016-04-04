@@ -120,6 +120,7 @@ classdef TableTennis < handle
             numLands = 0;
             eps = 0.0;
             maxSimTime = 3.0;
+            dt = 0.01;
             
             % Init filter
             filter = obj.initFilter();
@@ -255,6 +256,19 @@ classdef TableTennis < handle
                 qf = val(1:dofs)';
                 qfdot = val(dofs+1:2*dofs)';
                 T = val(end);
+                
+                %{
+                disp('Initializing with lookup table...');
+                fast = true;
+                % land the ball on the centre of opponents court
+                desBall(1) = 0.0;
+                desBall(2) = obj.TABLE.DIST - 3*obj.TABLE.LENGTH/4;
+                desBall(3) = obj.TABLE.Z;
+                time2reach = 0.5; % time to reach desired point on opponents court
+                racketDes = calcRacketStrategy(desBall,ballPred,ballTime,time2reach,fast);
+                racketDes.est = [qf;qfdot;T];
+                [qf,qfdot,T] = calcOptimalPoly(robot,racketDes,q0,time2return);
+                %}
             else
                 % Calculate ball outgoing velocities attached to each ball pos
                 tic
@@ -268,6 +282,11 @@ classdef TableTennis < handle
                 elapsedTimeForCalcDesRacket = toc;
                 fprintf('Elapsed time for racket computation: %f sec.\n',...
                     elapsedTimeForCalcDesRacket);
+                
+                % Initialize solution for optimal poly
+                timeEst = 0.8;
+                x0 = [q0;q0dot;timeEst];
+                racketDes.est = x0;
 
                 % Compute traj here
                 if obj.VHP.flag

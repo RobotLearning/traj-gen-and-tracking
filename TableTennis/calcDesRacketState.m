@@ -2,9 +2,9 @@
 % at a certain incoming (mean) ball position
 % Using the mirror law and inverse kinematics 
 
-function [racketPos, racketVel,racketOrient] = calcDesRacketState(ballPos,ballOutVel,ballInVel)
+function [racketPos, racketVel,racketOrient] = calcDesRacketState(ballPos,ballOutVel,ballInVel,par)
 
-loadTennisTableValues();
+CRR = par.CRR;
 
 % inverting the mirror law
 normal = (ballOutVel - ballInVel) ...

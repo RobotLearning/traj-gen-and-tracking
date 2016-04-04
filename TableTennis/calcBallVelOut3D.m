@@ -4,9 +4,11 @@
 % Reverting the nonlinear flight model and solving BVP to calculate 
 % the initial outgoing velocity vout
 
-function velOut = calcBallVelOut3D(ballDes,ballPos,time2reach,fast)
+function velOut = calcBallVelOut3D(ballDes,ballPos,time2reach,par)
 
-loadTennisTableValues();
+fast = par.fast;
+gravity = par.g;
+Cdrag = par.Cdrag;
 
 % desired pos is in the centre of opponents court
 ballOutVel(1) = (ballDes(1) - ballPos(1))/time2reach;
