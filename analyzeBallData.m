@@ -21,7 +21,7 @@ dropSet2 = [5,6,9,10,14,26,27,32,38,42,55,56,57];
 % what's wrong with sample 54? symplecticFlightModel does not terminate
 set = setdiff(set1,dropSet1);
 
-choose = 36; %set(end);
+choose = 39; %set(end);
 M = dlmread([demoFolder1,int2str(choose),'.txt']);
 scale = 0.001; % recorded in milliseconds
 t = scale * M(:,11);
@@ -129,8 +129,8 @@ bTillNet(:,1) = bTillNet(:,1) - bTillNet(1,1);
 
 % Get ball positions till bounce
 
-    % find the last ball position before first bounce
-    % detect first bounce
+% find the last ball position before first bounce
+% detect first bounce
 
 tol = 5e-2;    
 idxBallBounce = find(b(:,4) <= table_z + ball_radius + tol);
