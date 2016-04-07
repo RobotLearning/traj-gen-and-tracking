@@ -1,4 +1,14 @@
-%% Using Extended Kalman Filter to predict ball path after net
+%% AnalyzeBallData
+
+% analyzes the following prediction scenarios:
+% 
+% 1. prediction with nonlinear least squares [NLS] + 
+% nonlinear model till bounce and striking time
+% 
+% 2. prediction with (total) linear least squares
+% 
+% 3. prediction with Extended Kalman Filter with initial 
+% ball position and velocity calculated with NLS
 
 clc; clear; close all;
 
@@ -147,6 +157,7 @@ bTillTable = b(1:idxBallBounce,1:4);
 bTillTable(:,1) = bTillTable(:,1) - bTillTable(1,1);
 bBounce = bTillTable(end,1:4);
 tBounce = bBounce(1) - bTillNet(end,1);
+tBounceNLS = bBounce(1) - bTillNet(1,1);
 
 % checking something
 %bTillNet(:,1) = 1/60 * (1:size(bTillNet,1))';
@@ -156,9 +167,9 @@ tBounce = bBounce(1) - bTillNet(end,1);
 % % make sure t starts from 0
 bTillNet(:,1) = bTillNet(:,1) - bTillNet(1,1);
 guessBallInitVel = 1.0 * [-0.80; 7.0; 2.0];
-ballInit = [bTillNet(1,2:4)';guessBallInitVel];
+ballInitNLS = [bTillNet(1,2:4)';guessBallInitVel];
 % Run nonlinear least squares to estimate ballInit better
-x0 = [ballInit(:);Cdrag;gravity];
+x0 = [ballInitNLS(:);Cdrag;gravity];
 ballData = bTillNet;
 len = size(ballData,1);
 ballFun = @(b0,C,g) predictNextBall(b0,C,g,ballData,len);
@@ -166,11 +177,11 @@ fnc = @(x) ballFun(x(1:6),x(7),x(8));
 tic;
 x = lsqnonlin(fnc,x0);
 toc
-ballInit = x(1:6);
+ballInitNLS = x(1:6);
 Cdrag_est = x(7);
 gravity_est = x(8);
-p0 = ballInit(1:3);
-v0 = ballInit(4:6);
+p0 = ballInitNLS(1:3);
+v0 = ballInitNLS(4:6);
 % 
 params.C = Cdrag;
 params.g = gravity;
@@ -179,31 +190,38 @@ filter2 = EKF(dim,funState2,mats);
 filter2.initState([p0(:);v0(:)],eps);
 dt = 0.01;
 N_pred_NLS = tPredictNLS/dt;
+N_bounce = round(tBounceNLS/dt);
 for i = 1:N_pred_NLS
     filter2.linearize(dt,0);
     filter2.predict(dt,0);
-    ballLS(:,i) = C * filter2.x;
+    ballNLS(:,i) = C * filter2.x;
+    if i == N_bounce
+        % save position to compare later
+        bBouncePredict = ballNLS(:,i);
+    end
 end
 
 %% LS prediction based on projectile motion
 
-% tPredictLS = tPredictNLS;
-% len = size(bTillNet,1);
-% M = [ones(len,1),bTillNet(:,1)];
-% Y = bTillNet(:,2:3);
-% Yz = bTillNet(:,4) - 0.5*gravity*bTillNet(:,1).^2;
-% Y = [Y,Yz];
-% tol = 0.05;
-% ballInit(:,1) = tls(M,Y(:,1)); %pinv(M,tol)*Y;
-% ballInit(:,2) = tls(M,Y(:,2));
-% ballInit(:,3) = tls(M,Y(:,3));
-% 
-% dt = 0.01;
-% N_pred_LS = round(tPredictLS/dt);
-% tLS = dt * (1:N_pred_LS);
-% Mstar = [ones(N_pred_LS,1),tLS(:)];
-% ballLS = Mstar * ballInit + [zeros(N_pred_LS,2),0.5*gravity*tLS(:).^2];
-% ballLS = ballLS';
+%%{
+tPredictLS = tPredictNLS;
+len = size(bTillNet,1);
+M = [ones(len,1),bTillNet(:,1)];
+Y = bTillNet(:,2:3);
+Yz = bTillNet(:,4) - 0.5*gravity*bTillNet(:,1).^2;
+Y = [Y,Yz];
+tol = 0.05;
+ballInitLS(:,1) = tls(M,Y(:,1)); %pinv(M,tol)*Y;
+ballInitLS(:,2) = tls(M,Y(:,2));
+ballInitLS(:,3) = tls(M,Y(:,3));
+
+dt = 0.01;
+N_pred_LS = round(tPredictLS/dt);
+tLS = dt * (1:N_pred_LS);
+Mstar = [ones(N_pred_LS,1),tLS(:)];
+ballLS = Mstar * ballInitLS + [zeros(N_pred_LS,2),0.5*gravity*tLS(:).^2];
+ballLLS = ballLS';
+%}
 
 %% Predict the ball with EKF till striking time
 
@@ -263,11 +281,11 @@ ballEKFSmooth = C * xEKFSmooth;
 
 %% Plot predictions
 figure(3);
-scatter3(bx1,by1,bz1,'r');
+s1 = scatter3(bx1,by1,bz1,'r');
 hold on;
-scatter3(bx3,by3,bz3,'b');
-scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
-%scatter3(ballLS(1,:),ballLS(2,:),ballLS(3,:),'k');
+s2 = scatter3(bx3,by3,bz3,'b');
+%s3 = scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
+s3 = scatter3(ballNLS(1,:),ballNLS(2,:),ballNLS(3,:),'y');
 %scatter3(ballEKFSmooth(1,:),ballEKFSmooth(2,:),ballEKFSmooth(3,:));
 title('Filtered ball trajectory');
 grid on;
@@ -277,7 +295,10 @@ ylabel('y');
 zlabel('z');
 fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
-legend('cam1','cam3','EKF');
+s1.MarkerEdgeColor = s1.CData; % due to a bug in MATLAB R2015b
+s2.MarkerEdgeColor = s2.CData;
+s3.MarkerEdgeColor = s3.CData;
+legend('cam1','cam3','filter');
 hold off;
 
 disp('Difference between actual bouncing pt and predicted state');
@@ -288,9 +309,12 @@ fprintf('e1 = %f, e2 = %f, e3 = %f.\n',err(1),err(2),err(3));
 fprintf('Norm error = %f.\n',norm(err));
 
 disp('Difference between actual hitting pt and predicted state');
-err(1) = bx1(idx) - ballEKF(1,end);
-err(2) = by1(idx) - ballEKF(2,end);
-err(3) = bz1(idx) - ballEKF(3,end);
+% err(1) = bx1(idx) - ballEKF(1,end);
+% err(2) = by1(idx) - ballEKF(2,end);
+% err(3) = bz1(idx) - ballEKF(3,end);
+err(1) = bx1(idx) - ballNLS(1,end);
+err(2) = by1(idx) - ballNLS(2,end);
+err(3) = bz1(idx) - ballNLS(3,end);
 fprintf('e1 = %f, e2 = %f, e3 = %f.\n',err(1),err(2),err(3));
 fprintf('Norm error = %f.\n',norm(err));
 
