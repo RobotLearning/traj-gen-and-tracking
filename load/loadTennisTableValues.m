@@ -1,7 +1,9 @@
 %% Table Tennis parameters and values
 
 % Table Variables 
-dist_to_table = -1.15; %-3.50; % -0.80;
+if ~exist('dist_to_table')
+    dist_to_table = -1.15; %-3.50; % -0.80;
+end
 table_height = 0.76;
 table_length = 2.76; 
 net_height   = 0.144; %0.1525

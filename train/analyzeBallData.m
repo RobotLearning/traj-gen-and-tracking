@@ -29,14 +29,24 @@ dropSet1 = [17,20,22,23,24,29,31,32,34,35,38,41,48,53,54,56]; % bad recordings
 dropSet2 = [5,6,9,10,14,26,27,32,38,42,55,56,57];
 % what's wrong with sample 31? problem on the ekf-smoother bouncing 
 % what's wrong with sample 54? symplecticFlightModel does not terminate
-set = setdiff(set1,dropSet1);
+%set = setdiff(set1,dropSet1);
+demo = demoFolder1;
 
-choose = 39; %set(end);
-M = dlmread([demoFolder1,int2str(choose),'.txt']);
+% adapt between different datasets
+if strcmp(demo,demoFolder1)
+    dist_to_table = -0.80;
+    loadTennisTableValues();
+    IDX = 14;
+else 
+    dist_to_table = -1.15;
+    IDX = 20;
+end
+
+choose = 16; %set(end);
+M = dlmread([demo,int2str(choose),'.txt']);
 scale = 0.001; % recorded in milliseconds
 t = scale * M(:,11);
 % Second dataset includes cartesian positions so idx is 20 then
-IDX = 14; % 20
 robot = M(:,end-IDX:end);
 dof = N_DOFS;
 q = robot(:,2:dof+1);
