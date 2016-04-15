@@ -33,10 +33,14 @@ floor_level   = -1.71;
 
 % Contact parameters
 
+CRT = 0.90;
+CFTY = 1.10;
+CFTX = 1.10;
+
 % old coefficients from Katharina's times :D
-CRT = 0.86;
-CFTY = 0.72;
-CFTX = 0.68;
+% CRT = 0.86;
+% CFTY = 0.72;
+% CFTX = 0.68;
 
 % First dataset is noisy here
 % CRT = 0.8553; % coeff of restitution for table (i.e. for z-dir)

@@ -10,6 +10,7 @@ C = params.C;
 g = params.g;
 zTable = params.zTable;
 yNet = params.yNet;
+ballRadius = params.radius;
 tableLength = params.table_length;
 tableWidth = params.table_width;
 % coeff of restitution-friction vector
@@ -39,7 +40,8 @@ switch alg
 end
 
 % condition for bouncing
-if xNext(3) < zTable && abs(xNext(2) - yNet) < tableLength/2 && abs(xNext(1)) < tableWidth/2
+if xNext(3) < zTable + ballRadius && ...
+        abs(xNext(2) - yNet) < tableLength/2 && abs(xNext(1)) < tableWidth/2
     tol = 1e-4;
     dt1 = 0;
     dt2 = dt;

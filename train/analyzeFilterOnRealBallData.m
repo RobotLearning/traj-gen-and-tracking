@@ -12,7 +12,8 @@ initializeWAM;
 
 yCenter = dist_to_table - table_length/2;
 
-file = '../Desktop/realBallData1';
+dataSet = 2;
+file = ['../Desktop/realBallData',int2str(dataSet)];
 M = dlmread([file,'.txt']);
 % ball data
 B = M(1:2:end,:);
@@ -35,6 +36,7 @@ params.zTable = table_z;
 params.yNet = dist_to_table - table_y;
 params.table_length = table_length;
 params.table_width = table_width;
+params.radius = ball_radius;
 % coeff of restitution-friction vector
 params.CFTX = CFTX;
 params.CFTY = CFTY;
@@ -92,13 +94,27 @@ b3 = b3(idxDiffBallPos3,:);
 % if there is more than 1 second difference it means its a new trial
 diffBall3 = diff(b3);
 idxStart3 = find(diffBall3(:,1) > 1.0);
-idxStart3 = [1;idxStart3+1];
+
+% if second dataset then dont keep first trial
+if dataSet == 1
+    idxStart3 = [1;idxStart3+1];
+else
+    idxStart3 = idxStart3+1;
+end
+
 tStart3 = b3(idxStart3,1);
 numTrials = length(idxStart3);
 
 %% Predict ball using estimate (SL uses it for lookup table)
 
-trial = 50;
+badExamplesOnDataSet1 = [2,19,20];
+trial = 13;
+% DATASET 1
+% rebound coeffs dont fit well in 9,11,14,15,
+% 25,26,33,38 due to bad estimation/lower spin?
+% DATASET 2
+% rebound doesnt happen in trial 3, is it due to bad ballPred?
+% 10,12 has too many outliers in camera1
 
 b3est = [t3,B(idx3,12:17)];
 b3est = sortrows(b3est);
@@ -123,8 +139,12 @@ t3plot = b3(idxStart3(trial):idxStart3(trial+1)-1,1);
 b1plot = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),2:4);
 t1plot = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),1);
 
-% remove outliers in b1plot
-b1plot = b1plot(
+% remove outliers in b1plot after getting ball closest to robot
+[~,idxClosest2Robot] = max(b1plot(:,2));
+% diffBall1 = diff(b1plot);
+% idxEnd1 = find(diffBall1(:,2) < -1.0, 1);
+b1plot = b1plot(1:idxClosest2Robot,:);
+t1plot = t1plot(1:idxClosest2Robot);
 
 % find the index at bounce
 [~,idxBounce] = min(b3plot(:,3));
@@ -138,7 +158,7 @@ dt = 1/60;
 initVar = 1;
 filter.initState(ballLookUp(:),initVar);
 filter.linearize(dt,0);
-predictHorizon = dtPredTillLastBlob3; % only predict till last blob3
+predictHorizon = dtPredTillLastBlob1; % only predict till last blob3
 table.DIST = dist_to_table;
 table.LENGTH = table_length;
 table.Z = table_z;
@@ -152,7 +172,8 @@ figure;
 s1 = scatter3(b1plot(:,1),b1plot(:,2),b1plot(:,3),'r');
 hold on;
 s3 = scatter3(b3plot(:,1),b3plot(:,2),b3plot(:,3),'b');
-sP = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'y');
+%predColor = [0.200 0.200 0.200];
+sP = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'k');
 
 title('Predicted ball trajectory');
 grid on;
@@ -162,8 +183,8 @@ ylabel('y');
 zlabel('z');
 fill3(T(1:4,1),T(1:4,2),T(1:4,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
-s1.MarkerEdgeColor = s1.CData; % due to a bug in MATLAB R2015b
-s3.MarkerEdgeColor = s3.CData;
-sP.MarkerEdgeColor = sP.CData;
+% s1.MarkerEdgeColor = s1.CData; % due to a bug in MATLAB R2015b
+% s3.MarkerEdgeColor = s3.CData;
+% sP.MarkerEdgeColor = sP.CData;
 legend('cam1','cam3','filter');
 hold off;
