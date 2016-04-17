@@ -28,6 +28,7 @@ C = [eye(3),zeros(3)];
 params.C = Cdrag;
 params.g = gravity;
 params.zTable = table_z;
+params.radius = ball_radius;
 params.yNet = dist_to_table - table_y;
 params.table_length = table_length;
 params.table_width = table_width;
@@ -60,8 +61,8 @@ dropSet1 = [17,20,22,23,24,27,29,...
 dropSet2 = [5,6,9,10,14,19,26,27,32,38,42,55,56,57,60,62];
 % 60 caused NaN for some reason in filtering
 % 19 does not have good bounce data
-%set = setdiff(set1,dropSet1);
-set = setdiff(set2,dropSet2);
+set = setdiff(set1,dropSet1);
+%set = setdiff(set2,dropSet2);
 scale  = 0.001; % recorded in milliseconds
 
 % bouncing data to be used for regression
@@ -71,10 +72,10 @@ velAfterBounce = zeros(3,length(set));
 for idx = 1:length(set)
 
     %% Get rid of outliers
-    M = dlmread([demoFolder2,int2str(set(idx)),'.txt']);
-    %M = dlmread([demoFolder1,int2str(set(idx)),'.txt']);
-    robot = M(:,end-20:end);
-    %robot = M(:,end-14:end);
+    %M = dlmread([demoFolder2,int2str(set(idx)),'.txt']);
+    M = dlmread([demoFolder1,int2str(set(idx)),'.txt']);
+    %robot = M(:,end-20:end);
+    robot = M(:,end-14:end);
     q = robot(:,2:N_DOFS+1);
     qd = robot(:,N_DOFS+2:N_DOFS+8);
     t = scale * robot(:,1);

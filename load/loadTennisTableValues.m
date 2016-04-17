@@ -2,7 +2,7 @@
 
 % Table Variables 
 if ~exist('dist_to_table')
-    dist_to_table = -1.15; %-3.50; % -0.80;
+    dist_to_table = -1.15; % -0.80;
 end
 table_height = 0.76;
 table_length = 2.76; 
@@ -17,8 +17,8 @@ table_center = 0.0;
 % Table Tennis Ball Variables 
 ball_radius  = 0.02;
 ball_mass    = 0.0027;
-ball_contact_damping = 0; % filled in SimBall
-ball_contact_spring = 0;  % filled in SimBall
+ball_contact_damping = 0; 
+ball_contact_spring = 0; 
 
 % Table Tennis Racket Radius 
 racket_radius = 0.076; %not 0.08
@@ -31,42 +31,38 @@ stand_y       = -0.59;
 % Floor 
 floor_level   = -1.71;
 
-% Contact parameters
+% virtual hitting plane y level
+vhp = -0.6;
 
+%% Rebound and contact model parameters
+
+% Coefficients for rebound and contact model 
+% manually tuned for dataset realBallData1 & 2
 CRT = 0.90;
 CFTY = 1.10;
 CFTX = 1.10;
 
-% old coefficients from Katharina's times :D
+% old coefficients from SL
 % CRT = 0.86;
 % CFTY = 0.72;
 % CFTX = 0.68;
 
-% First dataset is noisy here
-% CRT = 0.8553; % coeff of restitution for table (i.e. for z-dir)
-% CFTY = 0.6892; % coeff of friction on Y-dir
-% CFTX = 0.6677; % coefficient of friction on X-dir
-
-% Second dataset is not noisy
-% CRT = 0.8156;
-% CFTY = 0.7016;
-% CFTX = 0.6780; 
-
 % coeff of restitution for racket
 CRR = 0.78; 
 
-% Air drag coefficients
-Cdrag = 0.1414;
+%% Flight model parameters
 
-% gravity
-gravity = -9.802;
+% flight model estimated using old dataset1
+gravity = -10.2540;
+Cdrag = 0.1442; % Air drag coefficient
 
-% Cdrag = 0.1476;
-% % probably due to top spin
-% gravity = -10.37;
+% estimated using new dataset1
+% gravity = -10.8393;
+% Cdrag = 0.1757;
 
-% virtual hitting plane y level
-vhp = -0.6;
+% old coefficients from SL
+% gravity = -9.801;
+% Cdrag = 0.1414;
 
 %% Values for drawing the table
 
