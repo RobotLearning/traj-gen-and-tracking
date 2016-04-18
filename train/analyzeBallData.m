@@ -138,13 +138,19 @@ b1plot = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),2:4);
 t1plot = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),1);
 
 % remove outliers in b1plot after getting ball closest to robot
-[~,idxClosest2Robot] = max(b1plot(:,2));
-% diffBall1 = diff(b1plot);
-% idxEnd1 = find(diffBall1(:,2) < -1.0, 1);
-b1plot = b1plot(1:idxClosest2Robot,:);
-t1plot = t1plot(1:idxClosest2Robot);
+% [~,idxClosest2Robot] = max(b1plot(:,2));
+% % diffBall1 = diff(b1plot);
+% % idxEnd1 = find(diffBall1(:,2) < -1.0, 1);
+% b1plot = b1plot(1:idxClosest2Robot,:);
+% t1plot = t1plot(1:idxClosest2Robot);
 
 % use ransac to further prune outliers
+% outlier detection again
+outlierIdx = detectOutlierBalls(t1plot,b1plot);
+inlierIdx = setdiff(1:length(t1plot),outlierIdx);
+b1plot = b1plot(inlierIdx,:);
+t1plot = t1plot(inlierIdx,:);
+    
 
 % find the index at bounce
 [~,idxBounce] = min(b3plot(:,3));
@@ -158,7 +164,7 @@ dt = 1/60;
 initVar = 1;
 filter.initState(ballLookUp(:),initVar);
 filter.linearize(dt,0);
-predictHorizon = dtPredTillLastBlob1; % only predict till last blob3
+predictHorizon = dtPredTillLastBlob3; % only predict till last blob3
 table.DIST = dist_to_table;
 table.LENGTH = table_length;
 table.Z = table_z;

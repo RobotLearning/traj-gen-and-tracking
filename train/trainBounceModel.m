@@ -103,8 +103,10 @@ for idx = 1:length(set)
     data = data(1:idxClosest2Robot,:);
     time = time(1:idxClosest2Robot);
     % outlier detection again
-    
-    
+    outlierIdx = detectOutlierBalls(time,data);
+    inlierIdx = setdiff(1:length(time),outlierIdx);
+    data = data(inlierIdx,:);
+    time = time(inlierIdx,:);
     
 
 
