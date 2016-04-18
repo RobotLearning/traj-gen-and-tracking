@@ -129,6 +129,7 @@ if ~isempty(idxJump)
     idxBallNet = idxBallNet(1:idxJump(1));
 end
 bTillNet = b(idxBallNet,1:4);
+tPredictTillLastBallLS = tStrike - bTillNet(1,1);
 tPredictTillLastBall = tStrike - bTillNet(end,1);
 
 % Get ball positions till bounce
@@ -174,18 +175,18 @@ ballInitNLS = x(1:6);
 p0 = ballInitNLS(1:3);
 v0 = ballInitNLS(4:6);
 
-%% LS prediction based on projectile motion on last 12 samples
+%% LS prediction based on projectile motion 
 
-%{
-sampleSize = 12; %size(bTillNet,1);
+%%{
+sampleSize = size(bTillNet,1);
 M = [ones(sampleSize,1),...
     bTillNet(end-sampleSize+1:end,1),bTillNet(end-sampleSize+1:end,1).^2];
 Y = bTillNet(end-sampleSize+1:end,2:4); %2:3
 % Yz = bTillNet(:,4) - 0.5*gravity*bTillNet(:,1).^2;
 % Y = [Y,Yz];
-tol = 0.00;
+tol = 0.001;
 betaPreBounce = M \ Y;
-%ballInitLS = pinv(M,tol)*Y;
+%betaPreBounce = pinv(M,tol)*Y;
 
 % find the time till bounce
 
@@ -215,7 +216,7 @@ y = [b*tBouncePredLS + c; (2*a*tBouncePredLS + b)*M - 2*a*tBouncePredLS];
 betaAfterBounce = mat \ y;
 betaAfterBounce = [betaAfterBounce; a];
 
-N_pred_LS = round((tPredictLS(end) - tBouncePredLS)/dt);
+N_pred_LS = round((tPredictTillLastBallLS - tBouncePredLS)/dt);
 tLS = tBouncePredLS + dt * (1:N_pred_LS);
 MstarAfter = [ones(N_pred_LS,1),tLS(:),tLS(:).^2];
 ballLSAfter = MstarAfter * betaAfterBounce;
@@ -280,7 +281,7 @@ s1 = scatter3(b1(1:idxStrike,1),b1(1:idxStrike,2),b1(1:idxStrike,3),'r');
 hold on;
 s2 = scatter3(b3(1:idxMaxY,1),b3(1:idxMaxY,2),b3(1:idxMaxY,3),'b');
 s3 = scatter3(ballEKF(1,:),ballEKF(2,:),ballEKF(3,:));
-%s4 = scatter3(ballLLS(1,:),ballLLS(2,:),ballLLS(3,:),'y');
+s4 = scatter3(ballLLS(1,:),ballLLS(2,:),ballLLS(3,:),'y');
 title('Filtered ball trajectory');
 grid on;
 axis equal;
@@ -292,8 +293,8 @@ fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 s1.MarkerEdgeColor = s1.CData; % due to a bug in MATLAB R2015b
 s2.MarkerEdgeColor = s2.CData;
 s3.MarkerEdgeColor = s3.CData;
-%s4.MarkerEdgeColor = s4.CData;
-legend('cam1','cam3','EKF-NLS');
+s4.MarkerEdgeColor = s4.CData;
+legend('cam1','cam3','EKF-NLS','polyfit');
 hold off;
 
 

@@ -1,4 +1,4 @@
-%% Train bounce model
+%% Train bounce model for old data
 
 clc; clear; close all;
 
