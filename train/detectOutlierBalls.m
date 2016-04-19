@@ -22,7 +22,7 @@ matPost = [ones(n-idxBallBounce,1),tPost,tPost.^2];
 if ~isempty(idxBallBounce)
 
     iter = 1000;
-    num = round(n/2);
+    num = round(n/5);
     threshDist = 0.2;
     outlierRatio = 0.5;
     inlierRatio = 1 - outlierRatio;
@@ -44,6 +44,20 @@ if ~isempty(idxBallBounce)
         timePost = t(idxPost);
         ballPost = b(idxPost,:);
         mat2 = [ones(num-nPre,1),timePost,timePost.^2];
+        
+        m = betaPreBounce(:,3);
+        a = m(3);
+        b = m(2);
+        c = m(1) - table_z - ball_radius;
+        tBounce = (-b - sqrt(b^2 - 4*a*c))/(2*a);
+        
+        c = betaPreBounce(1,:);
+b = betaPreBounce(2,:);
+a = betaPreBounce(3,:);
+y = [b*tBouncePredLS + c; (2*a*tBouncePredLS + b)*M - 2*a*tBouncePredLS];
+betaAfterBounce = mat \ y;
+betaAfterBounce = [betaAfterBounce; a];
+        
         betaPostBounce = mat2 \ ballPost;
         % get the errors
         errPre = bPre - matPre * betaPreBounce;
