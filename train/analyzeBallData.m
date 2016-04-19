@@ -102,7 +102,7 @@ numTrials = length(idxStart3);
 
 %% Predict ball using estimate (SL uses it for lookup table)
 
-trial = 4;
+trial = 3;
 % DATASET 1
 % badExamples = [2,19,20];
 % rebound coeffs dont fit well in 9,11,14,15,
@@ -138,11 +138,9 @@ b1plot = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),2:4);
 t1plot = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),1);
 
 % remove outliers in b1plot after getting ball closest to robot
-% [~,idxClosest2Robot] = max(b1plot(:,2));
-% % diffBall1 = diff(b1plot);
-% % idxEnd1 = find(diffBall1(:,2) < -1.0, 1);
-% b1plot = b1plot(1:idxClosest2Robot,:);
-% t1plot = t1plot(1:idxClosest2Robot);
+[~,idxClosest2Robot] = max(b1plot(:,2));
+b1plot = b1plot(1:idxClosest2Robot,:);
+t1plot = t1plot(1:idxClosest2Robot);
 
 % use ransac to further prune outliers
 % outlier detection again
