@@ -102,9 +102,10 @@ numTrials = length(idxStart3);
 
 %% Predict ball using estimate (SL uses it for lookup table)
 
-trial = 3;
+trial = 17;
 % DATASET 1
 % badExamples = [2,19,20];
+% in example2 ballgun throws 2 balls
 % rebound coeffs dont fit well in 9,11,14,15,
 % 25,26,33,38 due to bad estimation/lower spin?
 % DATASET 2
@@ -144,15 +145,13 @@ t1plot = t1plot(1:idxClosest2Robot);
 
 % use ransac to further prune outliers
 % outlier detection again
-outlierIdx = detectOutlierBalls(t1plot,b1plot);
+outlierIdx = detectOutlierBalls(t1plot,b1plot,1);
 inlierIdx = setdiff(1:length(t1plot),outlierIdx);
 b1plot = b1plot(inlierIdx,:);
 t1plot = t1plot(inlierIdx,:);
-    
 
 % find the index at bounce
 [~,idxBounce] = min(b3plot(:,3));
-
 dtPredTillBounce =  t3plot(idxBounce) - tLookUp;
 dtPredTillLastBlob3 = t3plot(end) - tLookUp;
 dtPredTillLastBlob1 = t1plot(end) - tLookUp;

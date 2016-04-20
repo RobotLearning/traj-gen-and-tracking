@@ -213,7 +213,6 @@ for idx = 1:length(set)
     zAfterBounce = xEKFSmooth(3,1);
     yAfterBounce = xEKFSmooth(2,1);
     dt = 0.001;
-    i = 1;
     filter.initState(xEKFSmooth(:,1),VekfSmooth(:,:,1));
     while zAfterBounce > table_z + ball_radius + tol && yAfterBounce > yAtBounce
         filter.predict(-dt,0);

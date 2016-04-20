@@ -53,12 +53,12 @@ CRR = 0.78;
 %% Flight model parameters
 
 % flight model estimated using old dataset1
-gravity = -10.2540;
-Cdrag = 0.1442; % Air drag coefficient
+% gravity = -10.2540;
+% Cdrag = 0.1442; % Air drag coefficient
 
 % estimated using new dataset1
-% gravity = -10.8393;
-% Cdrag = 0.1757;
+gravity = -10.8393;
+Cdrag = 0.1757;
 
 % old coefficients from SL
 % gravity = -9.801;
