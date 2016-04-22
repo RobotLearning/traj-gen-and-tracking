@@ -231,7 +231,7 @@ classdef Ball < handle
             distNextToRacketPlane = racketNormal'*diffNext;
 
             % find the precise hitting time with bisection  
-            if distOnRacketPlane < racketRadius && distNextToRacketPlane < 0 %cross
+            if distOnRacketPlane < racketRadius && distNextToRacketPlane < obj.radius %cross
                 
                 tol = 1e-4; % obj.radius
                 dt1 = 0;

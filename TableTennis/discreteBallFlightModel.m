@@ -13,10 +13,9 @@ yNet = params.yNet;
 ballRadius = params.radius;
 tableLength = params.table_length;
 tableWidth = params.table_width;
-% coeff of restitution-friction vector
-K(1) = params.CFTX;
-K(2) = params.CFTY;
-K(3) = params.CRT;
+% coeff of restitution-friction matrix
+% M = params.BMAT;
+M = diag([params.CFTX; params.CFTY; -params.CRT]);
 alg = params.ALG;
 
 xNext = zeros(6,1);
@@ -62,7 +61,7 @@ if xNext(3) < zTable + ballRadius && ...
         iter = iter + 1;
     end
     % rebound
-    xBounce(4:6) = reboundModel(xBounce(4:6),K);
+    xBounce(4:6) = reboundModel(xBounce(4:6),M);
     % integrate for the rest
     dt = dt - dtBounce;
     xNext(4:6) = xBounce(4:6) + dt * ballFlightModel(xBounce(4:6),C,g);
@@ -72,13 +71,8 @@ end
 end
 
 % K is the coefficient values in x-y-z directions
-function xdot = reboundModel(xdot,K)
+function xdot = reboundModel(xdot,M)
 
-if K(3) > 0
-    K(3) = -K(3); % make sure value is below zero
-end
-
-M = diag(K);
 xdot = M * xdot;
     
 end

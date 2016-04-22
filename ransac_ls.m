@@ -1,6 +1,6 @@
 % RANSAC algorithm for robust estimation/fitting for linear least squares
 %
-% data: a 2xn dataset with n data points
+% x,y: a 2xn dataset with n data points
 % num: the number of points for fitting
 % iter: the number of iterations
 % threshDist: the threshold of the distances between points and the fitting line
@@ -10,9 +10,10 @@ function betaBest = ransac_ls(x,y,num,iter,threshDist,outlierRatio)
 
 m = size(x,2); % Dimension of fitting
 n = size(x,1); % Total number of points
+d = size(y,2); % Number of 'experiments' to fit
 assert(n == size(y,1),'Number of points do not match!');
 bestInlierNum = 0; % Best fitting line with largest number of inliers
-betaBest = zeros(m,1);
+betaBest = zeros(m,d);
 inlierRatio = 1 - outlierRatio;
 
 for i = 1:iter

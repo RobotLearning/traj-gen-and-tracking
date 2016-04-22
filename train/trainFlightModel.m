@@ -76,7 +76,6 @@ else
     idxStart3 = idxStart3+1;
 end
 
-tStart3 = b3(idxStart3,1);
 numTrials = length(idxStart3);
 
 %% For each dataset estimate initial b0 values
@@ -84,24 +83,27 @@ numTrials = length(idxStart3);
 set1 = 15:65; % dataset of demonstrations
 dropSet1 = [2,19,20]; % bad recordings
 set = setdiff(1:numTrials,dropSet1);
+tStart3 = b3(idxStart3,1);
 idxStart3(end+1) = size(b3,1)+1; % for the last dataset
+tStart3(end+1) = b3(end,1) + 0.01;
 
 for idx = 1:length(set)
     
+    %% PRE BOUNCE ESTIMATION
     trial = set(idx);
-    data = b3(idxStart3(trial):idxStart3(trial+1)-1,2:4);
-    time = b3(idxStart3(trial):idxStart3(trial+1)-1,1);
-    time = time - time(1);
-    [~,idxBounce] = min(data(:,3));
-    time = time(1:idxBounce);
-    data = data(1:idxBounce,:);
-    ballData = [time,data];
+    ballPreBounce = b3(idxStart3(trial):idxStart3(trial+1)-1,2:4);
+    timePreBounce = b3(idxStart3(trial):idxStart3(trial+1)-1,1);
+    timePreBounce = timePreBounce - timePreBounce(1);
+    [~,idxBounce] = min(ballPreBounce(:,3));
+    timePreBounce = timePreBounce(1:idxBounce);
+    ballPreBounce = ballPreBounce(1:idxBounce,:);
+    ballData = [timePreBounce,ballPreBounce];
     
     % Provide good initial ball estimates    
     % using polyfit on first 12 balls
     sampleSize = 12; 
-    M = [ones(sampleSize,1),time(1:sampleSize),time(1:sampleSize).^2];
-    Y = data(1:sampleSize,:);
+    M = [ones(sampleSize,1),timePreBounce(1:sampleSize),timePreBounce(1:sampleSize).^2];
+    Y = ballPreBounce(1:sampleSize,:);
     beta = M \ Y;
     ballInitPosEst = beta(1,:);
     ballInitVelEst = beta(2,:);
@@ -119,26 +121,96 @@ for idx = 1:length(set)
     ballInit = x(1:6);
     
     % data used for optimization is saved here
-    ballTrain.bInit(:,idx) = ballInit(:);
-    ballTrain.data{idx} = ballData;
-    ballTrain.error{idx} = err;
-end
+    ball.pre.bInit(:,idx) = ballInit(:);
+    ball.pre.data{idx} = ballData;
+    ball.pre.error{idx} = err;
+    
+    %% POST BOUNCE PARAMETER ESTIMATION
+    
+    ballPostBounce = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),2:4);
+    timePostBounce = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),1);
+    timePostBounce = timePostBounce - timePostBounce(1);
 
-save('train/ballTrain.mat','ballTrain');
+    % remove outliers in b1plot after getting ball closest to robot
+    [~,idxClosest2Robot] = max(ballPostBounce(:,2));
+    ballPostBounce = ballPostBounce(1:idxClosest2Robot,:);
+    timePostBounce = timePostBounce(1:idxClosest2Robot);
+ 
+    % use ransac to further prune outliers
+    % outlier detection again
+    outlierIdx = detectOutlierBalls(timePostBounce,ballPostBounce,1);
+    inlierIdx = setdiff(1:length(timePostBounce),outlierIdx);
+    ballPostBounce = ballPostBounce(inlierIdx,:);
+    timePostBounce = timePostBounce(inlierIdx);
+    
+    % get the post bounce balls
+    idxBounce = findReboundIndex(ballPostBounce);
+    ballPostBounce = ballPostBounce(idxBounce+1:end,:);
+    timePostBounce = timePostBounce(idxBounce+1:end);
+    ballData = [timePostBounce,ballPostBounce];
+    
+    % Provide good initial ball estimates    
+    % using polyfit on first 12 balls
+    sampleSize = min(length(timePostBounce),12); 
+    M = [ones(sampleSize,1),timePostBounce(1:sampleSize),timePostBounce(1:sampleSize).^2];
+    Y = ballPostBounce(1:sampleSize,:);
+    beta = M \ Y;
+    ballInitPosEst = beta(1,:);
+    ballInitVelEst = beta(2,:);
+    ballInit = [ballInitPosEst,ballInitVelEst];
+    
+    % Run nonlinear least squares to estimate ballInit better
+    x0 = ballInit(:);
+    ballFun = @(b0,C,g) predictNextBall(b0,C,g,ballData,length(ballData));
+    fnc = @(x) ballFun(x,Cdrag,gravity);
+    [x,err] = lsqnonlin(fnc,x0,[],[],options);
+    ballInit = x(1:6);
+    
+    % data used for optimization is saved here
+    ball.post.bInit(:,idx) = ballInit(:);
+    ball.post.data{idx} = ballData;
+    ball.post.error{idx} = err;
+end
 
 %% Nonlinear least squares to estimate flight model parameters
 
-b0 = ballTrain.bInit(:);
+b0 = ball.pre.bInit(:);
 x0 = [b0; Cdrag; gravity];
-data = [];
+ballPreBounce = [];
 for i = 1:length(set)
-    data = [data;ballTrain.data{idx}];
-    lenSet(i) = size(ballTrain.data{idx},1);
+    ballPreBounce = [ballPreBounce;ball.pre.data{idx}];
+    lenSet(i) = size(ball.pre.data{idx},1);
 end
-ballFun = @(b0,C,g) predictNextBall(b0,C,g,data,lenSet);
+ballFun = @(b0,C,g) predictNextBall(b0,C,g,ballPreBounce,lenSet);
 fun = @(x) ballFun(x(1:end-2),x(end-1),x(end));
 options = optimoptions('lsqnonlin','Display','iter','MaxFunEvals',3000);
 x = lsqnonlin(fun,x0,[],[],options);
-C = x(end-1)
-g = x(end)
+C_pre = x(end-1)
+g_pre = x(end)
+
+b0 = ball.post.bInit(:);
+x0 = x;
+% x0 = [b0; C_pre; g_pre];
+%x0 = [x(1:end-2); Cdrag; gravity];
+ballPostBounce = [];
+for i = 1:length(set)
+    ballPostBounce = [ballPostBounce;ball.post.data{idx}];
+    lenSet(i) = size(ball.post.data{idx},1);
+end
+ballFun = @(b0,C,g) predictNextBall(b0,C,g,ballPostBounce,lenSet);
+fun = @(x) ballFun(x(1:end-2),x(end-1),x(end));
+x = lsqnonlin(fun,x0,[],[],options);
+C_post = x(end-1)
+g_post = x(end)
+
 %}
+
+%% Estimate initial distribution as a gaussian
+
+ballInit = ballPreBounce.bInit;
+N = size(ballInit,2);
+mu_hat = sum(ballInit,2)/N;
+res = ballInit - repmat(mu_hat,1,N);
+Sigma_hat = res * res' / (N-1);
+
+save('train/ballTrain1.mat','ball');

@@ -37,15 +37,22 @@ vhp = -0.6;
 %% Rebound and contact model parameters
 
 % Coefficients for rebound and contact model 
-% manually tuned for dataset realBallData1 & 2
-CRT = 0.90;
-CFTY = 1.10;
-CFTX = 1.10;
+% fitted for dataset realBallData1
+
+CRT = 0.96;
+CFTY = 1.20;
+CFTX = 1.20;
 
 % old coefficients from SL
 % CRT = 0.86;
 % CFTY = 0.72;
 % CFTX = 0.68;
+
+% nondiagonal matrix
+BMAT = [1.23 0.33 0.36;
+        0.10 0.65 -0.71; 
+        -0.19 0.62 -0.29];
+
 
 % coeff of restitution for racket
 CRR = 0.78; 
@@ -57,8 +64,12 @@ CRR = 0.78;
 % Cdrag = 0.1442; % Air drag coefficient
 
 % estimated using new dataset1
-gravity = -10.8393;
-Cdrag = 0.1757;
+gravity = -11.06;
+Cdrag = 0.1753;
+
+% post bounce
+Cdrag_post = 0.1968;
+gravity_post = -10.83;
 
 % old coefficients from SL
 % gravity = -9.801;

@@ -105,10 +105,10 @@ numTrials = length(idxStart3);
 
 %% For each dataset estimate initial b0 values
 
-set1 = 15:65; % dataset of demonstrations
-dropSet1 = [2,19,20]; % bad recordings
-set = setdiff(1:numTrials,dropSet1);
+dropSet = [2,19,20,32]; % bad recordings
+set = setdiff(1:numTrials,dropSet);
 idxStart3(end+1) = size(b3,1)+1; % for the last dataset
+tStart3(end+1) = b3(end,1) + 0.01;
 
 for idx = 1:length(set)
     
@@ -135,18 +135,11 @@ for idx = 1:length(set)
     time = time(inlierIdx,:);
     
     % get bounce index for balls from camera 1
-    tol = 5e-2;    
-    idxBallBounce = [];
-    while isempty(idxBallBounce)
-        idxBallBounce = find(data(:,3) <= table_z + ball_radius + tol, 1);
-        tol = 1.2 * tol;
-    end
-    [~,ind] = min(data(idxBallBounce,3));
-    idxBallBounce = idxBallBounce(ind) + 1;
+    idxBallBounce = findReboundIndex(data);
     timePostBounce = time(idxBallBounce:end);
     ballPostBounce = data(idxBallBounce:end,:);
     
-    %% FIT TRAJECTORY TO FIND INITIAL BALL VELOCITY
+    %% RUN KALMAN SMOOTHER TO GET VELOCITIES BEFORE AND AFTER REBOUND
     
     % Provide good initial ball estimates    
     % using polyfit on first 12 balls
@@ -169,25 +162,12 @@ for idx = 1:length(set)
     [x,err] = lsqnonlin(fnc,x0,[],[],options);
     ballInit = x(1:6);
     
-    %% RUN KALMAN SMOOTHER TO GET VELOCITIES BEFORE AND AFTER REBOUND
-    
-    filter.initState(ballInit(:),eps);
-    u = zeros(1,size(ballPreBounce,1));
-    [xEKFSmooth, ~] = filter.smooth(timePreBounce,ballPreBounce',u);
-    ballEKFSmoothPreBounce = C * xEKFSmooth;
-    
-    % Predict if necessary to get velocity before bounce
-    zBeforeBounce = ballEKFSmoothPreBounce(3,end);
-    dt = 0.001;
-    while zBeforeBounce > table_z + ball_radius
-        filter.predict(dt,0);
-        zBeforeBounce = filter.x(3);
-    end    
-    % Get velocity before bounce
-    velBeforeBounce(:,idx) = filter.x(4:6);
+    % get the pre-rebound velocity using Kalman smoother
+    velBeforeBounce(:,idx) = calcReboundVel(ballInit,ballPreBounce,timePreBounce,filter,1);
     
     % provide good initial ball estimate for the 2nd kalman smoother
     timePostBounce = timePostBounce - timePostBounce(1);
+    sampleSize = min(12,length(timePostBounce));
     M = [ones(sampleSize,1),timePostBounce(1:sampleSize),timePostBounce(1:sampleSize).^2];
     Y = ballPostBounce(1:sampleSize,:);
     beta = M \ Y;
@@ -195,18 +175,66 @@ for idx = 1:length(set)
     ballInitVelEst = beta(2,:);
     ballInit = [ballInitPosEst,ballInitVelEst];
     
-    % run kalman smoother one last time
-    filter.initState(ballInit(:),eps);
-    u = zeros(1,size(ballPostBounce,1));
-    [xEKFSmooth, ~] = filter.smooth(timePostBounce,ballPostBounce',u);
-    ballEKFSmoothPostBounce = C * xEKFSmooth;
-    % Predict if necessary to get velocity after bounce
-    zAfterBounce = ballEKFSmoothPostBounce(3,1); 
-    while zAfterBounce > table_z + ball_radius
-        filter.predict(-dt,0);
-        zAfterBounce = filter.x(3);
-    end    
-    % Get velocity before bounce
-    velAfterBounce(:,idx) = filter.x(4:6);
+    % Run nonlinear least squares to estimate ballInit better
+    x0 = ballInit(:);
+    ballFun = @(b0,C,g) predictNextBall(b0,C,g,[timePostBounce,ballPostBounce],length(ballPostBounce));
+    fnc = @(x) ballFun(x,Cdrag_post,gravity_post);
+    [x,err] = lsqnonlin(fnc,x0,[],[],options);
+    ballInit = x(1:6);
+    
+    % there might be a spin change after rebound
+    params.C = Cdrag_post;
+    params.g = gravity_post;
+    funState = @(x,u,dt) discreteBallFlightModel(x,dt,params);
+    filter.f = funState;
+    velAfterBounce(:,idx) = calcReboundVel(ballInit,ballPostBounce,timePostBounce,filter,0);
 
 end
+
+%% ESTIMATE REBOUND MATRIX
+
+% WITH RANSAC + LS
+% beta1 = ransac_ls(velBeforeBounce(1,:)',velAfterBounce(1,:)',5,1000,0.5,0.5);
+% beta2 = ransac_ls(velBeforeBounce(2,:)',velAfterBounce(2,:)',5,1000,0.5,0.5);
+% beta3 = ransac_ls(velBeforeBounce(3,:)',velAfterBounce(3,:)',5,1000,0.2,0.5);
+% beta = ransac_ls(velBeforeBounce',velAfterBounce',10,1000,0.2,0.5);
+% beta = beta';
+
+% WITH LLS
+% beta1 = velBeforeBounce(1,:)' \ velAfterBounce(1,:)';
+% beta2 = velBeforeBounce(2,:)' \ velAfterBounce(2,:)';
+% beta3 = velBeforeBounce(3,:)' \ velAfterBounce(3,:)';
+% B = diag([beta1,beta2,beta3]);
+B = velBeforeBounce' \ velAfterBounce';
+B = B';
+
+% LLS WITH A CONSTANT TERM 
+% M = [velBeforeBounce',ones(size(velBeforeBounce,2),1)];
+% B = M \ velAfterBounce';
+% B = B';
+
+%velAfterFit = beta * velBeforeBounce;
+velAfterFit = B * velBeforeBounce;
+% velAfterFit = B * M';
+figure;
+title('Velocity after vs. before');
+subplot(3,1,1);
+scatter(velBeforeBounce(1,:),velAfterBounce(1,:));
+hold on;
+scatter(velBeforeBounce(1,:),velAfterFit(1,:));
+hold off;
+subplot(3,1,2);
+scatter(velBeforeBounce(2,:),velAfterBounce(2,:));
+hold on;
+scatter(velBeforeBounce(2,:),velAfterFit(2,:));
+hold off;
+subplot(3,1,3);
+scatter(velBeforeBounce(3,:),velAfterBounce(3,:));
+hold on;
+scatter(velBeforeBounce(3,:),velAfterFit(3,:));
+hold off;
+
+figure;
+scatter3(velAfterBounce(1,:),velAfterBounce(2,:),velAfterBounce(3,:));
+hold on;
+scatter3(velAfterFit(1,:),velAfterFit(2,:),velAfterFit(3,:));

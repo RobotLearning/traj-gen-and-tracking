@@ -67,22 +67,6 @@ function outlierIdx = detectOutlierBalls(t,ball,camId)
 
 end
 
-% function to find the index of the balldata closest to rebound in a robust way
-function idx = findReboundIndex(ball,table_z,ball_radius)
-
-    loadTennisTableValues();
-    % check if there is a bounce
-    tol = 5e-2;    
-    idxBallBounce = [];
-    while isempty(idxBallBounce)
-        idxBallBounce = find(ball(:,3) <= table_z + ball_radius + tol, 1);
-        tol = 1.2 * tol;
-    end
-    idx = idxBallBounce(1);
-
-    
-end
-
 % Fit 2nd order polynomials in x-y-z
 function [betaPre,betaPost] = fitPoly(t,ball,idxPre,idxPost,camId)
 

@@ -31,6 +31,7 @@ C = [eye(3),zeros(3)];
 params.C = Cdrag;
 params.g = gravity;
 params.zTable = table_z;
+params.radius = ball_radius;
 params.yNet = dist_to_table - table_y;
 params.table_length = table_length;
 params.table_width = table_width;
@@ -38,12 +39,14 @@ params.table_width = table_width;
 params.CFTX = CFTX;
 params.CFTY = CFTY;
 params.CRT = CRT;
+params.ALG = 'RK4';
 
-funState = @(x,u,dt) symplecticFlightModel(x,dt,params);
+funState = @(x,u,dt) discreteBallFlightModel(x,dt,params);
 % very small but nonzero value for numerical stability
 mats.O = eps * eye(dim);
 mats.C = C;
 mats.M = eps * eye(3);
+
 filterPre = EKF(dim,funState,mats);
 filterAfter = EKF(dim,funState,mats);
 
@@ -119,10 +122,10 @@ for idx = 2 %1:length(set)
     
     %% Estimate striking time roughly
     % Get cartesian coordinates of robot trajectory
-    [x,xd,o] = wam.kinematics(Q');
+    [racketPos,racketVel,orient] = wam.kinematics(Q');
 
     % find closest points in space as a first estimate
-    diffBallRobot = b(:,2:4)-x';
+    diffBallRobot = b(:,2:4)-racketPos';
     distBallRobot = diag(diffBallRobot * diffBallRobot');
     [minDist,idxStrike] = min(distBallRobot);
     tStrike = b(idxStrike,1);
@@ -140,21 +143,36 @@ for idx = 2 %1:length(set)
     [xEKFSmoothPre, VekfSmoothPre] = filterPre.smooth(tTillStrike,bTillStrike(:,2:4)',u);
     ballEKFSmoothPreStrike = C * xEKFSmoothPre;
     
+    %% Update the striking time estimate
+    
+    windowTime = 0.2;
+    dt = 0.01;
+    timePossibleStrikes =  b(tTillStrike > timeStrike - windowTime/2);
+    
+    diff = obj.pos - racketPos;
+    distToRacketPlane = racketNormal'*diff;
+    distOnRacketPlane = sqrt(diff'*diff - distToRacketPlane^2);
+    
+    racketRot = quat2Rot(orient);
+    racketNormal = racketRot(:,3);
+    
+    idxStrike = find(distOnRacketPlane < racket_radius & distNextToRacketPlane < ball_radius,1);
+    if distOnRacketPlane < racket_radius && distNextToRacketPlane < 0
+    
     %% Fit again a Kalman smoother from strike onwards
     
-    % ELIMINATE BALL POSITIONS THAT ARE CRAZY!
-    bAfterStrike = b(idxStrike+1:end,1:4);
+    bAfterStrike = b(b(:,1) >= tStrike & b(:,end) == 3,1:4);
     obsLen = size(bAfterStrike,1);
     % initialize the state with first observation and first derivative est.
     p0 = ballEKFSmoothPreStrike(:,end);
     % Calculate outgoing velocity using conservation of momentum
     velBallPreStrike(:,idx) = xEKFSmoothPre(4:end,end);
     % Get the racket prenormal
-    quatRacketStrike = o(:,idxStrike);
+    quatRacketStrike = orient(:,idxStrike);
     R = quat2Rot(quatRacketStrike);
     racketNormal = R(:,3); % of unit length
     % Get the racket velocity
-    velRacket = xd(:,idxStrike);
+    velRacket = racketVel(:,idxStrike);
     velBallPreStrikeNormal = velBallPreStrike(:,idx)' * racketNormal;
     velBallAlongRacket = velBallPreStrike(:,idx) - velBallPreStrikeNormal .* racketNormal;
     velRacketAlongNormal = velRacket' * racketNormal;

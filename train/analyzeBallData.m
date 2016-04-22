@@ -8,8 +8,6 @@ clc; clear; close all;
 % load table parameters
 loadTennisTableValues;
 
-y_center = dist_to_table - table_length/2;
-
 dataSet = 1;
 file = ['../Desktop/realBallData',int2str(dataSet)];
 M = dlmread([file,'.txt']);
@@ -31,6 +29,7 @@ params.table_length = table_length;
 params.table_width = table_width;
 params.radius = ball_radius;
 % coeff of restitution-friction vector
+params.BMAT = BMAT;
 params.CFTX = CFTX;
 params.CFTY = CFTY;
 params.CRT = CRT;
@@ -90,7 +89,7 @@ b3 = b3(idxDiffBallPos3,:);
 diffBall3 = diff(b3);
 idxStart3 = find(diffBall3(:,1) > 1.0);
 
-% if second dataset then dont keep first trial
+% if second dataset then dont keep first trial because it is bad
 if dataSet == 1
     idxStart3 = [1;idxStart3+1];
 else
@@ -102,7 +101,7 @@ numTrials = length(idxStart3);
 
 %% Predict ball using estimate (SL uses it for lookup table)
 
-trial = 17;
+trial = 50;
 % DATASET 1
 % badExamples = [2,19,20];
 % in example2 ballgun throws 2 balls
@@ -126,6 +125,7 @@ ballEst = ballEst(12+1:end,:);
 toly = 0.4;
 
 % particular rule implemented in lookup table in SL
+y_center = dist_to_table - table_length/2;
 idxPred = find(ballEst(:,3) > y_center & ballEst(:,3) < y_center + toly & ...
                ballEst(:,6) > 0.5,1);
 
@@ -161,13 +161,33 @@ dt = 1/60;
 initVar = 1;
 filter.initState(ballLookUp(:),initVar);
 filter.linearize(dt,0);
-predictHorizon = dtPredTillLastBlob3; % only predict till last blob3
+predictHorizon = dtPredTillLastBlob1; % only predict till last blob3
 table.DIST = dist_to_table;
 table.LENGTH = table_length;
 table.Z = table_z;
 table.WIDTH = table_width;
 [ballPred,ballTime,numBounce,time2PassTable] = ...
             predictBallPath(dt,predictHorizon,filter,table);
+        
+        
+% Npred = round(predictHorizon/dt);
+% % after bounce there should be less topspin effects
+% spinChange = true;
+% 
+% for i = 1:Npred
+%     %filter.linearize(dt,0);
+%     filter.predict(dt,0);
+%     ballPred(:,i) = C * filter.x;
+%     % try changing constants
+%     if filter.x(6) > 0 && spinChange
+%         params.g = gravity_post;
+%         params.C = Cdrag_post;
+%         funAfterBounce = @(x,u,dt) discreteBallFlightModel(x,dt,params);
+%         filter.f = funAfterBounce;
+%         spinChange = false;
+%     end
+%         
+% end
         
 %% Plot predictions
 
