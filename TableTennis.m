@@ -10,6 +10,8 @@ classdef TableTennis < handle
         NET
         % ball class
         ball
+        % initial ball mean and variance
+        ballinit
         % robot 1
         robot1
         % robot 2 (opponent)
@@ -30,19 +32,19 @@ classdef TableTennis < handle
     methods
         
         %% CONSTRUCTOR
-        function obj = TableTennis(wam,wam2,q0,std,opt)
+        function obj = TableTennis(wam,wam2,q0,opt)
             
             % initialize two robots
             obj.robot1 = wam;
             obj.robot2 = wam2;
             
-            % initialize the noise models
-            obj.noise.ballInit.pos.std = std.pos;
-            obj.noise.ballInit.vel.std = std.vel;
-            obj.noise.camera.std = std.camera;
+            % initialize the ball and camera noise
+            obj.ballinit.mean = opt.mean.ballinit;
+            obj.ballinit.cov = opt.cov.ballinit;
+            obj.noise.camera.cov = opt.cov.camera;
             
-            % initialize a ball            
-            obj.ball = Ball(0.0,0.0); 
+            % initialize a ball    
+            obj.ball = Ball(obj.ballinit.mean,obj.ballinit.cov); 
             
             % options is a structure
             train = opt.train;
@@ -54,7 +56,7 @@ classdef TableTennis < handle
             % shall we train an offline lookup table
             obj.offline.train = train;
             obj.offline.use = lookup;
-            obj.offline.savefile = 'LookupTable.mat';
+            obj.offline.savefile = 'LookupTableNew.mat';
             obj.offline.X = [];
             obj.offline.Y = [];
             
@@ -115,8 +117,6 @@ classdef TableTennis < handle
         % first robot practices 
         function numLands = practice(obj,q0,numTimes)
         
-            stdPos = obj.noise.ballInit.pos.std;
-            stdVel = obj.noise.ballInit.vel.std;
             numLands = 0;
             eps = 0.0;
             maxSimTime = 3.0;
@@ -127,7 +127,7 @@ classdef TableTennis < handle
             
             for i = 1:numTimes                                               
                 % initialize a ball
-                obj.ball = Ball(stdPos,stdVel);
+                obj.ball = Ball(obj.ballinit.mean,obj.ballinit.cov);
                 % initialize filter state
                 filter.initState([obj.ball.pos;obj.ball.vel],eps);
                 % play one turn
@@ -141,6 +141,7 @@ classdef TableTennis < handle
                         obj.offline.Y = [obj.offline.Y; obj.offline.xf];
                     end                    
                 end
+                disp('Iteration: %d', i);
             end
             
             fprintf('Landed %d/%d.\n',numLands,numTimes);
@@ -355,6 +356,7 @@ classdef TableTennis < handle
 
             params.C = tennisBall.C;
             params.g = tennisBall.g;
+            params.radius = tennisBall.radius;
             params.zTable = obj.TABLE.Z;
             params.yNet = obj.NET.Y;
             params.table_length = obj.TABLE.LENGTH; 
@@ -377,7 +379,11 @@ classdef TableTennis < handle
         
         function obs = emulateCamera(obj)
             
-            std = obj.noise.camera.std;
+            if det(obj.noise.camera.cov) > 0
+                std = chol(obj.noise.camera.cov);
+            else
+                std = 0.0;
+            end
             obs = obj.ball.pos + std * randn(3,1);
         end
         

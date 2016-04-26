@@ -36,12 +36,13 @@ classdef Ball < handle
         
         %% Initialize ball on the ball gun
         % Randomness is due to initial standard deviation initStd
-        function obj = Ball(initStdPos,initStdVel)
+        function obj = Ball(meanInit,varInit)
             
             loadTennisTableValues();
             
-            obj.pos = ball_cannon(:) + initStdPos*randn(3,1);
-            obj.vel = 1.2*[-0.9; 4.000; 3.2] + initStdVel*randn(3,1);
+            initState = meanInit + chol(varInit) * randn(6,1);
+            obj.pos = initState(1:3);
+            obj.vel = initState(4:6);
             
             obj.C = Cdrag;
             obj.g = gravity;
