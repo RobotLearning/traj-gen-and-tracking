@@ -3,6 +3,7 @@
 clc; clear; close all;
 % addpath('../saveData/');
 
+load('LookupTableNew.mat');
 load('../Desktop/data/realBallData_030516.txt');
 load('../Desktop/data/realJointData_030516.txt');
 %load('simBallData1.txt');
@@ -173,8 +174,8 @@ y_center = dist_to_table - table_length/2;
 idxPred = find(ballEst(:,3) > y_center & ballEst(:,3) < y_center + toly & ...
                ballEst(:,6) > 0.5,1);
 
-ballLookUp = ballEst(idxPred,2:end);
-tLookUp = ballEst(idxPred,1);
+ballLookup = ballEst(idxPred,2:end);
+tLookup = ballEst(idxPred,1);
 
 % get the indices for plotting
 b3_plot = b3(idxStart3,2:4);
@@ -196,14 +197,14 @@ t1_plot = t1_plot(inlierIdx,:);
 
 % find the index at bounce
 [~,idxBounce] = min(b3_plot(:,3));
-dtPredTillBounce =  t3_plot(idxBounce) - tLookUp;
-dtPredTillLastBlob3 = t3_plot(end) - tLookUp;
-dtPredTillLastBlob1 = t1_plot(end) - tLookUp;
+dtPredTillBounce =  t3_plot(idxBounce) - tLookup;
+dtPredTillLastBlob3 = t3_plot(end) - tLookup;
+dtPredTillLastBlob1 = t1_plot(end) - tLookup;
 
 % predict using ball estimate
 dt = 1/60;
 initVar = 1;
-filter.initState(ballLookUp(:),initVar);
+filter.initState(ballLookup(:),initVar);
 filter.linearize(dt,0);
 predictHorizon = dtPredTillLastBlob1; % only predict till last blob3
 table.DIST = dist_to_table;
@@ -212,6 +213,51 @@ table.Z = table_z;
 table.WIDTH = table_width;
 [ballPred,ballTime,numBounce,time2PassTable] = ...
             predictBallPath(dt,predictHorizon,filter,table);
+        
+%% generate desired traj using lookup table and compare
+
+dof = 7;
+numLookup = size(X,1);
+dist2Lookup = zeros(numLookup,1);
+for i = 1:numLookup
+    vec = X(i,:) - ballLookup;
+    dist2Lookup(i) = vec*vec';
+end
+[~,idxLookup] = min(dist2Lookup);
+paramLookup = Y(idxLookup,:);
+qf = paramLookup(1:dof);
+qfdot = paramLookup(dof+1:14);
+time2hit = paramLookup(end);
+time2return = 1.0;
+q0dot = zeros(dof,1);
+Q0 = [q0(:);q0dot(:)];  
+Qf = [qf(:);qfdot(:)];
+
+% GET 3RD DEGREE POLYNOMIALS      
+dt = 0.002;
+pStrike = generatePoly3rd(Q0,Qf,dt,time2hit);
+qStrike = pStrike(1:dof,:);
+qdStrike = pStrike(dof+1:2*dof,:);
+qddStrike = pStrike(2*dof+1:end,:);
+
+pReturn = generatePoly3rd(Qf,Q0,dt,time2return);
+qReturn = pReturn(1:dof,:);
+qdReturn = pReturn(dof+1:2*dof,:);
+qddReturn = pReturn(2*dof+1:end,:);
+
+q_des_lookup = [qStrike,qReturn];
+qd_des_lookup = [qdStrike,qdReturn];
+qdd_des_lookup = [qddStrike,qddReturn];   
+
+figure('Name','Lookup table vs desired saved values');
+for i = 1:7
+    subplot(7,2,2*i-1)
+    plot(t_plot(1:end-1),q_des_lookup(i,:),t_plot,q_des_plot(i,:));
+    legend([joints{i},'des_lookup'],[joints{i},'des']);
+    subplot(7,2,2*i)
+    plot(t_plot(1:end-1),qd_des_lookup(i,:),t_plot,qd_des_plot(i,:));
+    legend([vels{i},'des_lookup'],[vels{i},'des']);
+end
 
 %% plot actual and desired values
 figure('Name','Actual and Desired Joint pos and vel');
