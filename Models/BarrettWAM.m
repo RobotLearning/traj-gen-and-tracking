@@ -119,6 +119,7 @@ classdef BarrettWAM < Robot
         end
         
         % dynamics to get u
+        % TODO: can we input/output matrices?
         function u = invDynamics(obj,q,qd,qdd)
             % inverse dynamics model taken from SL
             u = barrettWamInvDynamicsNE(q,qd,qdd,obj.PAR);
@@ -323,16 +324,26 @@ classdef BarrettWAM < Robot
             
             len = size(q,2);
             con = obj.CON;
+            umax = repmat(con.u.max,1,len);
+            umin = repmat(con.u.min,1,len);
             qmax = repmat(con.q.max,1,len);            
             qmin = repmat(con.q.min,1,len);
             qdmax = repmat(con.qd.max,1,len);
             qdmin = repmat(con.qd.min,1,len);
             qddmax = repmat(con.qdd.max,1,len);
             qddmin = repmat(con.qdd.min,1,len); 
-            try
-                assert(sum(sum((q > qmax) + (q < qmin))) == 0,'Joint limits violated!');
-                assert(sum(sum((qd > qdmax) + (qd < qdmin))) == 0, 'Vel limits violated!');
-                assert(sum(sum((qdd > qddmax) + (qdd < qddmin))) == 0, 'Acc limits violated!');
+            u = zeros(7,len);
+            for i = 1:len
+                u(:,i) = obj.invDynamics(q(:,i),qd(:,i),qdd(:,i));
+            end
+            
+            obj.displayMaxInfo(q,qd,qdd,u);
+            
+            try              
+                assert(~any(any((q > qmax | q < qmin))),'Joint limits violated!');
+                assert(~any(any((qd > qdmax | qd < qdmin))), 'Vel limits violated!');
+                assert(~any(any((qdd > qddmax | qdd < qddmin))), 'Acc limits violated!');
+                assert(~any(any((u > umax | u < umin))), 'Torque limits violated!');
             catch ME
                 disp(ME.message);
                 disp('Not moving the robot!');
@@ -342,6 +353,31 @@ classdef BarrettWAM < Robot
                 qd = zeros(dof,len);
                 qdd = zeros(dof,len);
             end
+        end
+        
+        % Display max and min info about trajectory and control inputs
+        function displayMaxInfo(obj,q,qd,qdd,u)
+            
+            qmax = max(q,[],2);
+            qmin = min(q,[],2);
+            qdmax = max(qd,[],2);
+            qdmin = min(qd,[],2);
+            qddmax = max(qdd,[],2);
+            qddmin = min(qdd,[],2);
+            umax = max(u,[],2);
+            umin = min(u,[],2);
+            
+            fprintf('qmax 	 qdmax 	 qddmax  umax\n');
+            for i = 1:7
+                fprintf('%.2f 	 %.2f 	 %.2f  %.2f\n',...
+                    qmax(i),qdmax(i),qddmax(i),umax(i));
+            end
+            fprintf('qmin 	 qdmin 	 qddmin  umin\n');
+            for i = 1:7
+                fprintf('%.2f 	 %.2f 	 %.2f  %.2f\n',...
+                    qmin(i),qdmin(i),qddmin(i),umin(i));
+            end
+                
         end
         
         function q = clampJointLimits(obj,q)

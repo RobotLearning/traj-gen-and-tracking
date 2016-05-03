@@ -141,7 +141,7 @@ classdef TableTennis < handle
                         obj.offline.Y = [obj.offline.Y; obj.offline.xf];
                     end                    
                 end
-                disp('Iteration: %d', i);
+                fprintf('Iteration: %d\n', i);
             end
             
             fprintf('Landed %d/%d.\n',numLands,numTimes);
@@ -185,19 +185,15 @@ classdef TableTennis < handle
                 velEst = filter.x(4:6);
                 if velEst(2) > 0 && stage == WAIT
                     stage = PREDICT;
-                end    
+                end
                 
-                if stage == PREDICT
+                table_center = obj.TABLE.DIST - obj.TABLE.LENGTH/2;
+                %if stage == PREDICT && time2PassTable <= minTime2Hit       
+                if stage == PREDICT && filter.x(2) > table_center && filter.x(5) > 0.5   
                     predictTime = 1.2;
                     [ballPred,ballTime,numBounce,time2PassTable] = ...
                         obj.predictBall(dt,predictTime,filter);
-                    if checkBounceOnOppTable(filter,obj.TABLE)
-                        stage = FINISH;
-                    end
-                end
-                
-                if stage == PREDICT && time2PassTable <= minTime2Hit       
-                    if numBounce ~= 1
+                    if checkBounceOnOppTable(filter,obj.TABLE) || numBounce ~= 1
                         disp('Ball is not valid! Not hitting!');
                         stage = FINISH;
                     else
@@ -241,7 +237,8 @@ classdef TableTennis < handle
             
             dofs = 7;
             q0dot = zeros(dofs,1);
-            time2return = 1.0;
+            time2return = 1.0; % time for robot to go back to q0 after hit
+            time2reach = 0.8; % time to reach desired point on opponents court
             
             if obj.offline.use
                 %val = obj.offline.b0 * obj.offline.B;
@@ -277,8 +274,7 @@ classdef TableTennis < handle
                 % land the ball on the centre of opponents court
                 desBall(1) = 0.0;
                 desBall(2) = obj.TABLE.DIST - 3*obj.TABLE.LENGTH/4;
-                desBall(3) = obj.TABLE.Z;
-                time2reach = 0.5; % time to reach desired point on opponents court
+                desBall(3) = obj.TABLE.Z;                
                 racketDes = calcRacketStrategy(desBall,ballPred,ballTime,time2reach,fast);
                 elapsedTimeForCalcDesRacket = toc;
                 fprintf('Elapsed time for racket computation: %f sec.\n',...
@@ -558,7 +554,7 @@ classdef TableTennis < handle
             line1_x = repmat(linspace(-table_x+tol,table_x-tol,3)',1,numpts);
             line1_y = repmat(linspace(dist_to_table-table_length,dist_to_table,numpts),3,1);
             line1_z = repmat(table_z * ones(1,numpts),3,1);
-            plot3(line1_x',line1_y',line1_z','w','LineWidth',5);
+            plot3(line1_x',line1_y',line1_z','w','LineWidth',3);
             line2_x = repmat(linspace(-table_x,table_x,numpts),2,1);
             line2_y = repmat(linspace(dist_to_table-table_length+tol,dist_to_table-tol,2)',1,numpts);
             line2_z = repmat(table_z * ones(1,numpts),2,1);

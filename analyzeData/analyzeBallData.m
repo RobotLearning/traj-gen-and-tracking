@@ -9,7 +9,7 @@ clc; clear; close all;
 loadTennisTableValues;
 
 dataSet = 1;
-file = ['../Desktop/realBallData',int2str(dataSet)];
+file = ['../Desktop/data/realBallsimRobotData',int2str(dataSet)];
 M = dlmread([file,'.txt']);
 % ball data
 B = M(1:2:end,:);
@@ -101,7 +101,7 @@ numTrials = length(idxStart3);
 
 %% Predict ball using estimate (SL uses it for lookup table)
 
-trial = 50;
+trial = 1;
 % DATASET 1
 % badExamples = [2,19,20];
 % in example2 ballgun throws 2 balls
