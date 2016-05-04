@@ -470,8 +470,9 @@ classdef TableTennis < handle
             [joint,ee,racket] = wam.drawPosture(q);
             endeff = [joint(end,:); ee];
 
+            % edit: reduced to half screen size
             scrsz = get(groot,'ScreenSize');
-            figure('Position',[1 scrsz(4) scrsz(3) scrsz(4)]);
+            figure('Position',[1 scrsz(4)/2 scrsz(3)/2 scrsz(4)/2]);
             %uisetcolor is useful here to determine these 3-vectors
             orange = [0.9100 0.4100 0.1700];
             gray = [0.5020 0.5020 0.5020];

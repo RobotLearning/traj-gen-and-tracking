@@ -233,8 +233,12 @@ q0dot = zeros(dof,1);
 Q0 = [q0(:);q0dot(:)];  
 Qf = [qf(:);qfdot(:)];
 
-% GET 3RD DEGREE POLYNOMIALS      
 dt = 0.002;
+idxHit = floor(time2hit / dt);
+
+
+%{
+% GET 3RD DEGREE POLYNOMIALS      
 pStrike = generatePoly3rd(Q0,Qf,dt,time2hit);
 qStrike = pStrike(1:dof,:);
 qdStrike = pStrike(dof+1:2*dof,:);
@@ -258,6 +262,7 @@ for i = 1:7
     plot(t_plot(1:end-1),qd_des_lookup(i,:),t_plot,qd_des_plot(i,:));
     legend([vels{i},'des_lookup'],[vels{i},'des']);
 end
+%}
 
 %% plot actual and desired values
 figure('Name','Actual and Desired Joint pos and vel');
@@ -271,27 +276,39 @@ for i = 1:7
 end
 
 %% plot cartesian values
+
+plotIdx = 5;
+plotIdxs = 1:plotIdx:size(x_des,2);
+
 figure('Name','Actual vs Desired Cartesian pos');
-plot3(x_des(1,:), x_des(2,:), x_des(3,:),'-r*');
+scatter3(x_des(1,plotIdxs), x_des(2,plotIdxs), x_des(3,plotIdxs));
 hold on;
-plot3(x_act(1,:), x_act(2,:), x_act(3,:),'o');
+scatter3(x_act(1,plotIdxs), x_act(2,plotIdxs), x_act(3,plotIdxs));
+scatter3(x_des(1,idxHit),x_des(2,idxHit),x_des(3,idxHit),200,'filled');
 grid on
 axis square
-legend('des','act');
+legend('des','act','des-hit');
 hold off
 xlabel('x')
 ylabel('y')
 zlabel('z')
 
 %% plot cartesian values along with ball observations and table
+
+plotIdx = 10;
+plotIdxs = 1:plotIdx:size(x_des,2);
+gray = [0.5020 0.5020 0.5020];
+red = [1.0000 0.2500 0.2500];
 figure('Name','Table tennis performance');
-s1 = scatter3(b1_plot(:,1),b1_plot(:,2),b1_plot(:,3),'r');
 hold on;
+
+s1 = scatter3(b1_plot(:,1),b1_plot(:,2),b1_plot(:,3),'r');
 s3 = scatter3(b3_plot(:,1),b3_plot(:,2),b3_plot(:,3),'b');
 %predColor = [0.200 0.200 0.200];
 sP = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'k');
-plot3(x_des(1,:), x_des(2,:), x_des(3,:),'-r*');
-plot3(x_act(1,:), x_act(2,:), x_act(3,:),'o');
+scatter3(x_des(1,plotIdxs), x_des(2,plotIdxs), x_des(3,plotIdxs));
+scatter3(x_act(1,plotIdxs), x_act(2,plotIdxs), x_act(3,plotIdxs));
+scatter3(x_des(1,idxHit),x_des(2,idxHit),x_des(3,idxHit),100,'filled');
 
 title('Predicted ball trajectory');
 grid on;
@@ -299,7 +316,15 @@ axis equal;
 xlabel('x');
 ylabel('y');
 zlabel('z');
-legend('cam1','cam3','filter','robot des', 'robot act');
+legend('cam1','cam3','filter','robot des', 'robot act', 'des-hit');
+
+% draw table and robot 
 fill3(T(1:4,1),T(1:4,2),T(1:4,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+% get joints, endeffector pos and orientation for q0
+[joint,ee,racket] = wam.drawPosture(q0);
+endeff = [joint(end,:); ee];
+plot3(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
+plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
+fill3(racket(1,:), racket(2,:), racket(3,:),red);
 hold off;
