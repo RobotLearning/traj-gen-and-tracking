@@ -5,6 +5,8 @@ classdef Ball < handle
     % Fields necessary for all ball models
     properties        
         
+        % initial distribution of the ball
+        distr
         % air drag
         C
         % gravity
@@ -36,14 +38,12 @@ classdef Ball < handle
         
         %% Initialize ball on the ball gun
         % Randomness is due to initial standard deviation initStd
-        function obj = Ball(meanInit,varInit)
+        function obj = Ball(initial_distribution)
             
-            loadTennisTableValues();
-            
-            initState = meanInit + chol(varInit) * randn(6,1);
-            obj.pos = initState(1:3);
-            obj.vel = initState(4:6);
-            
+            loadTennisTableValues();   
+            obj.distr = initial_distribution;
+            obj.resetState();
+
             obj.C = Cdrag;
             obj.g = gravity;
             obj.radius = ball_radius;
@@ -78,7 +78,23 @@ classdef Ball < handle
             obj.MESH.X = ballMeshX;
             obj.MESH.Y = ballMeshY;
             obj.MESH.Z = ballMeshZ;
-            
+
+        end
+        
+        % Initialize the ball according to the given distribution
+        function resetState(obj)
+                        
+            switch obj.distr.type
+                case 'normal'
+                    mean = obj.distr.mean;
+                    var = obj.distr.cov;
+                    b0 = mean + chol(var) * randn(6,1);
+                otherwise
+                    error('Distribution not supported');
+            end
+                
+            obj.pos = b0(1:3);
+            obj.vel = b0(4:6);
             obj.isLANDED = false;
         end
         

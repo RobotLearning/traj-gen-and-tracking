@@ -1,9 +1,7 @@
 %% Table Tennis parameters and values
 
 % Table Variables 
-if ~exist('dist_to_table')
-    dist_to_table = -1.15; % -0.80;
-end
+dist_to_table = -1.15; % -0.80;
 table_height = 0.76;
 table_length = 2.76; 
 net_height   = 0.144; %0.1525
@@ -25,28 +23,25 @@ racket_radius = 0.076; %not 0.08
 
 % Stand Variables 
 stand_radius = 0.02;
-stand_x       = -0.45;
-stand_y       = -0.59;
+stand_x = -0.45;
+stand_y = -0.59;
 
 % Floor 
-floor_level   = -1.71;
-
-% virtual hitting plane y level
-vhp = -0.6;
+floor_level = -1.71;
 
 %% Rebound and contact model parameters
 
 % Coefficients for rebound and contact model 
 % fitted for dataset realBallData1
 
-CRT = 0.96;
-CFTY = 1.20;
-CFTX = 1.20;
+% CRT = 0.96;
+% CFTY = 1.20;
+% CFTX = 1.20;
 
 % old coefficients from SL
-% CRT = 0.86;
-% CFTY = 0.72;
-% CFTX = 0.68;
+CRT = 0.86;
+CFTY = 0.72;
+CFTX = 0.68;
 
 % nondiagonal matrix
 BMAT = [1.23 0.33 0.36;
@@ -64,16 +59,16 @@ CRR = 0.78;
 % Cdrag = 0.1442; % Air drag coefficient
 
 % estimated using new dataset1
-gravity = -11.06;
-Cdrag = 0.1753;
+% gravity = -11.06;
+% Cdrag = 0.1753;
 
 % post bounce
-Cdrag_post = 0.1968;
-gravity_post = -10.83;
+% Cdrag_post = 0.1968;
+% gravity_post = -10.83;
 
 % old coefficients from SL
-% gravity = -9.801;
-% Cdrag = 0.1414;
+gravity = -9.801;
+Cdrag = 0.1414;
 
 %% Values for drawing the table
 
