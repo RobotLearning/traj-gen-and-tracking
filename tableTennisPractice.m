@@ -5,8 +5,13 @@ clc; clear; close all;
 load('ballInitDist1.mat','mu','Sigma');
 initializeWAM;
 
+% drawing related params
 OPT.draw = true; % draw the simulation
 OPT.record = false; % record the simulation
+
+% planning related flags and parameters
+OPT.plan.vhp.flag = false;
+OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
 OPT.lookup.flag = false; % use lookup table instead of optimizing online
 OPT.lookup.savefile = 'LookupTable.mat';
@@ -16,7 +21,7 @@ OPT.distr.type = 'normal';
 OPT.distr.mean = mu;
 OPT.distr.cov = Sigma;
 % measurement covariance
-OPT.cov.camera = 0.0;
+OPT.camera.cov = 0.0;
 
 tt = TableTennis(wam,q0,OPT);
 tt.practice(q0,1);

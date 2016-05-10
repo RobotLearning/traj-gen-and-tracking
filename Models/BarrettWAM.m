@@ -207,7 +207,7 @@ classdef BarrettWAM < Robot
             end
         end
         
-        % calculate the geometric jacobian using the common jacabian function
+        % calculate the geometric jacobian using the common jacobian function
         function jac = calcJacobian(obj,q)
             
             [xLink,xOrigin,xAxis,~] = barrettWamKinematics(q,obj.PAR);
@@ -367,14 +367,14 @@ classdef BarrettWAM < Robot
             umax = max(u,[],2);
             umin = min(u,[],2);
             
-            fprintf('qmax 	 qdmax 	 qddmax  umax\n');
+            fprintf('qmax 	 qdmax 	 qddmax    umax\n');
             for i = 1:7
-                fprintf('%.2f 	 %.2f 	 %.2f  %.2f\n',...
+                fprintf('%-8.2f %-8.2f %-8.2f %-8.2f\n',...
                     qmax(i),qdmax(i),qddmax(i),umax(i));
             end
-            fprintf('qmin 	 qdmin 	 qddmin  umin\n');
+            fprintf('qmin 	 qdmin 	 qddmin    umin\n');
             for i = 1:7
-                fprintf('%.2f 	 %.2f 	 %.2f  %.2f\n',...
+                fprintf('%-8.2f %-8.2f %-8.2f %-8.2f\n',...
                     qmin(i),qdmin(i),qddmin(i),umin(i));
             end
                 
