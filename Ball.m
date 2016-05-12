@@ -89,6 +89,8 @@ classdef Ball < handle
                     mean = obj.distr.mean;
                     var = obj.distr.cov;
                     b0 = mean + chol(var) * randn(6,1);
+                case 'empirical'
+                    b0 = drawSimilarSample(obj.distr.data);
                 otherwise
                     error('Distribution not supported');
             end

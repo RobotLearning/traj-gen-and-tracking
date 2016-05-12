@@ -97,7 +97,7 @@ wam.regressOnFinalJointsFromDemo();
 % save('BarrettWorkspace.mat','Del');
 % toc
 % 
-% load('BarrettWorkspace.mat','Del');
+load('BarrettWorkspace.mat','Del');
 
 %{
 % Search for an initial posture with less jacobian condition number

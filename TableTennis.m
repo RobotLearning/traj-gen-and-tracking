@@ -152,6 +152,7 @@ classdef TableTennis < handle
                     end                    
                 end
                 fprintf('Iteration: %d\n', i);
+                obj.reset_plan(q0);
             end
             
             fprintf('Landed %d/%d.\n',numLands,numTimes);
@@ -220,8 +221,10 @@ classdef TableTennis < handle
                 predictTime = 1.2;
                 [ballPred,ballTime,numBounce,time2Passtable] = ...
                     predictBallPath(dt,predictTime,filter,obj.table);
-                if checkBounceOnOppTable(filter,obj.table) || numBounce ~= 1
-                    disp('Ball is not valid! Not hitting!');
+                if checkBounceOnOppTable(filter,obj.table)
+                    obj.plan.stage = FINISH;
+                else if numBounce ~= 1
+                    disp('Ball does not bounce once! Not hitting!');
                     obj.plan.stage = FINISH;
                 else
                     obj.plan.idx = 0;

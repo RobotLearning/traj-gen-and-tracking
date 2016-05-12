@@ -2,7 +2,8 @@
 
 clc; clear; close all;
 
-load('ballInitDist1.mat','mu','Sigma');
+% load('ballInitDist1.mat','mu','Sigma');
+load('ballTrain1');
 initializeWAM;
 
 % drawing related params
@@ -17,11 +18,14 @@ OPT.lookup.flag = false; % use lookup table instead of optimizing online
 OPT.lookup.savefile = 'LookupTable.mat';
 
 % initial ball parameters
-OPT.distr.type = 'normal';
-OPT.distr.mean = mu;
-OPT.distr.cov = Sigma;
+% OPT.distr.type = 'normal';
+% OPT.distr.mean = mu;
+% OPT.distr.cov = Sigma;
+OPT.distr.type = 'empirical';
+OPT.distr.data = ballTrain.bInit;
+
 % measurement covariance
 OPT.camera.cov = 0.0;
 
 tt = TableTennis(wam,q0,OPT);
-tt.practice(q0,1);
+tt.practice(q0,5);

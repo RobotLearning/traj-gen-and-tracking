@@ -14,7 +14,7 @@ loadTennisTableValues;
 
 % Load real ball data saved on 13/04/2016
 dataSet = 1;
-file = ['../Desktop/realBallData',int2str(dataSet)];
+file = ['../Desktop/data/realBallsimRobotData',int2str(dataSet)];
 M = dlmread([file,'.txt']);
 % ball data
 B = M(1:2:end,:);
@@ -207,10 +207,13 @@ g_post = x(end)
 
 %% Estimate initial distribution as a gaussian
 
+%ballPreBounce = ballTrain;
 ballInit = ballPreBounce.bInit;
 N = size(ballInit,2);
 mu_hat = sum(ballInit,2)/N;
 res = ballInit - repmat(mu_hat,1,N);
 Sigma_hat = res * res' / (N-1);
 
-save('train/ballTrain1.mat','ball');
+density = kernelDensityEstimation(ballInit);
+
+save('ballTrain1.mat','ball');
