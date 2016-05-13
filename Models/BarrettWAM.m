@@ -21,6 +21,8 @@ classdef BarrettWAM < Robot
         flag_ref_jsp
         % regressors for inverse kinematics estimation
         Bdemo
+        % bunch of points from workspace boundary
+        workspace
     end
     
     methods
@@ -86,6 +88,9 @@ classdef BarrettWAM < Robot
             
             % for inv kin initialization from demonstrations
             obj.Bdemo = [];
+            % workspace boundary
+            % construct robot workspace by using mesh            
+            obj.workspace = [];
         end
         
         %% Dynamics functions here
@@ -290,6 +295,26 @@ classdef BarrettWAM < Robot
                 obj.Bdemo = X \ Y;
             end
              
+        end
+        
+        % Build the boundary of the workspace
+        function buildWorkspace(obj)
+            
+            try
+                load('BarrettWorkspace.mat','workspace');
+            catch
+                % construct robot workspace by using mesh
+                numPt = 5;
+                for i = 1:7
+                    mesh{i} = linspace(obj.CON.q.min(i),obj.CON.q.max(i),numPt);
+                end
+                [x1,x2,x3,x4,x5,x6,x7] = ndgrid(mesh{:});
+                Qworkspace = [x1(:),x2(:),x3(:),x4(:),x5(:),x6(:),x7(:)];
+                [workspace,~,~] = obj.kinematics([Qworkspace';zeros(7,numPt^7)]);
+                save('BarrettWorkspace.mat','workspace');
+            end
+            
+            obj.workspace = workspace;
         end
         
         % call inverse kinematics from outside

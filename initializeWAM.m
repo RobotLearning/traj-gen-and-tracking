@@ -83,21 +83,8 @@ Q0 = [q0;qd0];
 % to help with inverse kin
 wam.regressOnFinalJointsFromDemo();
 
-% construct robot workspace by using mesh
-% tic;
-% numPt = 5;
-% for i = 1:N_DOFS
-%     mesh{i} = linspace(CON.q.min(i),CON.q.max(i),numPt);
-% end
-% [x1,x2,x3,x4,x5,x6,x7] = ndgrid(mesh{:});
-% Qworkspace = [x1(:),x2(:),x3(:),x4(:),x5(:),x6(:),x7(:)];
-% [xw,~,~] = wam.kinematics([Qworkspace';zeros(7,numPt^7)]);
-% Del = delaunay(xw(1,:),xw(2,:),xw(3,:));
-% trisurf(Del,xw(1,:),xw(2,:),xw(3,:));
-% save('BarrettWorkspace.mat','Del');
-% toc
-% 
-load('BarrettWorkspace.mat','Del');
+% take points from the workspace boundary
+wam.buildWorkspace();
 
 %{
 % Search for an initial posture with less jacobian condition number

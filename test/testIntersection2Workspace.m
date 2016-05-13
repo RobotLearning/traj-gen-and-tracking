@@ -8,7 +8,7 @@ D = delaunay(X(:,1),X(:,2));
 trimesh(D,X(:,1),X(:,2))
 
 C = convhull(X(:,1),X(:,2));
-P = X(C(1:end-1),:);
+P = X(C,:);
 
 % find if there is an intersection
 

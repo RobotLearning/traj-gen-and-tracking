@@ -223,8 +223,11 @@ classdef TableTennis < handle
                     predictBallPath(dt,predictTime,filter,obj.table);
                 if checkBounceOnOppTable(filter,obj.table)
                     obj.plan.stage = FINISH;
-                else if numBounce ~= 1
+                elseif numBounce ~= 1
                     disp('Ball does not bounce once! Not hitting!');
+                    obj.plan.stage = FINISH;
+                elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPred)
+                    disp('No intersection with workspace! Not hitting!');
                     obj.plan.stage = FINISH;
                 else
                     obj.plan.idx = 0;
