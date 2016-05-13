@@ -100,6 +100,7 @@ classdef TableTennis < handle
             % shall we train an offline lookup table
             obj.offline.train = opt.train;
             obj.offline.use = opt.lookup.flag;
+            obj.offline.mode = opt.lookup.mode;
             obj.offline.savefile = opt.lookup.savefile;
             obj.offline.X = [];
             obj.offline.Y = [];
@@ -111,15 +112,27 @@ classdef TableTennis < handle
                     obj.offline.X = X;
                     obj.offline.Y = Y;
                     obj.offline.B = X \ Y;
-                    %obj.offline.GP = [];
+                    %obj.train_gp(X,Y);                    
                 catch
                     warning('No lookup table found!');
                     obj.offline.X = [];
                     obj.offline.Y = [];
                 end
-
+            end            
+        end
+        
+        % Train 15 independent GPS
+        function train_gp(obj,X,Y)            
+            hp.type = 'squared exponential iso';
+            hp.l = 1/4;
+            hp.scale = 1;
+            hp.noise.var = 0.0;
+            ndofs = 7;
+            num_dims = 2*ndofs + 1;
+            for i = 1:num_dims
+                gp{i} = GP(hp,X',Y(:,i));
             end
-            
+            obj.offline.GP = gp;            
         end
         
         %% MAIN LOOP
@@ -272,17 +285,31 @@ classdef TableTennis < handle
         
         % Loads lookup table parameters by finding the 
         % closest table ball-estimate entry 
-        function [qf,qfdot,T] = lookup(obj)
-            
-            %val = obj.offline.b0 * obj.offline.B;
-            Xs = obj.offline.X;
-            Ys = obj.offline.Y;
-            bstar = obj.offline.b0;
-            N = size(Xs,1);
-            % find the closest point among Xs
-            diff = repmat(bstar,N,1) - Xs;
-            [~,idx] = min(diag(diff*diff'));
-            val = Ys(idx,:);                        
+        function [qf,qfdot,T] = lookup(obj)            
+       
+            dofs = 7;
+            switch obj.offline.mode
+                case 'regress'
+                    val = obj.offline.b0 * obj.offline.B;
+                    %{
+                    numdims = 2*dofs + 1;
+                    val = zeros(1,numdims);
+                    for i = 1:numdims
+                        val(i) = obj.offline.GP{i}.predict(obj.offline.b0);
+                    end
+                    %}
+                case 'closest'      
+                    Xs = obj.offline.X;
+                    Ys = obj.offline.Y;
+                    bstar = obj.offline.b0;
+                    N = size(Xs,1);
+                    % find the closest point among Xs
+                    diff = repmat(bstar,N,1) - Xs;
+                    [~,idx] = min(diag(diff*diff'));
+                    val = Ys(idx,:);              
+                otherwise
+                    error('lookup mode not supported!');
+            end
             qf = val(1:dofs)';
             qfdot = val(dofs+1:2*dofs)';
             T = val(end);
@@ -298,12 +325,12 @@ classdef TableTennis < handle
             ballDes(1) = 0.0;
             ballDes(2) = obj.table.DIST - 3*obj.table.LENGTH/4;
             ballDes(3) = obj.table.Z;   
+            q0dot = zeros(dofs,1);
+            time2return = 1.0; % time for robot to go back to q0 after hit
             
             if obj.offline.use
                 [qf,qfdot,T] = obj.lookup();
             else
-                q0dot = zeros(dofs,1);
-                time2return = 1.0; % time for robot to go back to q0 after hit
                 time2reach = 0.8; % time to reach desired point on opponents court    
 
                 % Compute traj here

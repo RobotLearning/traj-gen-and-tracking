@@ -41,8 +41,6 @@ classdef Ball < handle
         function obj = Ball(initial_distribution)
             
             loadTennisTableValues();   
-            obj.distr = initial_distribution;
-            obj.resetState();
 
             obj.C = Cdrag;
             obj.g = gravity;
@@ -69,6 +67,10 @@ classdef Ball < handle
             obj.RACKET.CRR = CRR;
             obj.RACKET.R = racket_radius;
             
+            % initialize ball state
+            obj.distr = initial_distribution;
+            obj.resetState();
+            
             % mesh for drawing the ball
             numPoints = 100;
             [ballMeshX,ballMeshY,ballMeshZ] = sphere(numPoints);
@@ -86,11 +88,13 @@ classdef Ball < handle
                         
             switch obj.distr.type
                 case 'normal'
-                    mean = obj.distr.mean;
-                    var = obj.distr.cov;
+                    mean = obj.distr.init.mean;
+                    var = obj.distr.init.cov;
                     b0 = mean + chol(var) * randn(6,1);
                 case 'empirical'
                     b0 = drawSimilarSample(obj.distr.data);
+                case 'landing' % draw according to des landing distr
+                    b0 = obj.sampleFromLandingDistr();
                 otherwise
                     error('Distribution not supported');
             end
@@ -98,6 +102,36 @@ classdef Ball < handle
             obj.pos = b0(1:3);
             obj.vel = b0(4:6);
             obj.isLANDED = false;
+        end
+        
+        % sample the ball based on a desired landing distribution
+        % landing time and initial ball to find feasible ball velocities
+        % such that ball is above net when it passes
+        function b0 = sampleFromLandingDistr(obj)
+            
+            mean_land_time = 0.8;
+            s2_land_time = 0.01;
+            
+            par.fast = true;
+            par.g = obj.g;
+            par.Cdrag = obj.C;
+            
+            mean_init_pos = obj.distr.init.mean;
+            var_init_pos = obj.distr.init.cov;
+            mean_land = obj.distr.land.mean;
+            var_land = obj.distr.land.cov;
+            znet = -Inf;
+            while znet < obj.NET.Zmax
+                binit = mean_init_pos + chol(var_init_pos) * randn(3,1);
+                bland = mean_land + chol(var_land) * randn(2,1);
+                bland(3) = obj.TABLE.Z;
+                tland = mean_land_time + sqrt(s2_land_time) * randn;
+                vinit = calcBallVelOut3D(bland,binit,tland,par);
+                tnet = (obj.NET.Y - bland(2))/vinit(2);
+                znet = binit(3) + vinit(3)*tnet - 0.5*obj.g*tnet^2;
+            end
+                
+            b0 = [binit(:);vinit(:)];
         end
         
         %% Flight models  

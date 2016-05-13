@@ -2,8 +2,9 @@
 
 clc; clear; close all;
 
-% load('ballInitDist1.mat','mu','Sigma');
-load('ballTrain1');
+rng(1);
+load('ballInitDist1.mat','mu','Sigma');
+% load('ballTrain1');
 initializeWAM;
 
 % drawing related params
@@ -15,14 +16,20 @@ OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
 OPT.lookup.flag = false; % use lookup table instead of optimizing online
-OPT.lookup.savefile = 'LookupTable.mat';
+OPT.lookup.mode = 'regress';
+OPT.lookup.savefile = 'LookupTableTest.mat';
 
 % initial ball parameters
 % OPT.distr.type = 'normal';
-% OPT.distr.mean = mu;
-% OPT.distr.cov = Sigma;
-OPT.distr.type = 'empirical';
-OPT.distr.data = ballTrain.bInit;
+% OPT.distr.init.mean = mu;
+% OPT.distr.init.cov = Sigma;
+% OPT.distr.type = 'empirical';
+% OPT.distr.data = ballTrain.bInit;
+OPT.distr.type = 'landing';
+OPT.distr.init.mean = mu(1:3);
+OPT.distr.init.cov = Sigma(1:3,1:3);
+OPT.distr.land.mean = [-0.2;-1.5];
+OPT.distr.land.cov = 0.01*eye(2);
 
 % measurement covariance
 OPT.camera.cov = 0.0;

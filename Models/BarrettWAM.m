@@ -362,7 +362,7 @@ classdef BarrettWAM < Robot
                 u(:,i) = obj.invDynamics(q(:,i),qd(:,i),qdd(:,i));
             end
             
-            obj.displayMaxInfo(q,qd,qdd,u);
+            %obj.displayMaxInfo(q,qd,qdd,u);
             
             try              
                 assert(~any(any((q > qmax | q < qmin))),'Joint limits violated!');
