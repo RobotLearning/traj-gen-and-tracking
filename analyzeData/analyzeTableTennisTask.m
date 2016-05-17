@@ -3,20 +3,23 @@
 clc; clear; close all;
 % addpath('../saveData/');
 
-load('LookupTableNew.mat');
-load('../Desktop/data/realBallData_030516.txt');
-load('../Desktop/data/realJointData_030516.txt');
-%load('simBallData1.txt');
-%load('simJointData1.txt');
-ballData = realBallData_030516;
-jointData = realJointData_030516;
+load('LookupTable.mat');
+% load('../Desktop/data/realBallData_030516.txt');
+% load('../Desktop/data/realJointData_030516.txt');
 
-B = ballData;
-t = jointData(:,1);
-q_des = jointData(:,2:8);
-qd_des = jointData(:,9:15);
-q_act = jointData(:,16:22);
-qd_act = jointData(:,23:end);
+date = '16-5-16';
+moment = '19:50:49';
+
+% ball data
+B = load(['../robolab/barrett/saveData/realBallData_', date, '_', moment, '.txt']);
+% joint data
+J = load(['../robolab/barrett/saveData/realJointData_', date, '_', moment, '.txt']);
+
+t = J(:,1);
+q_des = J(:,2:8);
+qd_des = J(:,9:15);
+q_act = J(:,16:22);
+qd_act = J(:,23:end);
 
 joints = cell(1,7);
 cartpos = cell(1,7);
@@ -45,6 +48,20 @@ t = scale * t;
 initializeWAM;
 % load table parameters
 loadTennisTableValues;
+% using ball gun or throwing by hand
+ballgun = true;
+
+if ballgun
+    CRT = 0.96;
+    CFTY = 1.20;
+    CFTX = 1.20;
+    gravity = -11.06;
+    Cdrag = 0.1753;
+    % post bounce
+    Cdrag_post = 0.1968;
+    gravity_post = -10.83;
+end
+
 
 Q_des = [q_des';qd_des'];
 Q_act = [q_act';qd_act'];
@@ -115,7 +132,7 @@ b3 = b3(idxDiffBallPos3,:);
 
 %% Find the trajectory corresponding to trial
 
-trial = 2;
+trial = 1;
 % note: we can also check for zero desired velocity
 
 N = size(q_des,1);
@@ -149,13 +166,18 @@ t_plot = t(idxPlot);
 
 %% Get the number of incoming balls 
 
+if trial >= numTrials
+    warning('choose trial smaller than max');
+    tFinish = ceil(t(startTrjIdx(end)));
+else
+    tFinish = t(startTrjIdx(2*trial+1));
+end
+
 % get the time of first ball 
 time2Arrive2Net = 0.5;
 tStart = t_plot(1) - time2Arrive2Net;
-tFinish = t(startTrjIdx(2*trial+1));
 idxStart3 = b3(:,1) >= tStart & b3(:,1) <= tFinish;
 idxStart1 = b1(:,1) >= tStart & b1(:,1) <= tFinish;
-assert(trial < numTrials, 'choose trial smaller than max');
 
 %% Predict ball using estimate (SL uses it for lookup table)
 
@@ -310,7 +332,6 @@ scatter3(x_des(1,plotIdxs), x_des(2,plotIdxs), x_des(3,plotIdxs));
 scatter3(x_act(1,plotIdxs), x_act(2,plotIdxs), x_act(3,plotIdxs));
 scatter3(x_des(1,idxHit),x_des(2,idxHit),x_des(3,idxHit),100,'filled');
 
-title('Predicted ball trajectory');
 grid on;
 axis equal;
 xlabel('x');
@@ -328,3 +349,19 @@ plot3(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
 plot3(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
 fill3(racket(1,:), racket(2,:), racket(3,:),red);
 hold off;
+
+%% Give info about cartesian tracking error at hitting time
+disp('========TRACKNG ERROR AT DES HITTING TIME=======')
+vectoridx = 1:3;
+fprintf('xdes[%d] = %f\n', [vectoridx; x_des(:,idxHit)']);
+fprintf('xact[%d] = %f\n', [vectoridx; x_act(:,idxHit)']);
+fprintf('Diff in cm = %f\n', norm(x_des(:,idxHit) - x_act(:,idxHit)));
+fprintf('vdes[%d] = %f\n', [vectoridx; xd_des(:,idxHit)']);
+fprintf('vact[%d] = %f\n', [vectoridx; xd_act(:,idxHit)']);
+fprintf('Diff in cm = %f\n', norm(xd_des(:,idxHit) - xd_act(:,idxHit)));
+
+R_des = quat2Rot(o_des);
+R_act = quat2Rot(o_act);
+fprintf('ndes[%d] = %f\n', [vectoridx; R_des(:,3,idxHit)']);
+fprintf('nact[%d] = %f\n', [vectoridx; R_act(:,3,idxHit)']);
+fprintf('Diff in cm = %f\n', norm(R_des(:,3,idxHit) - R_act(:,3,idxHit)));
