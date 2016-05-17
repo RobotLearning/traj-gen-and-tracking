@@ -85,20 +85,3 @@ wam.regressOnFinalJointsFromDemo();
 
 % take points from the workspace boundary
 wam.buildWorkspace();
-
-%{
-% Search for an initial posture with less jacobian condition number
-numIter = 100;
-s2 = 0.1;
-qs = repmat(q0,1,numIter) + sqrt(s2)*randn(N_DOFS,numIter);
-% choose posture around q0 minimizing jacobian
-
-for i = 1:numIter
-    J = wam.calcJacobian(qs(:,i));
-    c(i) = cond(J);
-end
-
-[jacCond,ind] = min(c);
-fprintf('Initial Jacobian condition: %f.\n',jacCond);
-q0 = qs(:,ind);
-%}

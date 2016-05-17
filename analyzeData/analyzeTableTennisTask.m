@@ -3,12 +3,12 @@
 clc; clear; close all;
 % addpath('../saveData/');
 
-load('LookupTable.mat');
+load('LookupTable-16-May-2016.mat');
 % load('../Desktop/data/realBallData_030516.txt');
 % load('../Desktop/data/realJointData_030516.txt');
 
 date = '16-5-16';
-moment = '19:50:49';
+moment = '20:1:22';
 
 % ball data
 B = load(['../robolab/barrett/saveData/realBallData_', date, '_', moment, '.txt']);
@@ -58,8 +58,8 @@ if ballgun
     gravity = -11.06;
     Cdrag = 0.1753;
     % post bounce
-    Cdrag_post = 0.1968;
-    gravity_post = -10.83;
+    %Cdrag_post = 0.1968;
+    %gravity_post = -10.83;
 end
 
 
@@ -132,7 +132,7 @@ b3 = b3(idxDiffBallPos3,:);
 
 %% Find the trajectory corresponding to trial
 
-trial = 1;
+trial = 2;
 % note: we can also check for zero desired velocity
 
 N = size(q_des,1);
@@ -303,9 +303,9 @@ plotIdx = 5;
 plotIdxs = 1:plotIdx:size(x_des,2);
 
 figure('Name','Actual vs Desired Cartesian pos');
-scatter3(x_des(1,plotIdxs), x_des(2,plotIdxs), x_des(3,plotIdxs));
+scatter3(x_des(1,plotIdxs), x_des(2,plotIdxs), x_des(3,plotIdxs),'r');
 hold on;
-scatter3(x_act(1,plotIdxs), x_act(2,plotIdxs), x_act(3,plotIdxs));
+scatter3(x_act(1,plotIdxs), x_act(2,plotIdxs), x_act(3,plotIdxs),'b');
 scatter3(x_des(1,idxHit),x_des(2,idxHit),x_des(3,idxHit),200,'filled');
 grid on
 axis square
