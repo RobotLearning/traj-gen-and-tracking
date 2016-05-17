@@ -45,12 +45,13 @@ classdef Ball < handle
             obj.C = Cdrag;
             obj.g = gravity;
             obj.radius = ball_radius;
-            obj.int = 'Euler';
+            obj.int = 'RK4';
             
             % table related values
-            obj.TABLE.Z = table_z;
+            obj.TABLE.Z = table_z + ball_radius;
             obj.TABLE.WIDTH = table_width;
             obj.TABLE.LENGTH = table_length;
+            obj.TABLE.DIST2ROBOT1 = dist_to_table;
             % coeff of restitution-friction vector
             obj.TABLE.K = [CFTX; CFTY; -CRT];
             
@@ -95,6 +96,8 @@ classdef Ball < handle
                     b0 = drawSimilarSample(obj.distr.data);
                 case 'landing' % draw according to des landing distr
                     b0 = obj.sampleFromLandingDistr();
+                case 'workspace' % draw acc. to des workspace distr
+                    b0 = obj.sampleFromWorkspaceDistr();
                 otherwise
                     error('Distribution not supported');
             end
@@ -105,14 +108,15 @@ classdef Ball < handle
         end
         
         % sample the ball based on a desired landing distribution
-        % landing time and initial ball to find feasible ball velocities
+        % sample landing time 
+        % sample initial ball to find feasible ball velocities
         % such that ball is above net when it passes
         function b0 = sampleFromLandingDistr(obj)
             
-            mean_land_time = 0.8;
-            s2_land_time = 0.01;
+            mean_land_time = 0.5;
+            s2_land_time = 0.0004;
             
-            par.fast = true;
+            par.fast = false;
             par.g = obj.g;
             par.Cdrag = obj.C;
             
@@ -121,18 +125,68 @@ classdef Ball < handle
             mean_land = obj.distr.land.mean;
             var_land = obj.distr.land.cov;
             znet = -Inf;
-            while znet < obj.NET.Zmax
+            while znet <= obj.NET.Zmax
                 binit = mean_init_pos + chol(var_init_pos) * randn(3,1);
                 bland = mean_land + chol(var_land) * randn(2,1);
-                bland(3) = obj.TABLE.Z;
+                bland(3) = obj.TABLE.Z + obj.radius;
                 tland = mean_land_time + sqrt(s2_land_time) * randn;
                 vinit = calcBallVelOut3D(bland,binit,tland,par);
-                tnet = (obj.NET.Y - bland(2))/vinit(2);
-                znet = binit(3) + vinit(3)*tnet - 0.5*obj.g*tnet^2;
+                tnet = abs(obj.NET.Y - binit(2))/vinit(2);
+                znet = binit(3) + vinit(3)*tnet + 0.5*obj.g*tnet^2;
             end
                 
             b0 = [binit(:);vinit(:)];
         end
+        
+        % Sample the ball from a desired workspace distr
+        % sample time2reach desired workspace point and 
+        % sample initial ball to find feasible ball velocities
+        % such that ball is above net when it passes and lands on the
+        % robots court
+        function b0 = sampleFromWorkspaceDistr(obj)
+            
+            par.fast = false;
+            par.g = obj.g;
+            par.Cdrag = obj.C;
+            par.zTable = obj.TABLE.Z;
+            par.radius = obj.radius;
+            par.bounce = true;
+            par.coeff_bounce = obj.TABLE.K;
+            par.dist_to_table = obj.TABLE.DIST2ROBOT1;
+            
+            mean_reach_time = 1.0;
+            s2_reach_time = 0.01;
+            mean_init_pos = obj.distr.init.mean;
+            var_init_pos = obj.distr.init.cov;
+            mean_end_pos = obj.distr.workspace.mean;
+            var_end_pos = obj.distr.workspace.cov;
+            znet = -Inf;
+            xland = Inf;
+            yland = Inf;
+            y_robot_table_center = obj.TABLE.DIST2ROBOT1 - obj.TABLE.LENGTH/4;
+            zland = obj.TABLE.Z + obj.radius;
+            
+            while znet < obj.NET.Zmax || ...
+                  abs(xland) > obj.TABLE.WIDTH/2 || ...
+                  abs(yland - y_robot_table_center) > obj.TABLE.LENGTH/4
+                 binit = mean_init_pos + chol(var_init_pos) * randn(3,1);
+                 bend = mean_end_pos + chol(var_end_pos) * randn(3,1);
+                 tend = mean_reach_time + sqrt(s2_reach_time) * randn;
+                 vinit = calcBallVel2ReachWorkspace(ballDes,ballPos,time2reach,par);
+                 tnet = abs(obj.NET.Y - binit(2))/vinit(2);
+                 znet = binit(3) + vinit(3)*tnet - 0.5*obj.g*tnet^2;
+                 a = 1/2*obj.g; b = vinit(3); c = binit(3) - zland;
+                 tland1 = (-b + sqrt(b^2 - 4*a*c))/(2*a);
+                 tland2 = (-b - sqrt(b^2 - 4*a*c))/(2*a);
+                 % pick the one that is positive
+                 tland = max(tland1,tland2);
+                 assert(tland > 0, 'landing time must be positive!');
+                 xland = binit(1) + vinit(1)*tland;
+                 yland = binit(2) + vinit(2)*tland;                 
+            end
+            b0 = [binit(:);vinit(:)];
+        end
+            
         
         %% Flight models  
         % 2D flight model
@@ -168,8 +222,21 @@ classdef Ball < handle
             if strcmp(obj.int,'Euler')
                 velNext = obj.vel + dt * acc;
                 posNext = obj.pos + dt * velNext;
+            elseif strcmp(obj.int,'RK4')
+                x = [obj.pos; obj.vel];
+                ballFlightFnc = @(x) [x(4:6);obj.ballFlightModel3D(x(4:6))];
+                k1 = dt * ballFlightFnc(x);
+                x_k1 = x + k1/2;
+                k2 = dt * ballFlightFnc(x_k1);
+                x_k2 = x + k2/2;
+                k3 = dt * ballFlightFnc(x_k2);
+                x_k3 = x + k3;
+                k4 = dt * ballFlightFnc(x_k3);
+                xNext = x + (k1 + 2*k2 + 2*k3 + k4)/6;
+                posNext = xNext(1:3);
+                velNext = xNext(4:6);
             else
-                error('Not implemented yet!');
+                error('Not implemented!');
             end
             
             % Check for contact            
