@@ -6,16 +6,30 @@ loadTennisTableValues();
 
 %% Testing the code for calculating outgoing velocities
 
+% ballDes(1) = 0.0;
+% ballDes(2) = dist_to_table - 3*table_y/2;
+% ballDes(3) = table_z + ball_radius;
+
 ballDes(1) = 0.0;
-ballDes(2) = dist_to_table - 3*table_y/2;
-ballDes(3) = table_z + ball_radius;
+ballDes(2) = dist_to_table - table_length;
+ballDes(3) = table_z + ball_radius + 0.2;
 
 ballPos = [0;0;0];
 time2reach = 0.5;
 fast = false;
 
 % calculate using BVP
-ballOutVel = calcBallVelOut3D(ballDes,ballPos,time2reach,fast);
+par.fast = fast;
+par.g = gravity;
+par.Cdrag = Cdrag;
+par.zTable = table_z;
+par.radius = ball_radius;
+par.bounce = true;
+par.CFTX = CFTX; 
+par.CFTY = CFTY; 
+par.CRT = CRT;
+
+ballOutVel = calcBallVelOut3D(ballDes,ballPos,time2reach,par);
 
 % now check with symplectic Euler
 dt = 0.02;

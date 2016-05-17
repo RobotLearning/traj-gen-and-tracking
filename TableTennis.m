@@ -273,7 +273,7 @@ classdef TableTennis < handle
         function racketDes = planRacket(obj,ballDes,ballPred,ballTime,time2reach,q0)
             
             %Calculate ball outgoing velocities attached to each ball pos
-            fast = true;      
+            fast = false;
             racketDes = calcRacketStrategy(ballDes,ballPred,ballTime,time2reach,fast);
             
             % Initialize solution for optimal poly
@@ -381,7 +381,7 @@ classdef TableTennis < handle
             params.CFTX = obj.table.K(1); 
             params.CFTY = obj.table.K(2); 
             params.CRT = -obj.table.K(3);
-            params.ALG = 'Euler'; %'RK4'; 
+            params.ALG = 'RK4'; 
 
             ballFlightFnc = @(x,u,dt) discreteBallFlightModel(x,dt,params);
             % very small but nonzero value for numerical stability

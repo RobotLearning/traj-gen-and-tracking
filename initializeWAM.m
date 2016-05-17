@@ -37,7 +37,7 @@ PAR.C = eye(SIM.dimy,SIM.dimx);
 
 % form constraints
 MAX_VEL = 200;
-MAX_ACC = 180;
+MAX_ACC = 200;
 SLACK = 0.05;
 CON.q.max = [2.60; 2.00; 2.80; 3.10; 1.30; 1.60; 2.20] - SLACK;
 CON.q.min = [-2.60; -2.00; -2.80; -0.90; -4.80; -1.60; -2.20] + SLACK;
