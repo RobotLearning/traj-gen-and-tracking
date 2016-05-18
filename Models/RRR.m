@@ -242,11 +242,12 @@ classdef RRR < Robot
             
             if nargin == 4
                 phi = varargin{:};
-                R = [cos(phi) -sin(phi); sin(phi) cos(phi)];
+                R = [cos(phi) -sin(phi); 
+                     sin(phi) cos(phi)];
             else
                 R = eye(2);
             end            
-            xd = R * obj.jac * qd;
+            xd = R*obj.jac*qd;
         end
         
         % get jacobian at current q
@@ -263,7 +264,20 @@ classdef RRR < Robot
                        l3*cos(q(1)+q(2)+q(3))];
         end
         
-        %% Make an animation of the robot manipulator
+        %% Drawing functions here
+        % to draw the robots joints and endeffector 
+        % for one posture only
+        function [joints,endeff,racket] = drawPosture(obj,q,varargin)
+            
+            if nargin == 3
+                rotAngle = varargin{:};
+            end
+            
+            [x1,x2,x3,mats] = rrr.kinematics(q0,rotAngle);
+            
+        end
+        
+        % Make an animation of the robot manipulator
         function animateArm(obj,q_actual,s)
             [x1,x2,x3,~] = obj.kinematics(q_actual);
             if obj.flag_ref_jsp

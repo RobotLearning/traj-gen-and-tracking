@@ -35,12 +35,13 @@ classdef TableTennis2D < handle
             % initialize camera noise
             obj.noise.camera.cov = opt.camera.cov;            
             % initialize a ball    
-            obj.ball = Ball(opt.distr); 
+            obj.ball = Ball2D(opt.distr); 
             % choose method to use for generating trajectories                        
             obj.plan.vhp.flag = opt.plan.vhp.flag;
             obj.plan.vhp.y = opt.plan.vhp.y;
             
             obj.reset_plan(q0);
+            obj.init_table();
             obj.init_handle(opt,q0);   
             
         end    
@@ -75,6 +76,7 @@ classdef TableTennis2D < handle
         function init_handle(obj,opt,q0)            
             % initialize animation
             obj.draw.flag = opt.draw;
+            obj.draw.rotate = opt.rotate;
             if opt.draw                
                 obj.initAnimation(q0);
                 obj.handle.record = false;
@@ -143,14 +145,15 @@ classdef TableTennis2D < handle
             timeSim = 0.0;
             % initialize q and x
             qd0 = zeros(length(q0),1);
-            [x,xd,o] = obj.robot.calcRacketState([q0;qd0]);
+            rotAngle = obj.draw.rotate;
+            [x,xd,o] = obj.robot.getEndEffectorState([q0;qd0],rotAngle);
 
             while timeSim < timeMax      
                 
                 % evolve ball according to racket and get estimate
                 filter = obj.getBallEstimate(dt,filter,x,xd,o);
                 [q,qd] = obj.planFiniteStateMachine(filter,q0,dt);
-                [x,xd,o] = obj.robot.calcRacketState([q;qd]);
+                [x,xd,o] = obj.robot.getEndEffectorState([q0;qd0],rotAngle);
                 
                 if obj.draw.flag
                     obj.updateAnimation(q);
@@ -324,7 +327,7 @@ classdef TableTennis2D < handle
         function filter = getBallEstimate(obj,dt,filter,x,xd,o)
             racket.pos = x;
             racket.vel = xd;
-            racket.normal = o; % FIXME: check this
+            racket.normal = o(1:2,1,3); 
             obj.ball.evolve(dt,racket);
             obs = obj.emulateCamera();
 
@@ -447,8 +450,8 @@ classdef TableTennis2D < handle
             if obj.handle.record
                 frame = getframe(gcf);
                 writeVideo(obj.handle.recordFile,frame);
-            end
-
-            
-        end        
+            end            
+        end    
+        
+    end
 end

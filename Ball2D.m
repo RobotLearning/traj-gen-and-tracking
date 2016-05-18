@@ -36,7 +36,7 @@ classdef Ball2D < handle
         
         %% Initialize ball on the ball gun
         % Randomness is due to initial standard deviation initStd
-        function obj = Ball(initial_distribution)
+        function obj = Ball2D(initial_distribution)
             
             loadTennisTableValues();   
 
@@ -139,16 +139,15 @@ classdef Ball2D < handle
         
         % Symplectic Integration 
         function evolve(obj,dt,racket)            
-
-            acc = obj.ballFlightModel();
             
             % integrate ball flight
             if strcmp(obj.int,'Euler')
+                acc = obj.ballFlightModel();
                 velNext = obj.vel + dt * acc;
                 posNext = obj.pos + dt * velNext;
             elseif strcmp(obj.int,'RK4')
                 x = [obj.pos; obj.vel];
-                ballFlightFnc = @(x) [x(1:2);obj.ballFlightModel3D(x(3:4))];
+                ballFlightFnc = @(x) [x(1:2);obj.ballFlightModel(x(3:4))];
                 k1 = dt * ballFlightFnc(x);
                 x_k1 = x + k1/2;
                 k2 = dt * ballFlightFnc(x_k1);
