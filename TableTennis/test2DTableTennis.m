@@ -34,16 +34,11 @@ filter = EKF(dim,funState,mats);
 %% Prepare the animation
 
 % get joints, endeffector pos and orientation
-[x1,x2,x3,mats] = rrr.kinematics(q0);
+rotAngle = -pi/2;
+[x1,x2,x3,mats] = rrr.kinematics(q0,rotAngle);
 x0 = x3(:,1);
 q = q0; qd = qd0;
 
-% rotate everything by 90 degrees
-R = [0 1; -1 0];
-x1 = R * x1;
-x2 = R * x2;
-x3 = R * x3;
-x0 = R * x0;
 shift = [0;0];
 link1_y = [shift(1) x1(1,1)];
 link1_z = [shift(2) x1(2,1)];
@@ -66,8 +61,8 @@ h5 = scatter(x1(1,1),x1(2,1),20,'b','LineWidth',4);
 h6 = scatter(x2(1,1),x2(2,1),20,'b','LineWidth',4);
 %h7 = scatter(x3(1,1),x3(2,1),20,'b','LineWidth',4);
 % add the endeffector as a racket-line attached
-racket_orient = R * mats(1:2,1,3);
-racket_dir = R * mats(1:2,2,3);
+racket_orient = mats(1:2,1,3);
+racket_dir = mats(1:2,2,3);
 racket_radius = 0.08;
 racket1 = x3 - racket_radius * racket_dir;
 racket2 = x3 + racket_radius * racket_dir;
@@ -129,7 +124,7 @@ land = false;
 net = false;
 % maximum horizon to predict
 time2PassTable = 1.0;
-maxTime2Hit = 0.6;
+maxTime2Hit = 0.4;
 maxPredictHorizon = 1.0;
 maxWaitAfterHit = 1.0;
 
@@ -163,13 +158,11 @@ while numTrials < 50
     end
 
     % check contact with racket    
-    tol = ball_radius;
+    tol = 2*ball_radius;
     l = min(robotIdx,size(path,2));
     % get racket pos, vel and orientation (on plane)
-    [xRacket,velRacket,mats] = rrr.getEndEffectorState(q(:,l),qd(:,l));
-    xRacket = R * xRacket;
-    velRacket = R * velRacket;
-    racketPlane = R * squeeze(mats(1:2,2,3,:)); % orientation along racket
+    [xRacket,velRacket,mats] = rrr.getEndEffectorState(q(:,l),qd(:,l),rotAngle);
+    racketPlane = squeeze(mats(1:2,2,3,:)); % orientation along racket
     vecFromRacketToBall = ball(1:2,ballIdx) - xRacket;
     %racketPlane = racket_dir(:,l);
     projPlane = racketPlane*racketPlane'/(racketPlane'*racketPlane);
@@ -196,33 +189,6 @@ while numTrials < 50
         velOut = velOutAlongNormal + velInAlongRacket;
         ball(3:4,ballIdx) = velOut;
     end    
-    
-    % run counter to terminate game after hit
-    if hit
-        cnt = cnt + dt;
-        tol = 2*net_width_2d;
-        % check contact with net
-        if abs(ball(1,ballIdx) - (dist_to_table - table_y)) <= tol 
-            if ball(2,ballIdx) < (table_z + net_height)
-                disp('Hit the net! Resetting...');
-                net = true;
-            else
-                disp('Passing over the net');
-            end
-        end
-        % check for landing
-        tol = 0.01;
-        if ball(2,ballIdx) <= table_z + ball_radius + tol && ball(4,ballIdx) < 0             
-            land = true;
-            fprintf('Land at y = %f\n', ball(1,ballIdx));
-            if abs(ball(1,ballIdx) - (dist_to_table - 3*table_y/2)) < table_y/2
-                %disp('Ball landed! Amazing!'); 
-                numLands = numLands + 1;                
-                %else
-                %disp('Ball is not inside the court. Lost a point!')
-            end
-        end
-    end
     
     % evolve ball according to flight model
     ball(:,ballIdx+1) = funState(ball(:,ballIdx),0,dt);
@@ -281,7 +247,7 @@ while numTrials < 50
             %}
             
             %%{
-            % Compute VHP Trajectory here            
+            % Compute VHP Trajectory here
             [q,qd,~] = generate2DTTTwithVHP(rrr,ballPred,ballTime,q0);            
 %             M = 100;
 %             ballInitVar = PSave;
@@ -292,11 +258,8 @@ while numTrials < 50
             %computeMPfor2DTT;            
             %}
             
-            [x1,x2,x3,mats] = rrr.kinematics(q);
-            x1 = R * x1;
-            x2 = R * x2;
-            x3 = R * x3;
-            racket_dir = R * squeeze(mats(1:2,2,3,:));
+            [x1,x2,x3,mats] = rrr.kinematics(q,rotAngle);
+            racket_dir = squeeze(mats(1:2,2,3,:));
 
             racket1 = x3 - racket_radius * racket_dir;
             racket2 = x3 + racket_radius * racket_dir;

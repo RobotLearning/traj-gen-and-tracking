@@ -4,9 +4,12 @@ function [q,qd,qdd] = generate2DTTTwithVHP(robot,ballPred,ballTime,q0)
     loadTennisTableValues();
     dof = length(q0);
     par.CRR = CRR;
+    par.Cdrag = Cdrag;
+    par.fast = true;
+    par.g = gravity;
 
     % define virtual hitting plane (VHP)
-    VHP = -0.6;
+    VHP = -0.7;
     time2reach = 0.5; % time to reach desired point on opponents court
     time2return = 0.5; % time to return to initial configuration          
     dt = ballTime(2)-ballTime(1);
@@ -26,7 +29,7 @@ function [q,qd,qdd] = generate2DTTTwithVHP(robot,ballPred,ballTime,q0)
     ballInVelAtVHP = ballAtVHP(3:4); 
 
     % GET DESIRED OUTGOING VELOCITY OF THE BALL AT VHP            
-    ballOutVelAtVHP = calcBallVelOut2D(ballDes,ballPosAtVHP,time2reach);            
+    ballOutVelAtVHP = calcBallVelOut2D(ballDes,ballPosAtVHP,time2reach,par);            
 
     % GET RACKET DESIRED VEL AND ORIENTATION AT VHP 
     [racketPos,racketVel,racketOrient] = calcDesRacketState ...
@@ -34,11 +37,11 @@ function [q,qd,qdd] = generate2DTTTwithVHP(robot,ballPred,ballTime,q0)
 
     % feed to inverse kinematics to get qf
     try
-        normalRot = R'*racketOrient;
+        normalRot = R*racketOrient;
         phiVHP = atan2(normalRot(2),normalRot(1));
-        qf = robot.invKinematics(R'*racketPos,-phiVHP);
+        qf = robot.invKinematics(R*racketPos, phiVHP);
         robot.calcJacobian(qf);
-        qfdot = robot.jac \ (R'*racketVel);
+        qfdot = robot.jac \ (R*racketVel);
     catch ME
         disp('Virtual Hitting Point outside of workspace');
         qf = q0;

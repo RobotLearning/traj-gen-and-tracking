@@ -1,6 +1,6 @@
-%% Table Tennis ball class for simulating all sorts of ball interactions
+%% 2D Table Tennis ball class for simulating all sorts of ball interactions
 
-classdef Ball < handle
+classdef Ball2D < handle
    
     % Fields necessary for all ball models
     properties        
@@ -27,8 +27,6 @@ classdef Ball < handle
         NET
         % racket structure
         RACKET
-        % for drawing
-        MESH
         % to give landing information
         isLANDED
     end
@@ -49,18 +47,16 @@ classdef Ball < handle
             
             % table related values
             obj.TABLE.Z = table_z + ball_radius;
-            obj.TABLE.WIDTH = table_width;
             obj.TABLE.LENGTH = table_length;
             obj.TABLE.DIST2ROBOT1 = dist_to_table;
             % coeff of restitution-friction vector
-            obj.TABLE.K = [CFTX; CFTY; -CRT];
+            obj.TABLE.K = [CFTY; -CRT];
             
             % floor
             obj.FLOOR.Z = floor_level;
             
             % net y value and coeff of restitution of net
             obj.NET.Y = dist_to_table - table_y;
-            obj.NET.Xmax = table_width/2 + net_overhang;
             obj.NET.Zmax = table_z + net_height;
             obj.NET.CRN = net_restitution;
             
@@ -71,16 +67,6 @@ classdef Ball < handle
             % initialize ball state
             obj.distr = initial_distribution;
             obj.resetState();
-            
-            % mesh for drawing the ball
-            numPoints = 100;
-            [ballMeshX,ballMeshY,ballMeshZ] = sphere(numPoints);
-            ballMeshX = ball_radius * ballMeshX;
-            ballMeshY = ball_radius * ballMeshY;
-            ballMeshZ = ball_radius * ballMeshZ;
-            obj.MESH.X = ballMeshX;
-            obj.MESH.Y = ballMeshY;
-            obj.MESH.Z = ballMeshZ;
 
         end
         
@@ -91,19 +77,17 @@ classdef Ball < handle
                 case 'normal'
                     mean = obj.distr.init.mean;
                     var = obj.distr.init.cov;
-                    b0 = mean + chol(var) * randn(6,1);
+                    b0 = mean + chol(var) * randn(4,1);
                 case 'empirical'
                     b0 = drawSimilarSample(obj.distr.data);
                 case 'landing' % draw according to des landing distr
                     b0 = obj.sampleFromLandingDistr();
-                case 'workspace' % draw acc. to des workspace distr
-                    b0 = obj.sampleFromWorkspaceDistr();
                 otherwise
                     error('Distribution not supported');
             end
                 
-            obj.pos = b0(1:3);
-            obj.vel = b0(4:6);
+            obj.pos = b0(1:2);
+            obj.vel = b0(3:4);
             obj.isLANDED = false;
         end
         
@@ -126,94 +110,45 @@ classdef Ball < handle
             var_land = obj.distr.land.cov;
             znet = -Inf;
             while znet <= obj.NET.Zmax
-                binit = mean_init_pos + chol(var_init_pos) * randn(3,1);
-                bland = mean_land + chol(var_land) * randn(2,1);
-                bland(3) = obj.TABLE.Z + obj.radius;
+                binit = mean_init_pos + chol(var_init_pos) * randn(2,1);
+                bland = mean_land + chol(var_land) * randn(1);
+                bland(2) = obj.TABLE.Z + obj.radius;
                 tland = mean_land_time + sqrt(s2_land_time) * randn;
-                vinit = calcBallVelOut3D(bland,binit,tland,par);
-                tnet = abs(obj.NET.Y - binit(2))/vinit(2);
-                znet = binit(3) + vinit(3)*tnet + 0.5*obj.g*tnet^2;
+                vinit = calcBallVelOut2D(bland,binit,tland,par);
+                tnet = abs(obj.NET.Y - binit(1))/vinit(1);
+                znet = binit(2) + vinit(2)*tnet + 0.5*obj.g*tnet^2;
             end
                 
-            b0 = [binit(:);vinit(:)];
-        end
-        
-        % Sample the ball from a desired workspace distr
-        % sample time2reach desired workspace point and 
-        % sample initial ball to find feasible ball velocities
-        % such that ball is above net when it passes and lands on the
-        % robots court
-        function b0 = sampleFromWorkspaceDistr(obj)
-            
-            par.fast = false;
-            par.g = obj.g;
-            par.Cdrag = obj.C;
-            par.zTable = obj.TABLE.Z;
-            par.radius = obj.radius;
-            par.bounce = true;
-            par.coeff_bounce = obj.TABLE.K;
-            par.dist_to_table = obj.TABLE.DIST2ROBOT1;
-            
-            mean_reach_time = 1.0;
-            s2_reach_time = 0.01;
-            mean_init_pos = obj.distr.init.mean;
-            var_init_pos = obj.distr.init.cov;
-            mean_end_pos = obj.distr.workspace.mean;
-            var_end_pos = obj.distr.workspace.cov;
-            znet = -Inf;
-            xland = Inf;
-            yland = Inf;
-            y_robot_table_center = obj.TABLE.DIST2ROBOT1 - obj.TABLE.LENGTH/4;
-            zland = obj.TABLE.Z + obj.radius;
-            
-            while znet < obj.NET.Zmax || ...
-                  abs(xland) > obj.TABLE.WIDTH/2 || ...
-                  abs(yland - y_robot_table_center) > obj.TABLE.LENGTH/4
-                 binit = mean_init_pos + chol(var_init_pos) * randn(3,1);
-                 bend = mean_end_pos + chol(var_end_pos) * randn(3,1);
-                 tend = mean_reach_time + sqrt(s2_reach_time) * randn;
-                 vinit = calcBallVel2ReachWorkspace(ballDes,ballPos,time2reach,par);
-                 tnet = abs(obj.NET.Y - binit(2))/vinit(2);
-                 znet = binit(3) + vinit(3)*tnet - 0.5*obj.g*tnet^2;
-                 a = 1/2*obj.g; b = vinit(3); c = binit(3) - zland;
-                 tland1 = (-b + sqrt(b^2 - 4*a*c))/(2*a);
-                 tland2 = (-b - sqrt(b^2 - 4*a*c))/(2*a);
-                 % pick the one that is positive
-                 tland = max(tland1,tland2);
-                 assert(tland > 0, 'landing time must be positive!');
-                 xland = binit(1) + vinit(1)*tland;
-                 yland = binit(2) + vinit(2)*tland;                 
-            end
             b0 = [binit(:);vinit(:)];
         end
             
         
         %% Flight models  
-        
-        % 3D flight model
+        % 2D flight model
         function xddot = ballFlightModel(obj,xdot)
 
-            v = sqrt(xdot(1)^2 + xdot(2)^2 + xdot(3)^2);
-            xddot(1) = -obj.C * v * xdot(1);
-            xddot(2) = -obj.C * v * xdot(2);
-            xddot(3) = obj.g - obj.C * v * xdot(3);
+            v = sqrt(xdot(1)^2 + xdot(2)^2);
+            xddot(1) = -obj.C * v * obj.vel(1);
+            xddot(2) = obj.g - obj.C * v * obj.vel(2);
 
             xddot = xddot(:);
         end
+        
         
         %% Integrate the ball state
         
         % Symplectic Integration 
         function evolve(obj,dt,racket)            
+
+            acc = obj.ballFlightModel();
             
             % integrate ball flight
             if strcmp(obj.int,'Euler')
-                acc = obj.ballFlightModel(obj.vel);
                 velNext = obj.vel + dt * acc;
                 posNext = obj.pos + dt * velNext;
             elseif strcmp(obj.int,'RK4')
                 x = [obj.pos; obj.vel];
-                ballFlightFnc = @(x) [x(4:6);obj.ballFlightModel(x(4:6))];
+                ballFlightFnc = @(x) [x(1:2);obj.ballFlightModel3D(x(3:4))];
                 k1 = dt * ballFlightFnc(x);
                 x_k1 = x + k1/2;
                 k2 = dt * ballFlightFnc(x_k1);
@@ -222,8 +157,8 @@ classdef Ball < handle
                 x_k3 = x + k3;
                 k4 = dt * ballFlightFnc(x_k3);
                 xNext = x + (k1 + 2*k2 + 2*k3 + k4)/6;
-                posNext = xNext(1:3);
-                velNext = xNext(4:6);
+                posNext = xNext(1:2);
+                velNext = xNext(3:4);
             else
                 error('Not implemented!');
             end
@@ -279,22 +214,22 @@ classdef Ball < handle
 
             % if ball would cross the table
             % consider rebound only            
-            cross = sign(posNext(3) - obj.TABLE.Z) ~= ...
-                         sign(obj.pos(3) - obj.TABLE.Z);
+            cross = sign(posNext(2) - obj.TABLE.Z) ~= ...
+                         sign(obj.pos(2) - obj.TABLE.Z);
                      
             % condition for bouncing      
-            if cross && abs(posNext(2) - obj.NET.Y) < obj.TABLE.LENGTH/2
+            if cross && abs(posNext(1) - obj.NET.Y) < obj.TABLE.LENGTH/2
                 tol = 1e-4;
                 dt1 = 0;
                 dt2 = dt;
                 xBounce = [obj.pos; obj.vel];
                 dtBounce = 0.0;
                 % doing bisection to find the bounce time
-                while abs(xBounce(3) - obj.TABLE.Z) > tol
+                while abs(xBounce(2) - obj.TABLE.Z) > tol
                     dtBounce = (dt1 + dt2) / 2;
-                    xBounce(4:6) = obj.vel + dtBounce * obj.ballFlightModel(obj.vel);
-                    xBounce(1:3) = obj.pos + dtBounce * xBounce(4:6);
-                    if sign(posNext(3) - obj.TABLE.Z)*(xBounce(3) - obj.TABLE.Z) < 0
+                    xBounce(3:4) = obj.vel + dtBounce * obj.ballFlightModel(obj.vel);
+                    xBounce(1:2) = obj.pos + dtBounce * xBounce(3:4);
+                    if sign(posNext(2) - obj.TABLE.Z)*(xBounce(2) - obj.TABLE.Z) < 0
                         % increase the time
                         dt1 = dtBounce;
                     else
@@ -302,16 +237,16 @@ classdef Ball < handle
                     end
                 end
                 % did the ball land on opponents court?
-                if ~obj.isLANDED && xBounce(2) < obj.NET.Y
+                if ~obj.isLANDED && xBounce(1) < obj.NET.Y
                     obj.isLANDED = true;
-                    fprintf('Ball landed at x = %f, y = %f.\n', xBounce(1),xBounce(2));
+                    fprintf('Ball landed at y = %f.\n', xBounce(1));
                 end
                 % rebound
-                xBounce(4:6) = obj.reboundModel(xBounce(4:6));
+                xBounce(3:4) = obj.reboundModel(xBounce(3:4));
                 % integrate for the rest
                 dt = dt - dtBounce;
-                velNext = xBounce(4:6) + dt * obj.ballFlightModel3D(xBounce(4:6));
-                posNext = xBounce(1:3) + dt * velNext;
+                velNext = xBounce(3:4) + dt * obj.ballFlightModel3D(xBounce(3:4));
+                posNext = xBounce(1:2) + dt * velNext;
             end
         end
         
@@ -351,10 +286,10 @@ classdef Ball < handle
                 % doing bisection to find the bounce time
                 while iter < 5 %abs(distToRacketPlane) > tol
                     dtContact = (dt1 + dt2) / 2;
-                    xContact(4:6) = obj.vel + dtContact * obj.ballFlightModel3D(obj.vel);
-                    xContact(1:3) = obj.pos + dtContact * xContact(4:6);
+                    xContact(3:4) = obj.vel + dtContact * obj.ballFlightModel(obj.vel);
+                    xContact(1:2) = obj.pos + dtContact * xContact(3:4);
                     racketContactPos = racketPos + dtContact * racketVel;
-                    diff = xContact(1:3) - racketContactPos;
+                    diff = xContact(1:2) - racketContactPos;
                     distToRacketPlane = racketNormal'*diff;
                     if distToRacketPlane > 0
                         % increase the time
@@ -365,14 +300,13 @@ classdef Ball < handle
                     iter = iter + 1;
                 end
                 % racket contact
-                xContact(4:6) = obj.racketContactModel(xContact(4:6),racket);
+                xContact(3:4) = obj.racketContactModel(xContact(3:4),racket);
                 % integrate for the rest
                 dt = dt - dtContact;
-                velNext = xContact(4:6) + dt * obj.ballFlightModel3D(xContact(4:6));
-                posNext = xContact(1:3) + dt * velNext;                
+                velNext = xContact(3:4) + dt * obj.ballFlightModel3D(xContact(3:4));
+                posNext = xContact(1:2) + dt * velNext;                
                               
-                fprintf('Hit at x = %f, y = %f, z = %f\n',...
-                     xContact(1),xContact(2),xContact(3));
+                fprintf('Hit at y = %f, z = %f\n',xContact(1),xContact(2));
             end
         end
         
@@ -381,11 +315,11 @@ classdef Ball < handle
         function [posNext,velNext] = checkContactNet(obj,dt,posNext,velNext)
             
             tol = obj.radius;
-            z = posNext(3);
-            y = posNext(2);
+            z = posNext(2);
+            y = posNext(1);
             xabs = abs(posNext(1));
             if abs(y - obj.NET.Y) <= tol && z <= obj.NET.Zmax && xabs <= obj.NET.Xmax
-                velNext(2) = -obj.NET.CRN * obj.vel(2);                    
+                velNext(1) = -obj.NET.CRN * obj.vel(1);                    
             end
             
         end       
@@ -393,9 +327,9 @@ classdef Ball < handle
         % Checks contact, zeros the velocities
         function [pos,vel] = checkContactFloor(obj,dt,pos,vel)
             
-            if pos(3) <= obj.FLOOR.Z
-                pos(3) = obj.FLOOR.Z;
-                vel = zeros(3,1);
+            if pos(2) <= obj.FLOOR.Z
+                pos(2) = obj.FLOOR.Z;
+                vel = zeros(2,1);
             end
         end
         

@@ -173,9 +173,29 @@ classdef RRR < Robot
         %% Kinematics and dynamics models
         
         % run kinematics using an external function
-        function [x1,x2,x3,Ahmats] = kinematics(obj,q)
+        function [x1,x2,x3,Ahmats] = kinematics(obj,q,varargin)
             
             [x1,x2,x3,Ahmats] = RRRKinematics(q,obj.PAR);
+            
+            if nargin == 3
+                angle = varargin{1};
+                [x1,x2,x3,Ahmats] = obj.rotate(angle,x1,x2,x3,Ahmats);
+            end
+        end
+        
+        function [x1,x2,x3,mats] = rotate(obj,phi,x1,x2,x3,mats)
+            % rotate everything by phi degrees
+            R = [cos(phi) -sin(phi); sin(phi) cos(phi)];
+            x1 = R * x1;
+            x2 = R * x2;
+            x3 = R * x3;
+            for timeIdx = 1:size(mats,4)
+                Ahmats = mats(:,:,:,timeIdx);
+                for slice = 1:size(Ahmats,3)
+                    Ahmats(1:2,1:2,slice) = R * Ahmats(1:2,1:2,slice);
+                end
+                mats(:,:,:,timeIdx) = Ahmats;
+            end
         end
         
         % call inverse kinematics from outside
@@ -215,11 +235,18 @@ classdef RRR < Robot
         end
         
         % get end effector position
-        function [x,xd,mats] = getEndEffectorState(obj,q,qd)
+        function [x,xd,mats] = getEndEffectorState(obj,q,qd,varargin)
             
-            [~,~,x,mats] = obj.kinematics(q);
+            [~,~,x,mats] = obj.kinematics(q,varargin{:});
             obj.calcJacobian(q);
-            xd = obj.jac * qd;
+            
+            if nargin == 4
+                phi = varargin{:};
+                R = [cos(phi) -sin(phi); sin(phi) cos(phi)];
+            else
+                R = eye(2);
+            end            
+            xd = R * obj.jac * qd;
         end
         
         % get jacobian at current q
