@@ -42,6 +42,7 @@ classdef TableTennis2D < handle
             
             obj.reset_plan(q0);
             obj.init_table();
+            obj.init_lookup(opt);
             obj.init_handle(opt,q0);   
             
         end    
@@ -90,6 +91,33 @@ classdef TableTennis2D < handle
                 obj.handle = [];
                 obj.handle.record = false;
             end
+        end        
+        
+        % initialize the lookup table parameters
+        function init_lookup(obj,opt)
+            
+            % shall we train an offline lookup table
+            obj.offline.train = opt.train;
+            obj.offline.use = opt.lookup.flag;
+            obj.offline.mode = opt.lookup.mode;
+            obj.offline.savefile = opt.lookup.savefile;
+            obj.offline.X = [];
+            obj.offline.Y = [];
+            
+            if obj.offline.use || obj.offline.train
+                try
+                    % load the savefile
+                    load(obj.offline.savefile,'X','Y');
+                    obj.offline.X = X;
+                    obj.offline.Y = Y;
+                    obj.offline.B = X \ Y;
+                    %obj.train_gp(X,Y);                    
+                catch
+                    warning('No lookup table found!');
+                    obj.offline.X = [];
+                    obj.offline.Y = [];
+                end
+            end            
         end        
 
         %% MAIN LOOP
@@ -146,14 +174,14 @@ classdef TableTennis2D < handle
             % initialize q and x
             qd0 = zeros(length(q0),1);
             rotAngle = obj.draw.rotate;
-            [x,xd,o] = obj.robot.getEndEffectorState([q0;qd0],rotAngle);
+            [x,xd,o] = obj.robot.getEndEffectorState(q0,qd0,rotAngle);
 
             while timeSim < timeMax      
                 
                 % evolve ball according to racket and get estimate
                 filter = obj.getBallEstimate(dt,filter,x,xd,o);
                 [q,qd] = obj.planFiniteStateMachine(filter,q0,dt);
-                [x,xd,o] = obj.robot.getEndEffectorState([q0;qd0],rotAngle);
+                [x,xd,o] = obj.robot.getEndEffectorState(q,qd,rotAngle);
                 
                 if obj.draw.flag
                     obj.updateAnimation(q);
@@ -195,9 +223,9 @@ classdef TableTennis2D < handle
                 elseif numBounce ~= 1
                     disp('Ball does not bounce once! Not hitting!');
                     obj.plan.stage = FINISH;
-                elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPred)
-                    disp('No intersection with workspace! Not hitting!');
-                    obj.plan.stage = FINISH;
+%                 elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPred)
+%                     disp('No intersection with workspace! Not hitting!');
+%                     obj.plan.stage = FINISH;
                 else
                     obj.plan.idx = 0;
                     obj.plan.stage = HIT;
@@ -239,12 +267,38 @@ classdef TableTennis2D < handle
             racketDes.est = x0;
         end  
         
+        % Loads lookup table parameters by finding the 
+        % closest table ball-estimate entry 
+        function [qf,qfdot,T] = lookup(obj)            
+       
+            switch obj.offline.mode
+                case 'regress'
+                    val = obj.offline.b0 * obj.offline.B;
+                case 'closest'      
+                    Xs = obj.offline.X;
+                    Ys = obj.offline.Y;
+                    bstar = obj.offline.b0;
+                    N = size(Xs,1);
+                    % find the closest point among Xs
+                    diff = repmat(bstar,N,1) - Xs;
+                    [~,idx] = min(diag(diff*diff'));
+                    val = Ys(idx,:);              
+                otherwise
+                    error('lookup mode not supported!');
+            end
+            dofs = (length(val) - 1) / 2;
+            qf = val(1:dofs)';
+            qfdot = val(dofs+1:2*dofs)';
+            T = val(end);
+        end        
+        
         % Fix a desired landing point and desired landing time
         % as well as a desired return time to q0
         % For now only two methods : VHP and free Time
         function returnBall2Center(obj,ballPred,ballTime,q0,dt)                
             
             dofs = length(q0);
+            rotAngle = obj.draw.rotate;
             % land the ball on the centre of opponents court
             ballDes(1) = obj.table.DIST - 3*obj.table.LENGTH/4;
             ballDes(2) = obj.table.Z;   
@@ -271,7 +325,7 @@ classdef TableTennis2D < handle
             
             [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
             [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
-            [x,xd,o] = obj.robot.calcRacketState([q;qd]);
+            [x,xd,o] = obj.robot.getEndEffectorState(q,qd,rotAngle);
 
             if obj.draw.flag
                 % Debugging the trajectory generation                 
@@ -346,7 +400,7 @@ classdef TableTennis2D < handle
             ball = obj.ball;
 
             % get joints, endeffector pos and orientation
-            [joint,ee,racket] = rob.drawPosture(q);
+            [joint,ee,racket] = rob.drawPosture(q,obj.draw.rotate);
             endeff = [joint(end,:); ee];
 
             % edit: reduced to half screen size
@@ -355,26 +409,12 @@ classdef TableTennis2D < handle
             %uisetcolor is useful here to determine these 3-vectors
             orange = [0.9100 0.4100 0.1700];
             gray = [0.5020 0.5020 0.5020];
-            lightgray = [0.8627    0.8627    0.8627];
-            white = [0.9412 0.9412 0.9412];
-            black2 = [0.3137    0.3137    0.3137];
-            red = [1.0000    0.2500    0.2500];
             % transform into base coord.
-            h.ball = scatter(ball.pos(1),ball.pos(2),20,orange,'filled');
+            h.ball = scatter(ball.pos(1),ball.pos(2),50,orange,'filled');
             hold on;
-            
-            racket_orient = mats(1:2,1,3);
-            racket_dir = mats(1:2,2,3);
-            racket_radius = 0.08;
-            racket1 = x3 - racket_radius * racket_dir;
-            racket2 = x3 + racket_radius * racket_dir;
-            line_racket_y = [racket1(1,1),racket2(1,1)];
-            line_racket_z = [racket1(2,1),racket2(2,1)];
-            
-            h.robot.joints = plot(joint(:,1),joint(:,2),joint(:,3),'k','LineWidth',10);
-            h.robot.endeff = plot(endeff(:,1),endeff(:,2),endeff(:,3),'Color',gray,'LineWidth',5);
-            h.robot.racket = line(line_racket_y,line_racket_z,'color',[1 0 0],'LineWidth',4);
-
+            h.robot.joints = plot(joint(:,1),joint(:,2),'k','LineWidth',10);
+            h.robot.endeff = plot(endeff(:,1),endeff(:,2),'Color',gray,'LineWidth',10);
+            h.robot.racket = line(racket(:,1),racket(:,2),'color',[1 0 0],'LineWidth',10);
             obj.handle = h;
             
             grid on;
@@ -409,9 +449,9 @@ classdef TableTennis2D < handle
 
             net = [net1,net2,net3,net4]';
 
-            % tol_x = 0.1; tol_y = 0.1; tol_z = 0.3;
-            % xlim([dist_to_table - table_length - tol_y, tol_y]);
-            % ylim([table_z - tol_z, table_z + 2*tol_z]);
+            tol_y = 0.1; tol_z = 0.3;
+            xlim([dist_to_table - table_length - tol_y, 3*tol_y]);
+            ylim([table_z - 3*tol_z, table_z + 4*tol_z]);
             legend('ball','robot');
             fill(T(:,1),T(:,2),[0 0.7 0.3]);
             fill(net(:,1),net(:,2),[0 0 0]);  
@@ -427,8 +467,9 @@ classdef TableTennis2D < handle
             hrobotJ = obj.handle.robot.joints;
             hrobotE = obj.handle.robot.endeff;
             hrobotR = obj.handle.robot.racket;
-            [joint,ee,racket] = rob.drawPosture(q);
-            endeff = [joint(end,:);ee];
+            rotangle = obj.draw.rotate;
+            [joint,ee,racket] = rob.drawPosture(q,rotangle);
+            endeff = [joint(end,:); ee];
     
             % ball
             set(hball,'XData',b.pos(1));
@@ -441,8 +482,8 @@ classdef TableTennis2D < handle
             set(hrobotE,'XData',endeff(:,1));
             set(hrobotE,'YData',endeff(:,2));
             % robot racket
-            set(hrobotR,'XData',racket(1,:));
-            set(hrobotR,'YData',racket(2,:));
+            set(hrobotR,'XData',racket(:,1));
+            set(hrobotR,'YData',racket(:,2));
 
             drawnow;
             %pause(0.001);

@@ -24,12 +24,15 @@ ballPosAtVHP = ballAtVHP(1:2);
 ballInVelAtVHP = ballAtVHP(3:4); 
 
 % GET DESIRED OUTGOING VELOCITY OF THE BALL AT VHP            
-fast = true;
-ballOutVelAtVHP = calcBallVelOut2D(ballDes,ballPosAtVHP,time2reach,fast);            
+par.fast = true;
+par.g = gravity;
+par.Cdrag = Cdrag;
+par.CRR = CRR;
+ballOutVelAtVHP = calcBallVelOut2D(ballDes,ballPosAtVHP,time2reach,par);            
 
 % GET RACKET DESIRED VEL AND ORIENTATION AT VHP 
 [racketPos,racketVel,racketNormal] = calcDesRacketState ...
-               (ballPosAtVHP,ballOutVelAtVHP,ballInVelAtVHP);
+               (ballPosAtVHP,ballOutVelAtVHP,ballInVelAtVHP,par);
 % attach a suitable angular velocity to the racket
 racketAngularVel = zeros(1);
 
@@ -42,4 +45,4 @@ racket.normal = racketNormal;
 racket.vel = racketVel;
 racket.angvel = racketAngularVel;
 
-[qf,qfdot] = robot.invKinTableTennis1(Q0,racket);
+[qf,qfdot] = robot.invKinTableTennis(Q0,racket);

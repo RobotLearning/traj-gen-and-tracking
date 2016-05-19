@@ -27,27 +27,6 @@ classdef RRR < Robot
         
         % copies the parameter values inside the structure
         function set.PAR(obj, STR)  
-            
-            % initialize everything to zero
-            obj.PAR.const.g = 0;
-            obj.PAR.link1.mass = 0;
-            obj.PAR.link2.mass = 0;
-            obj.PAR.link3.mass = 0;
-            obj.PAR.link1.length = 0;
-            obj.PAR.link2.length = 0;
-            obj.PAR.link3.length = 0;
-            obj.PAR.link1.centre.dist = 0;
-            obj.PAR.link2.centre.dist = 0;
-            obj.PAR.link3.centre.dist = 0;
-            obj.PAR.link1.inertia = 0;
-            obj.PAR.link2.inertia = 0;
-            obj.PAR.link3.inertia = 0;
-            obj.PAR.link1.motor.inertia = 0;
-            obj.PAR.link2.motor.inertia = 0;
-            obj.PAR.link3.motor.inertia = 0;
-            obj.PAR.link1.motor.gear_ratio = 0;
-            obj.PAR.link2.motor.gear_ratio = 0;
-            obj.PAR.link3.motor.gear_ratio = 0;
                          
             % check that the input has all the fields
             % TODO: is there a better way?
@@ -60,37 +39,6 @@ classdef RRR < Robot
         
         % copies the constraint values inside the structure
         function set.CON(obj, STR)
-            % initialize all fields
-            obj.CON.link1.q.max = Inf;
-            obj.CON.link1.q.min = -Inf;
-            obj.CON.link1.qd.max = Inf;
-            obj.CON.link1.qd.min = -Inf;
-            obj.CON.link1.qdd.max = Inf;
-            obj.CON.link1.qdd.min = -Inf;
-            obj.CON.link1.u.max = Inf;
-            obj.CON.link1.u.min = -Inf;
-            obj.CON.link1.udot.max = Inf;
-            obj.CON.link1.udot.min = -Inf;
-            obj.CON.link2.q.max = Inf;
-            obj.CON.link2.q.min = -Inf;
-            obj.CON.link2.qd.max = Inf;
-            obj.CON.link2.qd.min = -Inf;
-            obj.CON.link2.qdd.max = Inf;
-            obj.CON.link2.qdd.min = -Inf;            
-            obj.CON.link2.u.max = Inf;
-            obj.CON.link2.u.min = -Inf;
-            obj.CON.link2.udot.max = Inf;
-            obj.CON.link2.udot.min = -Inf;
-            obj.CON.link3.q.max = Inf;
-            obj.CON.link3.q.min = -Inf;
-            obj.CON.link3.qd.max = Inf;
-            obj.CON.link3.qd.min = -Inf;
-            obj.CON.link3.qdd.max = Inf;
-            obj.CON.link3.qdd.min = -Inf;            
-            obj.CON.link3.u.max = Inf;
-            obj.CON.link3.u.min = -Inf;
-            obj.CON.link3.udot.max = Inf;
-            obj.CON.link3.udot.min = -Inf;
             
             % check that the input has all the fields
             %assert(all(strcmp(fieldnames(obj.CON), fieldnames(STR))));
@@ -100,6 +48,7 @@ classdef RRR < Robot
         
         % set the simulation parameters
         function set.SIM(obj, sim)
+            %assert(all(strcmp(fieldnames(obj.SIM), fieldnames(sim))));
             obj.SIM.discrete = sim.discrete;
             obj.SIM.dimx = sim.dimx;
             obj.SIM.dimy = sim.dimy;
@@ -197,24 +146,6 @@ classdef RRR < Robot
                 mats(:,:,:,timeIdx) = Ahmats;
             end
         end
-        
-        % call inverse kinematics from outside
-        function q = invKinematics(obj,x,var)
-            
-            if isscalar(var)
-                % phi must have been provided
-                phi = var;
-                q = RRRInvKinematics(x,phi,obj.PAR);
-            else
-                Ahmat = var;
-                % Ahmat is the last hom. matrix for the last joint
-                % get the approach vector
-                a = Ahmat(1:3,1);
-                % get phi
-                phi = Atan2(a(2),a(1));
-                q = RRRInvKinematics(x,phi,obj.PAR);
-            end
-        end
                    
         % dynamics to get u
         % TODO
@@ -237,17 +168,22 @@ classdef RRR < Robot
         % get end effector position
         function [x,xd,mats] = getEndEffectorState(obj,q,qd,varargin)
             
-            [~,~,x,mats] = obj.kinematics(q,varargin{:});
-            obj.calcJacobian(q);
-            
+            dofs = size(q,1);
+            lenq = size(q,2);
             if nargin == 4
                 phi = varargin{:};
                 R = [cos(phi) -sin(phi); 
                      sin(phi) cos(phi)];
             else
                 R = eye(2);
-            end            
-            xd = R*obj.jac*qd;
+            end      
+            
+            [~,~,x,mats] = obj.kinematics(q,varargin{:});            
+            xd = zeros(2,lenq);
+            for i = 1:lenq
+                obj.calcJacobian(q(:,i));
+                xd(:,i) = R*obj.jac*qd(:,i);
+            end
         end
         
         % get jacobian at current q
@@ -264,6 +200,121 @@ classdef RRR < Robot
                        l3*cos(q(1)+q(2)+q(3))];
         end
         
+        %% Inverse Kinematics functions
+        
+        % call inverse kinematics from outside
+        function q = invKinematics(obj,x,var)
+            
+            if isscalar(var)
+                % phi must have been provided
+                phi = var;
+                q = RRRInvKinematics(x,phi,obj.PAR);
+            else
+                Ahmat = var;
+                % Ahmat is the last hom. matrix for the last joint
+                % get the approach vector
+                a = Ahmat(1:3,1);
+                % get phi
+                phi = Atan2(a(2),a(1));
+                q = RRRInvKinematics(x,phi,obj.PAR);
+            end
+        end        
+        
+        % inverse kin for table tennis
+        function [qf,qfdot] = invKinTableTennis(obj,Q0,racket)
+            
+            dof = length(Q0)/2;
+            q0 = Q0(1:dof);
+            % rotate some variables for drawing in 2D simulation
+            R = [0 -1; 1 0];
+            % feed to inverse kinematics to get qf
+            try
+                normalRot = R*racket.normal;
+                phiVHP = atan2(normalRot(2),normalRot(1));
+                qf = obj.invKinematics(R*racket.pos, phiVHP);
+                obj.calcJacobian(qf);
+                qfdot = obj.jac \ (R*racket.vel);
+            catch ME
+                disp('Virtual Hitting Point outside of workspace');
+                qf = q0;
+                qfdot = zeros(dof,1);
+            end
+        end
+        
+        %% Check safety here
+        
+        function [q,qd,qdd] = checkJointLimits(obj,q,qd,qdd)
+            
+            dofs = size(q,1);
+            len = size(q,2);
+            con = obj.CON;
+            umax = repmat(con.u.max,1,len);
+            umin = repmat(con.u.min,1,len);
+            qmax = repmat(con.q.max,1,len);            
+            qmin = repmat(con.q.min,1,len);
+            qdmax = repmat(con.qd.max,1,len);
+            qdmin = repmat(con.qd.min,1,len);
+            qddmax = repmat(con.qdd.max,1,len);
+            qddmin = repmat(con.qdd.min,1,len); 
+            u = zeros(dofs,len);
+%             for i = 1:len
+%                 u(:,i) = obj.invDynamics(q(:,i),qd(:,i),qdd(:,i));
+%             end
+            
+            %obj.displayMaxInfo(q,qd,qdd,u);
+            
+            try              
+                assert(~any(any((q > qmax | q < qmin))),'Joint limits violated!');
+                assert(~any(any((qd > qdmax | qd < qdmin))), 'Vel limits violated!');
+                assert(~any(any((qdd > qddmax | qdd < qddmin))), 'Acc limits violated!');
+                assert(~any(any((u > umax | u < umin))), 'Torque limits violated!');
+            catch ME
+                disp(ME.message);
+                disp('Not moving the robot!');
+                q0 = q(:,end);
+                q = q0 * ones(1,len);
+                qd = zeros(dofs,len);
+                qdd = zeros(dofs,len);
+            end
+        end
+        
+        % Display max and min info about trajectory and control inputs
+        function displayMaxInfo(obj,q,qd,qdd,u)
+            
+            dofs = size(q,1);
+            qmax = max(q,[],2);
+            qmin = min(q,[],2);
+            qdmax = max(qd,[],2);
+            qdmin = min(qd,[],2);
+            qddmax = max(qdd,[],2);
+            qddmin = min(qdd,[],2);
+            umax = max(u,[],2);
+            umin = min(u,[],2);
+            
+            fprintf('qmax 	 qdmax 	 qddmax    umax\n');
+            for i = 1:dofs
+                fprintf('%-8.2f %-8.2f %-8.2f %-8.2f\n',...
+                    qmax(i),qdmax(i),qddmax(i),umax(i));
+            end
+            fprintf('qmin 	 qdmin 	 qddmin    umin\n');
+            for i = 1:dofs
+                fprintf('%-8.2f %-8.2f %-8.2f %-8.2f\n',...
+                    qmin(i),qdmin(i),qddmin(i),umin(i));
+            end
+                
+        end
+        
+        function q = clampJointLimits(obj,q)
+            
+            con = obj.CON;
+            q = min(con.q.max,q);
+            q = max(con.q.min,q);
+        end
+        
+        function q = checkContactWithTable(obj,q)
+            % TODO:
+        end        
+        
         %% Drawing functions here
         % to draw the robots joints and endeffector 
         % for one posture only
@@ -273,7 +324,18 @@ classdef RRR < Robot
                 rotAngle = varargin{:};
             end
             
-            [x1,x2,x3,mats] = rrr.kinematics(q0,rotAngle);
+            [x1,x2,x3,mats] = obj.kinematics(q,rotAngle);
+            
+            base = [0,0];
+            joints = [base; x1'; x2'];
+            endeff = x3';
+            
+            racket_orient = mats(1:2,1,3);
+            racket_dir = mats(1:2,2,3);
+            racket_radius = 0.08;
+            racket1 = x3 - racket_radius * racket_dir;
+            racket2 = x3 + racket_radius * racket_dir;
+            racket = [racket1'; racket2'];
             
         end
         

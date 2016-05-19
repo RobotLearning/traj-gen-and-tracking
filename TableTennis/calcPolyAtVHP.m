@@ -42,4 +42,4 @@ racket.normal = racketNormal;
 racket.vel = racketVel;
 racket.angvel = racketAngularVel;
 
-[qf,qfdot] = robot.invKinTableTennis1(Q0,racket);
+[qf,qfdot] = robot.invKinTableTennis(Q0,racket);

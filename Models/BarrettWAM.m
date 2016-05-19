@@ -224,7 +224,7 @@ classdef BarrettWAM < Robot
         
         % Inverse Kinematics for table tennis
         % Specifically, trying to keep initial slide of the racket
-        function [qf,qfdot] = invKinTableTennis1(obj,Q0,racket)
+        function [qf,qfdot] = invKinTableTennis(obj,Q0,racket)
             
             racketPos = racket.pos;
             racketNormal = racket.normal;

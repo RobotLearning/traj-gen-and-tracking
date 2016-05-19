@@ -142,12 +142,12 @@ classdef Ball2D < handle
             
             % integrate ball flight
             if strcmp(obj.int,'Euler')
-                acc = obj.ballFlightModel();
+                acc = obj.ballFlightModel(obj.vel);
                 velNext = obj.vel + dt * acc;
                 posNext = obj.pos + dt * velNext;
             elseif strcmp(obj.int,'RK4')
                 x = [obj.pos; obj.vel];
-                ballFlightFnc = @(x) [x(1:2);obj.ballFlightModel(x(3:4))];
+                ballFlightFnc = @(x) [x(3:4);obj.ballFlightModel(x(3:4))];
                 k1 = dt * ballFlightFnc(x);
                 x_k1 = x + k1/2;
                 k2 = dt * ballFlightFnc(x_k1);
@@ -244,7 +244,7 @@ classdef Ball2D < handle
                 xBounce(3:4) = obj.reboundModel(xBounce(3:4));
                 % integrate for the rest
                 dt = dt - dtBounce;
-                velNext = xBounce(3:4) + dt * obj.ballFlightModel3D(xBounce(3:4));
+                velNext = xBounce(3:4) + dt * obj.ballFlightModel(xBounce(3:4));
                 posNext = xBounce(1:2) + dt * velNext;
             end
         end
@@ -302,7 +302,7 @@ classdef Ball2D < handle
                 xContact(3:4) = obj.racketContactModel(xContact(3:4),racket);
                 % integrate for the rest
                 dt = dt - dtContact;
-                velNext = xContact(3:4) + dt * obj.ballFlightModel3D(xContact(3:4));
+                velNext = xContact(3:4) + dt * obj.ballFlightModel(xContact(3:4));
                 posNext = xContact(1:2) + dt * velNext;                
                               
                 fprintf('Hit at y = %f, z = %f\n',xContact(1),xContact(2));
@@ -316,8 +316,7 @@ classdef Ball2D < handle
             tol = obj.radius;
             z = posNext(2);
             y = posNext(1);
-            xabs = abs(posNext(1));
-            if abs(y - obj.NET.Y) <= tol && z <= obj.NET.Zmax && xabs <= obj.NET.Xmax
+            if abs(y - obj.NET.Y) <= tol && z <= obj.NET.Zmax 
                 velNext(1) = -obj.NET.CRN * obj.vel(1);                    
             end
             

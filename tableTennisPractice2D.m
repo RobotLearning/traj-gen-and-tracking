@@ -12,12 +12,12 @@ OPT.record = false; % record the simulation
 OPT.rotate = -pi/2;
 
 % planning related flags and parameters
-OPT.plan.vhp.flag = false;
-OPT.plan.vhp.y = -0.7;
+OPT.plan.vhp.flag = true;
+OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
-OPT.lookup.flag = true; % use lookup table instead of optimizing online
+OPT.lookup.flag = false; % use lookup table instead of optimizing online
 OPT.lookup.mode = 'closest'; %'regress';
-OPT.lookup.savefile = ['LookupTable-', date, '.mat'];
+OPT.lookup.savefile = ['R3-LookupTable-', date, '.mat'];
 
 % initial ball parameters
 % OPT.distr.type = 'normal';

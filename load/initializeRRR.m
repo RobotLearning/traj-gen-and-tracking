@@ -73,18 +73,18 @@ PAR.link3.motor.gear_ratio = r_3;
 PAR.C = eye(SIM.dimy,SIM.dimx);
 
 % form constraints
-CON.link1.u.min = -Inf;
-CON.link1.u.max = Inf;
-CON.link2.u.min = -Inf;
-CON.link2.u.max = Inf;
-CON.link3.u.min = -Inf;
-CON.link3.u.max = Inf;
-CON.link1.udot.min = -Inf;
-CON.link1.udot.max = Inf;
-CON.link2.udot.min = -Inf;
-CON.link2.udot.max = Inf;
-CON.link3.udot.min = -Inf;
-CON.link3.udot.max = Inf;
+
+MAX_VEL = 200;
+MAX_ACC = 200;
+SLACK = 0.05;
+CON.q.max = [2.60; 2.00; 2.80] - SLACK;
+CON.q.min = [-2.60; -2.00; -2.80] + SLACK;
+CON.qd.max = MAX_VEL * ones(3,1);
+CON.qd.min = -MAX_VEL * ones(3,1);
+CON.qdd.max = MAX_ACC * ones(3,1);
+CON.qdd.min = -MAX_ACC * ones(3,1);
+CON.u.max = [75; 125; 39];
+CON.u.min = -CON.u.max;
 
 % cost structure
 % only penalize positions

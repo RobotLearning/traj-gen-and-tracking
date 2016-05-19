@@ -121,7 +121,7 @@ classdef TableTennis < handle
             end            
         end
         
-        % Train 15 independent GPS
+        % Train independent GPS
         function train_gp(obj,X,Y)            
             hp.type = 'squared exponential iso';
             hp.l = 1/4;
@@ -287,7 +287,6 @@ classdef TableTennis < handle
         % closest table ball-estimate entry 
         function [qf,qfdot,T] = lookup(obj)            
        
-            dofs = 7;
             switch obj.offline.mode
                 case 'regress'
                     val = obj.offline.b0 * obj.offline.B;
@@ -310,6 +309,7 @@ classdef TableTennis < handle
                 otherwise
                     error('lookup mode not supported!');
             end
+            dofs = (length(val) - 1) / 2;
             qf = val(1:dofs)';
             qfdot = val(dofs+1:2*dofs)';
             T = val(end);
