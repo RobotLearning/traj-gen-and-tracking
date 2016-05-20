@@ -12,7 +12,7 @@ OPT.record = false; % record the simulation
 OPT.rotate = -pi/2;
 
 % planning related flags and parameters
-OPT.plan.vhp.flag = true;
+OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
 OPT.lookup.flag = false; % use lookup table instead of optimizing online
@@ -38,7 +38,7 @@ OPT.distr.land.cov = 0.01;
 
 % measurement covariance
 OPT.vision.cov = 0.0;
-OPT.vision.filter = 'poly'; %'EKF';
+OPT.vision.filter = 'EKF';
 OPT.vision.draw = true; %plot filtered state
 
 tt = TableTennis2D(rrr,q0,OPT);
