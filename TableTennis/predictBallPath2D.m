@@ -19,7 +19,7 @@ time2PassTable = Inf;
 
 % save filter state before prediction
 xSave = filter.x;
-PSave = filter.P;
+%PSave = filter.P;
 
 % comingDown variable is used because z-derivative estimate might not
 % be valid to predict number of bounces correctly
@@ -50,4 +50,5 @@ for j = 1:predictLen
 end
 
 % revert back to saved state
-filter.initState(xSave,PSave);
+% filter.initState(xSave,PSave);
+filter.initState(xSave,0);

@@ -37,7 +37,9 @@ OPT.distr.land.cov = 0.01;
 % OPT.distr.workspace.cov = 0.1*eye(3);
 
 % measurement covariance
-OPT.camera.cov = 0.0;
+OPT.vision.cov = 0.0;
+OPT.vision.filter = 'poly'; %'EKF';
+OPT.vision.draw = true; %plot filtered state
 
 tt = TableTennis2D(rrr,q0,OPT);
 tt.practice(q0,1);

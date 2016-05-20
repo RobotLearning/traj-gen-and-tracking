@@ -10,7 +10,7 @@ loadTennisTableValues();
 dof = length(q0);
 
 ballFull = [ballPred;ballTime];            
-fprintf('Desired landing pos: y = %.3f.\n', ballDes(2));
+fprintf('Desired landing pos: y = %.3f.\n', ballDes(1));
 
 % interpolate at VHP
 vec = [2,3,4,5];
