@@ -73,7 +73,7 @@ function [J,G] = cost(Q0,Qf,T)
 % a3 = a(1,:)';
 % a2 = a(2,:)';
 
-dof = 7;
+dof = length(Q0)/2;
 q0 = Q0(1:dof); 
 q0dot = Q0(dof+1:end); 
 qf = Qf(1:dof); 
@@ -123,7 +123,7 @@ end
 function [c,ceq] = calculateRacketDev(robot,racket,Qf,T,Q0,Tret)
 
 % enforce joint limits as inequality constraints throughout trajectory
-dof = 7;
+dof = length(Q0)/2;
 q0 = Q0(1:dof); 
 q0dot = Q0(dof+1:end); 
 qf = Qf(1:dof); 
@@ -184,11 +184,12 @@ ceq = [xf - posDes(:);
 end
 
 % interpolate to find ball at time t
-function [pos,vel,orient] = calculateDesRacket(racket,t)
+function [pos,vel,normal] = calculateDesRacket(racket,t)
 
+dim = size(racket.pos,1);
 state = interp1(racket.time',[racket.pos',racket.vel',racket.normal'],t);
-pos = state(1:3);
-vel = state(4:6);
-orient = state(7:9);
+pos = state(1:dim);
+vel = state(dim+1:2*dim);
+normal = state(2*dim+1:3*dim);
 
 end
