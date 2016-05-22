@@ -1,7 +1,7 @@
 %% Table tennis practice using the table tennis class
 
 % original seed was 1
-clc; clear; close all; rng(2);
+clc; clear; close all; rng(4);
 load('ballInitDist1.mat','mu','Sigma');
 % load('ballTrain1');
 initializeRRR;
@@ -15,8 +15,8 @@ OPT.rotate = -pi/2;
 OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
-OPT.lookup.flag = false; % use lookup table instead of optimizing online
-OPT.lookup.mode = 'closest'; %'regress';
+OPT.lookup.flag = true; % use lookup table instead of optimizing online
+OPT.lookup.mode = 'closest'; %'regress'
 OPT.lookup.savefile = ['R3-LookupTable-', date, '.mat'];
 
 % initial ball parameters
@@ -27,9 +27,9 @@ OPT.lookup.savefile = ['R3-LookupTable-', date, '.mat'];
 % OPT.distr.data = ballTrain.bInit;
 OPT.distr.type = 'landing';
 OPT.distr.init.mean = mu(2:3);
-OPT.distr.init.cov = 0.01*Sigma(2:3,2:3);
-OPT.distr.land.mean = -1.5;
-OPT.distr.land.cov = 0.01;
+OPT.distr.init.cov = Sigma(2:3,2:3);
+OPT.distr.land.mean = -1.85;
+OPT.distr.land.cov = 0.05;
 % OPT.distr.type = 'workspace';
 % OPT.distr.init.mean = mu(1:3);
 % OPT.distr.init.cov = 1e-6;
