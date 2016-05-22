@@ -97,15 +97,14 @@ classdef Ball2D < handle
         % such that ball is above net when it passes
         function b0 = sampleFromLandingDistr(obj)
             
-            mean_land_time = 0.5;
-            s2_land_time = 0.0004;
-            
             par.fast = false;
             par.g = obj.g;
             par.Cdrag = obj.C;
             
             mean_init_pos = obj.distr.init.mean;
             var_init_pos = obj.distr.init.cov;
+            mean_land_time = obj.distr.time.mean;
+            var_land_time = obj.distr.time.cov;
             mean_land = obj.distr.land.mean;
             var_land = obj.distr.land.cov;
             znet = -Inf;
@@ -113,7 +112,7 @@ classdef Ball2D < handle
                 binit = mean_init_pos + chol(var_init_pos) * randn(2,1);
                 bland = mean_land + chol(var_land) * randn(1);
                 bland(2) = obj.TABLE.Z + obj.radius;
-                tland = mean_land_time + sqrt(s2_land_time) * randn;
+                tland = mean_land_time + sqrt(var_land_time) * randn;
                 vinit = calcBallVelOut2D(bland,binit,tland,par);
                 tnet = abs(obj.NET.Y - binit(1))/vinit(1);
                 znet = binit(2) + vinit(2)*tnet + 0.5*obj.g*tnet^2;

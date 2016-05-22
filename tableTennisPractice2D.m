@@ -1,6 +1,6 @@
 %% Table tennis practice using the table tennis class
 
-% original seed was 1
+% original seed was 2 for lookup table
 clc; clear; close all; rng(4);
 load('ballInitDist1.mat','mu','Sigma');
 % load('ballTrain1');
@@ -30,11 +30,8 @@ OPT.distr.init.mean = mu(2:3);
 OPT.distr.init.cov = Sigma(2:3,2:3);
 OPT.distr.land.mean = -1.85;
 OPT.distr.land.cov = 0.05;
-% OPT.distr.type = 'workspace';
-% OPT.distr.init.mean = mu(1:3);
-% OPT.distr.init.cov = 1e-6;
-% OPT.distr.workspace.mean = [-0.5; -0.5; -1.0];
-% OPT.distr.workspace.cov = 0.1*eye(3);
+OPT.distr.time.mean = 0.5; %time to land
+OPT.distr.time.cov = 0.01;
 
 % measurement covariance
 OPT.vision.cov = 0.0;
