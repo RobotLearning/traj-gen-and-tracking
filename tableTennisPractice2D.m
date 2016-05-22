@@ -1,5 +1,9 @@
 %% Table tennis practice using the table tennis class
 
+% TODO: 
+% Ball should reflect only when touching the racket. 
+%    check contact model
+
 % original seed was 2 for lookup table
 clc; clear; close all; rng(4);
 load('ballInitDist1.mat','mu','Sigma');
@@ -16,7 +20,7 @@ OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
 OPT.lookup.flag = true; % use lookup table instead of optimizing online
-OPT.lookup.mode = 'closest'; %'regress'
+OPT.lookup.mode = 'regress'; %'closest';
 OPT.lookup.savefile = ['R3-LookupTable-', date, '.mat'];
 
 % initial ball parameters

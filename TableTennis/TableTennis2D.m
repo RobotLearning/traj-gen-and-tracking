@@ -340,6 +340,7 @@ classdef TableTennis2D < handle
             [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
             [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
             [x,xd,o] = obj.robot.calcRacketState(q,qd);
+            [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);
 
             if obj.draw.flag
                 % Debugging the trajectory generation                 
@@ -350,6 +351,25 @@ classdef TableTennis2D < handle
             obj.plan.q = q;
             obj.plan.qd = qd;
         end        
+        
+        % Check contact with table
+        % IF contact is expected to occur, then 
+        % Do not move the robot! [q = q0 for all time]
+        function [q,qd,qdd] = checkContactTable(obj,q,qd,qdd,x)
+            
+             dofs = size(q,1);
+             len = size(q,2);
+             tol = 1e-2;
+             lim = obj.table.DIST; % should be negative
+             assert(lim < 0, 'dist to table is negative by convention!');
+             if sum(x(1,:) < lim + tol)
+                disp('Contact with table expected! Not moving the robot!');
+                q0 = q(:,end);
+                q = q0 * ones(1,len);
+                qd = zeros(dofs,len);
+                qdd = zeros(dofs,len);
+             end
+        end
   
         
         %% FILTERING FOR ROBOTS TO GET BALL OBSERVATION
