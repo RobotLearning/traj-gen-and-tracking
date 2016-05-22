@@ -188,15 +188,14 @@ classdef TableTennis2D < handle
             timeSim = 0.0;
             % initialize q and x
             qd0 = zeros(length(q0),1);
-            rotAngle = obj.draw.rotate;
-            [x,xd,o] = obj.robot.getEndEffectorState(q0,qd0,rotAngle);
+            [x,xd,o] = obj.robot.calcRacketState(q0,qd0);
 
             while timeSim < timeMax      
                 
                 % evolve ball according to racket and get estimate
                 obj.getBallEstimate(dt,x,xd,o);
                 [q,qd] = obj.planFiniteStateMachine(q0,dt);
-                [x,xd,o] = obj.robot.getEndEffectorState(q,qd,rotAngle);
+                [x,xd,o] = obj.robot.calcRacketState(q,qd);
                 
                 if obj.draw.flag
                     obj.updateAnimation(q);
@@ -314,7 +313,6 @@ classdef TableTennis2D < handle
         function returnBall2Center(obj,ballPred,ballTime,q0,dt)                
             
             dofs = length(q0);
-            rotAngle = obj.draw.rotate;
             % land the ball on the centre of opponents court
             ballDes(1) = obj.table.DIST - 3*obj.table.LENGTH/4;
             ballDes(2) = obj.table.Z;   
@@ -341,7 +339,7 @@ classdef TableTennis2D < handle
             
             [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
             [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
-            [x,xd,o] = obj.robot.getEndEffectorState(q,qd,rotAngle);
+            [x,xd,o] = obj.robot.calcRacketState(q,qd);
 
             if obj.draw.flag
                 % Debugging the trajectory generation                 

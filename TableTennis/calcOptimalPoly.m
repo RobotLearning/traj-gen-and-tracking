@@ -153,9 +153,8 @@ qext_ret = @(t) a3ret.*(t.^3) + a2ret.*(t.^2) + qfdot.*t + qf;
 con = robot.CON;
 
 % equality constraints
-[xf,xfd,of] = robot.calcRacketState(Qf);
-rot = quat2Rot(of);
-nf = rot(1:3,3);
+[xf,xfd,of] = robot.calcRacketState(qf,qfdot);
+nf = robot.calcRacketNormal(of);
 [posDes,velDes,normalDes] = calculateDesRacket(racket,T);
 % vecFromBallToRacket = rot'*(posDes(:) - xf); % in racket coordinates
 

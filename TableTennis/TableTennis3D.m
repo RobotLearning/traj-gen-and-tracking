@@ -188,14 +188,14 @@ classdef TableTennis3D < handle
             timeSim = 0.0;
             % initialize q and x
             qd0 = zeros(7,1);
-            [x,xd,o] = obj.robot.calcRacketState([q0;qd0]);
+            [x,xd,o] = obj.robot.calcRacketState(q0,qd0);
 
             while timeSim < timeMax      
                 
                 % evolve ball according to racket and get estimate
                 filter = obj.getBallEstimate(dt,filter,x,xd,o);
                 [q,qd] = obj.planFiniteStateMachine(filter,q0,dt);
-                [x,xd,o] = obj.robot.calcRacketState([q;qd]);
+                [x,xd,o] = obj.robot.calcRacketState(q,qd);
                 
                 if obj.draw.flag
                     obj.updateAnimation(q);
@@ -348,7 +348,7 @@ classdef TableTennis3D < handle
             
             [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
             [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
-            [x,xd,o] = obj.robot.calcRacketState([q;qd]);
+            [x,xd,o] = obj.robot.calcRacketState(q,qd);
 
             if obj.draw.flag
                 % Debugging the trajectory generation                 

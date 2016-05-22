@@ -42,4 +42,4 @@ OPT.vision.filter = 'EKF';
 OPT.vision.draw = true; %plot filtered state
 
 tt = TableTennis2D(rrr,q0,OPT);
-tt.practice(q0,1);
+tt.practice(q0,5);

@@ -192,13 +192,9 @@ classdef BarrettWAM < Robot
         
         % racket configurations and velocities are returned
         % racket orientations are also returned as a quaternions        
-        function [x,xd,o] = calcRacketState(obj,Q)
+        function [x,xd,o] = calcRacketState(obj,q,qd)
             
-            assert(size(Q,1) == 14, 'velocities not fed in!');
-            dim = size(Q,1)/2;
-            lenq = size(Q,2);
-            q = Q(1:dim,:);
-            qd = Q(dim+1:end,:);
+            lenq = size(q,2);
             x = zeros(3,lenq);
             xd = zeros(3,lenq);
             o = zeros(4,lenq);
@@ -210,6 +206,12 @@ classdef BarrettWAM < Robot
                 x(:,i) = xLink(6,:)';
                 xd(:,i) = obj.jac(1:3,:) * qd(:,i);
             end
+        end
+        
+        % calculate racket normal from racket orientations
+        function normal = calcRacketNormal(obj,o)
+            rot = quat2Rot(o);
+            normal = rot(1:3,3); 
         end
         
         % calculate the geometric jacobian using the common jacobian function

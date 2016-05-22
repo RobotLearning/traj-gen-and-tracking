@@ -166,24 +166,25 @@ classdef RRR < Robot
         end
         
         % get end effector position
-        function [x,xd,mats] = getEndEffectorState(obj,q,qd,varargin)
+        % TODO: make rotation angle phi a field of RRR?
+        function [x,xd,mats] = calcRacketState(obj,q,qd)
             
-            dofs = size(q,1);
-            lenq = size(q,2);
-            if nargin == 4
-                phi = varargin{:};
-                R = [cos(phi) -sin(phi); 
-                     sin(phi) cos(phi)];
-            else
-                R = eye(2);
-            end      
+            lenq = size(q,2);     
+            phi = -pi/2;
+            R = [cos(phi) -sin(phi); 
+                 sin(phi) cos(phi)];            
             
-            [~,~,x,mats] = obj.kinematics(q,varargin{:});            
+            [~,~,x,mats] = obj.kinematics(q,-pi/2);            
             xd = zeros(2,lenq);
             for i = 1:lenq
                 obj.calcJacobian(q(:,i));
                 xd(:,i) = R*obj.jac*qd(:,i);
             end
+        end
+        
+        % calculate racket normal from homogenous matrix transformations
+        function normal = calcRacketNormal(obj,mats)            
+            normal = mats(1:2,1,3);
         end
         
         % get jacobian at current q
@@ -351,6 +352,7 @@ classdef RRR < Robot
         
         %% get lifted model constraints
         % now only aILC may use it
+        % FIXME: doesnt work now
         function [umin,umax,L,q] = lift_constraints(obj,trj,ilc)
             
             h = obj.SIM.h;
