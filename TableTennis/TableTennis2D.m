@@ -297,7 +297,8 @@ classdef TableTennis2D < handle
                     % find the closest point among Xs
                     diff = repmat(bstar,N,1) - Xs;
                     [~,idx] = min(diag(diff*diff'));
-                    val = Ys(idx,:);              
+                    val = Ys(idx,:);       
+                case 'local-policy'
                 otherwise
                     error('lookup mode not supported!');
             end

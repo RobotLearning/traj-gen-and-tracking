@@ -3,6 +3,9 @@
 % TODO: 
 % Ball should reflect only when touching the racket. 
 %    check contact model
+% Check for torque limits as well in optimization
+% Check for table in optimization
+% Build local policy
 
 % original seed was 2 for lookup table
 clc; clear; close all; rng(4);
@@ -21,7 +24,7 @@ OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
 OPT.lookup.flag = true; % use lookup table instead of optimizing online
 OPT.lookup.mode = 'regress'; %'closest';
-OPT.lookup.savefile = ['R3-LookupTable-', date, '.mat'];
+OPT.lookup.savefile = 'R3-LookupTable-22-May-2016.mat'; %, date, '.mat'];
 
 % initial ball parameters
 % OPT.distr.type = 'normal';
