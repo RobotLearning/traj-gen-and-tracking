@@ -285,7 +285,7 @@ classdef TableTennis2D < handle
         % Loads lookup table parameters by finding the 
         % closest table ball-estimate entry 
         function [qf,qfdot,T] = lookup(obj)            
-       
+            
             switch obj.offline.mode
                 case 'regress'
                     val = obj.offline.b0 * obj.offline.B;
@@ -299,6 +299,30 @@ classdef TableTennis2D < handle
                     [~,idx] = min(diag(diff*diff'));
                     val = Ys(idx,:);       
                 case 'local-policy'
+                    % first find the closest entry
+                    Xs = obj.offline.X;
+                    Ys = obj.offline.Y;
+                    bstar = obj.offline.b0;
+                    N = size(Xs,1);
+                    % find the closest point among Xs
+                    diff = repmat(bstar,N,1) - Xs;
+                    [~,idx] = min(diag(diff*diff'));
+                    b_lookup = Xs(idx,:);
+                    val = Ys(idx,:);
+                    b0 = b_lookup(1:2)';
+                    v0 = b_lookup(3:4)';
+                    dofs = (length(val) - 1)/2;
+                    qf = val(1:dofs)';
+                    T = val(end);
+                    obj.robot.calcJacobian(qf);
+                    g = [0; obj.ball.g];
+                    M = [obj.robot.jac, -(v0 + g*T)];
+                    db0 = bstar(1:2)' - b0;
+                    dv0 = bstar(3:4)' - v0;
+                    y = db0 + T*dv0;
+                    x = pinv(M)*y;
+                    val(1:dofs) = val(1:dofs) + x(1:end-1)';
+                    val(end) = val(end) + x(end);
                 otherwise
                     error('lookup mode not supported!');
             end
