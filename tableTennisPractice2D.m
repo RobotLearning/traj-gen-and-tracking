@@ -6,9 +6,10 @@
 % Check for torque limits as well in optimization
 % Check for table in optimization
 % Build local policy
+% Correct robot models and clean-up
 
 % original seed was 2 for lookup table
-clc; clear; close all; rng(4);
+clc; clear; close all; rng(6);
 load('ballInitDist1.mat','mu','Sigma');
 % load('ballTrain1');
 initializeRRR;
@@ -22,7 +23,7 @@ OPT.rotate = -pi/2;
 OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
-OPT.lookup.flag = true; % use lookup table instead of optimizing online
+OPT.lookup.flag = false; % use lookup table instead of optimizing online
 OPT.lookup.mode = 'local-policy'; %'regress'; %'closest';
 OPT.lookup.savefile = 'R3-LookupTable-22-May-2016.mat'; %, date, '.mat'];
 

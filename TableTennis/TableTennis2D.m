@@ -282,56 +282,6 @@ classdef TableTennis2D < handle
             racketDes.est = x0;
         end  
         
-        % Loads lookup table parameters by finding the 
-        % closest table ball-estimate entry 
-        function [qf,qfdot,T] = lookup(obj)            
-            
-            switch obj.offline.mode
-                case 'regress'
-                    val = obj.offline.b0 * obj.offline.B;
-                case 'closest'      
-                    Xs = obj.offline.X;
-                    Ys = obj.offline.Y;
-                    bstar = obj.offline.b0;
-                    N = size(Xs,1);
-                    % find the closest point among Xs
-                    diff = repmat(bstar,N,1) - Xs;
-                    [~,idx] = min(diag(diff*diff'));
-                    val = Ys(idx,:);       
-                case 'local-policy'
-                    % first find the closest entry
-                    Xs = obj.offline.X;
-                    Ys = obj.offline.Y;
-                    bstar = obj.offline.b0;
-                    N = size(Xs,1);
-                    % find the closest point among Xs
-                    diff = repmat(bstar,N,1) - Xs;
-                    [~,idx] = min(diag(diff*diff'));
-                    b_lookup = Xs(idx,:);
-                    val = Ys(idx,:);
-                    b0 = b_lookup(1:2)';
-                    v0 = b_lookup(3:4)';
-                    dofs = (length(val) - 1)/2;
-                    qf = val(1:dofs)';
-                    T = val(end);
-                    obj.robot.calcJacobian(qf);
-                    g = [0; obj.ball.g];
-                    M = [obj.robot.jac, -(v0 + g*T)];
-                    db0 = bstar(1:2)' - b0;
-                    dv0 = bstar(3:4)' - v0;
-                    y = db0 + T*dv0;
-                    x = pinv(M)*y;
-                    val(1:dofs) = val(1:dofs) + x(1:end-1)';
-                    val(end) = val(end) + x(end);
-                otherwise
-                    error('lookup mode not supported!');
-            end
-            dofs = (length(val) - 1) / 2;
-            qf = val(1:dofs)';
-            qfdot = val(dofs+1:2*dofs)';
-            T = val(end);
-        end        
-        
         % Fix a desired landing point and desired landing time
         % as well as a desired return time to q0
         % For now only two methods : VHP and free Time
@@ -347,7 +297,7 @@ classdef TableTennis2D < handle
             if obj.offline.use
                 [qf,qfdot,T] = obj.lookup();
             else
-                time2reach = 0.8; % time to reach desired point on opponents court    
+                time2reach = 0.8; % time to reach desired point on opponents court
 
                 % Compute traj here
                 if obj.plan.vhp.flag
@@ -395,7 +345,100 @@ classdef TableTennis2D < handle
                 qdd = zeros(dofs,len);
              end
         end
-  
+        
+        %% LOOKUP METHODS HERE
+        
+          % Loads lookup table parameters by finding the 
+        % closest table ball-estimate entry 
+        function [qf,qfdot,T] = lookup(obj)            
+            
+            switch obj.offline.mode
+                case 'regress'
+                    val = obj.offline.b0 * obj.offline.B;
+                case 'closest'
+                    [val,~] = obj.find_closest_entry();   
+                case 'local-policy'
+                    val = obj.local_policy();
+                otherwise
+                    error('lookup mode not supported!');
+            end
+            dofs = (length(val) - 1) / 2;
+            qf = val(1:dofs)';
+            qfdot = val(dofs+1:2*dofs)';
+            T = val(end);
+        end      
+        
+        % Build a local policy that interpolates between 
+        % lookup table entries
+        function val = local_policy(obj)
+            
+            % first find the closest entry
+            Xs = obj.offline.X;
+            Ys = obj.offline.Y;
+            bstar = obj.offline.b0;            
+            % form the covariance matrix based on distance metric
+            % between lookup values and new point
+            k = 100;
+            N = size(Xs,1);
+            assert(k <= N, 'knn value cannot be bigger than lookup size!');
+            [dists,indices] = obj.knn(k);
+            dimy = (size(Ys,2) - 1)/2 + 1;
+            dimx = 2;
+            M = zeros(k*dimx,dimy);
+            y = zeros(k*dimx,1);
+            % form the large local policy matrix M            
+            for i = 1:k
+                idx = indices(i);
+                b_lookup = Xs(idx,:);
+                val = Ys(idx,:);
+                b0 = b_lookup(1:2)';
+                v0 = b_lookup(3:4)';
+                dofs = (length(val) - 1)/2;
+                qf = val(1:dofs)';
+                T = val(end);
+                obj.robot.calcJacobian(qf);
+                g = [0; obj.ball.g];
+                M(dimx*i-1:dimx*i,:) = [obj.robot.jac, -(v0 + g*T)]; 
+                db0 = bstar(1:dimx)' - b0;
+                dv0 = bstar(dimx+1:2*dimx)' - v0;
+                y(dimx*i-1:dimx*i) = db0 + T*dv0;
+            end
+            dists = repmat(dists(:)',dimx,1);
+            D = diag(dists(:));
+            Mbar = M; %chol(D) \ M;
+            ybar = y; %chol(D) \ y;
+            x = pinv(Mbar)*ybar; % adjustment to lookup
+            val(1:dofs) = val(1:dofs) + x(1:end-1)';
+            val(end) = val(end) + x(end);            
+            
+        end
+        
+        % Gets the closest entry
+        function [val,idx] = find_closest_entry(obj)
+            Xs = obj.offline.X;
+            Ys = obj.offline.Y;
+            bstar = obj.offline.b0;
+            N = size(Xs,1);
+            % find the closest point among Xs
+            diff = repmat(bstar,N,1) - Xs;
+            [~,idx] = min(diag(diff*diff'));
+            val = Ys(idx,:);                
+        end
+        
+        % Find the k-nearest-neighbours of the new point
+        % Returns the indices of the k-nearest-neighbours
+        % Returns also the square of the distances between lookup entries and new point
+        % This can be used as a covariance matrix
+        function [D,idx] = knn(obj,k)
+            Xs = obj.offline.X;
+            bnew = obj.offline.b0;
+            N = size(Xs,1);
+            diff = repmat(bnew,N,1) - Xs;
+            D = diag(diff*diff');    
+            [d,idx] = sort(D);
+            D = D(idx(1:k));
+            idx = idx(1:k);
+        end
         
         %% FILTERING FOR ROBOTS TO GET BALL OBSERVATION
         
@@ -549,7 +592,7 @@ classdef TableTennis2D < handle
             net = [net1,net2,net3,net4]';
 
             tol_y = 0.1; tol_z = 0.3;
-            xlim([dist_to_table - table_length - tol_y, 3*tol_y]);
+            xlim([dist_to_table - table_length - tol_y, 15*tol_y]);
             ylim([table_z - 3*tol_z, table_z + 4*tol_z]);
             legend('ball','ball filt','robot');
             fill(T(:,1),T(:,2),[0 0.7 0.3]);
