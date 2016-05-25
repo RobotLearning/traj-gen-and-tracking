@@ -357,6 +357,9 @@ classdef TableTennis2D < handle
                     val = obj.offline.b0 * obj.offline.B;
                 case 'closest'
                     [val,~] = obj.find_closest_entry();   
+                case 'knn'
+                    k = 10;
+                    [val,~] = obj.knn(k);
                 case 'local-policy'
                     val = obj.local_policy();
                 otherwise
@@ -370,46 +373,34 @@ classdef TableTennis2D < handle
         
         % Build a local policy that interpolates between 
         % lookup table entries
+        % FIXME: not complete yet!
         function val = local_policy(obj)
             
             % first find the closest entry
             Xs = obj.offline.X;
             Ys = obj.offline.Y;
             bstar = obj.offline.b0;            
-            % form the covariance matrix based on distance metric
-            % between lookup values and new point
-            k = 100;
-            N = size(Xs,1);
-            assert(k <= N, 'knn value cannot be bigger than lookup size!');
-            [dists,indices] = obj.knn(k);
+            [val,idx] = obj.find_closest_entry();
             dimy = (size(Ys,2) - 1)/2 + 1;
             dimx = 2;
-            M = zeros(k*dimx,dimy);
-            y = zeros(k*dimx,1);
-            % form the large local policy matrix M            
-            for i = 1:k
-                idx = indices(i);
-                b_lookup = Xs(idx,:);
-                val = Ys(idx,:);
-                b0 = b_lookup(1:2)';
-                v0 = b_lookup(3:4)';
-                dofs = (length(val) - 1)/2;
-                qf = val(1:dofs)';
-                T = val(end);
-                obj.robot.calcJacobian(qf);
-                g = [0; obj.ball.g];
-                M(dimx*i-1:dimx*i,:) = [obj.robot.jac, -(v0 + g*T)]; 
-                db0 = bstar(1:dimx)' - b0;
-                dv0 = bstar(dimx+1:2*dimx)' - v0;
-                y(dimx*i-1:dimx*i) = db0 + T*dv0;
-            end
-            dists = repmat(dists(:)',dimx,1);
-            D = diag(dists(:));
-            Mbar = M; %chol(D) \ M;
-            ybar = y; %chol(D) \ y;
-            x = pinv(Mbar)*ybar; % adjustment to lookup
+            M = zeros(dimx,dimy);
+            y = zeros(dimx,1);
+            % form the local policy matrix M            
+            b_lookup = Xs(idx,:);
+            b0 = b_lookup(1:2)';
+            v0 = b_lookup(3:4)';
+            dofs = (length(val) - 1)/2;
+            qf = val(1:dofs)';
+            T = val(end);
+            obj.robot.calcJacobian(qf);
+            g = [0; obj.ball.g];
+            M = [obj.robot.jac, -(v0 + g*T)]; 
+            db0 = bstar(1:dimx)' - b0;
+            dv0 = bstar(dimx+1:2*dimx)' - v0;
+            y = db0 + T*dv0;
+            x = pinv(M)*y; % adjustment to lookup
             val(1:dofs) = val(1:dofs) + x(1:end-1)';
-            val(end) = val(end) + x(end);            
+            val(end) = val(end) + x(end);
             
         end
         
@@ -426,18 +417,18 @@ classdef TableTennis2D < handle
         end
         
         % Find the k-nearest-neighbours of the new point
-        % Returns the indices of the k-nearest-neighbours
-        % Returns also the square of the distances between lookup entries and new point
-        % This can be used as a covariance matrix
-        function [D,idx] = knn(obj,k)
+        % Returns the indices as well as the average of those points
+        function [val,idx] = knn(obj,k)
             Xs = obj.offline.X;
+            Ys = obj.offline.Y;
             bnew = obj.offline.b0;
             N = size(Xs,1);
             diff = repmat(bnew,N,1) - Xs;
             D = diag(diff*diff');    
-            [d,idx] = sort(D);
-            D = D(idx(1:k));
+            [d,idx] = sort(D);            
             idx = idx(1:k);
+            vals = Ys(idx,:);
+            val = sum(vals,1)/k;
         end
         
         %% FILTERING FOR ROBOTS TO GET BALL OBSERVATION
