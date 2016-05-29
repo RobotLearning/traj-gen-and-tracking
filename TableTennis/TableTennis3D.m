@@ -112,7 +112,9 @@ classdef TableTennis3D < handle
                     obj.offline.X = X;
                     obj.offline.Y = Y;
                     obj.offline.B = X \ Y;
-                    %obj.train_gp(X,Y);                    
+                    if strcmp(obj.offline.mode,'GP-regress')
+                        obj.train_gp(X,Y); 
+                    end
                 catch
                     warning('No lookup table found!');
                     obj.offline.X = [];
@@ -283,38 +285,6 @@ classdef TableTennis3D < handle
             racketDes.est = x0;
         end
         
-        % Loads lookup table parameters by finding the 
-        % closest table ball-estimate entry 
-        function [qf,qfdot,T] = lookup(obj)            
-       
-            switch obj.offline.mode
-                case 'regress'
-                    val = obj.offline.b0 * obj.offline.B;
-                    %{
-                    numdims = 2*dofs + 1;
-                    val = zeros(1,numdims);
-                    for i = 1:numdims
-                        val(i) = obj.offline.GP{i}.predict(obj.offline.b0);
-                    end
-                    %}
-                case 'closest'      
-                    Xs = obj.offline.X;
-                    Ys = obj.offline.Y;
-                    bstar = obj.offline.b0;
-                    N = size(Xs,1);
-                    % find the closest point among Xs
-                    diff = repmat(bstar,N,1) - Xs;
-                    [~,idx] = min(diag(diff*diff'));
-                    val = Ys(idx,:);              
-                otherwise
-                    error('lookup mode not supported!');
-            end
-            dofs = (length(val) - 1) / 2;
-            qf = val(1:dofs)';
-            qfdot = val(dofs+1:2*dofs)';
-            T = val(end);
-        end
-        
         % Fix a desired landing point and desired landing time
         % as well as a desired return time to q0
         % For now only two methods : VHP and free Time
@@ -382,6 +352,44 @@ classdef TableTennis3D < handle
                 qd = zeros(dofs,len);
                 qdd = zeros(dofs,len);
              end
+        end       
+        
+        %% LOOKUP METHODS
+        % Loads lookup table parameters by finding the 
+        % closest table ball-estimate entry 
+        function [qf,qfdot,T] = lookup(obj)            
+       
+            switch obj.offline.mode
+                case 'lin-regress'
+                    val = obj.offline.b0 * obj.offline.B;
+                case 'GP-regress'
+                    dofs = 7;
+                    numdims = 2*dofs + 1;
+                    val = zeros(1,numdims);
+                    for i = 1:numdims
+                        val(i) = obj.offline.GP{i}.predict(obj.offline.b0);
+                    end                
+                case 'closest'      
+                    [val,~] = obj.find_closest_entry();              
+                otherwise
+                    error('lookup mode not supported!');
+            end
+            dofs = (length(val) - 1) / 2;
+            qf = val(1:dofs)';
+            qfdot = val(dofs+1:2*dofs)';
+            T = val(end);
+        end 
+        
+        % Gets the closest entry
+        function [val,idx] = find_closest_entry(obj)
+            Xs = obj.offline.X;
+            Ys = obj.offline.Y;
+            bstar = obj.offline.b0;
+            N = size(Xs,1);
+            % find the closest point among Xs
+            diff = repmat(bstar,N,1) - Xs;
+            [~,idx] = min(diag(diff*diff'));
+            val = Ys(idx,:);                
         end        
         
         %% FILTERING FOR ROBOTS TO GET BALL OBSERVATION

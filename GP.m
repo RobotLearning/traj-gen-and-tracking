@@ -28,6 +28,34 @@ classdef GP < handle
             
         end
         
+        % Estimate hyperparameters using maximum likelihood
+        function fitHP(obj,hp0)
+             
+            try
+                addpath(genpath('../gpml-matlab-v3.1-2010-09-27'));
+            catch
+                error('GPML toolbox not found!');
+            end
+            
+            covar = @covSEard;
+            lik = @likGauss;
+            inf = @infExact;
+            mean = [];
+            cov_hp_len = size(obj.x,1) + 1; % scale hp added
+            hyp.mean = [];
+            hyp.cov = [log(hp0.l);log(sqrt(hp0.scale))];
+            hyp.lik = log(sqrt(hp0.noise.var));            
+            Ncg = 1000; % 100 line search steps
+            hyp = minimize(hyp, @gp, Ncg, ...
+                              inf, mean, covar, lik, obj.x', obj.y);
+                          
+            % update hp field after hp estimation
+            obj.hp.l = exp(hyp.cov(1:end-1));
+            obj.hp.scale = exp(hyp.cov(end))^2;
+            obj.hp.noise.var = exp(hyp.lik)^2;
+            obj.setKernel(obj.hp);
+        end
+        
         
         %% predict mean and variance at a test point
         function [mu,s2] = predict(obj,xstar)
@@ -64,6 +92,8 @@ classdef GP < handle
         % the type field and hyperparameters
         %
         % out - covariance between x1 and x2
+        %
+        % IMPORTANT: does not consider noise as part of kernel
         %
         function setKernel(obj,hp)
 

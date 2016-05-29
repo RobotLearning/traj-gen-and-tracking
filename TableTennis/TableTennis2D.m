@@ -129,13 +129,29 @@ classdef TableTennis2D < handle
                     obj.offline.X = X;
                     obj.offline.Y = Y;
                     obj.offline.B = X \ Y;
-                    %obj.train_gp(X,Y);                    
+                    if strcmp(obj.offline.mode,'GP-regress')
+                        obj.train_gp(X,Y); 
+                    end                                     
                 catch
                     warning('No lookup table found!');
                     obj.offline.X = [];
                     obj.offline.Y = [];
                 end
             end            
+        end        
+        
+        % Train independent GPS
+        function train_gp(obj,X,Y)            
+            hp.type = 'squared exponential iso';
+            hp.l = 1/4;
+            hp.scale = 1;
+            hp.noise.var = 0.0;
+            ndofs = 3;
+            num_dims = 2*ndofs + 1;
+            for i = 1:num_dims
+                gp{i} = GP(hp,X',Y(:,i));
+            end
+            obj.offline.GP = gp;            
         end        
 
         %% MAIN LOOP
@@ -348,13 +364,20 @@ classdef TableTennis2D < handle
         
         %% LOOKUP METHODS HERE
         
-          % Loads lookup table parameters by finding the 
+        % Loads lookup table parameters by finding the 
         % closest table ball-estimate entry 
         function [qf,qfdot,T] = lookup(obj)            
             
             switch obj.offline.mode
-                case 'regress'
+                case 'lin-regress'
                     val = obj.offline.b0 * obj.offline.B;
+                case 'GP-regress'
+                    dofs = 3;
+                    numdims = 2*dofs + 1;
+                    val = zeros(1,numdims);
+                    for i = 1:numdims
+                        val(i) = obj.offline.GP{i}.predict(obj.offline.b0);
+                    end
                 case 'closest'
                     [val,~] = obj.find_closest_entry();   
                 case 'knn'

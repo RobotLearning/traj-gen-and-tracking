@@ -14,8 +14,8 @@ OPT.record = false; % record the simulation
 OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
-OPT.lookup.flag = false; % use lookup table instead of optimizing online
-OPT.lookup.mode = 'closest'; %'regress';
+OPT.lookup.flag = true; % use lookup table instead of optimizing online
+OPT.lookup.mode = 'GP-regress'; %'closest'; %'lin-regress';
 OPT.lookup.savefile = 'LookupTable-16-May-2016'; %['LookupTable-', date, '.mat'];
 
 % initial ball parameters
