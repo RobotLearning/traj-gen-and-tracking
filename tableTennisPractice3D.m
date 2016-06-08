@@ -1,7 +1,7 @@
 %% Table tennis practice using the table tennis class
 
 % original seed was 1
-clear; close all; rng(2);
+clc; clear; close all; rng(2);
 load('ballInitDist1.mat','mu','Sigma');
 load('ballTrain1.mat');
 % load('ballTrain1');
