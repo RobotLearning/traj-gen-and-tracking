@@ -3,7 +3,7 @@
 % q0 and q0dot are given
 % using fmincon optimizing for their parameters qf,qfdot,T
 
-function [qf,qfdot,T] = calcOptimalPoly(robot,racket,q0,Tret)
+function [qf,qfdot,T] = calcOptimalPoly(robot,racket,ballvel,q0,Tret)
 
 tic;
 dof = length(q0);
@@ -35,7 +35,7 @@ fun = @(x) cost([q0;q0dot],x(1:end-1),x(end));
 
 % nonlinear equality constraint
 % ball must be intersected with desirable vel.
-nonlcon = @(x) calculateRacketDev(robot,racket,x(1:end-1),...
+nonlcon = @(x) calculateRacketDev(robot,racket,ballvel,x(1:end-1),...
                                   x(end),[q0;q0dot],Tret);
 
 % solve with MATLAB nonlinear optimizer
@@ -47,8 +47,9 @@ options = optimoptions('fmincon','Algorithm', 'sqp',...
                        'TolCon', 1e-6, ...
                        'TolFun',1e-6, ...
                        'MaxFunEvals',2e3,...
-                       'GradObj','on');
-                       %'DerivativeCheck','on',...                       
+                       'GradObj','on',...
+                       ... %'DerivativeCheck','on',...
+                       'GradConstr','on');
 %options = optimoptions('fmincon','Display','iter-detailed');
 %profile on;
 [xopt,fval,exitflag,output] = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
@@ -61,6 +62,7 @@ qf = xopt(1:dof);
 qfdot = xopt(dof+1:end-1);
 T = xopt(end);
 
+fprintf('Fval (sum of squared acc) = %f.\n',fval);
 fprintf('Calc. opt. time at T = %f.\n',T);
 fprintf('Optim took %f sec.\n',toc);
 
@@ -119,9 +121,12 @@ end
 
 % boundary conditions
 % racket centre at the ball 
-% racket velocity negative of incoming ball vel
-function [c,ceq] = calculateRacketDev(robot,racket,Qf,T,Q0,Tret)
+% racket velocity equal to desired racket velocity given in racket struct
+%
+% Gc and Gceq are jacobians of the constraints respectively
+function [c,c_eq,Gc,Gc_eq] = calculateRacketDev(robot,racket,ballvel,Qf,T,Q0,Tret)
 
+dim = size(racket.pos,1);
 % enforce joint limits as inequality constraints throughout trajectory
 dof = length(Q0)/2;
 q0 = Q0(1:dof); 
@@ -160,15 +165,17 @@ nf = robot.calcRacketNormal(of);
 
 % inequality constraints
 % last one makes sure ball touches the racket
-c = [qext(t1) - con.q.max;
-     con.q.min - qext(t1);
-     qext(t2) - con.q.max;
-     con.q.min - qext(t2);
-     qext_ret(t1ret) - con.q.max;
-     con.q.min - qext_ret(t1ret);
-     qext_ret(t2ret) - con.q.max;
-     con.q.min - qext_ret(t2ret)];
+% c = [qext(t1) - con.q.max;
+%      con.q.min - qext(t1);
+%      qext(t2) - con.q.max;
+%      con.q.min - qext(t2);
+%      qext_ret(t1ret) - con.q.max;
+%      con.q.min - qext_ret(t1ret);
+%      qext_ret(t2ret) - con.q.max;
+%      con.q.min - qext_ret(t2ret)];
      %vecFromBallToRacket(1:2)'*vecFromBallToRacket(1:2) - racket.radius^2];
+     
+c = [];
 
 % first one makes sure ball is at racket dist 
 % 2cm is ball radius is not considered
@@ -176,10 +183,18 @@ c = [qext(t1) - con.q.max;
 %         xfd - velDes(:);
 %         nf - normalDes(:)];
 
-% no longer trying to get racket centre to ball 
-ceq = [xf - posDes(:); 
-      xfd - velDes(:);
-      nf - normalDes(:)];
+% trying to get racket centre to ball 
+c_eq = [xf - posDes(:)]; 
+      %xfd - velDes(:);
+      %nf - normalDes(:)];
+      
+if nargout > 2
+    % compute derivatives
+    Gc = [];
+    ballsVelAtT = interp1(racket.time', ballvel',T)';
+    Gc_eq = [robot.jac(1:dim,:), zeros(dim,dof),-ballsVelAtT]';
+end
+      
 end
 
 % interpolate to find ball at time t

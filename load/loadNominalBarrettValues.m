@@ -196,6 +196,8 @@ links(7).inertia(3,3) = 0.00007614;
 %}
 
 %% Organize values
+% Base position and orientation values are taken from ParameterPool.cf
+
 % make sure inertia matrices are symmetric
 for i = 1:7
     for j = 1:3

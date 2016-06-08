@@ -275,8 +275,12 @@ classdef TableTennis3D < handle
         function racketDes = planRacket(obj,ballDes,ballPred,ballTime,time2reach,q0)
             
             %Calculate ball outgoing velocities attached to each ball pos
-            fast = false;
+            fast = true;            
+            tic;
             racketDes = calcRacketStrategy(ballDes,ballPred,ballTime,time2reach,fast);
+            logicalStr = {'Slow','Fast'};
+            fprintf('%s racket strategy calculation took %f seconds\n',...
+                     logicalStr{fast + 1}, toc);
             
             % Initialize solution for optimal poly
             timeEst = 0.8;
@@ -308,7 +312,8 @@ classdef TableTennis3D < handle
                     [qf,qfdot,T] = calcPolyAtVHP(obj.robot,obj.plan.vhp.y,time2reach,ballDes,ballPred,ballTime,q0);
                 else
                     racketDes = obj.planRacket(ballDes,ballPred,ballTime,time2reach,q0);
-                    [qf,qfdot,T] = calcOptimalPoly(obj.robot,racketDes,q0,time2return);
+                    ballVel = ballPred(4:6,:);
+                    [qf,qfdot,T] = calcOptimalPoly(obj.robot,racketDes,ballVel,q0,time2return);
                 end
                 % If we're training an offline model save optimization result
                 if obj.offline.train
