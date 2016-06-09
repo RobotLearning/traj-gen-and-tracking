@@ -33,3 +33,8 @@ dMdx = blkdiag(dm1dx(x),dm2dx(x));
 
 dwdx2 = dMdx * repmat(v,m,1);
 dwdx2 = reshape(dwdx2',l,m)'
+
+% trying kronecker product + automatic differentiation
+% x_AD = adiff(x);
+% func = vectorize(M,x_AD);
+% [y,dydx] = adiffget(func);

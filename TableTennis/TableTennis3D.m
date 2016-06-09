@@ -284,7 +284,7 @@ classdef TableTennis3D < handle
             
             % Initialize solution for optimal poly
             timeEst = 0.8;
-            q0dot = zeros(7,1);
+            q0dot = zeros(length(q0),1);
             x0 = [q0;q0dot;timeEst];
             racketDes.est = x0;
         end
@@ -312,8 +312,7 @@ classdef TableTennis3D < handle
                     [qf,qfdot,T] = calcPolyAtVHP(obj.robot,obj.plan.vhp.y,time2reach,ballDes,ballPred,ballTime,q0);
                 else
                     racketDes = obj.planRacket(ballDes,ballPred,ballTime,time2reach,q0);
-                    ballVel = ballPred(4:6,:);
-                    [qf,qfdot,T] = calcOptimalPoly(obj.robot,racketDes,ballVel,q0,time2return);
+                    [qf,qfdot,T] = calcOptimalPoly(obj.robot,racketDes,ballPred,q0,time2return);
                 end
                 % If we're training an offline model save optimization result
                 if obj.offline.train

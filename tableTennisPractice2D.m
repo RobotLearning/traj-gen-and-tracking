@@ -23,7 +23,7 @@ OPT.rotate = -pi/2;
 OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
-OPT.lookup.flag = true; % use lookup table instead of optimizing online
+OPT.lookup.flag = false; % use lookup table instead of optimizing online
 OPT.lookup.mode = 'GP-regress'; %'local-policy'; %'knn'; %'lin-regress'; %'closest';
 OPT.lookup.savefile = 'R3-LookupTable-22-May-2016.mat'; %, date, '.mat'];
 
@@ -47,4 +47,4 @@ OPT.vision.filter = 'EKF';
 OPT.vision.draw = true; %plot filtered state
 
 tt = TableTennis2D(rrr,q0,OPT);
-tt.practice(q0,5);
+tt.practice(q0,1);
