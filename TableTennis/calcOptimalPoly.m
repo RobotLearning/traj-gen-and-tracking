@@ -3,7 +3,7 @@
 % q0 and q0dot are given
 % using fmincon optimizing for their parameters qf,qfdot,T
 
-function [qf,qfdot,T] = calcOptimalPoly(robot,racket,ballvel,q0,Tret)
+function [qf,qfdot,T] = calcOptimalPoly(robot,racket,ballPred,q0,Tret)
 
 tic;
 dof = length(q0);
@@ -35,7 +35,7 @@ fun = @(x) cost([q0;q0dot],x(1:end-1),x(end));
 
 % nonlinear equality constraint
 % ball must be intersected with desirable vel.
-nonlcon = @(x) calculateRacketDev(robot,racket,ballvel,x(1:end-1),...
+nonlcon = @(x) calculateRacketDev(robot,racket,ballPred,x(1:end-1),...
                                   x(end),[q0;q0dot],Tret);
 
 % solve with MATLAB nonlinear optimizer
@@ -124,7 +124,7 @@ end
 % racket velocity equal to desired racket velocity given in racket struct
 %
 % Gc and Gceq are jacobians of the constraints respectively
-function [c,c_eq,Gc,Gc_eq] = calculateRacketDev(robot,racket,ballvel,Qf,T,Q0,Tret)
+function [c,c_eq,Gc,Gc_eq] = calculateRacketDev(robot,racket,ballPred,Qf,T,Q0,Tret)
 
 dim = size(racket.pos,1);
 % enforce joint limits as inequality constraints throughout trajectory
@@ -191,7 +191,8 @@ c_eq = [xf - posDes(:)];
 if nargout > 2
     % compute derivatives
     Gc = [];
-    ballsVelAtT = interp1(racket.time', ballvel',T)';
+    ballVel = ballPred(dim+1:end,:);
+    ballsVelAtT = interp1(racket.time', ballVel',T)';
     Gc_eq = [robot.jac(1:dim,:), zeros(dim,dof),-ballsVelAtT]';
 end
       

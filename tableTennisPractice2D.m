@@ -24,7 +24,11 @@ OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
 OPT.lookup.flag = false; % use lookup table instead of optimizing online
+<<<<<<< HEAD
 OPT.lookup.mode = 'knn'; %'GP-regress'; %'local-policy'; %'lin-regress'; %'closest';
+=======
+OPT.lookup.mode = 'GP-regress'; %'local-policy'; %'knn'; %'lin-regress'; %'closest';
+>>>>>>> fb84367ffbb524c694ff26769d05b2ff5fb73741
 OPT.lookup.savefile = 'R3-LookupTable-22-May-2016.mat'; %, date, '.mat'];
 
 % initial ball parameters
