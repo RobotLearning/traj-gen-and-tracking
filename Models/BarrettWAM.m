@@ -146,7 +146,7 @@ classdef BarrettWAM < Robot
         % Calculate the racket orientation based on quaternion
         function racketOrient = calcRacketOrientation(obj,cartOrient)
             
-            % quaternion transformation of pi/4 from endeff to racket
+            % quaternion transformation of -pi/2 from endeff to racket
             rot = [cos(pi/4); -sin(pi/4); 0; 0];
             
             racketOrient = mult2Quat(cartOrient,rot);
@@ -171,6 +171,7 @@ classdef BarrettWAM < Robot
         % run kinematics using an external function
         % return endeffector coordinates, vel and orientation
         % TODO: should return what barrettWAMKinematics returns
+        % make sure endeffector[Z] = 0
         function [x,xd,o] = kinematics(obj,Q)
               
             assert(size(Q,1) == 14, 'velocities not fed in!');
@@ -209,9 +210,18 @@ classdef BarrettWAM < Robot
         end
         
         % calculate racket normal from racket orientations
+        % NOTE:
+        % what can be done directly is the following rotation
+        % i.e. directly, without using quaternions
+        % R1 = squeeze(Amats(6,1:3,1:3));
+        % R2 = [1 0 0 ; 0 0 1; 0 -1 0]; 
+        % %since theta = -pi/2, using
+        % %angle/axis transformation [see Siciliano Robotics book pg.54]
+        % R = R1 * R2;
+        % normal = R(:,3);
         function normal = calcRacketNormal(obj,o)
             rot = quat2Rot(o);
-            normal = rot(1:3,3); 
+            normal = rot(1:3,3);
         end
         
         % calculate the geometric jacobian using the common jacobian function
