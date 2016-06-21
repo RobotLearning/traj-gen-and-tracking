@@ -47,9 +47,9 @@ options = optimoptions('fmincon','Algorithm', 'sqp',...
                        'TolCon', 1e-6, ...
                        'TolFun',1e-6, ...
                        'MaxFunEvals',2e3,...
-                       'GradObj','on',...
+                       'GradObj','on');...
                        ... %'DerivativeCheck','on',...
-                       'GradConstr','on');
+                       ... %'GradConstr','on');
 %options = optimoptions('fmincon','Display','iter-detailed');
 %profile on;
 [xopt,fval,exitflag,output] = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
@@ -165,17 +165,17 @@ nf = robot.calcRacketNormal(of);
 
 % inequality constraints
 % last one makes sure ball touches the racket
-% c = [qext(t1) - con.q.max;
-%      con.q.min - qext(t1);
-%      qext(t2) - con.q.max;
-%      con.q.min - qext(t2);
-%      qext_ret(t1ret) - con.q.max;
-%      con.q.min - qext_ret(t1ret);
-%      qext_ret(t2ret) - con.q.max;
-%      con.q.min - qext_ret(t2ret)];
+c = [qext(t1) - con.q.max;
+     con.q.min - qext(t1);
+     qext(t2) - con.q.max;
+     con.q.min - qext(t2);
+     qext_ret(t1ret) - con.q.max;
+     con.q.min - qext_ret(t1ret);
+     qext_ret(t2ret) - con.q.max;
+     con.q.min - qext_ret(t2ret)];
      %vecFromBallToRacket(1:2)'*vecFromBallToRacket(1:2) - racket.radius^2];
      
-c = [];
+% c = [];
 
 % first one makes sure ball is at racket dist 
 % 2cm is ball radius is not considered
@@ -184,17 +184,17 @@ c = [];
 %         nf - normalDes(:)];
 
 % trying to get racket centre to ball 
-c_eq = [xf - posDes(:)]; 
-      %xfd - velDes(:);
-      %nf - normalDes(:)];
+c_eq = [xf - posDes(:); 
+      xfd - velDes(:);
+      nf - normalDes(:)];
       
-if nargout > 2
-    % compute derivatives
-    Gc = [];
-    ballVel = ballPred(dim+1:end,:);
-    ballsVelAtT = interp1(racket.time', ballVel',T)';
-    Gc_eq = [robot.jac(1:dim,:), zeros(dim,dof),-ballsVelAtT]';
-end
+% if nargout > 2
+%     % compute derivatives
+%     Gc = [];
+%     ballVel = ballPred(dim+1:end,:);
+%     ballsVelAtT = interp1(racket.time', ballVel',T)';
+%     Gc_eq = [robot.jac(1:dim,:), zeros(dim,dof),-ballsVelAtT]';
+% end
       
 end
 

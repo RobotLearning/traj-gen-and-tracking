@@ -243,11 +243,12 @@ classdef BarrettWAM < Robot
             racketVel = racket.vel;
             racketAngularVel = racket.angvel;
             q0 = Q0(1:7);  
+            q0d = Q0(8:end);
             
             try
                 tic;
                 % get the slide of the original racket orientation
-                [~,~,o] = obj.calcRacketState(Q0);
+                [~,~,o] = obj.calcRacketState(q0,q0d);
                 rotMatrix0 = quat2Rot(o);
                 slide0 = rotMatrix0(1:3,2);    
                 slide0 = slide0./norm(slide0,2);
@@ -269,10 +270,11 @@ classdef BarrettWAM < Robot
                 rotBack = [cos(-pi/4); -sin(-pi/4); 0; 0];
                 eQuat = mult2Quat(quatRacket,rotBack);
                 % estimate qf from demonstrations
-                qest = [ePos(:);eQuat(:)]' * obj.Bdemo;
-                qest = obj.clampJointLimits(qest(:));
+                %qest = [ePos(:);eQuat(:)]' * obj.Bdemo;
+                %qest = obj.clampJointLimits(qest(:));
+                qest = rand(7,1);
                 qf = obj.invKinematics(ePos(:),eQuat(:),qest(:));
-                obj.checkJointLimits(qf,0,0);
+                obj.checkJointLimits(qf,zeros(7,1),zeros(7,1));
                 timeInvKin = toc;
                 fprintf('InvKin took %f sec.\n',timeInvKin);
                 obj.calcJacobian(qf);                
