@@ -8,6 +8,16 @@ clc; clear; close all;
 % load table parameters
 loadTennisTableValues;
 
+ballgun_with_spin = true;
+
+if ballgun_with_spin
+    CRT = 0.96;
+    CFTY = 1.20;
+    CFTX = 1.20;
+    gravity = -11.06;
+    Cdrag = 0.1753;
+end
+
 dataSet = 1;
 file = ['../Desktop/data/realBallsimRobotData',int2str(dataSet)];
 M = dlmread([file,'.txt']);
