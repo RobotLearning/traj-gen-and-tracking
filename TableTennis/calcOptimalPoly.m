@@ -148,9 +148,9 @@ a2ret = (3/(Tret^2))*(q0-qf) - (1/Tret)*(q0dot + 2*qfdot);
 % compute the extrema
 t1ret = (-a2ret + sqrt(a2ret.^2 - 3*a3ret.*qfdot))./(3*a3ret);
 t2ret = (-a2ret - sqrt(a2ret.^2 - 3*a3ret.*qfdot))./(3*a3ret);
-% discard if complex and clamp to [T,T+return]
-t1ret = min(max(~logical(imag(t1ret)) .* t1ret, T),T+Tret);
-t2ret = min(max(~logical(imag(t2ret)) .* t2ret, T),T+Tret);
+% discard if complex and clamp to [0,Treturn]
+t1ret = min(max(~logical(imag(t1ret)) .* t1ret, 0),Tret);
+t2ret = min(max(~logical(imag(t2ret)) .* t2ret, 0),Tret);
 
 % enforce both minima and maxima
 qext = @(t) a3.*(t.^3) + a2.*(t.^2) + q0dot.*t + q0;
