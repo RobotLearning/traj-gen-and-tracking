@@ -1,21 +1,32 @@
 
-function ballPred = predictTillLastBlob(filter,t1,t3,b1,b3,t_lookup,ball_lookup)
+function ballPred = predictTillLastBlob(filter,t,tstart,ball_lookup)
 
-loadTennisTableValues;
-% find the index at bounce
-[~,idx_bounce] = min(b3(:,3));
-predTime.bounce =  t3(idx_bounce) - t_lookup;
-predTime.lastBlob3 = t3(end) - t_lookup;
-predTime.lastBlob1 = t1(end) - t_lookup;
-
-dt = 1/60;
+t = t(t > tstart) - tstart;
 initVar = 1;
 filter.initState(ball_lookup(:),initVar);
-filter.linearize(dt,0);
-predictHorizon = predTime.lastBlob1; % only predict till last blob3
-table.DIST = dist_to_table;
-table.LENGTH = table_length;
-table.Z = table_z;
-table.WIDTH = table_width;
-[ballPred,ballTime,numBounce,time2PassTable] = ...
-            predictBallPath(dt,predictHorizon,filter,table);
+filter.linearize(t(1),0);
+ballPred = predictBallPath(t,filter);
+        
+% Predict the ball path for a fixed seconds into the future
+% maxPredictHorizon indicates the fixed time
+% includes also bounce prediction (num of estimated bounces)
+
+function ballPred = predictBallPath(t,filter)
+
+ballPred = zeros(6,length(t));       
+
+% save filter state before prediction
+xSave = filter.x;
+PSave = filter.P;
+
+t_last = 0.0;
+for j = 1:length(t)
+    diff_t = t(j) - t_last;
+    %filter.linearize(dt,0);
+    filter.predict(diff_t,0);
+    ballPred(:,j) = filter.x;   
+    t_last = t(j);
+end
+
+% revert back to saved state
+filter.initState(xSave,PSave);        

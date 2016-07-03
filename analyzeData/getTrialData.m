@@ -22,8 +22,6 @@ b1 = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),:);
 
 try
     ballEst = filtData(idxStart3(trial):idxStart3(trial+1)-1,:);
-    % remove first 12 entries
-    ballEst = ballEst(12+1:end,:);  
 catch
     warning('Filter data from SL seems to be unavailable!');
     ballEst = [];

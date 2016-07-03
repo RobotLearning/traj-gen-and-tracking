@@ -1,5 +1,5 @@
 
-function [ball_lookup,idx_lookup,t_lookup] = getSLFilterLookup(ballEst)
+function [ball_lookup,idx_lookup,t_lookup] = getFilterLookup(ballEst)
 
 toly = 0.4;
 % load table parameters
