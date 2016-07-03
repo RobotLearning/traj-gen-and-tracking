@@ -21,5 +21,5 @@ for i = 1:N_updates
     RMS_pred(i) = sqrt(sum(diag((differ)*(differ)'))/N);
 end
 
-disp('Plotting last prediction result also');
-plotPredictionResult([],b,ballPredNew);
+% disp('Plotting last prediction result also');
+% plotPredictionResult([],b,ballPredNew);

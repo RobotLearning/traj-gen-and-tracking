@@ -1,4 +1,4 @@
-%% Analyze prediction error on ball data
+%% Analyze ball data and prediction error of filtering approaches
 
 % Load real ball data saved on 13/04/2016
 % and look at filtering and prediction performance
@@ -17,7 +17,7 @@
 
 clc; clear; close all;
 loadTennisTableValues; 
-dataSet = 1; trial = 1; % Get the data corresponding to trial of interest
+dataSet = 1; trial = 3; % Get the data corresponding to trial of interest
 [t,B] = loadBallData(dataSet);
 
 % initialize EKF
@@ -29,8 +29,8 @@ spin = true;
 [b1,b3,ball_est,numTrials] = getTrialData(b1,b3,trial,dataSet,ball_est);
 [t1,b1] = removeOutliers(b1);
 
-% Merge balls
-[tMerge,ballMerge] = mergeBallData(t1,b1,b3(:,1),b3(:,2:4));
+% Merge balls - camera1 offset is also removed
+[tMerge,ballMerge,b1] = mergeBallData(t1,b1,b3(:,1),b3(:,2:4));
 
 % Check SL filter results with MATLAB polynomial filter class
 ball_est = filterBallsPoly(ball_func,tMerge,ballMerge);
@@ -47,5 +47,7 @@ plotPredictionResult(b1,b3(:,2:4),ballPred);
 % Calculate RMS prediction error as we get more ball data till bounce
 % update till ball hits table
 [~,idx_bounce] = min(b3(:,4));% find the index at bounce
-rms_pred = calculatePredErrors(filter,ball_est,idx_lookup,idx_bounce,tMerge,ballMerge);      
+idx_end = size(b3,1); % idx_bounce; % end of camera3 data not 
+idx_start = 12; % idx_lookup % start from first estimate not lookup
+rms_pred = calculatePredErrors(filter,ball_est,idx_start,idx_end,tMerge,ballMerge);      
 figure; plot(rms_pred);
