@@ -47,9 +47,9 @@ options = optimoptions('fmincon','Algorithm', 'sqp',...
                        'TolCon', 1e-6, ...
                        'TolFun',1e-6, ...
                        'MaxFunEvals',2e3,...
-                       'GradObj','on',...
+                       'GradObj','on');...
                        ... %'DerivativeCheck','on',...
-                       'GradConstr','on');
+                       ... %'GradConstr','on');
 %options = optimoptions('fmincon','Display','iter-detailed');
 %profile on;
 [xopt,fval,exitflag,output] = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
@@ -148,9 +148,9 @@ a2ret = (3/(Tret^2))*(q0-qf) - (1/Tret)*(q0dot + 2*qfdot);
 % compute the extrema
 t1ret = (-a2ret + sqrt(a2ret.^2 - 3*a3ret.*qfdot))./(3*a3ret);
 t2ret = (-a2ret - sqrt(a2ret.^2 - 3*a3ret.*qfdot))./(3*a3ret);
-% discard if complex and clamp to [T,T+return]
-t1ret = min(max(~logical(imag(t1ret)) .* t1ret, T),T+Tret);
-t2ret = min(max(~logical(imag(t2ret)) .* t2ret, T),T+Tret);
+% discard if complex and clamp to [0,Treturn]
+t1ret = min(max(~logical(imag(t1ret)) .* t1ret, 0),Tret);
+t2ret = min(max(~logical(imag(t2ret)) .* t2ret, 0),Tret);
 
 % enforce both minima and maxima
 qext = @(t) a3.*(t.^3) + a2.*(t.^2) + q0dot.*t + q0;
@@ -165,17 +165,17 @@ nf = robot.calcRacketNormal(of);
 
 % inequality constraints
 % last one makes sure ball touches the racket
-% c = [qext(t1) - con.q.max;
-%      con.q.min - qext(t1);
-%      qext(t2) - con.q.max;
-%      con.q.min - qext(t2);
-%      qext_ret(t1ret) - con.q.max;
-%      con.q.min - qext_ret(t1ret);
-%      qext_ret(t2ret) - con.q.max;
-%      con.q.min - qext_ret(t2ret)];
+c = [qext(t1) - con.q.max;
+     con.q.min - qext(t1);
+     qext(t2) - con.q.max;
+     con.q.min - qext(t2);
+     qext_ret(t1ret) - con.q.max;
+     con.q.min - qext_ret(t1ret);
+     qext_ret(t2ret) - con.q.max;
+     con.q.min - qext_ret(t2ret)];
      %vecFromBallToRacket(1:2)'*vecFromBallToRacket(1:2) - racket.radius^2];
      
-c = [];
+% c = [];
 
 % first one makes sure ball is at racket dist 
 % 2cm is ball radius is not considered
@@ -184,17 +184,17 @@ c = [];
 %         nf - normalDes(:)];
 
 % trying to get racket centre to ball 
-c_eq = [xf - posDes(:)]; 
-      %xfd - velDes(:);
-      %nf - normalDes(:)];
+c_eq = [xf - posDes(:); 
+      xfd - velDes(:);
+      nf - normalDes(:)];
       
-if nargout > 2
-    % compute derivatives
-    Gc = [];
-    ballVel = ballPred(dim+1:end,:);
-    ballsVelAtT = interp1(racket.time', ballVel',T)';
-    Gc_eq = [robot.jac(1:dim,:), zeros(dim,dof),-ballsVelAtT]';
-end
+% if nargout > 2
+%     % compute derivatives
+%     Gc = [];
+%     ballVel = ballPred(dim+1:end,:);
+%     ballsVelAtT = interp1(racket.time', ballVel',T)';
+%     Gc_eq = [robot.jac(1:dim,:), zeros(dim,dof),-ballsVelAtT]';
+% end
       
 end
 

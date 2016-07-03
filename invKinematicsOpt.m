@@ -46,7 +46,7 @@ end
 % endeff must be at a certain pos and orient
 function [c,ceq] = calculateEndEffDev(robot,pos,orient,q)
 
-condMax = 100;
+%condMax = 100;
 [xLink,~,~,Amats] = barrettWamKinematics(q,robot.PAR);
 o = rot2Quat(Amats(6,1:3,1:3));
 p = xLink(6,:);
