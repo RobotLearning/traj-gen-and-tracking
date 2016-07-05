@@ -12,5 +12,7 @@ N = size(b1,1);
 b1 = b1 - repmat(offset,N,1);
 ballMerge = [b3; b1(idx1butNot3,:)];
 tMerge = [t3; t1(idx1butNot3)];
+% time starts from 0
+tMerge = tMerge - tMerge(1);
 
 end

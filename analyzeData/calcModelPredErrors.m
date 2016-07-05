@@ -5,7 +5,7 @@
 % we test with the ball estimates (ballEsts) indexed from idx_start
 % to idx_end 
 
-function RMS_pred = calculatePredErrors(filter,ballEsts,idx_start,idx_end,t,b)
+function RMS_pred = calcModelPredErrors(filter,ballEsts,idx_start,idx_end,t,b)
 
 N_updates = idx_end - idx_start;
 RMS_pred = zeros(N_updates,1);

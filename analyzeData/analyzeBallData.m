@@ -49,5 +49,5 @@ plotPredictionResult(b1,b3(:,2:4),ballPred);
 [~,idx_bounce] = min(b3(:,4));% find the index at bounce
 idx_end = size(b3,1); % idx_bounce; % end of camera3 data not 
 idx_start = 12; % idx_lookup % start from first estimate not lookup
-rms_pred = calculatePredErrors(filter,ball_est,idx_start,idx_end,tMerge,ballMerge);      
+rms_pred = calcModelPredErrors(filter,ball_est,idx_start,idx_end,tMerge,ballMerge);      
 figure; plot(rms_pred);

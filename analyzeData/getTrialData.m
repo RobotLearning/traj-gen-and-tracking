@@ -17,8 +17,14 @@ tStart3 = b3(idxStart3,1);
 numTrials = length(idxStart3);
 
 % get the indices for plotting
-b3 = b3(idxStart3(trial):idxStart3(trial+1)-1,:);
-b1 = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),:);
+if trial < length(idxStart3)
+    b3 = b3(idxStart3(trial):idxStart3(trial+1)-1,:);
+    b1 = b1(b1(:,1) >= tStart3(trial) & b1(:,1) < tStart3(trial+1),:);
+else if trial == length(idxStart3)
+    b3 = b3(idxStart3(trial):end,:);
+    b1 = b1(b1(:,1) >= tStart3(trial),:);
+    end
+end
 
 try
     ballEst = filtData(idxStart3(trial):idxStart3(trial+1)-1,:);
