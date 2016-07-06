@@ -9,10 +9,16 @@ numRevealed = length(t_star);
 % get the balls from the ball_set
 numSet = length(ball_set);
 balls = zeros(numRevealed*3,numSet);
+mean_est = zeros(numRevealed*3,1);
+var_est = zeros(numRevealed*3);
 for i = 1:numSet
     balls_at_set = ball_set{i}(1:numRevealed,:)';
     balls(:,i) = balls_at_set(:);
 end
+
+mean_est = sum(balls,1)/numSet;
+balls_mean_reduced = balls - repmat(mean_est,1,numSet);
+var_est = balls_mean_reduced * balls_mean_reduced';
 
 % find the closest matches and take average
 b_star = ball_star';
