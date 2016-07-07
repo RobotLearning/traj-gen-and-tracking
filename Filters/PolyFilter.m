@@ -121,6 +121,34 @@ classdef PolyFilter < handle
              obj.x = [pos(:);vel(:)];
         end
         
+        % Estimate the state whenever there is a bounce
+        function estimate_rebound_state(obj)
+            % TODO
+            
+            try 
+                loadTennisTableValues();
+                ball = obj.Y;
+                idx = findReboundIndex(ball);
+                idxPost = idx+1:obj.size;
+                ballPost = ball(idxPost,:);
+                timePost = obj.T(idxPost);
+                nPost = length(idxPost);
+                mat1 = [ones(nPost,1), timePost, timePost.^2];
+                tol = 0.001;
+                betaPost = pinv(mat1,tol) * ballPost;
+                m = betaPost(:,3);
+                a = m(3); b = m(2); c = m(1) - table_z - ball_radius;
+                tBounce = (-b + sqrt(b^2 - 4*a*c))/(2*a);
+                c = betaPost(1,:);
+                b = betaPost(2,:);
+                a = betaPost(3,:);
+                y = [b*tBounce + c; (2*a*tBounce + b)/M - 2*a*tBounce];
+                mat = [1, tBounce; 0, 1];
+                betaPre = [mat \ y; a];
+            catch
+                warning('There is no rebound it seems!');
+            end
+        end
     end
     
     
