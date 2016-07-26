@@ -4,47 +4,47 @@ clc; clear; close all;
 
 %% Simple Test for Kalman Filter
 
-seed = 5;
-rng(seed);
-A = 0.5 * rand(2);
-C = [0,1];
-eps = 0.1;
-N = 20;
-x0 = [10;1];
-x(:,1) = x0;
-y(1) = C*x0 + sqrt(eps) * randn;
-for i = 2:N
-    x(:,i) = A*x(:,i-1);
-    y(i) = C*x(:,i) + sqrt(eps) * randn;
-end
-
-% initialize KF
-mats.A = A;
-mats.B = 0;
-mats.C = C;
-mats.D = 0;
-% process noise var
-mats.O = 0;
-% observation noise var
-mats.M = eps;
-filter = KF(2,mats);
-filter.initState(x0,eps);
-for i = 1:N-1
-    filter.update(y(i),0);
-    yKF(i) = C * filter.x;
-    filter.predict(0);
-end
-filter.update(y(i),0);
-yKF(N) = C * filter.x;
-
-w_cut = 45/180;
-yButter = filterButter2nd(y,w_cut);
-
-figure(1);
-plot(1:N, x(2,:), 'ks-', 1:N, y, 'b-', 1:N, yKF, 'rx:', 1:N, yButter, 'g*');
-legend('traj','noisy traj','Kalman Filter', 'Butterworth');
-SSE(1) = (yKF - C*x)*(yKF - C*x)';
-SSE(2) = (yButter - C*x)*(yButter - C*x)';
+% seed = 5;
+% rng(seed);
+% A = 0.5 * rand(2);
+% C = [0,1];
+% eps = 0.1;
+% N = 20;
+% x0 = [10;1];
+% x(:,1) = x0;
+% y(1) = C*x0 + sqrt(eps) * randn;
+% for i = 2:N
+%     x(:,i) = A*x(:,i-1);
+%     y(i) = C*x(:,i) + sqrt(eps) * randn;
+% end
+% 
+% % initialize KF
+% mats.A = A;
+% mats.B = 0;
+% mats.C = C;
+% mats.D = 0;
+% % process noise var
+% mats.O = 0;
+% % observation noise var
+% mats.M = eps;
+% filter = KF(2,mats);
+% filter.initState(x0,eps);
+% for i = 1:N-1
+%     filter.update(y(i),0);
+%     yKF(i) = C * filter.x;
+%     filter.predict(0);
+% end
+% filter.update(y(i),0);
+% yKF(N) = C * filter.x;
+% 
+% w_cut = 45/180;
+% yButter = filterButter2nd(y,w_cut);
+% 
+% figure(1);
+% plot(1:N, x(2,:), 'ks-', 1:N, y, 'b-', 1:N, yKF, 'rx:', 1:N, yButter, 'g*');
+% legend('traj','noisy traj','Kalman Filter', 'Butterworth');
+% SSE(1) = (yKF - C*x)*(yKF - C*x)';
+% SSE(2) = (yButter - C*x)*(yButter - C*x)';
 
 %% Set system parameters and constraints
 
@@ -98,7 +98,7 @@ Nu = N - 1;
 % track smoothed step
 ref = 1./(1+exp(-(2*t-20)/10));
 
-%% Evolve system dynamics with a nominal input
+% Evolve system dynamics with a nominal input
 
 % initialize states and inputs
 x0 = [0;ref(1)];
@@ -108,7 +108,7 @@ y = lin.observe(t,x0,us);
 traj = Trajectory(t,ref,us,[]);
 traj.addPerformance(us,y,lin.COST,'zeros');
 
-%% Find the control inputs
+% Find the control inputs
 
 num_trials = 2;
 ilc = mILC(lin,traj);
@@ -125,7 +125,7 @@ for i = 1:num_trials
 end
 
 % Plot the controls
-lin.plot_inputs(traj);
+% lin.plot_inputs(traj);
 %lin.plot_outputs(traj);
 
 %% See performance of Kalman Filter
