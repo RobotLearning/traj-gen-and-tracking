@@ -37,7 +37,8 @@ OPT.distr.land.cov = 0; %0.01*eye(2);
 % OPT.distr.workspace.cov = 0.1*eye(3);
 
 % measurement covariance
-OPT.camera.cov = 0.0;
-
-tt = TableTennis3D(wam,q0,OPT);
-tt.practice(q0,1);
+OPT.camera.cov = 5e-4;
+% sampling time
+dt = 0.01; 
+tt = TableTennis3D(wam,dt,q0,OPT);
+tt.practice(q0,5);

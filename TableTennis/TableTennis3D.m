@@ -4,6 +4,8 @@ classdef TableTennis3D < handle
     
     properties
         
+        % sampling time
+        dt
         % planning related parameters are stored here
         plan
         % table related parameters
@@ -28,8 +30,10 @@ classdef TableTennis3D < handle
     methods
         
         %% CONSTRUCTOR AND SUBMETHODS
-        function obj = TableTennis3D(wam,q0,opt)
+        function obj = TableTennis3D(wam,dt,q0,opt)
             
+            % sampling time
+            obj.dt = dt;
             % initialize the robot
             obj.robot = wam;            
             % initialize camera noise
@@ -51,6 +55,7 @@ classdef TableTennis3D < handle
         function reset_plan(obj,q0)
             WAIT = 0;
             obj.plan.stage = WAIT;
+            obj.plan.obs = [];
             obj.plan.idx = 1;
             obj.plan.q = q0;
             obj.plan.qd = zeros(7,1);
@@ -145,18 +150,12 @@ classdef TableTennis3D < handle
             numLands = 0;
             eps = obj.noise.camera.cov;
             maxSimTime = 3.0;
-            dt = 0.01;
-            
-            % Init filter
-            filter = obj.initFilter();
             
             for i = 1:numTimes                                               
                 % reset the ball state
                 obj.ball.resetState();
-                % initialize filter state
-                filter.initState([obj.ball.pos;obj.ball.vel],eps);
                 % play one turn
-                obj.play(dt,q0,filter,maxSimTime);                
+                obj.play(q0,maxSimTime);                
                 % check landing
                 if obj.ball.isLANDED
                     numLands = numLands + 1;
@@ -185,24 +184,30 @@ classdef TableTennis3D < handle
         end
         
         % first robot plays solo once
-        function play(obj,dt,q0,filter,timeMax)
+        function play(obj,q0,timeMax)
             
             timeSim = 0.0;
             % initialize q and x
             qd0 = zeros(7,1);
-            [x,xd,o] = obj.robot.calcRacketState(q0,qd0);
+            [x,xd,o] = obj.robot.calcRacketState(q0,qd0);     
+            % Init filter
+            eps = 1e4;
+            ballCovEst = eps;
+            ballPosEst = [0.0;obj.table.DIST + obj.table.LENGTH; obj.table.Z + 0.2];
+            ballVelEst = [0.0;4.0;4.0];
+            filter = obj.initFilter(ballPosEst,ballVelEst,ballCovEst);
 
             while timeSim < timeMax      
                 
                 % evolve ball according to racket and get estimate
-                filter = obj.getBallEstimate(dt,filter,x,xd,o);
-                [q,qd] = obj.planFiniteStateMachine(filter,q0,dt);
+                filter = obj.getBallEstimate(filter,x,xd,o);
+                [q,qd] = obj.planFiniteStateMachine(filter,q0);
                 [x,xd,o] = obj.robot.calcRacketState(q,qd);
                 
                 if obj.draw.flag
                     obj.updateAnimation(q);
                 end
-                timeSim = timeSim + dt;                
+                timeSim = timeSim + obj.dt;                
             end
             
             % clear the ball path predicted and robot generated traj
@@ -217,7 +222,7 @@ classdef TableTennis3D < handle
         % planning using a Virtual planning plane (VPP)
         % generally over the net
         % using a Finite State Machine to plan when to hit/stop
-        function [q,qd] = planFiniteStateMachine(obj,filter,q0,dt)
+        function [q,qd] = planFiniteStateMachine(obj,filter,q0)
             
             WAIT = 0;
             PREDICT = 1;
@@ -235,7 +240,7 @@ classdef TableTennis3D < handle
             if obj.plan.stage == PREDICT && filter.x(2) > table_center && filter.x(5) > 0.5   
                 predictTime = 1.2;
                 [ballPred,ballTime,numBounce,time2Passtable] = ...
-                    predictBallPath(dt,predictTime,filter,obj.table);
+                    predictBallPath(obj.dt,predictTime,filter,obj.table);
                 if checkBounceOnOppTable(filter,obj.table)
                     obj.plan.stage = FINISH;
                 elseif numBounce ~= 1
@@ -251,7 +256,7 @@ classdef TableTennis3D < handle
                     if obj.offline.train || obj.offline.use
                         obj.offline.b0 = filter.x';
                     end
-                    obj.returnBall2Center(ballPred,ballTime,q0,dt);            
+                    obj.returnBall2Center(ballPred,ballTime,q0);            
                 end
 
             end % end predict      
@@ -292,7 +297,7 @@ classdef TableTennis3D < handle
         % Fix a desired landing point and desired landing time
         % as well as a desired return time to q0
         % For now only two methods : VHP and free Time
-        function returnBall2Center(obj,ballPred,ballTime,q0,dt)                
+        function returnBall2Center(obj,ballPred,ballTime,q0)                
             
             dofs = 7;
             % land the ball on the centre of opponents court
@@ -320,7 +325,7 @@ classdef TableTennis3D < handle
                 end
             end
             
-            [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
+            [q,qd,qdd] = generateSpline(obj.dt,q0,q0dot,qf,qfdot,T,time2return);
             [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
             [x,xd,o] = obj.robot.calcRacketState(q,qd);
             [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);
@@ -398,7 +403,8 @@ classdef TableTennis3D < handle
         
         %% FILTERING FOR ROBOTS TO GET BALL OBSERVATION
         
-        function filter = initFilter(obj)
+        % initialize at the center of opponents court
+        function filter = initFilter(obj,posEst,velEst,covEst)
             
             % Initialize EKF
             dim = 6;
@@ -425,7 +431,7 @@ classdef TableTennis3D < handle
             mats.C = C;
             mats.M = eps * eye(3);
             filter = EKF(dim,ballFlightFnc,mats);
-            filter.initState([tennisBall.pos(:); tennisBall.vel(:)],eps);            
+            filter.initState([posEst(:); velEst(:)],covEst);            
         end
         
         function obs = emulateCamera(obj)
@@ -438,18 +444,42 @@ classdef TableTennis3D < handle
             obs = obj.ball.pos + std * randn(3,1);
         end
         
-        function filter = getBallEstimate(obj,dt,filter,x,xd,o)
+        % Get ball estimate from cameras and update KF estimate
+        % reinitialize filter whenever numobs is 5
+        function filter = getBallEstimate(obj,filter,x,xd,o)
             racket.pos = x;
             racket.vel = xd;
             racketRot = quat2Rot(o);
             racket.normal = racketRot(:,3);
+            dt = obj.dt;
             obj.ball.evolve(dt,racket);
             obs = obj.emulateCamera();
+            obj.plan.obs = [obj.plan.obs, obs(:)];
 
-            % Estimate the ball state
-            filter.linearize(dt,0);
-            filter.predict(dt,0);
-            filter.update(obs,0);                
+            if size(obj.plan.obs,2) == 12 % re-initialize filter 
+                filter = obj.reinitializeFilter(filter);
+            else
+                % Estimate the ball state
+                filter.linearize(dt,0);
+                filter.predict(dt,0);
+                filter.update(obs,0);           
+            end
+        end
+        
+        % Initialize filter based on observations so far
+        function filter = reinitializeFilter(obj,filter)
+            
+            dt = obj.dt;
+            time = dt * (1:size(obj.plan.obs,2));
+            [posEst,velEst] = estimateInitBall(time,obj.plan.obs);
+            covEst = 1e2;
+            filter.initState([posEst(:);velEst(:)],covEst);
+            
+            for i = 1:size(obj.plan.obs,2)
+                filter.linearize(dt,0);
+                filter.predict(dt,0);
+                filter.update(obj.plan.obs(:,i),0);
+            end
         end
         
         %% Animation functions here
