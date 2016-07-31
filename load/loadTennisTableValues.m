@@ -44,9 +44,9 @@ CFTY = 0.72;
 CFTX = 0.68;
 
 % nondiagonal matrix
-BMAT = [1.23 0.33 0.36;
-        0.10 0.65 -0.71; 
-        -0.19 0.62 -0.29];
+% BMAT = [1.23 0.33 0.36;
+%         0.10 0.65 -0.71; 
+%         -0.19 0.62 -0.29];
 
 
 % coeff of restitution for racket
@@ -69,6 +69,10 @@ CRR = 0.78;
 % old coefficients from SL
 gravity = -9.801;
 Cdrag = 0.1414;
+
+% lift coefficient for spin 
+% (Clift = (4/3)*CM*pi*rho*(r^3)/m)
+Clift = 0.001;
 
 %% Values for drawing the table
 

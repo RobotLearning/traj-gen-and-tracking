@@ -1,4 +1,5 @@
 %% Nonlinear ballistic flight model involving air drag
+% no spin
 
 function xddot = ballFlightModel(xdot,C,g)
 

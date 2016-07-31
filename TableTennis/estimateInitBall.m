@@ -1,10 +1,15 @@
 % Function that uses nonlinear least squares to estimate
 % initial ball position and velocity for a table tennis ball
 
-function [pos_est,vel_est] = estimateInitBall(time,obs)
+function [pos_est,vel_est] = estimateInitBall(time,obs,spin)
 
     % load table parameters
-    loadTennisTableValues;
+    loadTennisTableValues;    
+    if spin
+        gravity = -11.06;
+        Cdrag = 0.1753;
+    end
+    
     time = time(:);
     % using polyfit on the balls
     sampleSize = size(obs,2);

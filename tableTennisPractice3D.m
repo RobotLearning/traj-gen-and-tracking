@@ -41,4 +41,4 @@ OPT.camera.cov = 5e-4;
 % sampling time
 dt = 0.01; 
 tt = TableTennis3D(wam,dt,q0,OPT);
-tt.practice(q0,5);
+tt.practice(q0,1);

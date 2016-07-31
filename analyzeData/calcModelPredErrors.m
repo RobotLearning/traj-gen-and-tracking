@@ -5,7 +5,7 @@
 % we test with the ball estimates (ballEsts) indexed from idx_start
 % to idx_end 
 
-function RMS_pred = calcModelPredErrors(filter,ballEsts,idx_start,idx_end,t,b)
+function RMS_pred = calcModelPredErrors(filter,ballEsts,idx_start,idx_end,t,b,plot)
 
 N_updates = idx_end - idx_start;
 RMS_pred = zeros(N_updates,1);
@@ -21,5 +21,7 @@ for i = 1:N_updates
     RMS_pred(i) = sqrt(sum(diag((differ)*(differ)'))/N);
 end
 
-disp('Plotting last prediction result also');
-plotPredictionResult([],b,ballPredNew);
+if plot
+    disp('Plotting last prediction result also');
+    plotPredictionResult([],b,ballPredNew);
+end

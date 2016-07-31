@@ -22,7 +22,7 @@ params.table_length = table_length;
 params.table_width = table_width;
 params.radius = ball_radius;
 % coeff of restitution-friction vector
-params.BMAT = BMAT;
+%params.BMAT = BMAT;
 params.CFTX = CFTX;
 params.CFTY = CFTY;
 params.CRT = CRT;

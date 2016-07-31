@@ -7,15 +7,45 @@
 
 function plotPredErrors(rms_errors)
 
-figure;
-plot(rms_errors);
-title('Prediction error as more balls are observed');
-xlabel('Number of balls observed after initial prediction');
-ylabel('RMS of traj after observed ball');
+    figure;
+    title('Prediction error as more balls are observed');
+    xlabel('Number of balls observed after initial prediction');
+    ylabel('RMS of traj after observed ball');
 
-% give info on average
-avg = sum(rms_errors)/length(rms_errors);
-fprintf('Avg RMS: %f \n', avg);
+    if iscell(rms_errors) && length(rms_errors) > 1
 
+        % find cell with max entry
+        Nmax = 1;
+        for i = 1:length(rms_errors)
+            if length(rms_errors{i}) > Nmax
+                Nmax = length(rms_errors{i});
+            end
+        end
+        m = zeros(1,Nmax);
+        n = zeros(1,Nmax);
+        s = zeros(1,Nmax);    
+        % go through each cell and collect statistics 
+        % for errorplot
+        for i = 1:length(rms_errors)
+            for j = 1:length(rms_errors{i})
+                m(j) = m(j) + rms_errors{i}(j);
+                n(j) = n(j) + 1;
+                s(j) = s(j) + rms_errors{i}(j)^2;
+            end
+        end
+        % get mean and stdev. estimates
+        mean_est = m./n;
+        std_est = sqrt(s./n - mean_est.^2);
+        errorbar(mean_est,std_est);    
+    else
+        if iscell(rms_errors)
+            rms_errors = rms_errors{1};
+        end
+        
+        plot(rms_errors);
+        % give info on average
+        avg = sum(rms_errors)/length(rms_errors);
+        fprintf('Avg RMS: %f \n', avg);
+    end
 
 end
