@@ -1,18 +1,26 @@
 %% Predict next ball location given current ball position and vel
 
 
-function F = predictNextBall(b,C,g,data,len)
+function F = predictNextBall(b,C,g,data,len,spin)
 
-t = repmat(data(:,1)',6,1);
+if spin.flag
+    dim = 12;
+    Clift = spin.Clift;
+    ballFlightFnc = @(x) [x(7:12,:);ballSpinModel(x(7:12,:),C,Clift,g)];
+else
+    dim = 6;
+    ballFlightFnc = @(x) [x(4:6,:);ballFlightModel(x(4:6,:),C,g)];
+end
+
+t = repmat(data(:,1)',dim,1);
 x = [];
 for i = 1:length(len)
-    vec = b((i-1)*6+1:i*6);
+    vec = b((i-1)*dim+1:i*dim);
     x = [x,repmat(vec,1,len(i))];
 end
 %x = repmat(b,1,length(t));
 ballPosData = data(:,2:4)';
 
-ballFlightFnc = @(x) [x(4:6,:);ballFlightVectorModel(x(4:6,:),C,g)];
 k1 = t .* ballFlightFnc(x);
 x_k1 = x + k1/2;
 k2 = t .* ballFlightFnc(x_k1);
@@ -25,14 +33,5 @@ xNext = x + (k1 + 2*k2 + 2*k3 + k4)/6;
 err = xNext(1:3,:) - ballPosData;
 
 F = diag(err'*err);
-
-end
-
-function xddot = ballFlightVectorModel(xdot,C,g)
-
-v = sqrt(xdot(1,:).^2 + xdot(2,:).^2 + xdot(3,:).^2);
-xddot(1,:) = -C * v .* xdot(1,:);
-xddot(2,:) = -C * v .* xdot(2,:);
-xddot(3,:) = g - C * v .* xdot(3,:);
 
 end

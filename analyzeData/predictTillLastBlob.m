@@ -13,7 +13,7 @@ ballPred = predictBallPath(t,filter);
 
 function ballPred = predictBallPath(t,filter)
 
-ballPred = zeros(6,length(t));       
+ballPred = zeros(length(filter.x),length(t));       
 
 % save filter state before prediction
 xSave = filter.x;

@@ -25,7 +25,12 @@ trial = 6; iter = 1;% Get the data corresponding to trial of interest
 [t,B] = loadBallData(dataSet);
 
 % initialize EKF
-spin = true;
+% initialize ball with high topspin (3000rpm or more)
+w0 = [-50*2*pi;0;0]; %3000rpm topspin
+spin.flag = true;
+spin.Clift = Clift;
+spin.est = w0;
+
 [ekfFilter,ball_func] = initFilterEKF(spin);
 
 % Get reliable ball observations from trial and remove outliers
@@ -40,10 +45,10 @@ for trial = goodExamples
 
     % Check SL filter results with MATLAB filter poly/EKF classes
     %ball_est = filterBallsPoly(ball_func,tMerge,ballMerge);
-    ball_est = filterBallsEKF(ball_func,tMerge,ballMerge,ekfFilter,spin);
+    ball_est = filterBallsEKF(tMerge,ballMerge,ekfFilter,spin);
 
     % Get the SL filter ball estimate corresponding to ball trial
-    [ball_lookup,idx_lookup,t_lookup] = getFilterLookup(ball_est);
+    [ball_lookup,idx_lookup,t_lookup] = getFilterLookup(ball_est,spin);
 
     % Predict using ball estimate till last blob from camera 1
     ballPred = predictTillLastBlob(ekfFilter,tMerge,t_lookup,ball_lookup);

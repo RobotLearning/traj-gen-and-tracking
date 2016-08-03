@@ -1,19 +1,22 @@
 % Initialize an Extended Kalman Filter for the ball 
 % If ball is assumed to be spinning heavily, parameters are adjusted
 
-function [filter,ball_func] = initFilterEKF(ballgun_with_spin)
+function [filter,ball_func] = initFilterEKF(spin)
 
 % load table parameters
 loadTennisTableValues;
 
-if ballgun_with_spin
+if ~spin.flag
+    % try to compensate for effects of spin with a nonspinning ball model
+    gravity = -11.06;
+    Cdrag = 0.1753;
     CRT = 0.96;
     CFTY = 1.20;
     CFTX = 1.20;
-    gravity = -11.06;
-    Cdrag = 0.1753;
 end
 
+params.Clift = Clift;
+params.mu = mu; % is this accurate?
 params.C = Cdrag;
 params.g = gravity;
 params.zTable = table_z;
@@ -28,10 +31,18 @@ params.CFTY = CFTY;
 params.CRT = CRT;
 params.ALG = 'RK4';
 
-ball_func = @(x,u,dt) discreteBallFlightModel(x,dt,params);
+if spin.flag
+    ball_func = @(x,u,dt) discreteBallSpinModel(x,dt,params);
+    dim = 12;
+    C = [eye(3),zeros(3,9)];
+else
+    ball_func = @(x,u,dt) discreteBallFlightModel(x,dt,params);
+    dim = 6;
+    C = [eye(3),zeros(3)];
+end
+
 % very small but nonzero value for numerical stability
-eps = 1e-6; dim = 6; 
-C = [eye(3),zeros(3)];
+eps = 1e-6; 
 mats.O = eps * eye(dim);
 mats.C = C;
 mats.M = eps * eye(3);

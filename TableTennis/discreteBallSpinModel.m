@@ -80,7 +80,7 @@ function xdot = reboundSpinModel(xdot,e_t,mu,r)
         alpha = mu * (1 + e_t) * abs(xdot(3))/norm(vbT);
     end
 
-    Av = diag([1-alpha,1-alpha,-e_t]);
+    Av = diag([1.2,1-alpha,-e_t]);
     Bv = [0, alpha*r, 0;
           -alpha*r, 0, 0;
           zeros(1,3)];

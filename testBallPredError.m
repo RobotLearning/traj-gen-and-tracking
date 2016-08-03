@@ -21,7 +21,7 @@ params.ALG = 'RK4';
 ball_func = @(x,u,dt) discreteBallSpinModel(x,dt,params);
 
 % initialize ball with high topspin (3000rpm or more)
-w0 = [+50*2*pi;0;0]; %3000rpm topspin
+w0 = [-50*2*pi;0;0]; %3000rpm topspin
 phi0 = rand(3,1);
 pv0 = mu + chol(Sigma)*randn(6,1);
 x0 = [pv0(1:3);phi0(:);pv0(4:6);w0(:)];
@@ -73,25 +73,15 @@ hold off;
 %% Prediction as we get more ball data with spin-free model
 
 % initialize EKF
-% very small but nonzero value for numerical stability
-eps = 1e-6; dim = 6;
-C = [eye(3),zeros(3)];
-mats.O = eps * eye(dim);
-mats.C = C;
-mats.M = eps * eye(3);
-filter = EKF(dim,ball_func_nospin,mats);
+spin.flag = false;
+spin.Clift = Clift;
+spin.est = w0;
+filter = initFilterEKF(spin);
 
-% dim = 12;
-% C = [eye(3),zeros(3,9)];
-% mats.O = eps * eye(dim);
-% mats.C = C;
-% mats.M = eps * eye(3);
-% filter = EKF(dim,ball_func,mats);
+% filter balls over the trajectory balls data
+ballEsts = filterBallsEKF(t,balls,filter,spin);
 
-% filter balls with EKF
-spin = false;
-ball_est = filterBallsEKF(ball_func_nospin,t,balls,filter,spin);
 idx_start = 13;
 idx_end = 60;
-rms_pred = calcModelPredErrors(filter,ball_est,idx_start,idx_end,t,balls,false);      
+rms_pred = calcModelPredErrors(filter,ballEsts,idx_start,idx_end,t,balls,true);      
 plotPredErrors(rms_pred);
