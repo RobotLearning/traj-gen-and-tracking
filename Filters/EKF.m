@@ -23,6 +23,11 @@ classdef EKF < handle
         R
     end
     
+    % For robust filtering we need last observation value
+    properties
+        y_last
+    end
+    
     methods
         
         %% Initialize variances
@@ -40,6 +45,9 @@ classdef EKF < handle
             % initialize linearized matrices
             obj.A = [];
             obj.C = mats.C;
+            
+            % last observation value
+            obj.y_last = zeros(size(obj.C,1),1);
             
         end
         
@@ -96,6 +104,12 @@ classdef EKF < handle
             obj.P = P0;
         end
         
+        % Set covariances
+        function setCov(obj,Q,R)
+            obj.Q = Q;
+            obj.R = R;
+        end
+        
         %% predict state and covariance
         % predict dt into the future
         function predict(obj,dt,u)
@@ -105,7 +119,7 @@ classdef EKF < handle
             obj.P = obj.A * obj.P * obj.A' + obj.Q;
         end
         
-        %% update Kalman filter variance
+        %% update Kalman filter after observation
         function update(obj,y,u)
             
             % Innovation sequence
@@ -117,6 +131,41 @@ classdef EKF < handle
             % update state/variance
             obj.P = obj.P - K * obj.C * obj.P;
             obj.x = obj.x + K * Inno;
+        end
+        
+        % update only if the observation is within a fixed
+        % standard deviation of the filter
+        %
+        % considers also complete outliers where the ball is below
+        % the table or above the maximum threshold zMax
+        %
+        % considers also the case where the ball is not updated yet
+        % in this case we will also not update, nor issue warning
+        function robust_update(obj,y,u)
+            
+            table_z = -0.95;
+            zMin = table_z; 
+            zMax = 0.5;
+            validBall = y(3) >= zMin && y(3) < zMax;
+            tol = 1e-3; % ball should be at least this much different in norm
+            new_ball = norm(y - obj.y_last) > tol;
+            obj.y_last = y(:);
+            
+            % standard deviation multiplier
+            std_dev_mult = 4;
+            % difference in measurement and predicted value
+            inno = y(:) - obj.C * obj.x;
+            thresh = std_dev_mult * sqrt(diag(obj.C * obj.P * obj.C'));
+            
+            if any(inno > thresh) || ~validBall
+                % possible outlier not updating
+                warning('possible outlier! not updating!');                
+            elseif ~new_ball
+                warning('nothing new! not updating!');
+                % do not do anything
+            else
+                obj.update(y,u);
+            end    
         end
         
         %% Kalman smoother (batch mode)

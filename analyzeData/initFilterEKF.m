@@ -42,7 +42,7 @@ else
 end
 
 % very small but nonzero value for numerical stability
-eps = 1e-6; 
+eps = 1e-3; 
 mats.O = eps * eye(dim);
 mats.C = C;
 mats.M = eps * eye(3);

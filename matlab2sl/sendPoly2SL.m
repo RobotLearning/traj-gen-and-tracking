@@ -10,7 +10,7 @@ initializeWAM;
 %% Create the socket
 
 % wam or localhost
-host = 'localhost'; 
+host = 'wam'; 
 port = '7646';
 address = sprintf('tcp://%s:%s',host,port);
 context = zmq.core.ctx_new();

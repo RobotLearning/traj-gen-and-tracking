@@ -55,7 +55,7 @@ classdef KF < handle
             obj.P = obj.A * obj.P * obj.A' + obj.Q;
         end
         
-        %% update Kalman filter variance
+        %% update Kalman filter after observation
         function update(obj,y,u)
             
             % Innovation sequence
@@ -67,6 +67,31 @@ classdef KF < handle
             % update state/variance
             obj.P = obj.P - K * obj.C * obj.P;
             obj.x = obj.x + K * Inno;
+        end
+        
+        % update only if the observation is within a fixed
+        % standard deviation of the filter
+        %
+        % considers also complete outliers where the ball is below
+        % the table or above the maximum threshold zMax
+        function robust_update(obj,y,u)
+            
+            table_z = -0.95;
+            zMin = table_z; 
+            zMax = 0.5;
+            validBall = y(3) >= zMin && y(3) < zMax;
+            
+            % standard deviation multiplier
+            std_dev_mult = 4;
+            % difference in measurement and predicted value
+            inno = y(:) - obj.C * obj.x;
+            thresh = std_dev_mult * sqrt(diag(obj.C * obj.P * obj.C'));
+            if any(inno > thresh) || ~validBall
+                % possible outlier not updating
+                warning('possible outlier! not updating!');
+            else
+                obj.update(y,u);
+            end    
         end
         
         %% Kalman smoother (batch mode)
