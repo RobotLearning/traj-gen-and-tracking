@@ -14,7 +14,7 @@ classdef TableTennis3D < handle
         net
         % ball class
         ball
-        % robot 1
+        % robot 
         robot
         % handle structure for drawing animation
         handle
@@ -155,7 +155,7 @@ classdef TableTennis3D < handle
                 % reset the ball state
                 obj.ball.resetState();
                 % play one turn
-                obj.play(q0,maxSimTime);                
+                obj.playOneTurn(q0,maxSimTime);                
                 % check landing
                 if obj.ball.isLANDED
                     numLands = numLands + 1;
@@ -184,7 +184,7 @@ classdef TableTennis3D < handle
         end
         
         % first robot plays solo once
-        function play(obj,q0,timeMax)
+        function playOneTurn(obj,q0,timeMax)
             
             timeSim = 0.0;
             % initialize q and x
@@ -197,13 +197,11 @@ classdef TableTennis3D < handle
             ballVelEst = [0.0;4.0;4.0];
             filter = obj.initFilter(ballPosEst,ballVelEst,ballCovEst);
 
-            while timeSim < timeMax      
-                
+            while timeSim < timeMax                
                 % evolve ball according to racket and get estimate
                 filter = obj.getBallEstimate(filter,x,xd,o);
                 [q,qd] = obj.planFiniteStateMachine(filter,q0);
-                [x,xd,o] = obj.robot.calcRacketState(q,qd);
-                
+                [x,xd,o] = obj.robot.calcRacketState(q,qd);                
                 if obj.draw.flag
                     obj.updateAnimation(q);
                 end
@@ -224,74 +222,98 @@ classdef TableTennis3D < handle
         % using a Finite State Machine to plan when to hit/stop
         function [q,qd] = planFiniteStateMachine(obj,filter,q0)
             
-            WAIT = 0;
-            PREDICT = 1;
-            HIT = 2;
-            FINISH = 3; % only when practicing solo
-            
             % If it is coming towards the robot consider predicting
             velEst = filter.x(4:6);
-            if velEst(2) > 0 && obj.plan.stage == WAIT
-                obj.plan.stage = PREDICT;
+            if velEst(2) > 0 && obj.plan.stage == 0 % WAIT
+                obj.plan.stage = 1; % PREDICT
             end
 
-            table_center = obj.table.DIST - obj.table.LENGTH/2;
-            %if stage == PREDICT && time2Passtable <= minTime2Hit       
-            if obj.plan.stage == PREDICT && filter.x(2) > table_center && filter.x(5) > 0.5   
-                predictTime = 1.2;
-                [ballPred,ballTime,numBounce,time2Passtable] = ...
-                    predictBallPath(obj.dt,predictTime,filter,obj.table);
-                if checkBounceOnOppTable(filter,obj.table)
-                    obj.plan.stage = FINISH;
-                elseif numBounce ~= 1
-                    disp('Ball does not bounce once! Not hitting!');
-                    obj.plan.stage = FINISH;
-                elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPred)
-                    disp('No intersection with workspace! Not hitting!');
-                    obj.plan.stage = FINISH;
-                else
-                    obj.plan.idx = 0;
-                    obj.plan.stage = HIT;
-                    % If we're training an offline model save optimization result
-                    if obj.offline.train || obj.offline.use
-                        obj.offline.b0 = filter.x';
-                    end
-                    obj.returnBall2Center(ballPred,ballTime,q0);            
-                end
-
-            end % end predict      
+            table_center = obj.table.DIST - obj.table.LENGTH/2;   
+            % if stage is at PREDICT
+            if obj.plan.stage == 1 && filter.x(2) > table_center && filter.x(5) > 0.5   
+                obj.centredPlayer(q0,filter);               
+            end    
 
             % Move the robot
-            if obj.plan.stage == HIT 
+            if obj.plan.stage == 2 % HIT
                 obj.plan.idx = obj.plan.idx+1;
             end
             % if movement finished revert to waiting
             if obj.plan.idx > size(obj.plan.q,2)
                 obj.plan.idx = size(obj.plan.q,2);
-                obj.plan.stage = FINISH;
+                obj.plan.stage = 3; % FINISH
             end
             
             q = obj.plan.q(:,obj.plan.idx);
             qd = obj.plan.qd(:,obj.plan.idx);
         end
         
-        % Fix a desired landing point and desired landing time
-        % and calculate racket variables over ball estimated trajectory
-        function racketDes = planRacket(obj,ballDes,ballPred,ballTime,time2reach,q0)
+        % Lazy player
+        % does not fix q0, landing position, landing time
+        % does not fix racket center to hit the incoming ball
+        % does not fix the returning polynomial
+        % returns at estimated landing time to arbitrary q with zero velocity
+        %
+        % Implementing still the finite state machine rules
+        % Since we cannot run the optimization fast enough in MATLAB
+        % to enable MPC like correction
+        function lazyPlayer(obj,filter)
+            predictTime = 1.2;
+            [ballPred,ballTime,numBounce,time2Passtable] = ...
+                predictBallPath(obj.dt,predictTime,filter,obj.table);
+            if checkBounceOnOppTable(filter,obj.table)
+                obj.plan.stage = 3; % FINISH
+            elseif numBounce ~= 1
+                disp('Ball does not bounce once! Not hitting!');
+                obj.plan.stage = 3; % FINISH
+            elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPred)
+                disp('No intersection with workspace! Not hitting!');
+                obj.plan.stage = 3; % FINISH
+            else
+                obj.plan.idx = 0;
+                obj.plan.stage = 2; % HIT
+                [qf,qfdot,T,Tret] = lazyPlayer(obj.robot,ballPred,q0,time2return);
+                [q,qd,qdd] = calcHittingPoly(obj.dt,q0,q0dot,qf,qfdot,T,time2return);
+                [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
+                [x,xd,o] = obj.robot.calcRacketState(q,qd);
+                [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);
+
+                if obj.draw.flag
+                    % Debugging the trajectory generation                 
+                    obj.handle.robotCartesian = scatter3(x(1,:),x(2,:),x(3,:));
+                    obj.handle.ballPred = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
+                end
             
-            %Calculate ball outgoing velocities attached to each ball pos
-            fast = true;            
-            tic;
-            racketDes = calcRacketStrategy(ballDes,ballPred,ballTime,time2reach,fast);
-            logicalStr = {'Slow','Fast'};
-            fprintf('%s racket strategy calculation took %f seconds\n',...
-                     logicalStr{fast + 1}, toc);
-            
-            % Initialize solution for optimal poly
-            timeEst = 0.8;
-            q0dot = zeros(length(q0),1);
-            x0 = [q0;q0dot;timeEst];
-            racketDes.est = x0;
+                obj.plan.q = q;
+                obj.plan.qd = qd;
+            end
+        end
+        
+        
+        % Centred player that tries to return the ball
+        % at a desired point at a desired time
+        % It fixes a q0, generates both striking and returning polynomials
+        function centredPlayer(obj,q0,filter)
+            predictTime = 1.2;
+            [ballPred,ballTime,numBounce,time2Passtable] = ...
+                predictBallPath(obj.dt,predictTime,filter,obj.table);
+            if checkBounceOnOppTable(filter,obj.table)
+                obj.plan.stage = 3; % FINISH
+            elseif numBounce ~= 1
+                disp('Ball does not bounce once! Not hitting!');
+                obj.plan.stage = 3; % FINISH
+            elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPred)
+                disp('No intersection with workspace! Not hitting!');
+                obj.plan.stage = 3; % FINISH
+            else
+                obj.plan.idx = 0;
+                obj.plan.stage = 2; % HIT
+                % If we're training an offline model save optimization result
+                if obj.offline.train || obj.offline.use
+                    obj.offline.b0 = filter.x';
+                end
+                obj.returnBall2Center(ballPred,ballTime,q0);            
+            end            
         end
         
         % Fix a desired landing point and desired landing time
@@ -317,7 +339,7 @@ classdef TableTennis3D < handle
                     [qf,qfdot,T] = calcPolyAtVHP(obj.robot,obj.plan.vhp.y,time2reach,ballDes,ballPred,ballTime,q0);
                 else
                     racketDes = obj.planRacket(ballDes,ballPred,ballTime,time2reach,q0);
-                    [qf,qfdot,T] = calcOptimalPoly(obj.robot,racketDes,ballPred,q0,time2return);
+                    [qf,qfdot,T] = optimPoly(obj.robot,racketDes,ballPred,q0,time2return);
                 end
                 % If we're training an offline model save optimization result
                 if obj.offline.train
@@ -325,7 +347,7 @@ classdef TableTennis3D < handle
                 end
             end
             
-            [q,qd,qdd] = generateSpline(obj.dt,q0,q0dot,qf,qfdot,T,time2return);
+            [q,qd,qdd] = calcHitAndReturnSpline(obj.dt,q0,q0dot,qf,qfdot,T,time2return);
             [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
             [x,xd,o] = obj.robot.calcRacketState(q,qd);
             [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);
@@ -338,6 +360,25 @@ classdef TableTennis3D < handle
             
             obj.plan.q = q;
             obj.plan.qd = qd;
+        end
+        
+        % Fix a desired landing point and desired landing time
+        % and calculate racket variables over ball estimated trajectory
+        function racketDes = planRacket(obj,ballDes,ballPred,ballTime,time2reach,q0)
+            
+            %Calculate ball outgoing velocities attached to each ball pos
+            fast = true;            
+            tic;
+            racketDes = calcRacketStrategy(ballDes,ballPred,ballTime,time2reach,fast);
+            logicalStr = {'Slow','Fast'};
+            fprintf('%s racket strategy calculation took %f seconds\n',...
+                     logicalStr{fast + 1}, toc);
+            
+            % Initialize solution for optimal poly
+            timeEst = 0.8;
+            q0dot = zeros(length(q0),1);
+            x0 = [q0;q0dot;timeEst];
+            racketDes.est = x0;
         end
         
         % Check contact with table
@@ -445,7 +486,7 @@ classdef TableTennis3D < handle
         end
         
         % Get ball estimate from cameras and update KF estimate
-        % reinitialize filter whenever numobs is 5
+        % reinitialize filter whenever numobs is 12
         function filter = getBallEstimate(obj,filter,x,xd,o)
             racket.pos = x;
             racket.vel = xd;
@@ -469,15 +510,15 @@ classdef TableTennis3D < handle
         % Initialize filter based on observations so far
         function filter = reinitializeFilter(obj,filter)
             
-            dt = obj.dt;
-            time = dt * (1:size(obj.plan.obs,2));
-            [posEst,velEst] = estimateInitBall(time,obj.plan.obs);
+            time = obj.dt * (1:size(obj.plan.obs,2));
+            spin.flag = false;
+            ballInit = estimateInitBall(time,obj.plan.obs,spin);
             covEst = 1e2;
-            filter.initState([posEst(:);velEst(:)],covEst);
+            filter.initState(ballInit(:),covEst);
             
             for i = 1:size(obj.plan.obs,2)
-                filter.linearize(dt,0);
-                filter.predict(dt,0);
+                filter.linearize(obj.dt,0);
+                filter.predict(obj.dt,0);
                 filter.update(obj.plan.obs(:,i),0);
             end
         end

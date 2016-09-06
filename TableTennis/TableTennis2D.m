@@ -324,7 +324,7 @@ classdef TableTennis2D < handle
                     [qf,qfdot,T] = calcPolyAtVHP2D(obj.robot,obj.plan.vhp.y,time2reach,ballDes,ballPred,ballTime,q0);
                 else
                     racketDes = obj.planRacket(ballDes,ballPred,ballTime,time2reach,q0);
-                    [qf,qfdot,T] = calcOptimalPoly(obj.robot,racketDes,ballPred,q0,time2return);
+                    [qf,qfdot,T] = optimPoly(obj.robot,racketDes,ballPred,q0,time2return);
                 end
                 % If we're training an offline model save optimization result
                 if obj.offline.train
@@ -332,7 +332,7 @@ classdef TableTennis2D < handle
                 end
             end
             
-            [q,qd,qdd] = generateSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
+            [q,qd,qdd] = calcHitAndReturnSpline(dt,q0,q0dot,qf,qfdot,T,time2return);
             [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
             [x,xd,o] = obj.robot.calcRacketState(q,qd);
             [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);

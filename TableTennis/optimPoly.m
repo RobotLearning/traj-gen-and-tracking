@@ -3,7 +3,7 @@
 % q0 and q0dot are given
 % using fmincon optimizing for their parameters qf,qfdot,T
 
-function [qf,qfdot,T] = calcOptimalPoly(robot,racket,ballPred,q0,Tret)
+function [qf,qfdot,T] = optimPoly(robot,racket,ballPred,q0,Tret)
 
 tic;
 dof = length(q0);
