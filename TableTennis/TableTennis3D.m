@@ -14,6 +14,8 @@ classdef TableTennis3D < handle
         net
         % ball class
         ball
+        % environmental contraints
+        wall
         % robot 
         robot
         % handle structure for drawing animation
@@ -40,6 +42,7 @@ classdef TableTennis3D < handle
             obj.noise.camera.cov = opt.camera.cov;            
             % initialize a ball    
             obj.ball = Ball3D(opt.distr); 
+            
             % choose method to use for generating trajectories                        
             obj.plan.vhp.flag = opt.plan.vhp.flag;
             obj.plan.vhp.y = opt.plan.vhp.y;
@@ -78,6 +81,10 @@ classdef TableTennis3D < handle
             obj.net.Xmax = table_width/2 + net_overhang;
             obj.net.Zmax = table_z + net_height;
             obj.net.CRN = net_restitution;    
+            
+            % environment constraints                        
+            obj.wall = 1.0;
+            obj.floor = floor_level;
         end
         
         % init handle for recording video and drawing
@@ -272,7 +279,22 @@ classdef TableTennis3D < handle
             else
                 obj.plan.idx = 0;
                 obj.plan.stage = 2; % HIT
-                [qf,qfdot,T,Tret] = lazyPlayer(obj.robot,ballPred,q0,time2return);
+                
+                models.ball.time = ballTime;
+                models.ball.pred = ballPred;
+                models.ball.radius = obj.ball.radius;
+                models.table.xmax = obj.table.WIDTH;
+                models.wall.height = obj.wall;
+                models.net.height = obj.net.Zmax;
+                models.table.height = obj.table.HEIGHT;
+                models.table.dist = obj.table.DIST;
+                models.table.length = obj.table.LENGTH;
+                models.floor.level = obj.floor;
+                models.racket.radius = obj.ball.racket.radius;
+                models.gravity = abs(obj.ball.g);
+                models.racket.contact = @(velIn,racket) obj.ball.racketContactModel(velIn,racket);
+                
+                [qf,qfdot,T,Tret] = lazyOptimPoly(obj.robot,models,q0);
                 [q,qd,qdd] = calcHittingPoly(obj.dt,q0,q0dot,qf,qfdot,T,time2return);
                 [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
                 [x,xd,o] = obj.robot.calcRacketState(q,qd);
