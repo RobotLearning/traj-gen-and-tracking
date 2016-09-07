@@ -15,7 +15,7 @@ classdef TableTennis3D < handle
         % ball class
         ball
         % environmental contraints
-        wall
+        wall, floor
         % robot 
         robot
         % handle structure for drawing animation
@@ -238,7 +238,8 @@ classdef TableTennis3D < handle
             table_center = obj.table.DIST - obj.table.LENGTH/2;   
             % if stage is at PREDICT
             if obj.plan.stage == 1 && filter.x(2) > table_center && filter.x(5) > 0.5   
-                obj.centredPlayer(q0,filter);               
+                %obj.centredPlayer(q0,filter);     
+                obj.lazyPlayer(q0,filter);
             end    
 
             % Move the robot
@@ -264,7 +265,7 @@ classdef TableTennis3D < handle
         % Implementing still the finite state machine rules
         % Since we cannot run the optimization fast enough in MATLAB
         % to enable MPC like correction
-        function lazyPlayer(obj,filter)
+        function lazyPlayer(obj,q0,filter)
             predictTime = 1.2;
             [ballPred,ballTime,numBounce,time2Passtable] = ...
                 predictBallPath(obj.dt,predictTime,filter,obj.table);
@@ -279,23 +280,24 @@ classdef TableTennis3D < handle
             else
                 obj.plan.idx = 0;
                 obj.plan.stage = 2; % HIT
+                dofs = 7; q0dot = zeros(dofs,1);
                 
                 models.ball.time = ballTime;
                 models.ball.pred = ballPred;
                 models.ball.radius = obj.ball.radius;
-                models.table.xmax = obj.table.WIDTH;
+                models.table.xmax = obj.table.WIDTH/2;
                 models.wall.height = obj.wall;
                 models.net.height = obj.net.Zmax;
-                models.table.height = obj.table.HEIGHT;
+                models.table.height = obj.table.Z;
                 models.table.dist = obj.table.DIST;
                 models.table.length = obj.table.LENGTH;
                 models.floor.level = obj.floor;
-                models.racket.radius = obj.ball.racket.radius;
+                models.racket.radius = obj.ball.RACKET.R;
                 models.gravity = abs(obj.ball.g);
                 models.racket.contact = @(velIn,racket) obj.ball.racketContactModel(velIn,racket);
                 
-                [qf,qfdot,T,Tret] = lazyOptimPoly(obj.robot,models,q0);
-                [q,qd,qdd] = calcHittingPoly(obj.dt,q0,q0dot,qf,qfdot,T,time2return);
+                [qf,qfdot,T,Tland] = lazyOptimPoly(obj,models,q0);
+                [q,qd,qdd] = calcHittingPoly(obj.dt,q0,q0dot,qf,qfdot,T,Tland);
                 [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
                 [x,xd,o] = obj.robot.calcRacketState(q,qd);
                 [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);

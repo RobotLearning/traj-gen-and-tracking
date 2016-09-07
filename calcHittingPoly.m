@@ -2,10 +2,9 @@
 % Using the lazy player (optimization)
 % qfdot is zero
 % Based on optimization results qf,qfdot,T and given q0,q0dot
-function [q,qd,qdd] = calcHittingPoly(dt,q0,q0dot,qf,T,Tland)
+function [q,qd,qdd] = calcHittingPoly(dt,q0,q0dot,qf,qfdot,T,Tland)
 
     dof = length(q0);
-    qfdot = zeros(dof,1);
     time2hit = T;
     time2return = Tland;
     Q0 = [q0;q0dot];  
@@ -21,7 +20,7 @@ function [q,qd,qdd] = calcHittingPoly(dt,q0,q0dot,qf,T,Tland)
     qddStrike = pStrike(2*dof+1:end,:);
 
     % CONTINUE WITH 2ND ORDER POLYNOMIAL TILL LANDING TIME
-    pReturn = generatePoly2nd(q0,q0dot,dt,time2return);
+    pReturn = generatePoly2nd(qf,qfdot,dt,time2return);
     qReturn = pReturn(1:dof,:);
     qdReturn = pReturn(dof+1:2*dof,:);
     qddReturn = pReturn(2*dof+1:end,:);
