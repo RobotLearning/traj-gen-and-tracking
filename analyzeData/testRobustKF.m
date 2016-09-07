@@ -30,7 +30,7 @@ B = B(1:length(t),[3:5,8:10]);
 
 % initialize the EKF filter without initial state estimation
 v0 = [rand; 4.0; 2.0];
-p0 = [0; 0;0]; %dist_to_table-table_length-0.2; table_height+0.2];
+p0 = [0; dist_to_table-table_length-0.2; table_height+0.2];
 x0 = [p0; v0];
 P0 = 1e3*eye(length(x0));
 ekfFilter.initState(x0,P0);
@@ -40,26 +40,46 @@ R = 1e3*eye(length(3));
 ekfFilter.setCov(Q,R);
 
 t_last = 0.0;
+diff_t = 0.0;
 idxValidBall = 1;
-for j = 1:length(t)
-    diff_t = t(j) - t_last;
-    %filter.linearize(dt,0);
-    ekfFilter.predict(diff_t,0);
-    
+for j = 1:4400%length(t)
     if cam3isValid(j)
+        diff_t = t(j) - t_last;
+        ekfFilter.predict(diff_t,0);
         ekfFilter.robust_update(B(j,4:6)',0);
-        ballEsts(idxValidBall,:) = [t(j),ekfFilter.x(:)'];   
+        ball_est_RKF(idxValidBall,:) = [t(j),ekfFilter.x(:)'];   
         idxValidBall = idxValidBall + 1;
     %elseif cam1isValid(j)
     %    ekfFilter.robust_update(B(j,1:3)',0);
     %    ballEsts(idxValidBall,:) = [t(j),ekfFilter.x(:)'];   
     %    idxValidBall = idxValidBall + 1;
     end
-    
     t_last = t(j);
+
 end
+
+%% to compare we look at a noncausal filter that
+% can peak into the future
+
+[t1,b1] = removeOutliers(b1);
+% Merge balls - camera1 offset is also removed
+[tMerge,ballMerge,b1] = mergeBallData(t1,b1,b3(:,1),b3(:,2:4));
+
+ball_est_off = filterBallsEKF(tMerge,ballMerge,ekfFilter,spin);
 
 %% plot filtering results
 
 figure;
-plot3(ballEsts(:,2),ballEsts(:,3),ballEsts(:,4));
+title('Robust filtering of real ball observations. Single trial');
+grid on;
+axis equal;
+xlabel('x');
+ylabel('y');
+zlabel('z');
+hold on;
+scatter3(ball_est_RKF(:,2),ball_est_RKF(:,3),ball_est_RKF(:,4),'r');
+scatter3(ball_est_off(:,2),ball_est_off(:,3),ball_est_off(:,4),'b');
+legend('robust filter','offline filter');
+fill3(T(1:4,1),T(1:4,2),T(1:4,3),[0 0.7 0.3]);
+fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
+hold off;
