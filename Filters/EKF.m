@@ -141,8 +141,9 @@ classdef EKF < handle
         %
         % considers also the case where the ball is not updated yet
         % in this case we will also not update, nor issue warning
-        function robust_update(obj,y,u)
+        function update_flag = robust_update(obj,y,u)
             
+            update_flag = false;
             table_z = -0.95;
             zMin = table_z; 
             zMax = 0.5;
@@ -152,12 +153,12 @@ classdef EKF < handle
             obj.y_last = y(:);
             
             % standard deviation multiplier
-            std_dev_mult = 4;
+            std_dev_mult = 2;
             % difference in measurement and predicted value
             inno = y(:) - obj.C * obj.x;
             thresh = std_dev_mult * sqrt(diag(obj.C * obj.P * obj.C'));
             
-            if any(inno > thresh) || ~validBall
+            if any(abs(inno) > thresh) || ~validBall
                 % possible outlier not updating
                 warning('possible outlier! not updating!');                
             elseif ~new_ball
@@ -165,6 +166,7 @@ classdef EKF < handle
                 % do not do anything
             else
                 obj.update(y,u);
+                update_flag = true; % update flag
             end    
         end
         
