@@ -12,7 +12,7 @@ OPT.draw = true; % draw the simulation
 OPT.record = false; % record the simulation
 
 % planning related flags and parameters
-OPT.plan.vhp.flag = false;
+OPT.plan.vhp.flag = false; % TODO: vhp should be a seperate strategy method
 OPT.plan.vhp.y = -0.6;
 OPT.train = false; % train a lookup table using optimization results
 OPT.lookup.flag = false; % use lookup table instead of optimizing online
@@ -41,4 +41,4 @@ OPT.camera.cov = 0; %5e-4;
 % sampling time
 dt = 0.01; 
 tt = TableTennis3D(wam,dt,q0,OPT);
-tt.practice(q0,10);
+tt.practice(q0,1);

@@ -671,7 +671,7 @@ classdef TableTennis3D < handle
                     obj.plan.vhp.y;
                     table_z + 2*tol_z];
                 V = [V1,V2,V3,V4]';
-                text(table_center-table_x,obj.VHP.Y,table_z+2*tol_z-0.05,'VHP')
+                text(table_center-table_x,obj.plan.vhp.y,table_z+2*tol_z-0.05,'VHP')
                 fill3(V(:,1),V(:,2),V(:,3),[0 0.7 0.3],'FaceAlpha',0.2);
             end
             
@@ -718,11 +718,55 @@ classdef TableTennis3D < handle
             drawnow;
             %pause(0.001);
             
+            % this part is to draw table tennis constraints
+%             loadTennisTableValues();
+%             if abs(b.pos(2) - (dist_to_table-table_length/2)) < 2e-2
+%                 %obj.drawNetLandConstraints();
+%                 disp('comes here!');
+%             end
+            
             if obj.handle.record
                 frame = getframe(gcf);
                 writeVideo(obj.handle.recordFile,frame);
             end
 
+            
+        end
+        
+        % Draw feasible net and landing areas in fill3
+        function drawNetLandConstraints(obj) 
+            
+            tol_z = 0.3;
+            loadTennisTableValues();
+            V1 = [table_center - table_x; 
+                dist_to_table-table_length/2;
+                table_z + net_height];
+            V2 = [table_center + table_x;
+                dist_to_table-table_length/2;
+                table_z + net_height];
+            V3 = [table_center + table_x;
+                dist_to_table-table_length/2;
+                table_z + 4*tol_z];
+            V4 = [table_center - table_x;
+                dist_to_table-table_length/2;
+                table_z + 4*tol_z];
+            V = [V1,V2,V3,V4]';
+            fill3(V(:,1),V(:,2),V(:,3),[0 0.7 0.3],'FaceAlpha',0.2);
+            
+            H1 = [table_center - table_x;
+                  dist_to_table-table_length/2;
+                  table_z];
+            H2 = [table_center + table_x;
+                  dist_to_table-table_length/2;
+                  table_z];
+            H3 = [table_center + table_x;
+                  dist_to_table-table_length;
+                  table_z];
+            H4 = [table_center - table_x;
+                  dist_to_table-table_length;
+                  table_z];
+            H = [H1,H2,H3,H4]';
+            fill3(H(:,1),H(:,2),H(:,3),[0 0.7 0.7],'FaceAlpha',0.8);
             
         end
         
