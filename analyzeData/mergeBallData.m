@@ -2,7 +2,7 @@
 % Subtracts the constant offset from camera 1 before merging
 % Assumes that the data is preprocessed, outliers are removed etc.
 
-function [tMerge,ballMerge,b1] = mergeBallData(t1,b1,t3,b3)
+function [tMerge,ballMerge,b1,offset] = mergeBallData(t1,b1,t3,b3)
 
 % find the index at which t3 stops and t1 continues
 idx1butNot3 = t1 > t3(end);

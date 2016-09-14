@@ -1,4 +1,4 @@
-%% Test robust filter on actual ball data
+%% Test reseting on robust filter for multiple incoming ball trials
 
 clc; clear; close all;
 loadTennisTableValues; 
@@ -6,40 +6,38 @@ dataSet = 1;
 badExamples = [2,19,20];
 numTrials = 53;
 goodExamples = setdiff(1:numTrials,badExamples);
-trial = 1; iter = 1;% Get the data corresponding to trial of interest
+range = 3:5; % specify range of trials
+trial = range(end); % Get the data corresponding to trial of interest
 [t,B] = loadBallData(dataSet);
 
 % initialize Kalman Filter with no spin
 spin.flag = false;
 [ekfFilter,ball_func] = initFilterEKF(spin);
+x0 = ones(6,1);
+P0 = 1e3*eye(length(x0));
+ekfFilter.initState(x0,P0);
+ekfFilter.linearize(0.01,0);
 
 % Just to get the time index to which we will apply the filter
 % we want to get the prune the ball data (apply pre-processing/initial
 % outlier detection)
 % Get reliable ball observations from trial and remove outliers
 [B1,B3,~] = pruneBallData(t,B);
+[b1,b3,~,~] = getTrialData(B1,B3,range(1),dataSet);
+tbegin = b3(1,1);
 [b1,b3,~,~] = getTrialData(B1,B3,trial,dataSet);
+tend = b1(end,1);
 
 % get all of ball data till trial's end
-t = t(t >= b1(1,1) & t <= b1(end,1));
-cam1isValid = B(1:length(t),2);
-cam3isValid = B(1:length(t),7);
-B = B(1:length(t),[3:5,8:10]);
+tIdx = find(t >= tbegin & t <= tend);
+t = t(tIdx);
+cam1isValid = B(tIdx,2);
+cam3isValid = B(tIdx,7);
+B = B(tIdx,:);
 
 %% start filtering
 
-% initialize the EKF filter without initial state estimation
-v0 = [rand; 4.0; 2.0];
-p0 = [0; dist_to_table-table_length-0.2; table_height+0.2];
-x0 = [p0; v0];
-P0 = 1e3*eye(length(x0));
-ekfFilter.initState(x0,P0);
-ekfFilter.linearize(0.01,0);
-Q = 1e-3*eye(length(x0));
-R = 1e-3*eye(length(3));
-ekfFilter.setCov(Q,R);
-
-t_last = 0.0;
+t_last = t(1);
 diff_t = 0.0;
 idxValidBall = 1;
 update_flag = false;
@@ -47,19 +45,20 @@ update_flag = false;
 for j = 1:length(t)
     
     diff_t = t(j) - t_last;
-    
-    if cam3isValid(j)
-        ekfFilter.predict(diff_t,0);
-        update_flag = ekfFilter.robust_update(B(j,4:6)',0);
-    elseif cam1isValid(j)
-        ekfFilter.predict(diff_t,0);
-        update_flag = ekfFilter.robust_update(B(j,1:3)',0);
-    end
+    ekfFilter.predict(diff_t,0);
+    [update_flag,reset_flag] = ekfFilter.robust_update(B(j,:));
     
     if update_flag
         ball_est_RKF(idxValidBall,:) = [t(j),ekfFilter.x(:)'];   
         idxValidBall = idxValidBall + 1;
     end
+    
+    if reset_flag
+        disp('Resetting collected ball data');
+        ball_est_RKF = [];
+        idxValidBall = 1;
+    end
+    
     t_last = t(j);
 
 end
@@ -69,7 +68,7 @@ end
 
 [t1,b1] = removeOutliers(b1);
 % Merge balls - camera1 offset is also removed
-[tMerge,ballMerge,b1] = mergeBallData(t1,b1,b3(:,1),b3(:,2:4));
+[tMerge,ballMerge,b1,offset] = mergeBallData(t1,b1,b3(:,1),b3(:,2:4));
 
 ball_est_off = filterBallsEKF(tMerge,ballMerge,ekfFilter,spin);
 

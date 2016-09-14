@@ -133,6 +133,7 @@ classdef EKF < handle
             obj.x = obj.x + K * Inno;
         end
         
+        %% Robustificiation for ball tracking with outliers
         % update only if the observation is within a fixed
         % standard deviation of the filter
         %
@@ -141,15 +142,35 @@ classdef EKF < handle
         %
         % considers also the case where the ball is not updated yet
         % in this case we will also not update, nor issue warning
-        function update_flag = robust_update(obj,y,u)
-            
+        function [update_flag,reset_flag] = robust_update(obj,ball_info)
+       
+            reset_flag = false;
             update_flag = false;
+            cam3isValid = ball_info(7);
+            cam1isValid = ball_info(2);
+            
+            if cam3isValid
+                y = ball_info(8:10);
+            elseif cam1isValid
+                % subtract offset
+                offset = [0.0269, 0.0068, 0.0142];
+                y = ball_info(3:5) - offset;
+            else
+                return;
+            end            
+            
+            % check resetting
+            reset_flag = obj.check_reset(y);
+            if reset_flag
+                return;
+            end
+            
             table_z = -0.95;
             zMin = table_z; 
             zMax = 0.5;
             validBall = y(3) >= zMin && y(3) < zMax;
             tol = 1e-3; % ball should be at least this much different in norm
-            new_ball = norm(y - obj.y_last) > tol;
+            new_ball = norm(y(:) - obj.y_last) > tol;
             obj.y_last = y(:);
             
             % standard deviation multiplier
@@ -160,14 +181,50 @@ classdef EKF < handle
             
             if any(abs(inno) > thresh) || ~validBall
                 % possible outlier not updating
-                warning('possible outlier! not updating!');                
+                %warning('possible outlier! not updating!');                
             elseif ~new_ball
-                warning('nothing new! not updating!');
+                %warning('nothing new! not updating!');
                 % do not do anything
             else
-                obj.update(y,u);
+                obj.update(y,0);
                 update_flag = true; % update flag
             end    
+        end
+        
+        % Check to see if a new ball appears on opponents court
+        % If old ball is predicted to be outside robot area
+        % Then we consider resetting
+        % Position is set to the new ball data
+        % Velocity is biased to incoming ball data
+        % Variance is set to very high
+        function reset_flag = check_reset(obj,y)
+            
+            reset_flag = false;
+            ynet = -2.50;
+            ymax = 0.2;
+            ymin = -4.5;
+            zmin = -1.5;
+            zmax = 0.5;
+            xmax = 1.0;
+            xmin = -1.0;
+            table_z = -0.95;
+            newBallSeemsValid = (y(1) > xmin && y(1) < xmax && y(2) > ymin && ...
+                                 y(2) < ynet && y(3) > table_z && y(3) < zmax);
+            oldBallIsOutsideRange = (obj.x(2) > ymax || obj.x(2) < ymin || obj.x(3) < zmin);
+            if oldBallIsOutsideRange && newBallSeemsValid
+                reset_flag = true;
+                disp('Resetting ball!');
+                v0 = [0; 4.0; 2.0];
+                p0 = y;
+                x0 = [p0(:);v0];
+                P0 = 1e3*eye(length(x0));
+                obj.initState(x0,P0);
+                obj.linearize(0.01,0);
+                Q = 1e-3*eye(length(x0));
+                R = 1e-3*eye(length(3));
+                obj.setCov(Q,R);
+            end
+            
         end
         
         %% Kalman smoother (batch mode)
