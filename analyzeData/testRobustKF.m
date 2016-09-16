@@ -6,17 +6,13 @@ dataSet = 1;
 badExamples = [2,19,20];
 numTrials = 53;
 goodExamples = setdiff(1:numTrials,badExamples);
-range = 3:5; % specify range of trials
+range = 5; %3:5; % specify range of trials
 trial = range(end); % Get the data corresponding to trial of interest
 [t,B] = loadBallData(dataSet);
 
 % initialize Kalman Filter with no spin
 spin.flag = false;
 [ekfFilter,ball_func] = initFilterEKF(spin);
-x0 = ones(6,1);
-P0 = 1e3*eye(length(x0));
-ekfFilter.initState(x0,P0);
-ekfFilter.linearize(0.01,0);
 
 % Just to get the time index to which we will apply the filter
 % we want to get the prune the ball data (apply pre-processing/initial
@@ -45,22 +41,20 @@ update_flag = false;
 for j = 1:length(t)
     
     diff_t = t(j) - t_last;
-    ekfFilter.predict(diff_t,0);
-    [update_flag,reset_flag] = ekfFilter.robust_update(B(j,:));
+    ekfFilter.robust_update(diff_t,B(j,:));
     
-    if update_flag
-        ball_est_RKF(idxValidBall,:) = [t(j),ekfFilter.x(:)'];   
+    if ekfFilter.update_flag
+        ball_est_RKF(idxValidBall,:) = [t(j),ekfFilter.x(:)'];
         idxValidBall = idxValidBall + 1;
     end
     
-    if reset_flag
+    if ekfFilter.reset_flag && size(ekfFilter.reset_balls,2) == 1
         disp('Resetting collected ball data');
         ball_est_RKF = [];
         idxValidBall = 1;
     end
     
     t_last = t(j);
-
 end
 
 %% to compare we look at a noncausal filter
@@ -71,6 +65,14 @@ end
 [tMerge,ballMerge,b1,offset] = mergeBallData(t1,b1,b3(:,1),b3(:,2:4));
 
 ball_est_off = filterBallsEKF(tMerge,ballMerge,ekfFilter,spin);
+
+%% look at prediction performance
+
+startPredIdx = 30;
+tstart = ball_est_RKF(startPredIdx,1);
+ballStart = ball_est_RKF(startPredIdx,2:end);
+tPred = t(t > tstart & t < ball_est_RKF(end,1));
+ballPred = predictTillLastBlob(ekfFilter,tPred,tstart,ballStart);
 
 %% plot filtering results
 
@@ -84,10 +86,11 @@ zlabel('z');
 hold on;
 sRKF = scatter3(ball_est_RKF(:,2),ball_est_RKF(:,3),ball_est_RKF(:,4),'r');
 %sOFF = scatter3(b1(:,1),b1(:,2),b1(:,3),'b');
-sOFF = scatter3(ball_est_off(:,2),ball_est_off(:,3),ball_est_off(:,4),'b');
+%sOFF = scatter3(ball_est_off(:,2),ball_est_off(:,3),ball_est_off(:,4),'b');
+sPred = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:),'b');
 sRKF.MarkerEdgeColor = sRKF.CData;
-sOFF.MarkerEdgeColor = sOFF.CData;
-legend('robust filter','offline filter');
+%sOFF.MarkerEdgeColor = sOFF.CData;
+legend('robust filter','pred'); %'offline filter');
 fill3(T(1:4,1),T(1:4,2),T(1:4,3),[0 0.7 0.3]);
 fill3(net(:,1),net(:,2),net(:,3),[0 0 0]);
 hold off;

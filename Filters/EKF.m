@@ -23,9 +23,13 @@ classdef EKF < handle
         R
     end
     
-    % For robust filtering we need last observation value
+    % For robust filtering 
     properties
-        y_last
+        y_last %we need last observation value
+        reset_ball_size % size of observatios to reinitialize KF
+        reset_balls  % observations to reinitialize
+        reset_flag % flag for resetting
+        update_flag % outlier not detected
     end
     
     methods
@@ -46,9 +50,18 @@ classdef EKF < handle
             obj.A = [];
             obj.C = mats.C;
             
+            obj.init_robust_fields();
+        end
+        
+        function init_robust_fields(obj)
             % last observation value
             obj.y_last = zeros(size(obj.C,1),1);
-            
+            % reset holdout ball size
+            obj.reset_ball_size = 5;
+            % ball data to reinitialize the Kalman Filter after reset
+            obj.reset_balls = [];
+            obj.reset_flag = true;     
+            obj.update_flag = false;
         end
         
         %% linearize the dynamics f and g with 'TWO-SIDED-SECANT'
@@ -133,7 +146,7 @@ classdef EKF < handle
             obj.x = obj.x + K * Inno;
         end
         
-        %% Robustificiation for ball tracking with outliers
+        %% Robustification for ball tracking with outliers
         % update only if the observation is within a fixed
         % standard deviation of the filter
         %
@@ -142,13 +155,10 @@ classdef EKF < handle
         %
         % considers also the case where the ball is not updated yet
         % in this case we will also not update, nor issue warning
-        function [update_flag,reset_flag] = robust_update(obj,ball_info)
+        function robust_update(obj,dt,ball_info)
        
-            reset_flag = false;
-            update_flag = false;
             cam3isValid = ball_info(7);
-            cam1isValid = ball_info(2);
-            
+            cam1isValid = ball_info(2);            
             if cam3isValid
                 y = ball_info(8:10);
             elseif cam1isValid
@@ -158,13 +168,6 @@ classdef EKF < handle
             else
                 return;
             end            
-            
-            % check resetting
-            reset_flag = obj.check_reset(y);
-            if reset_flag
-                return;
-            end
-            
             table_z = -0.95;
             zMin = table_z; 
             zMax = 0.5;
@@ -172,7 +175,16 @@ classdef EKF < handle
             tol = 1e-3; % ball should be at least this much different in norm
             new_ball = norm(y(:) - obj.y_last) > tol;
             obj.y_last = y(:);
+            % check resetting
+            obj.check_reset(y);
+            if obj.reset_flag 
+                if validBall && new_ball
+                    obj.reinit_filter(dt,y);
+                end
+                return;
+            end           
             
+            obj.predict(dt,0);            
             % standard deviation multiplier
             std_dev_mult = 2;
             % difference in measurement and predicted value
@@ -182,12 +194,14 @@ classdef EKF < handle
             if any(abs(inno) > thresh) || ~validBall
                 % possible outlier not updating
                 %warning('possible outlier! not updating!');                
+                obj.update_flag = false;
             elseif ~new_ball
                 %warning('nothing new! not updating!');
                 % do not do anything
+                obj.update_flag = false;
             else
                 obj.update(y,0);
-                update_flag = true; % update flag
+                obj.update_flag = true; % update flag
             end    
         end
         
@@ -197,9 +211,8 @@ classdef EKF < handle
         % Position is set to the new ball data
         % Velocity is biased to incoming ball data
         % Variance is set to very high
-        function reset_flag = check_reset(obj,y)
+        function check_reset(obj,y)
             
-            reset_flag = false;
             ynet = -2.50;
             ymax = 0.2;
             ymin = -4.5;
@@ -210,21 +223,50 @@ classdef EKF < handle
             table_z = -0.95;
             newBallSeemsValid = (y(1) > xmin && y(1) < xmax && y(2) > ymin && ...
                                  y(2) < ynet && y(3) > table_z && y(3) < zmax);
-            oldBallIsOutsideRange = (obj.x(2) > ymax || obj.x(2) < ymin || obj.x(3) < zmin);
+            oldBallIsOutsideRange = (obj.x(2) > ymax || obj.x(2) < ymin ||...
+                                     obj.x(3) < zmin);
             if oldBallIsOutsideRange && newBallSeemsValid
-                reset_flag = true;
+                obj.reset_flag = true;
                 disp('Resetting ball!');
-                v0 = [0; 4.0; 2.0];
-                p0 = y;
-                x0 = [p0(:);v0];
-                P0 = 1e3*eye(length(x0));
-                obj.initState(x0,P0);
-                obj.linearize(0.01,0);
-                Q = 1e-3*eye(length(x0));
-                R = 1e-3*eye(length(3));
-                obj.setCov(Q,R);
             end
             
+        end
+        
+        % Reinitialize filter based on observations
+        function reinit_filter(obj, dt, y)
+            
+            if obj.reset_flag
+                % collect balls
+                data = [dt; y(:)];
+                obj.reset_balls = [obj.reset_balls, data];
+            end
+            
+            if size(obj.reset_balls,2) == obj.reset_ball_size
+                % estimate the initial ball state
+                P0 = 1e3*eye(6);
+                time = obj.reset_balls(1,:);
+                times = time;
+                for i = 1:obj.reset_ball_size
+                    times(i) = sum(time(1:i));
+                end
+                obs = obj.reset_balls(2:end,:);
+                spin.flag = false;
+                ballInit = estimateInitBall(times,obs,spin);
+                obj.initState(ballInit(:),P0);
+                obj.linearize(0.01,0);
+                Q = 1e-3*eye(6);
+                R = 1e-3*eye(3);
+                obj.setCov(Q,R);
+                obj.reset_balls = [];
+                obj.reset_flag = false;
+                % catch up to ball data
+                for i = 1:obj.reset_ball_size
+                    obj.predict(time(i),0);
+                    obj.update(obs(:,i),0);
+                end
+                    
+            end
+                
         end
         
         %% Kalman smoother (batch mode)
