@@ -32,9 +32,18 @@ params.CRT = CRT;
 params.ALG = 'RK4';
 
 if spin.flag
-    ball_func = @(x,u,dt) discreteBallSpinModel(x,dt,params);
-    dim = 12;
-    C = [eye(3),zeros(3,9)];
+    
+    if spin.known
+        params.spin = spin.est;
+        ball_func = @(x,u,dt) discreteBallConstSpinModel(x,dt,params);
+        dim = 6;
+        C = [eye(3),zeros(3)];
+    else
+    
+        ball_func = @(x,u,dt) discreteBallSpinModel(x,dt,params);
+        dim = 12;
+        C = [eye(3),zeros(3,9)];
+    end
 else
     ball_func = @(x,u,dt) discreteBallFlightModel(x,dt,params);
     dim = 6;

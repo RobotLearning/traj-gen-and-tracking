@@ -21,12 +21,13 @@ dataSet = 1;
 badExamples = [2,19,20];
 numTrials = 53;
 goodExamples = setdiff(1:numTrials,badExamples);
-trial = 6; iter = 1;% Get the data corresponding to trial of interest
+trial = 5; iter = 1;% Get the data corresponding to trial of interest
 [t,B] = loadBallData(dataSet);
 
 % initialize EKF
 % initialize ball with high topspin (3000rpm or more)
 w0 = [-50*2*pi;0;0]; %3000rpm topspin
+spin.known = true;
 spin.flag = true;
 spin.Clift = Clift;
 spin.est = w0;
@@ -61,7 +62,8 @@ for trial = goodExamples
     [~,idx_bounce] = min(b3(:,4));% find the index at bounce
     idx_end = size(b3,1); % end of camera3 data not bounce % idx_bounce; 
     idx_start = 12; % idx_lookup % start from first estimate not lookup
-    rms_pred{iter} = calcModelPredErrors(ekfFilter,ball_est,idx_start,idx_end,tMerge,ballMerge,false);     
+    rms_pred{iter} = calcModelPredErrors(ekfFilter,ball_est,...
+                       idx_start,idx_end,tMerge,ballMerge,false);     
     iter = iter + 1;
 end
 

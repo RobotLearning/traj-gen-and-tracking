@@ -25,6 +25,12 @@ classdef PolyFilter < handle
         time
     end
     
+    % properties for robust filtering
+    properties
+        % Coefficients of the polynomial
+        a
+    end
+    
     methods
         
         %% Initialize filtersize
@@ -34,11 +40,12 @@ classdef PolyFilter < handle
             obj.numobs = 0;
             obj.size = filter_size;
             obj.x = zeros(2*dim,1);
+            obj.a = zeros(order+1,dim);
             obj.f = predict_model;
-            obj.Y = zeros(filter_size,dim);
-            obj.V = zeros(filter_size,order+1);
+            obj.Y = [];
+            obj.V = [];
             obj.time = 0.0;
-            obj.T = zeros(filter_size,1);
+            obj.T = [];
         end
  
         
@@ -55,23 +62,28 @@ classdef PolyFilter < handle
         
         %% predict state
         % predict dt into the future
-        function predict(obj,dt,u)
+        % this step is not model based
+        function xpred = predict(obj,dt)
             
             % integrating the state to get x(t+1)
-            obj.x = obj.f(obj.x,dt);
+            acc = obj.a(3,:);
+            velPred = obj.x(4:6) + acc(:) * dt;
+            xpred = obj.x(1:3) + velPred * dt;
         end
         
         %% update state from observation
         
         % delta_t is the time passed from last observation time
-        function update(obj,delta_t,y)
+        function update(obj,dt,y)
             
-            obj.time = obj.time + delta_t;
-            if obj.numobs < obj.size
+            obj.check_rebound(dt);
+            obj.time = obj.time + dt;
+            if obj.numobs < obj.size 
                 obj.numobs = obj.numobs + 1;
                 obj.Y(obj.numobs,:) = y(:)';
-                obj.T(obj.numobs) = obj.time;
-                if obj.numobs == obj.size
+                obj.T(obj.numobs,1) = obj.time;
+                obj.x(1:length(y)) = y(:);
+                if obj.numobs <= obj.size && obj.numobs > 1
                     obj.construct_vandermonde();
                     obj.estimate_state();
                 end
@@ -89,7 +101,8 @@ classdef PolyFilter < handle
         % construct v-matrix only once
         function construct_vandermonde(obj)
             
-            assert(obj.numobs == obj.size, 'numobs should be equal to maxsize');
+            obj.V = zeros(obj.numobs,obj.order+1);
+            %assert(obj.numobs == obj.size, 'numobs should be equal to maxsize');
             for i = 0:1:obj.order
                 obj.V(:,i+1) = (obj.T).^i;
             end
@@ -99,56 +112,62 @@ classdef PolyFilter < handle
         function update_vandermonde(obj)
             
             assert(obj.numobs == obj.size, 'numobs should be equal to maxsize');
+
             vec = zeros(1,obj.order+1);
             for i = 0:1:obj.order
                 vec(i+1) = obj.time^i;
             end
             obj.V = [obj.V(2:end,:);vec];
+            obj.T = [obj.T(2:end); obj.time];
         end
         
-        % Estimate the state from the last 12 observations 
+        % Estimate the state (position and velocities)
+        % from the last X observations 
         % after having constructed the vandermonde matrix
         function estimate_state(obj)
-             a = obj.V \ obj.Y;
-             pos = obj.V(end,:) * a;
+             obj.a = obj.V \ obj.Y;
+             pos = obj.V(end,:) * obj.a;
              
              vec = zeros(1,obj.order+1);
              for i = 1:obj.order
                  vec(i+1) = factorial(i) * obj.time^(i-1);
              end
-             vel = vec * a;
+             vel = vec * obj.a;
              
              obj.x = [pos(:);vel(:)];
         end
         
-        % Estimate the state whenever there is a bounce
-        function estimate_rebound_state(obj)
-            % TODO
+        %% Robustification of filter
+        % Correct for predicted bounce
+        function check_rebound(obj,dt)
             
-            try 
-                loadTennisTableValues();
-                ball = obj.Y;
-                idx = findReboundIndex(ball);
-                idxPost = idx+1:obj.size;
-                ballPost = ball(idxPost,:);
-                timePost = obj.T(idxPost);
-                nPost = length(idxPost);
-                mat1 = [ones(nPost,1), timePost, timePost.^2];
-                tol = 0.001;
-                betaPost = pinv(mat1,tol) * ballPost;
-                m = betaPost(:,3);
-                a = m(3); b = m(2); c = m(1) - table_z - ball_radius;
-                tBounce = (-b + sqrt(b^2 - 4*a*c))/(2*a);
-                c = betaPost(1,:);
-                b = betaPost(2,:);
-                a = betaPost(3,:);
-                y = [b*tBounce + c; (2*a*tBounce + b)/M - 2*a*tBounce];
-                mat = [1, tBounce; 0, 1];
-                betaPre = [mat \ y; a];
-            catch
-                warning('There is no rebound it seems!');
+            % try to predict dt seconds into the future
+            % if the ball passes the table then there
+            % will be a rebound
+            % in this case vandermonde matrix has to be reset            
+            
+            % Get first filtered position
+            xpred = obj.predict(dt);
+            table_z = -0.93;
+            if xpred(3) < table_z
+                loadTennisTableValues;
+                disp('Bounce predicted');
+                disp('Resetting...');
+                obj.numobs = 0;
+                %M = diag([CFTX; CFTY; -CRT]);
+                %obj.x(4:6) = M * obj.x(4:6);
+                spin = [-50*2*pi;0;0];
+                vels = [obj.x(4:6); spin(:)];
+                vels = reboundSpinModel(vels,CRT,mu,ball_radius);
+                obj.x(4:6) = vels(1:3);
+                obj.Y = [];
+                obj.V = [];
+                obj.T = [];
             end
+
         end
+        
+        
     end
     
     

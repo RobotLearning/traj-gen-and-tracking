@@ -57,7 +57,7 @@ classdef EKF < handle
             % last observation value
             obj.y_last = zeros(size(obj.C,1),1);
             % reset holdout ball size
-            obj.reset_ball_size = 5;
+            obj.reset_ball_size = 12;
             % ball data to reinitialize the Kalman Filter after reset
             obj.reset_balls = [];
             obj.reset_flag = true;     
@@ -166,6 +166,7 @@ classdef EKF < handle
                 offset = [0.0269, 0.0068, 0.0142];
                 y = ball_info(3:5) - offset;
             else
+                obj.update_flag = false;
                 return;
             end            
             table_z = -0.95;
@@ -180,26 +181,30 @@ classdef EKF < handle
             if obj.reset_flag 
                 if validBall && new_ball
                     obj.reinit_filter(dt,y);
+                    obj.update_flag = true;
+                else
+                    obj.update_flag = false;
                 end
                 return;
             end           
             
-            obj.predict(dt,0);            
+            xSave = obj.x;
+            PSave = obj.P;
+            obj.predict(dt,0);  
             % standard deviation multiplier
             std_dev_mult = 2;
             % difference in measurement and predicted value
             inno = y(:) - obj.C * obj.x;
             thresh = std_dev_mult * sqrt(diag(obj.C * obj.P * obj.C'));
             
-            if any(abs(inno) > thresh) || ~validBall
+            if any(abs(inno) > thresh) || ~validBall || ~new_ball
                 % possible outlier not updating
-                %warning('possible outlier! not updating!');                
-                obj.update_flag = false;
-            elseif ~new_ball
-                %warning('nothing new! not updating!');
-                % do not do anything
+                %warning('possible outlier! not updating!');    
+                % restoring pre-prediction state
+                obj.initState(xSave,PSave);
                 obj.update_flag = false;
             else
+                disp('Updating ball!'); 
                 obj.update(y,0);
                 obj.update_flag = true; % update flag
             end    
@@ -214,7 +219,7 @@ classdef EKF < handle
         function check_reset(obj,y)
             
             ynet = -2.50;
-            ymax = 0.2;
+            ymax = -0.2;
             ymin = -4.5;
             zmin = -1.5;
             zmax = 0.5;
@@ -246,24 +251,37 @@ classdef EKF < handle
                 P0 = 1e3*eye(6);
                 time = obj.reset_balls(1,:);
                 times = time;
-                for i = 1:obj.reset_ball_size
+                for i = 1:size(obj.reset_balls,2)
                     times(i) = sum(time(1:i));
                 end
                 obs = obj.reset_balls(2:end,:);
                 spin.flag = false;
-                ballInit = estimateInitBall(times,obs,spin);
-                obj.initState(ballInit(:),P0);
+                %spin.known = true;
+                %spin.Clift = 0.001;
+                %spin.est = [-50*2*pi;0;0];
+                %x0 = estimateInitBall(times,obs,spin);
+                sampSize = obj.reset_ball_size;
+                M = [ones(sampSize,1),times(:),times(:).^2];
+                beta = M \ obs';
+                ballInitPosEst = beta(1,:);
+                ballInitVelEst = beta(2,:);
+                x0 = [ballInitPosEst(:);ballInitVelEst(:)];
+                %x0 = [x0(1:3);x0(7:9)];
+                % adjust x0
+                % vel seems to be estimated a bit low               
+                %x0(5) = 1.1 * x0(5);
+                obj.initState(x0(:),P0);
                 obj.linearize(0.01,0);
                 Q = 1e-3*eye(6);
                 R = 1e-3*eye(3);
                 obj.setCov(Q,R);
-                obj.reset_balls = [];
                 obj.reset_flag = false;
                 % catch up to ball data
-                for i = 1:obj.reset_ball_size
+                for i = 1:size(obj.reset_balls,2)
                     obj.predict(time(i),0);
                     obj.update(obs(:,i),0);
                 end
+                obj.reset_balls = [];
                     
             end
                 

@@ -8,7 +8,7 @@ loadTennisTableValues;
 % particular rule implemented in lookup table in SL
 y_center = dist_to_table - table_length/2;
 
-if spin.flag
+if spin.flag && ~spin.known
     
     idx_filter = find(ballEst(:,3) > y_center & ballEst(:,9) > 0.5,1);
     ball_lookup = ballEst(idx_filter,2:end);
