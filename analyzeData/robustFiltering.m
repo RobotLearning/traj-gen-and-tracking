@@ -41,6 +41,7 @@ t_last = t(1);
 diff_t = 0.0;
 idxValidBall = 1;
 update_flag = false;
+matPrint = zeros(length(t),3+6+1);
 
 for j = 1:length(t)
     
@@ -60,8 +61,13 @@ for j = 1:length(t)
         t_last = t_last - 0.014;
     end
     
+    % save to matrix to be printed (to compare with SL)
+    matPrint(j,:) = [t(j),ekfFilter.y_last',ekfFilter.x'];
 
 end
+
+dlmwrite('../Desktop/data/debugData/ball1_MATLAB.txt',matPrint,...
+          'delimiter','\t');
 
 %% to compare we look at a noncausal filter
 % that can peak into the future to remove outliers better
