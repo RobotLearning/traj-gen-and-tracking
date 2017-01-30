@@ -4,52 +4,54 @@ clc; clear; close all;
 
 %% Simple Test for Kalman Filter
 
-seed = 1;
-rng(seed);
-A = rand(2);
-C = [0,1];
-eps = 0.1;
-N = 10;
-x0 = [10;1];
-x(:,1) = x0;
-y(1) = C*x0 + sqrt(eps) * randn;
-for i = 2:N
-    x(:,i) = A*x(:,i-1);
-    y(i) = C*x(:,i) + sqrt(eps) * randn;
-end
-
-% initialize KF
-mats.A = A;
-mats.B = 0;
-mats.C = C;
-mats.D = 0;
-% process noise var
-mats.O = 0;
-% observation noise var
-mats.M = eps;
-filter = KF(2,mats);
-filter.initState(x0,eps);
-for i = 1:N-1
-    filter.update(y(i),0);
-    yKF(i) = C * filter.x;
-    filter.predict(0);
-end
-filter.update(y(i),0);
-yKF(N) = C * filter.x;
-
-w_cut = 45/180;
-yButter = filterButter2nd(y,w_cut);
-
-figure(1);
-plot(1:N, x(2,:), 'ks-', 1:N, y, 'b-', 1:N, yKF, 'rx:', 1:N, yButter, 'g*');
-legend('traj','noisy traj','Kalman Filter', 'Butterworth');
-SSE(1) = (yKF - C*x)*(yKF - C*x)';
-SSE(2) = (yButter - C*x)*(yButter - C*x)';
+% seed = 1;
+% rng(seed);
+% A = rand(2);
+% C = [0,1];
+% eps = 0.1;
+% N = 10;
+% x0 = [10;1];
+% x(:,1) = x0;
+% y(1) = C*x0 + sqrt(eps) * randn;
+% for i = 2:N
+%     x(:,i) = A*x(:,i-1);
+%     y(i) = C*x(:,i) + sqrt(eps) * randn;
+% end
+% 
+% % initialize KF
+% mats.A = A;
+% mats.B = 0;
+% mats.C = C;
+% mats.D = 0;
+% % process noise var
+% mats.O = 0;
+% % observation noise var
+% mats.M = eps;
+% filter = KF(2,mats);
+% filter.initState(x0,eps);
+% for i = 1:N-1
+%     filter.update(y(i),0);
+%     yKF(i) = C * filter.x;
+%     filter.predict(0);
+% end
+% filter.update(y(i),0);
+% yKF(N) = C * filter.x;
+% 
+% w_cut = 45/180;
+% yButter = filterButter2nd(y,w_cut);
+% 
+% figure(1);
+% plot(1:N, x(2,:), 'ks-', 1:N, y, 'b-', 1:N, yKF, 'rx:', 1:N, yButter, 'g*');
+% legend('traj','noisy traj','Kalman Filter', 'Butterworth');
+% SSE(1) = (yKF - C*x)*(yKF - C*x)';
+% SSE(2) = (yButter - C*x)*(yButter - C*x)';
 
 %% Set system parameters and constraints
 
 clc; clear; close all;
 % parameter values of the experimental setup
+% seeding
+rng(1);
 
 % Simulation Values 
 % for simulation purposes notify if model already discretized
@@ -144,6 +146,7 @@ filter = KF(dimx,mats);
 
 lin.SIM.eps_m = eps;
 yNoisy = lin.observe(t,x0,us);
+%yNoisy = y + sqrt(eps) * randn(size(y))
 
 filter.initState(x0,eps*eye(dimx));
 for i = 1:Nu
@@ -156,7 +159,7 @@ yKF(N) = lin.C * filter.x;
 
 % kalman smoothing
 filter.initState(x0,eps*eye(dimx));
-[X,V] = filter.smooth(yNoisy,us);
+[X,V] = filter.smooth(yNoisy,us,10);
 yKFsmooth = lin.C * X;
 
 % butterworth
@@ -170,8 +173,10 @@ yFiltFilt = filtfilt(B,A,yNoisy');
 yFiltFilt = yFiltFilt';
 
 figure(2);
-plot(t,y,'ks-',t,yNoisy,'b-',t,yKF,'rx:',t,yButter,'g*',t,yFiltFilt, 'r*',t,yKFsmooth,'--s');
-legend('actual obs','noisy obs', 'KF-filtered obs', 'Butterworth', 'Filtfilt','KF-smoother');
+plot(t,y,'ks-',t,yNoisy,'b-',t,yKF,'rx:',t,yKFsmooth,'--s');
+legend('actual obs','noisy obs', 'KF-filtered obs', 'KF-smoother');
+%plot(t,y,'ks-',t,yNoisy,'b-',t,yKF,'rx:',t,yButter,'g*',t,yFiltFilt, 'r*',t,yKFsmooth,'--s');
+%legend('actual obs','noisy obs', 'KF-filtered obs', 'Butterworth', 'Filtfilt','KF-smoother');
 %legend('traj','noisy traj','estimated traj');
 SSE_noise = (yNoisy - y)*(yNoisy - y)'
 SSE_KF = (yKF - y)*(yKF - y)'

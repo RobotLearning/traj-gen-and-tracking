@@ -63,7 +63,7 @@ classdef Linear < Model
             obj.SIM.eps_m = sim.eps_m;
             assert(strcmpi(sim.int,'Euler') || strcmpi(sim.int,'RK4'),...
                    'Please input Euler or RK4 as integration method');
-            obj.SIM.int = sim.int;
+            obj.SIM.int = sim.int;            
         end
         
         % change the cost function

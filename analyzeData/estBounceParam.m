@@ -14,7 +14,8 @@ loadTennisTableValues;
 
 % Load real ball data saved on 13/04/2016
 dataSet = 1;
-file = ['../Desktop/realBallData',int2str(dataSet)];
+file = ['../Desktop/data/realBallsimRobotData',int2str(dataSet)];
+%file = '../Desktop/data/realBallData_030516';
 M = dlmread([file,'.txt']);
 % ball data
 B = M(1:2:end,:);
@@ -153,7 +154,9 @@ for idx = 1:length(set)
     
     % Run nonlinear least squares to estimate ballInit better
     x0 = ballInit(:);
-    ballFun = @(b0,C,g) predictNextBall(b0,C,g,[timePreBounce,ballPreBounce],length(ballPreBounce));
+    spin.flag = false;
+    spin.Clift = Clift;
+    ballFun = @(b0,C,g) predictNextBall(b0,C,g,[timePreBounce,ballPreBounce],length(ballPreBounce),spin);
     fnc = @(x) ballFun(x,Cdrag,gravity);
     options = optimoptions('lsqnonlin');
     options.Display = 'final';
@@ -177,14 +180,16 @@ for idx = 1:length(set)
     
     % Run nonlinear least squares to estimate ballInit better
     x0 = ballInit(:);
-    ballFun = @(b0,C,g) predictNextBall(b0,C,g,[timePostBounce,ballPostBounce],length(ballPostBounce));
-    fnc = @(x) ballFun(x,Cdrag_post,gravity_post);
+    spin.flag = false;
+    spin.Clift = Clift;
+    ballFun = @(b0,C,g) predictNextBall(b0,C,g,[timePostBounce,ballPostBounce],length(ballPostBounce),spin);
+    fnc = @(x) ballFun(x,Cdrag,gravity);
     [x,err] = lsqnonlin(fnc,x0,[],[],options);
     ballInit = x(1:6);
     
     % there might be a spin change after rebound
-    params.C = Cdrag_post;
-    params.g = gravity_post;
+    %params.C = Cdrag_post;
+    %params.g = gravity_post;
     funState = @(x,u,dt) discreteBallFlightModel(x,dt,params);
     filter.f = funState;
     velAfterBounce(:,idx) = calcReboundVel(ballInit,ballPostBounce,timePostBounce,filter,0);
