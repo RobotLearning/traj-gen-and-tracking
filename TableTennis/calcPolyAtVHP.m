@@ -24,12 +24,15 @@ ballPosAtVHP = ballAtVHP(1:3);
 ballInVelAtVHP = ballAtVHP(4:6); 
 
 % GET DESIRED OUTGOING VELOCITY OF THE BALL AT VHP            
-fast = true;
-ballOutVelAtVHP = calcBallVelOut3D(ballDes,ballPosAtVHP,time2reach,fast);            
+par.fast = true;
+par.g = gravity;
+par.Cdrag = Cdrag;
+par.CRR = CRR;
+ballOutVelAtVHP = calcBallVelOut3D(ballDes,ballPosAtVHP,time2reach,par);            
 
 % GET RACKET DESIRED VEL AND ORIENTATION AT VHP 
 [racketPos,racketVel,racketNormal] = calcDesRacketState ...
-               (ballPosAtVHP,ballOutVelAtVHP,ballInVelAtVHP);
+               (ballPosAtVHP,ballOutVelAtVHP,ballInVelAtVHP,par);
 % attach a suitable angular velocity to the racket
 racketAngularVel = zeros(3,1);
 

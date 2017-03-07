@@ -38,8 +38,8 @@ options = optimoptions('fmincon','Algorithm', 'interior-point',...
                        'TolFun',1e-6, ...
                        'MaxFunEvals',2e3);
 
-%x0 = [q0;q0dot;1.0]; % initial guess
-x0 = init_soln(tt,models,q0);
+x0 = [q0;q0dot;1.0]; % initial guess
+%x0 = init_soln(tt,models,q0);
 [xopt,fval,exitflag,output] = fmincon(fun,x0,[],[],[],[],lb,ub,nonlcon,options);
 %}
 output
@@ -123,11 +123,12 @@ Tland = max(velBallOut(3) + sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ), .
                 velBallOut(3) - sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ)) / gravity;           
 
 % calculate total cost
-if isreal(Tland) && Tland > 0
-    J2 = (q1dot'*q1dot) / (4*Tland);
-else
-    J2 = 1e6;
-end
+% if isreal(Tland) && Tland > 0
+%     J2 = (q1dot'*q1dot) / (4*Tland);
+% else
+%     J2 = 1e6;
+% end
+J2 = (q1dot'*q1dot) / (4 * abs(real(Tland)));
 
 J = J1 + J2;
 
@@ -194,8 +195,8 @@ time2land = max(velBallOut(3) + sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ
                 velBallOut(3) - sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ)) / gravity;
 
 if ~isreal(time2net) || ~isreal(time2land)
-    time2net = -100;
-    time2land = -100;
+    time2net = real(time2net); %-100;
+    time2land = real(time2land); %-100;
 end
 
 xNet = posBall(1) + time2net * velBallOut(1);
@@ -206,6 +207,8 @@ yLand = posBall(2) + time2land * velBallOut(2);
 % trying to get racket close to ball 
 % resulting interaction should also land the ball to the table
 task_ineq = [vecBallAlongRacket'*vecBallAlongRacket - racket_radius^2;
+             distBall2RacketAlongNormal - ball_radius;
+             -distBall2RacketAlongNormal;
              -time2net;
              xNet - table_xmax;
              -xNet - table_xmax;
@@ -221,8 +224,9 @@ joint_limit_ineq = calcJointViolations(robot,q0,q1,q0dot,q1dot,T,time2land);
          
 c = [joint_limit_ineq;
      task_ineq];
-      
-ceq = [distBall2RacketAlongNormal - ball_radius];
+
+ceq = [];
+%ceq = [distBall2RacketAlongNormal - ball_radius];
 end
 
 function joint_limit_ineq = calcJointViolations(robot,q0,q1,q0dot,q1dot,T,Tland)

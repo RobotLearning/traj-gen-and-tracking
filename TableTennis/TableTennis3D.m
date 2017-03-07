@@ -44,7 +44,7 @@ classdef TableTennis3D < handle
             obj.ball = Ball3D(opt.distr); 
             
             % choose method to use for generating trajectories                        
-            obj.plan.vhp.flag = opt.plan.vhp.flag;
+            obj.plan.method = opt.plan.method;
             obj.plan.vhp.y = opt.plan.vhp.y;
             
             obj.reset_plan(q0);
@@ -238,8 +238,12 @@ classdef TableTennis3D < handle
             table_center = obj.table.DIST - obj.table.LENGTH/2;   
             % if stage is at PREDICT
             if obj.plan.stage == 1 && filter.x(2) > table_center && filter.x(5) > 0.5   
-                %obj.centredPlayer(q0,filter);     
-                obj.lazyPlayer(q0,filter);
+                if strcmp(obj.plan.method,'LAZY')
+                    obj.lazyPlayer(q0,filter);
+                else
+                    obj.centredPlayer(q0,filter);
+                end
+               
             end    
 
             % Move the robot
@@ -359,7 +363,7 @@ classdef TableTennis3D < handle
                 time2reach = 0.8; % time to reach desired point on opponents court    
 
                 % Compute traj here
-                if obj.plan.vhp.flag
+                if strcmp(obj.plan.method,'VHP')
                     [qf,qfdot,T] = calcPolyAtVHP(obj.robot,obj.plan.vhp.y,time2reach,ballDes,ballPred,ballTime,q0);
                 else
                     racketDes = obj.planRacket(ballDes,ballPred,ballTime,time2reach,q0);
@@ -657,7 +661,7 @@ classdef TableTennis3D < handle
             plot3(line2_x',line2_y',line2_z','w','LineWidth',5);
             
             % fill also the virtual hitting plane
-            if obj.plan.vhp.flag
+            if strcmp(obj.plan.method,'VHP')
                 V1 = [table_center - table_x; 
                     obj.plan.vhp.y;
                     table_z - 2*tol_z];
@@ -671,7 +675,7 @@ classdef TableTennis3D < handle
                     obj.plan.vhp.y;
                     table_z + 2*tol_z];
                 V = [V1,V2,V3,V4]';
-                text(table_center-table_x,obj.VHP.Y,table_z+2*tol_z-0.05,'VHP')
+                text(table_center-table_x,obj.plan.vhp.y,table_z+2*tol_z-0.05,'VHP')
                 fill3(V(:,1),V(:,2),V(:,3),[0 0.7 0.3],'FaceAlpha',0.2);
             end
             
