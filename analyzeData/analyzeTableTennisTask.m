@@ -7,13 +7,13 @@ load('LookupTable-16-May-2016.mat');
 % load('../Desktop/data/realBallData_030516.txt');
 % load('../Desktop/data/realJointData_030516.txt');
 
-date = '16-5-16';
+date = '030516';
 moment = '20:1:22';
 
 % ball data
-B = load(['../robolab/barrett/saveData/realBallData_', date, '_', moment, '.txt']);
+B = load(['../Dropbox/data/realBallData_', date, '.txt']);
 % joint data
-J = load(['../robolab/barrett/saveData/realJointData_', date, '_', moment, '.txt']);
+J = load(['../Dropbox/data/realJointData_', date, '.txt']);
 
 t = J(:,1);
 q_des = J(:,2:8);
@@ -76,7 +76,7 @@ params.table_length = table_length;
 params.table_width = table_width;
 params.radius = ball_radius;
 % coeff of restitution-friction vector
-params.BMAT = BMAT;
+%params.BMAT = BMAT;
 params.CFTX = CFTX;
 params.CFTY = CFTY;
 params.CRT = CRT;

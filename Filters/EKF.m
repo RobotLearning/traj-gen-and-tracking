@@ -153,7 +153,7 @@ classdef EKF < handle
             obj.y_last = y(:);
             
             % standard deviation multiplier
-            std_dev_mult = 2;
+            std_dev_mult = 3;
             % difference in measurement and predicted value
             inno = y(:) - obj.C * obj.x;
             thresh = std_dev_mult * sqrt(diag(obj.C * obj.P * obj.C'));
