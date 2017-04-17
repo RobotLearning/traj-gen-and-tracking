@@ -123,7 +123,7 @@ classdef Ball3D < handle
             mean_init_pos = obj.distr.init.mean;
             var_init_pos = obj.distr.init.cov;
             mean_land = obj.distr.land.mean;
-            var_land = obj.distr.land.cov;
+            mult_land = obj.distr.land.scale;
             znet = -Inf;
             std_init_pos = 0.0;
             std_land = 0.0;
@@ -131,14 +131,11 @@ classdef Ball3D < handle
             if det(var_init_pos) > 0.0
                 std_init_pos = chol(var_init_pos);
             end
-            
-            if det(var_land) > 0.0
-                std_land = chol(var_land);
-            end
+           
             
             while znet <= obj.NET.Zmax
                 binit = mean_init_pos + std_init_pos * randn(3,1);
-                bland = mean_land + std_land * randn(2,1);
+                bland = mean_land + mult_land * (rand(2,1)-0.5);
                 bland(3) = obj.TABLE.Z + obj.radius;
                 tland = mean_land_time + sqrt(s2_land_time) * randn;
                 vinit = calcBallVelOut3D(bland,binit,tland,par);

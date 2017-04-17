@@ -54,7 +54,7 @@ for trial = goodExamples
     ballPred = predictTillLastBlob(ekfFilter,tMerge,t_lookup,ball_lookup);
 
     % Plot predictions
-    %plotPredictionResult(b1,b3(:,2:4),ballPred);
+    plotPredictionResult(b1,b3(:,2:4),ballPred);
 
     % Calculate RMS prediction error as we get more ball data till bounce
     % update till ball hits table

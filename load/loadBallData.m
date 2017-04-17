@@ -2,7 +2,7 @@
 function [t,B] = loadBallData(dataSet)
 
 dataSet = 1;
-file = ['../Desktop/data/realBallsimRobotData',int2str(dataSet)];
+file = ['~/Dropbox/data/realBallsimRobotData',int2str(dataSet)];
 M = dlmread([file,'.txt']);
 % ball data
 B = M(1:2:end,:);

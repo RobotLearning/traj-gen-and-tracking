@@ -288,13 +288,17 @@ end
 
 %% plot actual and desired values
 figure('Name','Actual and Desired Joint pos and vel');
+t_plot = t_plot - t_plot(1);
 for i = 1:7
     subplot(7,2,2*i-1)
-    plot(t_plot,q_act_plot(i,:),t_plot,q_des_plot(i,:));
-    legend([joints{i},'act'],[joints{i},'des']);
+    plot(t_plot,q_act_plot(i,:),t_plot,q_des_plot(i,:),...
+        'LineWidth',2.0);
+    %legend([joints{i},'act'],[joints{i},'des']);
     subplot(7,2,2*i)
-    plot(t_plot,qd_act_plot(i,:),t_plot,qd_des_plot(i,:));
-    legend([vels{i},'act'],[vels{i},'des']);
+    plot(t_plot,qd_act_plot(i,:),t_plot,qd_des_plot(i,:),...
+        'LineWidth',2.0);
+    
+    %legend([vels{i},'act'],[vels{i},'des']);
 end
 
 %% plot cartesian values
@@ -351,7 +355,7 @@ fill3(racket(1,:), racket(2,:), racket(3,:),red);
 hold off;
 
 %% Give info about cartesian tracking error at hitting time
-disp('========TRACKNG ERROR AT DES HITTING TIME=======')
+disp('========TRACKING ERROR AT DES HITTING TIME=======')
 vectoridx = 1:3;
 fprintf('xdes[%d] = %f\n', [vectoridx; x_des(:,idxHit)']);
 fprintf('xact[%d] = %f\n', [vectoridx; x_act(:,idxHit)']);
@@ -365,3 +369,22 @@ R_act = quat2Rot(o_act);
 fprintf('ndes[%d] = %f\n', [vectoridx; R_des(:,3,idxHit)']);
 fprintf('nact[%d] = %f\n', [vectoridx; R_act(:,3,idxHit)']);
 fprintf('Diff in cm = %f\n', norm(R_des(:,3,idxHit) - R_act(:,3,idxHit)));
+
+%% MASTER PLOT FOR JOURNAL
+
+% Load saved figures
+% c1 = hgload('act_vs_des_ball_and_robot.fig');
+% c2 = hgload('act_vs_des_cart.fig');
+% 
+% % Prepare subplots
+% figure;
+% h(1) = subplot(2,1,1);
+% h(2) = subplot(2,1,2);
+% 
+% % Paste figures on the subplots
+% copyobj(allchild(get(c1,'CurrentAxes')),h(1));
+% copyobj(allchild(get(c2,'CurrentAxes')),h(2));
+
+% Add legends
+%l(1) = legend(h(1),'LegendForFirstFigure');
+%l(2) = legend(h(2),'LegendForSecondFigure');

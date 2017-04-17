@@ -21,6 +21,10 @@ end
 %x = repmat(b,1,length(t));
 ballPosData = data(:,2:4)';
 
+if len == 1
+    x = x';
+end
+
 k1 = t .* ballFlightFnc(x);
 x_k1 = x + k1/2;
 k2 = t .* ballFlightFnc(x_k1);

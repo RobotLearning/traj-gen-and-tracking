@@ -39,7 +39,8 @@ function intersect = checkIfBallIsInsideWorkspace(robot,ballPred)
                 p = ballPred(1:3,i);   
                 beq = [p(:);1];
                 Aeq = [pts;ones(1,N)];
-                options = optimoptions('linprog','Display','off');
+                options = optimoptions('linprog','Display','off',...
+                    'Algorithm','dual-simplex');
                 x0 = (1/N) * ones(N,1); 
                 [~,~,exitflag,~] = linprog(f,[],[],Aeq,beq,lb,ub,x0,options);
     
