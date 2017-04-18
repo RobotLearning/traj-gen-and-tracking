@@ -19,7 +19,7 @@ num_trials = length(balls1);
 % initialize ball with high topspin (3000rpm or more)
 w0 = [-30*2*pi;0;0]; %3000rpm topspin
 
-for trial = 21:30 %1:num_trials
+for trial = 1:10 %1:num_trials
     fprintf('Trial %d\n',trial);
     [ekfFilter,ball_func] = init_const_spin_filter(w0);
 
