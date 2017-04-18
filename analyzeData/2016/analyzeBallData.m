@@ -31,12 +31,13 @@ spin.flag = true;
 spin.Clift = Clift;
 spin.est = w0;
 
-[ekfFilter,ball_func] = initFilterEKF(spin);
+[ekfFilter,ball_func] = initFilterEKF(spin); %init_const_spin_filter(w0);
 
 % Get reliable ball observations from trial and remove outliers
 [B1,B3,Ball_est] = pruneBallData(t,B);
 
 for trial = goodExamples
+    fprintf('Trial %d\n',trial);
     [b1,b3,ball_est,numTrials] = getTrialData(B1,B3,trial,dataSet,Ball_est);
     [t1,b1] = removeOutliers(b1);
 

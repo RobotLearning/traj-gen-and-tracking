@@ -30,7 +30,7 @@ spin.flag = false;
 spin.Clift = Clift;
 
 % estimate parameters before bounce
-p = estimate_flight_params(balls3,spin)
+p = estimate_flight_params(balls3,spin);
 
 % initialize EKF with a spin-model
 % initialize ball with zero spin

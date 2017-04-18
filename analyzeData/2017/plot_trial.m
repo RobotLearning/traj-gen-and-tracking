@@ -1,6 +1,6 @@
 %% Plot trial data (blob data from cameras 1-4)
 
-function plot_trial(b1,b3)
+function plot_trial(b1,b3,ball_filt)
 
 loadTennisTableValues;
 
@@ -15,7 +15,14 @@ end
 hold on;
 s3 = scatter3(b3(:,1),b3(:,2),b3(:,3),'b');
 %predColor = [0.200 0.200 0.200];
-%sP = scatter3(ball_filt(1,:),ball_filt(2,:),ball_filt(3,:),'k');
+try 
+    sP = scatter3(ball_filt(:,1),ball_filt(:,2),ball_filt(:,3),'k');
+    sP.MarkerEdgeColor = sP.CData;
+    legend('cam1','cam3','filter');
+catch
+    warning('Filtered values not supplied!');
+    legend('cam1','cam3');
+end
 
 title('Ball trajectory in trial data');
 grid on;
