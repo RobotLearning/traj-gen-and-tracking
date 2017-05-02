@@ -4,7 +4,9 @@ function ballPred = predictTillLastBlob(filter,t,tstart,ball_lookup)
 t = t(t > tstart) - tstart;
 initVar = 1;
 filter.initState(ball_lookup(:),initVar);
-filter.linearize(t(1),0);
+if isempty(filter.A)
+    filter.linearize(t(1),0);
+end
 ballPred = predictBallPath(t,filter);
         
 % Predict the ball path for a fixed seconds into the future
