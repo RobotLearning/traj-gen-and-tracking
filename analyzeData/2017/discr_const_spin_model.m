@@ -74,16 +74,16 @@ function xdot = rebound_const_spin_model(xdot,w0,e_t,mu,r)
            xdot(2) + r*w0(1);
            0];
 
-    e_t = 0.90;
+    %e_t = 0.90;
     nu_s = 1 - (2/5)*mu*(1+e_t)*abs(xdot(3))/norm(vbT);
     alpha = 2/5; % roll
     if nu_s > 0 % slide 
         alpha = mu * (1 + e_t) * abs(xdot(3))/norm(vbT);
     end
 
-    Av = diag([1.2,1.6-alpha,-e_t]);
-    Bv = [0, alpha*r/2, 0;
-          -alpha*r/2, 0, 0;
+    Av = diag([1.2-alpha,1.1-alpha,-e_t]); %1.6-alpha
+    Bv = [0, alpha*r, 0; % alpha*r/2
+          -alpha*r, 0, 0; % alpha*r/2
           zeros(1,3)];
     Aw = [0, -3*alpha/(2*r), 0;
           3*alpha/(2*r), 0, 0;

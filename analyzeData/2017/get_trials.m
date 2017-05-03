@@ -2,9 +2,10 @@
 
 function [balls1,balls3] = get_trials(b1,b3)
 
-% if there is more than 1 second difference it means its a new trial
+% if there is more than threshold second difference it means its a new trial
+t_threshold = 0.8;
 diffBall3 = diff(b3);
-idxStart3 = find(diffBall3(:,1) > 1.0);
+idxStart3 = find(diffBall3(:,1) > t_threshold);
 idxStart3 = [1;idxStart3+1];
 
 tStart3 = b3(idxStart3,1);

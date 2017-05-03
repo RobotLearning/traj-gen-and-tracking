@@ -4,7 +4,7 @@ function plot_trial(b1,b3,ball_filt)
 
 loadTennisTableValues;
 
-figure;
+%figure;
 try
     s1 = scatter3(b1(:,1),b1(:,2),b1(:,3),'r');
     s1.MarkerEdgeColor = s1.CData; % due to a bug in MATLAB R2015b

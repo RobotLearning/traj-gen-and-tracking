@@ -28,9 +28,8 @@ ball_func = @(x,u,dt) discr_const_spin_model(x,dt,params);
 dim = 6;
 C = [eye(3),zeros(3)];
 
-% very small but nonzero value for numerical stability
-eps = 1e-3; 
-mats.O = eps * eye(dim);
+% very small but nonzero value of covariances for numerical stability
+mats.O = 0.03 * eye(dim); % process noise covariance
 mats.C = C;
-mats.M = eps * eye(3);
+mats.M = 0.001 * eye(3);
 filter = EKF(dim,ball_func,mats);
