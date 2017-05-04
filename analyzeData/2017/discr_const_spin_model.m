@@ -37,7 +37,8 @@ end
 
 % condition for bouncing
 if x_next(3) < zTable + ballRadius && ...
-        abs(x_next(2) - yNet) < tableLength/2 && abs(x_next(1)) < tableWidth/2
+        abs(x_next(2) - yNet) < tableLength/2 && abs(x_next(1)) < tableWidth/2 ...
+        && x_next(6) < 0.0
     tol = 1e-4;
     dt1 = 0;
     dt2 = dt;

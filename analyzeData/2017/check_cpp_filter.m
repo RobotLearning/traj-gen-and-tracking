@@ -22,12 +22,12 @@ b3 = balls3{trial}(:,2:4);
 file_filt = '~/Dropbox/data/realBallData_filtered.txt';
 B_filt = dlmread(file_filt);
 % get valid ball indices for trial
-b_filt = get_valid_balls(B_filt,balls1,balls3,trial);
+b_filt = get_valid_balls(B_filt,balls1,balls3,trial,3300);
 %plot_trial(b1,b3,b_filt);
 
 % initialize EKF
 % initialize ball with high topspin (3000rpm or more)
-w0 = [-30*2*pi;0;0]; %3000rpm topspin
+w0 = [-50*2*pi;0;0]; %3000rpm topspin
 spin.flag = false;
 %[ekf,ball_func] = initFilterEKF(spin);
 [ekf,ball_func] = init_const_spin_filter(w0);
@@ -65,7 +65,7 @@ plot_trial(b1,b3,ball_preds_bounce);
 
 % PREDICT WITH CPP FILTER VALUES
 %%{
-% Plot predicted values at net
+% Plot predicted values starting from net
 net_y = dist_to_table - table_length/2;
 b_filt_pre_net = b_filt(b_filt(:,2) < net_y,:);
 t_filt = 0.002 * (1:length(b_filt));
