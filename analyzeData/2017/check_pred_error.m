@@ -2,7 +2,7 @@
 
 clc; clear; close all;
 loadTennisTableValues;
-file = '~/Dropbox/data/balls.txt';
+file = '~/Dropbox/data/balls_0317.txt';
 M = dlmread(file);
 % ball data
 B = M(:,1:10); % cam id and status cols

@@ -2,7 +2,8 @@
 
 clc; clear; close all;
 loadTennisTableValues;
-file = '~/Dropbox/data/realBallData_030516.txt';
+file = '~/Dropbox/data/real_ball_data_0317/balls_30.txt';  
+%'~/Dropbox/data/realBallData_030516.txt';
 M = dlmread(file);
 % ball data
 B = M(:,1:10); % cam id and status cols
@@ -19,10 +20,11 @@ t3 = balls3{trial}(:,1);
 b3 = balls3{trial}(:,2:4);
 
 % ADD CPP FILTERED BALL VALUES
-file_filt = '~/Dropbox/data/realBallData_filtered.txt';
+file_filt = '~/Dropbox/data/real_ball_data_0317/balls_30_filtered.txt';
+%'~/Dropbox/data/realBallData_filtered.txt';
 B_filt = dlmread(file_filt);
 % get valid ball indices for trial
-b_filt = get_valid_balls(B_filt,balls1,balls3,trial,3300);
+b_filt = get_valid_balls(B_filt,balls1,balls3,trial); %,3300);
 %plot_trial(b1,b3,b_filt);
 
 % initialize EKF
@@ -77,8 +79,10 @@ subplot(2,2,3);
 plot_trial(b1,b3,ball_preds_net);
 % 
 % % Plot predicted values around bounce
-[~,idx_bounce] = min(b_filt(:,3));
+b_filt_pre_table_end = b_filt(b_filt(:,2) < dist_to_table,:);
+[~,idx_bounce] = min(b_filt_pre_table_end(:,3));
 b_filt_pre_bounce = b_filt(1:idx_bounce,:);
+%idx_bounce = idx_bounce - 1;
 t_bounce = 0.002 * size(b_filt_pre_bounce,1);
 ball_pred_bounce = predictTillLastBlob(ekf,t_filt,t_bounce,b_filt_pre_bounce(end,:));
 ball_preds_bounce = [b_filt_pre_bounce;ball_pred_bounce'];
