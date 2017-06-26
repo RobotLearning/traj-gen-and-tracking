@@ -8,7 +8,7 @@ load('ballTrain1.mat');
 initializeWAM;
 
 % drawing related params
-OPT.draw = false; % draw the simulation
+OPT.draw = true; % draw the simulation
 OPT.record = false; % record the simulation
 
 % planning related flags and parameters
@@ -41,4 +41,4 @@ OPT.camera.cov = 5e-4;
 % sampling time
 dt = 0.01; 
 tt = TableTennis3D(wam,dt,q0,OPT);
-tt.practice(q0,20);
+tt.practice(q0,1);
