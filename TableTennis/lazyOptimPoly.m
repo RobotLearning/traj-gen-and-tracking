@@ -90,25 +90,45 @@ a2 = (3/(T^2))*(qf-q0) - (1/T)*(qfdot + 2*q0dot);
 J = T * (3*T^2*(a3'*a3) + 3*T*(a3'*a2) + (a2'*a2));
 
 % we assume that contact occurs
-% ballTime = models.ball.time;
-% ballPred = models.ball.pred;
-% table_z = models.table.height;
-% gravity = abs(models.gravity); % should be +9.8
-% contactModel = models.racket.contact;
-% [xf,xfd,of] = robot.calcRacketState(q1,q1dot);
-% nf = robot.calcRacketNormal(of);
-% [posBall,velBall] = interpBall(ballPred,ballTime,T);
-% racket.normal = nf(:);
-% racket.vel = xfd(:);
-% velBallOut = contactModel(velBall(:),racket);
-% % hack for now - since projectile motion is inaccurate
-% velBallOut = [0.90;0.90;0.83] .* velBallOut(:);
-% distBall2TableZ = posBall(3) - table_z; 
-% % normally we have to add T to find actual Tland
-% Tland = max(velBallOut(3) + sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ), ...
-%                 velBallOut(3) - sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ)) / gravity;           
-% 
+net_y = models.table.dist - models.table.length/2;
+ballTime = models.ball.time;
+ballPred = models.ball.pred;
+table_z = models.table.height;
+gravity = abs(models.gravity); % should be +9.8
+contactModel = models.racket.contact;
+[xf,xfd,of] = robot.calcRacketState(qf,qfdot);
+nf = robot.calcRacketNormal(of);
+[posBall,velBall] = interpBall(ballPred,ballTime,T);
+racket.normal = nf(:);
+racket.vel = xfd(:);
+velBallOut = contactModel(velBall(:),racket);
+% hack for now - since projectile motion is inaccurate
+velBallOut = [0.90;0.90;0.83] .* velBallOut(:);
+ball2Racket = posBall(:) - xf(:); 
+distBall2RacketAlongNormal = nf(:)'*ball2Racket;
+vecBallAlongRacket = ball2Racket - distBall2RacketAlongNormal*nf(:);
+time2net = (net_y - posBall(2))/velBallOut(2);
+distBall2TableZ = posBall(3) - table_z; 
+time2land = max(velBallOut(3) + sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ), ...
+                velBallOut(3) - sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ)) / gravity;
 
+if ~isreal(time2net) || ~isreal(time2land)
+    time2net = real(time2net); %-100;
+    time2land = real(time2land); %-100;
+end
+            
+xNet = posBall(1) + time2net * velBallOut(1);
+zNet = posBall(3) + time2net * velBallOut(3) - 0.5*gravity*time2net^2;
+xLand = posBall(1) + time2land * velBallOut(1);
+yLand = posBall(2) + time2land * velBallOut(2);
+
+zDesNet = models.table.height + models.net.height + 0.50;
+yDesLand = models.table.dist - 3*models.table.length/4;
+
+J_hit = 100 * vecBallAlongRacket'*vecBallAlongRacket;
+J_net = 100 * ((xNet)^2 + (zNet - zDesNet)^2);
+J_land = 100 * ((xLand)^2 + (yLand - yDesLand)^2);
+J = J + J_hit + J_net + J_land;
 
 end
 

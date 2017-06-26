@@ -89,9 +89,8 @@ classdef Ball3D < handle
                         
             switch obj.distr.type
                 case 'normal'
-                    mean = obj.distr.init.mean;
-                    var = obj.distr.init.cov;
-                    b0 = mean + chol(var) * randn(6,1);
+                    std = obj.distr.init.std;
+                    b0 = initBallGun(std,randi(3));
                 case 'empirical'
                     b0 = drawSimilarSample(obj.distr.data);
                 case 'landing' % draw according to des landing distr
