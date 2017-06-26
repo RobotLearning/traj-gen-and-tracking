@@ -11,7 +11,7 @@
 % 
 % using fmincon optimizing for their parameters qf,qfdot,T
 
-function [qf,qfdot,T,Tland] = lazyOptimPoly(tt,models,q0)
+function [qf,qfdot,T] = lazyOptimPoly(tt,models,q0,Tret)
 
 tic;
 dof = length(q0);
@@ -50,21 +50,6 @@ qf = xopt(1:dof);
 qfdot = xopt(dof+1:end-1);
 T = xopt(end);
 
-ballTime = models.ball.time;
-ballPred = models.ball.pred;
-table_z = models.table.height;
-gravity = abs(models.gravity); % should be +9.8
-contactModel = models.racket.contact;
-[xf,xfd,of] = robot.calcRacketState(qf,qfdot);
-nf = robot.calcRacketNormal(of);
-[posBall,velBall] = interpBall(ballPred,ballTime,T);
-racket.normal = nf(:);
-racket.vel = xfd(:);
-velBallOut = contactModel(velBall(:),racket);
-distBall2TableZ = posBall(3) - table_z; 
-Tland = max(velBallOut(3) + sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ), ...
-                velBallOut(3) - sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ)) / gravity;
-
 fprintf('Fval (sum of squared acc) = %f.\n',fval);
 fprintf('Calc. opt. time at T = %f.\n',T);
 fprintf('Optim took %f sec.\n',toc);
@@ -92,55 +77,38 @@ x0 = [qf(:);qfdot(:);T];
 end
 
 % G is the gradient
-function [J,G] = cost(Q0,Q1,T,robot,models)
+function [J,G] = cost(Q0,Qf,T,robot,models)
 
 dof = length(Q0)/2;
 q0 = Q0(1:dof); 
 q0dot = Q0(dof+1:end); 
-q1 = Q1(1:dof); 
-q1dot = Q1(dof+1:end); 
-a3 = (2/(T^3))*(q0-q1) + (1/(T^2))*(q0dot + q1dot);
-a2 = (3/(T^2))*(q1-q0) - (1/T)*(q1dot + 2*q0dot);
-J1 = T * (3*T^2*(a3'*a3) + 3*T*(a3'*a2) + (a2'*a2));
+qf = Qf(1:dof); 
+qfdot = Qf(dof+1:end); 
+a3 = (2/(T^3))*(q0-qf) + (1/(T^2))*(q0dot + qfdot);
+a2 = (3/(T^2))*(qf-q0) - (1/T)*(qfdot + 2*q0dot);
+
+J = T * (3*T^2*(a3'*a3) + 3*T*(a3'*a2) + (a2'*a2));
 
 % we assume that contact occurs
-ballTime = models.ball.time;
-ballPred = models.ball.pred;
-table_z = models.table.height;
-gravity = abs(models.gravity); % should be +9.8
-contactModel = models.racket.contact;
-[xf,xfd,of] = robot.calcRacketState(q1,q1dot);
-nf = robot.calcRacketNormal(of);
-[posBall,velBall] = interpBall(ballPred,ballTime,T);
-racket.normal = nf(:);
-racket.vel = xfd(:);
-velBallOut = contactModel(velBall(:),racket);
-% hack for now - since projectile motion is inaccurate
-velBallOut = [0.90;0.90;0.83] .* velBallOut(:);
-distBall2TableZ = posBall(3) - table_z; 
-% normally we have to add T to find actual Tland
-Tland = max(velBallOut(3) + sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ), ...
-                velBallOut(3) - sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ)) / gravity;           
+% ballTime = models.ball.time;
+% ballPred = models.ball.pred;
+% table_z = models.table.height;
+% gravity = abs(models.gravity); % should be +9.8
+% contactModel = models.racket.contact;
+% [xf,xfd,of] = robot.calcRacketState(q1,q1dot);
+% nf = robot.calcRacketNormal(of);
+% [posBall,velBall] = interpBall(ballPred,ballTime,T);
+% racket.normal = nf(:);
+% racket.vel = xfd(:);
+% velBallOut = contactModel(velBall(:),racket);
+% % hack for now - since projectile motion is inaccurate
+% velBallOut = [0.90;0.90;0.83] .* velBallOut(:);
+% distBall2TableZ = posBall(3) - table_z; 
+% % normally we have to add T to find actual Tland
+% Tland = max(velBallOut(3) + sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ), ...
+%                 velBallOut(3) - sqrt(velBallOut(3)^2 + 2*gravity*distBall2TableZ)) / gravity;           
+% 
 
-% calculate total cost
-% if isreal(Tland) && Tland > 0
-%     J2 = (q1dot'*q1dot) / (4*Tland);
-% else
-%     J2 = 1e6;
-% end
-J2 = (q1dot'*q1dot) / (4 * abs(real(Tland)));
-
-J = J1 + J2;
-
-% supply gradient if algorithm supports it
-if nargout > 1
-    G = [(6/(T^3))*(q1-q0) - (3/T^2)*(q0dot + q1dot);
-         (-3/T^2)*(q1-q0) + (1/T)*(2*q1dot + q0dot)];
-    G(end+1) = (-9/(T^4))*((q1-q0)'*(q1-q0)) + ...
-               (6/(T^3))*((q1-q0)'*(q0dot+q1dot)) +...
-               (3/(T^2))*(q0dot'*(q0dot + q1dot)) +...
-               -(1/T^2)*((q1dot+2*q0dot)'*(q1dot+2*q0dot));
-end
 
 end
 

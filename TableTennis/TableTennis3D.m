@@ -238,10 +238,15 @@ classdef TableTennis3D < handle
             table_center = obj.table.DIST - obj.table.LENGTH/2;   
             % if stage is at PREDICT
             if obj.plan.stage == 1 && filter.x(2) > table_center && filter.x(5) > 0.5   
-                if strcmp(obj.plan.method,'LAZY')
-                    obj.lazyPlayer(q0,filter);
-                else
-                    obj.centredPlayer(q0,filter);
+                switch obj.plan.method
+                    case 'LAZY'
+                        obj.lazy_player(q0,filter);
+                    case 'FOCUSED'
+                        obj.focused_player(q0,filter);
+                    case 'VHP'
+                        obj.focused_player(q0,filter);
+                    otherwise
+                        error('Alg not specified!');
                 end
                
             end    
@@ -263,13 +268,12 @@ classdef TableTennis3D < handle
         % Lazy player
         % does not fix q0, landing position, landing time
         % does not fix racket center to hit the incoming ball
-        % does not fix the returning polynomial
         % returns at estimated landing time to arbitrary q with zero velocity
         %
         % Implementing still the finite state machine rules
         % Since we cannot run the optimization fast enough in MATLAB
         % to enable MPC like correction
-        function lazyPlayer(obj,q0,filter)
+        function lazy_player(obj,q0,filter)
             predictTime = 1.2;
             [ballPred,ballTime,numBounce,time2Passtable] = ...
                 predictBallPath(obj.dt,predictTime,filter,obj.table);
@@ -285,7 +289,7 @@ classdef TableTennis3D < handle
                 obj.plan.idx = 0;
                 obj.plan.stage = 2; % HIT
                 dofs = 7; q0dot = zeros(dofs,1);
-                
+                time2return = 1.0;
                 models.ball.time = ballTime;
                 models.ball.pred = ballPred;
                 models.ball.radius = obj.ball.radius;
@@ -300,8 +304,8 @@ classdef TableTennis3D < handle
                 models.gravity = abs(obj.ball.g);
                 models.racket.contact = @(velIn,racket) obj.ball.racketContactModel(velIn,racket);
                 
-                [qf,qfdot,T,Tland] = lazyOptimPoly(obj,models,q0);
-                [q,qd,qdd] = calcHittingPoly(obj.dt,q0,q0dot,qf,qfdot,T,Tland);
+                [qf,qfdot,T] = lazyOptimPoly(obj,models,q0);
+                [q,qd,qdd] = calcHitAndReturnSpline(obj.dt,q0,q0dot,qf,qfdot,T,time2return);
                 [q,qd,qdd] = obj.robot.checkJointLimits(q,qd,qdd);
                 [x,xd,o] = obj.robot.calcRacketState(q,qd);
                 [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);
@@ -321,7 +325,7 @@ classdef TableTennis3D < handle
         % Centred player that tries to return the ball
         % at a desired point at a desired time
         % It fixes a q0, generates both striking and returning polynomials
-        function centredPlayer(obj,q0,filter)
+        function focused_player(obj,q0,filter)
             predictTime = 1.2;
             [ballPred,ballTime,numBounce,time2Passtable] = ...
                 predictBallPath(obj.dt,predictTime,filter,obj.table);

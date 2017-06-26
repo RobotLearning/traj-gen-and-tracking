@@ -36,7 +36,7 @@ PAR.uex0 = uex0;
 PAR.C = eye(SIM.dimy,SIM.dimx);
 
 % form constraints
-MAX_VEL = 200;
+MAX_VEL = 10;
 MAX_ACC = 200;
 SLACK = 0.05;
 CON.q.max = [2.60; 2.00; 2.80; 3.10; 1.30; 1.60; 2.20] - SLACK;
@@ -46,7 +46,7 @@ CON.qd.min = -MAX_VEL * ones(7,1);
 CON.qdd.max = MAX_ACC * ones(7,1);
 CON.qdd.min = -MAX_ACC * ones(7,1);
 CON.u.max = [75; 125; 39; 30; 3; 4; 1];
-CON.u.min = -CON.u.max;
+CON.u.min = -CON.u.max; % ONLY Q and QD constraints are used in opt.
 
 % cost struc
 Q1 = 1*diag([ones(1,4),1*ones(1,3),1*ones(1,4),1*ones(1,3)]);
@@ -76,7 +76,19 @@ PD(7,7) = -2.5;
 PD(7,N_DOFS+7) = -0.075;
 
 % initialize the arm with zero velocity on the right hand side
-q0 = [1.0; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
+q_right = [1.0; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
+q_left = [-1.0; 0.0; 0.0; 1.5; -1.57; 0.1; 0.3];
+q_centre = [0.0; 0.0; 0.0; 1.5; -1.75; 0.0; 0.0];
+switch robot_side
+    case 'RIGHT'
+        q0 = q_right;
+    case 'LEFT'
+        q0 = q_left;
+    case 'CENTRE'
+        q0 = q_centre;
+    otherwise
+        error('Pose not identified!');
+end
 qd0 = zeros(7,1);
 Q0 = [q0;qd0];
 
