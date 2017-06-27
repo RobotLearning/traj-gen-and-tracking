@@ -2,8 +2,8 @@
 
 % original seed was 1
 clc; clear; close all; %rng(5);
-std = 0.05;
-robot_side = 'RIGHT';
+std = 0.2;
+robot_side = 'LEFT';
 initializeWAM;
 
 % drawing related params
@@ -13,10 +13,10 @@ OPT.record = false; % record the simulation
 % planning related flags and parameters
 OPT.plan.method = 'FOCUSED'; % FOCUSED , VHP, LAZY
 OPT.plan.vhp.y = -0.6;
-OPT.train = false; % train a lookup table using optimization results
+OPT.train = true; % train a lookup table using optimization results
 OPT.lookup.flag = false; % use lookup table instead of optimizing online
 OPT.lookup.mode = 'closest'; %'GP-regress'; %'lin-regress';
-OPT.lookup.savefile = 'center_lookup'; %'LookupTable-16-May-2016'; 
+OPT.lookup.savefile = 'left_lookup_260617'; %'LookupTable-16-May-2016'; 
 
 % initial ball parameters
 OPT.distr.type = 'normal';
@@ -36,4 +36,4 @@ OPT.camera.cov = 0.0; %5e-4;
 % sampling time
 dt = 0.01; 
 tt = TableTennis3D(wam,dt,q0,OPT);
-tt.practice(q0,10);
+tt.practice(q0,500);
