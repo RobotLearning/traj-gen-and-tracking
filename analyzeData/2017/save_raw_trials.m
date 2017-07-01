@@ -23,7 +23,9 @@ num_trials = length(idx_start);
 balls = cell(1,num_trials);
 
 for trial = 1:num_trials-1
-    balls{trial} = B(idx_start(trial):idx_start(trial+1)-1,:);
+    % add some vals from previous trial for testing cpp filter
+    start_idx = max(idx_start(trial)-5,1);
+    balls{trial} = B(start_idx:idx_start(trial+1)-1,:);
 end
 balls{num_trials} = B(idx_start(num_trials):end,:);
 
@@ -36,8 +38,8 @@ end
 % % plot one to see the result
 trial = 1;
 % remove outliers from camera 1
-[B1,B3,~] = prune_ball_data(balls{trial});
-[balls1,balls3] = get_trials(B1,B3); % cell structure
+[b1,b3,~] = prune_ball_data(balls{trial});
+[balls1,balls3] = get_trials(b1,b3); % cell structure
 balls1{trial} = remove_outliers(balls1{trial});
 t1 = balls1{trial}(:,1);
 b1 = balls1{trial}(:,2:4);

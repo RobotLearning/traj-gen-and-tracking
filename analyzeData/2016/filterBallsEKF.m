@@ -5,7 +5,9 @@ function ballEsts = filterBallsEKF(t,b,ekfFilter,spin)
 
 % initialize the EKF filter with nonlinear ls estimate
 num_init_balls = 5;
-x0 = estimateInitBall(t(1:num_init_balls),b(1:num_init_balls,:)',spin);
+t(1:num_init_balls)
+b(1:num_init_balls,:)'
+x0 = estimateInitBall(t(1:num_init_balls),b(1:num_init_balls,:)',spin)
 
 if spin.flag
     dim = 6;
