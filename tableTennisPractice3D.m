@@ -12,6 +12,7 @@ OPT.record = false; % record the simulation
 
 % planning related flags and parameters
 OPT.plan.method = 'FOCUSED'; % FOCUSED , VHP, LAZY
+OPT.plan.vhp.flag = false; % TODO: vhp should be a seperate strategy method
 OPT.plan.vhp.y = -0.6;
 OPT.train = true; % train a lookup table using optimization results
 OPT.lookup.flag = false; % use lookup table instead of optimizing online
