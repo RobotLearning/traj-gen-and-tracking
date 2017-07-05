@@ -23,7 +23,7 @@ function ballInit = estimateInitBall(time,obs,spin)
     options = optimoptions('lsqnonlin');
     options.Display = 'final';
     options.Algorithm = 'levenberg-marquardt';
-    options.MaxFunEvals = 1500;    
+    options.MaxFunEvals = 1500;
     
     if spin.flag
         p0 = ballInit(1:3); 
@@ -31,12 +31,12 @@ function ballInit = estimateInitBall(time,obs,spin)
         phi0 = zeros(3,1);
         w0 = spin.est;
         x0 = [p0(:);phi0;v0(:);w0];
-        [x,err] = lsqnonlin(fnc,x0,[],[],options);
+        [x,resnormsq] = lsqnonlin(fnc,x0,[],[],options);
         ballInit = x(1:12);        
     else
         x0 = ballInit(:);
-        [x,err] = lsqnonlin(fnc,x0,[],[],options);
+        [x,resnormsq] = lsqnonlin(fnc,x0,[],[],options);
         ballInit = x(1:6);
     end
-
+    fprintf('Res norm: %f\n', sqrt(resnormsq));
 end
