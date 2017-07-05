@@ -565,7 +565,7 @@ classdef TableTennis3D < handle
 
             % get joints, endeffector pos and orientation
             [joint,ee,racket] = wam.drawPosture(q);
-            endeff = [joint(end,:); ee];
+            endeff = [joint(end,1:3); ee];
 
             % edit: reduced to half screen size
             scrsz = get(groot,'ScreenSize');
@@ -703,7 +703,7 @@ classdef TableTennis3D < handle
             hrobotE = obj.handle.robot.endeff;
             hrobotR = obj.handle.robot.racket;
             [joint,ee,racket] = rob.drawPosture(q);
-            endeff = [joint(end,:);ee];
+            endeff = [joint(end,1:3);ee];
     
             % ball
             set(hball,'XData',b.pos(1) + b.MESH.X);

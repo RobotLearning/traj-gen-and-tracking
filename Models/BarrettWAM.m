@@ -186,7 +186,7 @@ classdef BarrettWAM < Robot
                 [xLink,xOrigin,xAxis,Amats] = barrettWamKinematics(q(:,i),obj.PAR);
                 o(:,i) = rot2Quat(Amats(6,1:3,1:3));
                 obj.jac = jacobian(xLink,xOrigin,xAxis);
-                x(:,i) = xLink(6,:)';
+                x(:,i) = xLink(6,1:3)';
                 xd(:,i) = obj.jac(1:3,:) * qd(:,i);
             end
         end
@@ -204,7 +204,7 @@ classdef BarrettWAM < Robot
                 quat = rot2Quat(Amats(6,1:3,1:3));
                 o(:,i) = obj.calcRacketOrientation(quat);
                 obj.jac = jacobian(xLink,xOrigin,xAxis);
-                x(:,i) = xLink(6,:)';
+                x(:,i) = xLink(6,1:3)';
                 xd(:,i) = obj.jac(1:3,:) * qd(:,i);
             end
         end
@@ -359,6 +359,7 @@ classdef BarrettWAM < Robot
 
         %% Check safety here
         
+        % TODO: check torques in a more clever way!
         function [q,qd,qdd] = checkJointLimits(obj,q,qd,qdd)
             
             len = size(q,2);
@@ -371,10 +372,10 @@ classdef BarrettWAM < Robot
             qdmin = repmat(con.qd.min,1,len);
             qddmax = repmat(con.qdd.max,1,len);
             qddmin = repmat(con.qdd.min,1,len); 
-            u = zeros(7,len);
-            for i = 1:len
-                u(:,i) = obj.invDynamics(q(:,i),qd(:,i),qdd(:,i));
-            end
+            %u = zeros(7,len);
+            %for i = 1:len
+            %    u(:,i) = obj.invDynamics(q(:,i),qd(:,i),qdd(:,i));
+            %end
             
             %obj.displayMaxInfo(q,qd,qdd,u);
             
@@ -382,7 +383,7 @@ classdef BarrettWAM < Robot
                 assert(~any(any((q > qmax | q < qmin))),'Joint limits violated!');
                 assert(~any(any((qd > qdmax | qd < qdmin))), 'Vel limits violated!');
                 assert(~any(any((qdd > qddmax | qdd < qddmin))), 'Acc limits violated!');
-                assert(~any(any((u > umax | u < umin))), 'Torque limits violated!');
+                %assert(~any(any((u > umax | u < umin))), 'Torque limits violated!');
             catch ME
                 disp(ME.message);
                 disp('Not moving the robot!');
@@ -440,7 +441,7 @@ classdef BarrettWAM < Robot
             orient = obj.calcRacketOrientation(quat);
             R = quat2Rot(orient(:));
             joints = xOrigin;
-            endeff = xLink(6,:);
+            endeff = xLink(6,1:3);
             
             %x and y are the coordinates of the center of the circle
             %r is the radius of the circle

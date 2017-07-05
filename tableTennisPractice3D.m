@@ -1,13 +1,13 @@
 %% Table tennis practice using the table tennis class
 
 % original seed was 1
-clc; clear; close all; %rng(5);
+clc; clear; close all; rng(1);
 std = 0.05;
-robot_side = 'LEFT';
+robot_side = 'RIGHT';
 initializeWAM;
 
 % drawing related params
-OPT.draw = false; % draw the simulation
+OPT.draw = true; % draw the simulation
 OPT.record = false; % record the simulation
 
 % planning related flags and parameters
@@ -17,7 +17,6 @@ OPT.train = true; % train a lookup table using optimization results
 OPT.lookup.flag = false; % use lookup table instead of optimizing online
 OPT.lookup.mode = 'closest'; %'GP-regress'; %'lin-regress';
 OPT.lookup.savefile = 'left_lookup_260617'; %'LookupTable-16-May-2016'; 
->>>>>>> c0ee940d3a9487370aef912f1ab246656d30448e
 
 % initial ball parameters
 OPT.distr.type = 'normal';
@@ -37,4 +36,4 @@ OPT.camera.cov = 0.0; %5e-4;
 % sampling time
 dt = 0.01; 
 tt = TableTennis3D(wam,dt,q0,OPT);
-tt.practice(q0,500);
+tt.practice(q0,1);
