@@ -2,7 +2,7 @@
 
 clc; clear; close all;
 loadTennisTableValues;
-trial = 3;
+trial = 58;
 file = ['~/Dropbox/data/real_ball_data_0317/balls_', ...
         int2str(trial), '.txt'];  
 M = dlmread(file);
