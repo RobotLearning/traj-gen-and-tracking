@@ -22,9 +22,9 @@ end
 
 % adjust x0
 % y vel seems to be estimated too high
-x0(4) = 0.92*x0(4);
-x0(5) = 0.88*x0(5);
-x0(6) = 0.90*x0(6);
+% x0(4) = 0.92*x0(4);
+% x0(5) = 0.88*x0(5);
+% x0(6) = 0.90*x0(6);
 
 ballEsts = zeros(length(t),2*dim+1);
 % x0 = estimateInitialState(ballFlightFnc,t,b,num_init_balls);

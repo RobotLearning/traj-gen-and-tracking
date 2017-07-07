@@ -27,7 +27,7 @@ stand_x = -0.45;
 stand_y = -0.59;
 
 % Floor 
-floor_level = -1.71;
+floor_level = -1.66;
 
 %% Rebound and contact model parameters
 
@@ -73,7 +73,7 @@ Cdrag = 0.1414;
 % lift coefficient for spin 
 % (Clift = (4/3)*CM*pi*rho*(r^3)/m)
 Clift = 0.001;
-mu = 0.05; % dynamic coeff of friction - is this accurate?
+mu = 0.10; % dynamic coeff of friction - is this accurate?
 
 %% Values for drawing the table
 
