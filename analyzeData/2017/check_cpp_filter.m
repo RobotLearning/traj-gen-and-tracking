@@ -4,7 +4,7 @@ clc; clear; close all;
 loadTennisTableValues;
 trial = 3;
 file = ['~/Dropbox/data/real_ball_data_0317/balls_', ...
-        int2str(trial), '.txt'];  
+        int2str(trial), '.txt'];
 M = dlmread(file);
 % ball data
 B = M(:,1:10); % cam id and status cols

@@ -12,7 +12,7 @@
 % \param[out]    Xlink   : array of link position
 % \param[out]    Amats   : homogeneous transformation matrices of each link
 %
-
+% TODO: check if all 4 outputs are necessary always!
 function [Xlink,Xorigin,Xaxis,Ahmat] = barrettWamKinematics(Q,PAR)
 
 NDOF = 7;
@@ -143,19 +143,6 @@ Ai05 = Ai04 * Hi45;
 Ai06 = Ai05 * Hi56;
 Ai07 = Ai06 * Hi67;
 Ai08 = Ai07 * Hi78;
-
-% Ahmat(1,1:3,1:4) = Ai02;
-% Ahmat(1,4,4) = 1;
-% Ahmat(2,1:3,1:4) = Ai03;
-% Ahmat(2,4,4) = 1;
-% Ahmat(3,1:3,1:4) = Ai04;
-% Ahmat(3,4,4) = 1;
-% Ahmat(4,1:3,1:4) = Ai05;
-% Ahmat(4,4,4) = 1;
-% Ahmat(5,1:3,1:4) = Ai07;
-% Ahmat(5,4,4) = 1;
-% Ahmat(6,1:3,1:4) = Ai08;
-% Ahmat(6,4,4) = 1;
 
 Ahmat(1,:,:) = Ai02;
 Ahmat(2,:,:) = Ai03;
