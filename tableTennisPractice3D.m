@@ -7,7 +7,7 @@ robot_side = 'RIGHT';
 initializeWAM;
 
 % drawing related params
-OPT.draw = true; % draw the simulation
+OPT.draw = false; % draw the simulation
 OPT.record = false; % record the simulation
 
 % planning related flags and parameters
