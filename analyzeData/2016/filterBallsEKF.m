@@ -1,10 +1,9 @@
 % Filter balls with EKF
 % Initialize using a polynomial filter
 
-function ballEsts = filterBallsEKF(t,b,ekfFilter,spin)
+function ballEsts = filterBallsEKF(t,b,ekfFilter,num_init_balls,spin)
 
 % initialize the EKF filter with nonlinear ls estimate
-num_init_balls = 5;
 t(1:num_init_balls)
 b(1:num_init_balls,:)'
 x0 = estimateInitBall(t(1:num_init_balls),b(1:num_init_balls,:)',spin)

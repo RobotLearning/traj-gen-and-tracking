@@ -82,7 +82,7 @@ function xdot = rebound_const_spin_model(xdot,w0,e_t,mu,r)
 %         alpha = mu * (1 + e_t) * abs(xdot(3))/norm(vbT);
 %     end
     % REPLACING ABOVE SINCE BALL ALWAYS SLIDES IT SEEMS
-    alpha = mu * (1 + e_t) * abs(xdot(3))/norm(vbT)
+    alpha = mu * (1 + e_t) * abs(xdot(3))/norm(vbT);
 
     Av = diag([1.0-alpha,1.0-alpha,-e_t]); 
     Bv = [0, alpha*r, 0; 
