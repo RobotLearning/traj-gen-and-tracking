@@ -27,7 +27,7 @@ stand_x = -0.45;
 stand_y = -0.59;
 
 % Floor 
-floor_level = -1.66;
+floor_level = -1.67;
 
 %% Rebound and contact model parameters
 

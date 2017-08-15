@@ -95,8 +95,8 @@ links(7).mcm(3) = 0.08286;
 links(7).inertia(1,1) = 0.01129; 
 links(7).inertia(1,2) = -0.00006;
 links(7).inertia(1,3) = -0.00006;  
-links(7).inertia(2,2) = 0.01086; 
-links(7).inertia(2,3) = 0.00001;  
+links(7).inertia(2,2) = 0.01086;
+links(7).inertia(2,3) = 0.00001;
 links(7).inertia(3,3) = 0.00016;
 
 % make sure inertia matrices are symmetric

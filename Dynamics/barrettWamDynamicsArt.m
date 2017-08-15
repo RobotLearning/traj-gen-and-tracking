@@ -27,21 +27,8 @@ ZEB  =  0.045;              %!< elbow z offset
 YWR  = -0.045;              %!< elbow y offset (back to forewarm)
 ZWR  =  0.045;              %!< elbow z offset (back to forearm)
 ZWFE  =  0.255;              %!< forearm length (minus 4.5cm)
-FYOFF  =  0.05;              %!< y offset of rotation axis of fingers
-FZOFF  =  (0.15-.015);       %!< z offset from WAA to palm (measured from robot with load cell, load cell subtracted)
-F1SEGY  =  0.07;             %!< length of 1st finger segment
-F1SEGZ  =  0.002;            %!< vertical offset of axis of 2nd finger segment
-F2LENGTH  =  0.056;          %!< lenth of 2nd finger segment
-FWIDTH  =  0.025;            %!< finger width
-FT2BRATIO  =  3.11;          %!< ratio of finger movement to finger base movement
-ANGLE2NDSEG  =  0.733;       %!< angle between 1st and 2nd finger segment when fingers are full extended
 
 g = 9.81; % gravity
-
-% the 1st to 2nd finger segment angles
-rf2ndSegAngle  =  ANGLE2NDSEG;
-mf2ndSegAngle  =  ANGLE2NDSEG;
-lf2ndSegAngle  =  ANGLE2NDSEG;
 
 % extract parameters
 link0 = PAR.link0;

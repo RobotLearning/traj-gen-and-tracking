@@ -2,22 +2,14 @@
 
 clc; clear; close all;
 loadTennisTableValues;
-file = '~/Dropbox/data/balls_0317.txt';
-M = dlmread(file);
-% ball data
-B = M(:,1:10); % cam id and status cols
+file = '~/Desktop/data/balls_050817.txt';
+B = dlmread(file);
 
-[B1,B3,~] = prune_ball_data(B);
-
-% adapted from get_trials function
-% if there is more than threshold second difference it means its a new trial
-t_threshold = 0.8;
-diffBall3 = diff(B3);
-idxStart3 = find(diffBall3(:,1) > t_threshold);
-idxStart3 = [1;idxStart3+1];
-tStart3 = B3(idxStart3,1);
-
-idx_start = floor(500 * tStart3);
+%[B1,B3,~] = prune_ball_data(B);
+% if there is more than threshold y-difference it means its a new trial
+thresh = -1.0;
+diffBall3 = diff(B(:,9));
+idx_start = [1; find(diffBall3 < thresh) + 1];
 num_trials = length(idx_start);
 
 balls = cell(1,num_trials);
@@ -31,7 +23,7 @@ balls{num_trials} = B(idx_start(num_trials):end,:);
 
 for trial = 1:num_trials
     % save trial
-    filename = sprintf('~/Dropbox/data/real_ball_data_0317/balls_%d.txt',trial);
+    filename = sprintf('~/Desktop/data/real_ball_data_050817/balls_%d.txt',trial);
     dlmwrite(filename,balls{trial},'delimiter','\t','precision',4)
 end
 
