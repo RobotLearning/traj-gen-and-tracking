@@ -268,38 +268,6 @@ classdef mILC < ILC
             u = trj.unom;
             
         end
-        
-        %% Testing quasi-Newton
-        % TODO: implement Broyden/BFGS as well as least squares here
-        function u = feedforwardQN(obj,trj,y)
-            
-            trj = trj.downsample(obj.downsample);
-            dimu = size(obj.inp_last,1);
-            Nu = size(obj.inp_last,2);
-            N = Nu + 1;
-            rate = size(y,2)/N;
-            idx = rate * (1:N);
-            y = y(:,idx);            
-            e = y - trj.s;
-            e = e(:,2:end);        
-
-            
-            L = obj.H * (obj.F' * obj.Ql);            
-            
-            u = obj.inp_last(:) - L * e(:);
-            
-            % revert from lifted vector from back to normal form
-            u = reshape(u,dimu,Nu);
-            
-            trj.unom = u;
-            trj = trj.upsample(obj.downsample);
-            u = trj.unom;
-            
-        end
-           
-        
-
-        
     end
     
 end

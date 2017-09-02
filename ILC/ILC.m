@@ -26,7 +26,7 @@ classdef (Abstract) ILC < handle
     methods (Abstract)
         
         % apply feedforward control (sequence of control signals)
-        feedforward(i,trj,model,x)        
+        feedforward(i,trj,model,x)
         
     end
     

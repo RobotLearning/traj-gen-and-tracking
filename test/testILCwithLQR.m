@@ -71,7 +71,7 @@ num_trials = 2;
 
 for i = 1:num_trials
     
-    us = ilc.feedforward(traj,y);     
+    us = ilc.feedforward(traj,y);
     traj.unom = us;
     % get the measurements
     y = lin.observeWithFeedbackErrorForm(traj,x0);

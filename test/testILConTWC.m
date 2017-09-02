@@ -1,21 +1,6 @@
 %% Simulate trajectories for the two-wheeled robot kinematical model
 
-%# store breakpoints
-tmp = dbstatus;
-save('tmp.mat','tmp')
-
-%# clear all
-close all
-clear classes %# clears even more than clear all
-clc
-
-%# reload breakpoints
-load('tmp.mat')
-dbstop(tmp)
-
-%# clean up
-clear tmp
-delete('tmp.mat')
+clc; clear; close all;
 
 %% Set system parameters and constraints
 
@@ -98,13 +83,13 @@ twc.animate(y,s(1:2,:));
 %% Iterative Learning Control
 
 num_trials = 5;
-ilc = aILC(twc,traj);
-%ilc = mILC(twc,traj);
+%ilc = aILC(twc,traj);
+ilc = mILC(twc,traj);
 
 for i = 1:num_trials
     
     %u = ilc.feedforward(traj,y);
-    u = ilc.feedforward(traj,twc,y);    
+    u = ilc.feedforward(traj,y);    
     % get error (observed trajectory deviation)
     y = twc.observe(t,x0,u);
     traj.addPerformance(u,y,twc.COST,ilc);

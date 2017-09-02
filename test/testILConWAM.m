@@ -1,29 +1,8 @@
 %% Simulate trajectories for the Barrett WAM
 
-%# store breakpoints
-tmp = dbstatus;
-save('tmp.mat','tmp')
-
-%# clear all
-close all
-clear classes %# clears even more than clear all
-clc
-
-%# reload breakpoints
-load('tmp.mat')
-dbstop(tmp)
-
-%# clean up
-clear tmp
-delete('tmp.mat')
-
-% folder that stores all data
-save_folder = '../robolab/barrett/saveData/';
-% folder that stores all config files, link parameters, etc.
-config_folder = '../robolab/barrett/config/';
-
-%% Define constants and parameters
-
+clc; clear; close all;
+robot_side = 'RIGHT';
+% Define constants and parameters
 initializeWAM;
 % load initial LQR
 LQR = load('LQR0.txt');
@@ -67,9 +46,9 @@ loadWAMTrajFromFile;
 % lqrPos = LQR; %traj.K(:,:,1); 
 % lqrPos(:,8:end) = 0.0;
 % for i = 1:traj.N-1, traj.K(:,:,i) = lqrPos; end
-for i = 1:traj.N-1, traj.K(:,:,i) = LQR; end;
+%for i = 1:traj.N-1, traj.K(:,:,i) = LQR; end;
 % PD control
-%for i = 1:traj.N-1, traj.K(:,:,i) = PD; end;
+for i = 1:traj.N-1, traj.K(:,:,i) = PD; end;
 
 %% Evolve system dynamics and animate the robot arm
 
@@ -95,10 +74,10 @@ wam.plot_outputs(traj);
 
 %% Start learning with ILC
 
-num_trials = 10;
+num_trials = 5;
 %ilc = aILC(wam,traj,10);
-ilc = mILC(wam,traj,10); %downsample 10
-%ilc = bILC(traj);
+%ilc = mILC(wam,traj,10); %downsample 10
+ilc = bILC(traj,wam);
 
 for i = 1:num_trials
     % get next inputs

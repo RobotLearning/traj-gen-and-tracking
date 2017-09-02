@@ -161,7 +161,7 @@ legend('system state x1e', 'desired trajectory s');
 title('Error form of LQR');
 
 %% Test LQR with DMP for discrete system
-
+%{
 clc; clear; close all;
 dimx = 2;
 dimu = 1;
@@ -245,3 +245,4 @@ title('Error form of LQR');
 % 
 % lin.plot_inputs(traj);
 % lin.plot_outputs(traj);
+%}

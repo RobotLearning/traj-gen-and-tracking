@@ -1,6 +1,7 @@
 %% ILC on BarrettWAM dynamics modifying discrete DMPs now
 
-%clc; clear; close all;
+clc; clear; close all;
+firsttime = true;
 % TEST SCRIPT FOR HUMANOIDS 2015
 
 %% Initialize WAM: define constants and parameters

@@ -17,13 +17,13 @@ SIM.h = 0.002; % 500 Hz recorded data
 % measurement noise covariance (eps_m * eye)
 SIM.eps_m = 0e-10;
 % integration method
-SIM.int = 'Symplectic Euler';
+SIM.int = 'RK4'; %'Symplectic Euler';
 % reference trajectory in joint space?
 SIM.jref = true;
 
 % load (nominal) parameter values for robot dynamics
-%loadActualBarrettValues;
-loadNominalBarrettValues;
+loadActualBarrettValues;
+%loadNominalBarrettValues;
 
 % We observe all joints and all joint velocities
 PAR.links = links;
@@ -79,15 +79,21 @@ PD(7,N_DOFS+7) = -0.075;
 q_right = [1.0; -0.2; -0.1; 1.8; -1.57; 0.1; 0.3];
 q_left = [-1.0; 0.0; 0.0; 1.5; -1.57; 0.1; 0.3];
 q_centre = [0.0; 0.0; 0.0; 1.5; -1.75; 0.0; 0.0];
-switch robot_side
-    case 'RIGHT'
-        q0 = q_right;
-    case 'LEFT'
-        q0 = q_left;
-    case 'CENTRE'
-        q0 = q_centre;
-    otherwise
-        error('Pose not identified!');
+
+try
+    switch robot_side
+        case 'RIGHT'
+            q0 = q_right;
+        case 'LEFT'
+            q0 = q_left;
+        case 'CENTRE'
+            q0 = q_centre;
+        otherwise
+            error('Pose not identified!');
+    end
+catch
+    warning('Robot side was not set. Init to right');
+    q0 = q_right;
 end
 qd0 = zeros(7,1);
 Q0 = [q0;qd0];
