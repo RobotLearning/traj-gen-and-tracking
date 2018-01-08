@@ -26,6 +26,8 @@ classdef TableTennis3D < handle
         noise
         % build offline policy (a structure)
         offline
+        % time to reach desired point on opponents court
+        time2reach
         
     end
     
@@ -34,6 +36,8 @@ classdef TableTennis3D < handle
         %% CONSTRUCTOR AND SUBMETHODS
         function obj = TableTennis3D(wam,dt,q0,opt)
             
+            % time to reach desired point on opponents court
+            obj.time2reach = 0.8; 
             % sampling time
             obj.dt = dt;
             % initialize the robot
@@ -90,8 +94,8 @@ classdef TableTennis3D < handle
         % init handle for recording video and drawing
         function init_handle(obj,opt,q0)            
             % initialize animation
-            obj.draw.flag = opt.draw;
-            if opt.draw                
+            obj.draw = opt.draw;
+            if opt.draw.setup                
                 obj.initAnimation(q0);
                 obj.handle.record = false;
                 if opt.record
@@ -209,16 +213,21 @@ classdef TableTennis3D < handle
                 filter = obj.getBallEstimate(filter,x,xd,o);
                 [q,qd] = obj.planFiniteStateMachine(filter,q0);
                 [x,xd,o] = obj.robot.calcRacketState(q,qd);                
-                if obj.draw.flag
+                if obj.draw.setup
                     obj.updateAnimation(q);
                 end
                 timeSim = timeSim + obj.dt;                
             end
             
             % clear the ball path predicted and robot generated traj
-            if obj.draw.flag && isfield(obj.handle,'ballPred')
+            if obj.draw.setup 
                 set(obj.handle.robotCartesian,'Visible','off');
-                set(obj.handle.ballPred,'Visible','off');
+                if isfield(obj.handle,'ballPredIn')
+                    set(obj.handle.ballPredIn,'Visible','off');
+                end
+                if isfield(obj.handle,'ballActOut') 
+                    set(obj.handle.ballActOut,'Visible','off');
+                end
             end
         end
         
@@ -239,11 +248,13 @@ classdef TableTennis3D < handle
             % if stage is at PREDICT
             if obj.plan.stage == 1 && filter.x(2) > table_center && filter.x(5) > 0.5   
                 switch obj.plan.method
-                    case 'LAZY'
-                        obj.lazy_player(q0,filter);
+                    case 'DEFENSIVE'
+                        obj.defensive_player(q0,filter);
                     case 'FOCUSED'
                         obj.focused_player(q0,filter);
                     case 'VHP'
+                        % VHP implementation is similar to
+                        % focused player but with hitting plane fixed
                         obj.focused_player(q0,filter);
                     otherwise
                         error('Alg not specified!');
@@ -265,7 +276,7 @@ classdef TableTennis3D < handle
             qd = obj.plan.qd(:,obj.plan.idx);
         end
         
-        % Lazy player
+        % Defensive player
         % does not fix q0, landing position, landing time
         % does not fix racket center to hit the incoming ball
         % returns at estimated landing time to arbitrary q with zero velocity
@@ -273,16 +284,16 @@ classdef TableTennis3D < handle
         % Implementing still the finite state machine rules
         % Since we cannot run the optimization fast enough in MATLAB
         % to enable MPC like correction
-        function lazy_player(obj,q0,filter)
+        function defensive_player(obj,q0,filter)
             predictTime = 1.2;
-            [ballPred,ballTime,numBounce,time2Passtable] = ...
+            [ballPredIn,ballTime,numBounce,time2Passtable] = ...
                 predictBallPath(obj.dt,predictTime,filter,obj.table);
             if checkBounceOnOppTable(filter,obj.table)
                 obj.plan.stage = 3; % FINISH
             elseif numBounce ~= 1
                 disp('Ball does not bounce once! Not hitting!');
                 obj.plan.stage = 3; % FINISH
-            elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPred)
+            elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPredIn)
                 disp('No intersection with workspace! Not hitting!');
                 obj.plan.stage = 3; % FINISH
             else
@@ -291,7 +302,7 @@ classdef TableTennis3D < handle
                 dofs = 7; q0dot = zeros(dofs,1);
                 time2return = 1.0;
                 models.ball.time = ballTime;
-                models.ball.pred = ballPred;
+                models.ball.pred = ballPredIn;
                 models.ball.radius = obj.ball.radius;
                 models.table.xmax = obj.table.WIDTH/2;
                 models.wall.height = obj.wall;
@@ -310,10 +321,15 @@ classdef TableTennis3D < handle
                 [x,xd,o] = obj.robot.calcRacketState(q,qd);
                 [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);
 
-                if obj.draw.flag
+                if obj.draw.setup 
                     % Debugging the trajectory generation                 
-                    obj.handle.robotCartesian = scatter3(x(1,:),x(2,:),x(3,:));
-                    obj.handle.ballPred = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
+                    if obj.draw.robot_traj
+                        obj.handle.robotCartesian = scatter3(x(1,:),x(2,:),x(3,:));
+                    end
+
+                    if obj.draw.ball.pred.in
+                        obj.handle.ballPredIn = scatter3(ballPredIn(1,:),ballPredIn(2,:),ballPredIn(3,:));
+                    end
                 end
             
                 obj.plan.q = q;
@@ -327,14 +343,14 @@ classdef TableTennis3D < handle
         % It fixes a q0, generates both striking and returning polynomials
         function focused_player(obj,q0,filter)
             predictTime = 1.2;
-            [ballPred,ballTime,numBounce,time2Passtable] = ...
+            [ballPredIn,ballTime,numBounce,time2Passtable] = ...
                 predictBallPath(obj.dt,predictTime,filter,obj.table);
             if checkBounceOnOppTable(filter,obj.table)
                 obj.plan.stage = 3; % FINISH
             elseif numBounce ~= 1
                 disp('Ball does not bounce once! Not hitting!');
                 obj.plan.stage = 3; % FINISH
-            elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPred)
+            elseif ~checkIfBallIsInsideWorkspace(obj.robot,ballPredIn)
                 disp('No intersection with workspace! Not hitting!');
                 obj.plan.stage = 3; % FINISH
             else
@@ -344,14 +360,14 @@ classdef TableTennis3D < handle
                 if obj.offline.train || obj.offline.use
                     obj.offline.b0 = filter.x';
                 end
-                obj.returnBall2Center(ballPred,ballTime,q0);            
+                obj.returnBall2Center(ballPredIn,ballTime,q0);            
             end            
         end
         
         % Fix a desired landing point and desired landing time
         % as well as a desired return time to q0
         % For now only two methods : VHP and free Time
-        function returnBall2Center(obj,ballPred,ballTime,q0)                
+        function returnBall2Center(obj,ballPredIn,ballTime,q0)                
             
             dofs = 7;
             % land the ball on the centre of opponents court
@@ -364,14 +380,12 @@ classdef TableTennis3D < handle
             if obj.offline.use
                 [qf,qfdot,T] = obj.lookup();
             else
-                time2reach = 0.8; % time to reach desired point on opponents court    
-
                 % Compute traj here
                 if strcmp(obj.plan.method,'VHP')
-                    [qf,qfdot,T] = calcPolyAtVHP(obj.robot,obj.plan.vhp.y,time2reach,ballDes,ballPred,ballTime,q0);
+                    [qf,qfdot,T] = calcPolyAtVHP(obj.robot,obj.plan.vhp.y,obj.time2reach,ballDes,ballPredIn,ballTime,q0);
                 else
-                    racketDes = obj.planRacket(ballDes,ballPred,ballTime,time2reach,q0);
-                    [qf,qfdot,T] = optimPoly(obj.robot,racketDes,ballPred,q0,time2return);
+                    racketDes = obj.planRacket(ballDes,ballPredIn,ballTime,obj.time2reach,q0);
+                    [qf,qfdot,T] = optimPoly(obj.robot,racketDes,ballPredIn,q0,time2return);
                 end
                 % If we're training an offline model save optimization result
                 if obj.offline.train
@@ -384,12 +398,17 @@ classdef TableTennis3D < handle
             [x,xd,o] = obj.robot.calcRacketState(q,qd);
             [q,qd,qdd] = obj.checkContactTable(q,qd,qdd,x);
 
-            if obj.draw.flag
+            if obj.draw.setup 
                 % Debugging the trajectory generation                 
-                obj.handle.robotCartesian = scatter3(x(1,:),x(2,:),x(3,:));
-                obj.handle.ballPred = scatter3(ballPred(1,:),ballPred(2,:),ballPred(3,:));
+                if obj.draw.robot_traj
+                    obj.handle.robotCartesian = scatter3(x(1,:),x(2,:),x(3,:));
+                end
+                
+                if obj.draw.ball.pred.in
+                    obj.handle.ballPredIn = scatter3(ballPredIn(1,:),ballPredIn(2,:),ballPredIn(3,:));
+                end
             end
-            
+
             obj.plan.q = q;
             obj.plan.qd = qd;
         end
@@ -399,7 +418,7 @@ classdef TableTennis3D < handle
         function racketDes = planRacket(obj,ballDes,ballPred,ballTime,time2reach,q0)
             
             %Calculate ball outgoing velocities attached to each ball pos
-            fast = true;            
+            fast = true;
             tic;
             racketDes = calcRacketStrategy(ballDes,ballPred,ballTime,time2reach,fast);
             logicalStr = {'Slow','Fast'};
@@ -525,7 +544,9 @@ classdef TableTennis3D < handle
             racketRot = quat2Rot(o);
             racket.normal = racketRot(:,3);
             dt = obj.dt;
+            velPre = obj.ball.vel;
             obj.ball.evolve(dt,racket);
+            velPost = obj.ball.vel;
             obs = obj.emulateCamera();
             obj.plan.obs = [obj.plan.obs, obs(:)];
 
@@ -537,6 +558,20 @@ classdef TableTennis3D < handle
                 filter.predict(dt,0);
                 filter.update(obs,0);           
             end
+            
+            if velPre(2) > 0 && velPost(2) < 0
+                % there was a hit and we can plot it
+                if obj.draw.ball.act.out
+                    ballPos = obj.ball.pos;
+                    t = dt:dt:obj.time2reach;
+                    mult = [0.9,0.9,0.8]; % multiplier
+                    ballPredOut(1,:) = ballPos(1) + mult(1) * velPost(1) * t;
+                    ballPredOut(2,:) = ballPos(2) + mult(2) * velPost(2) * t;
+                    ballPredOut(3,:) = ballPos(3) + mult(3) * velPost(3) * t + obj.ball.g*t.*t/2;
+                    obj.handle.ballActOut = scatter3(ballPredOut(1,:),ballPredOut(2,:),ballPredOut(3,:));
+                end
+            end
+           
         end
         
         % Initialize filter based on observations so far
@@ -601,7 +636,7 @@ classdef TableTennis3D < handle
             ylim([dist_to_table - table_length - tol_y, 3*tol_y]);
             zlim([floor_level, table_z + 5*tol_z]);
             %legend('ball','robot');
-            %fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
+            fill3(T(:,1),T(:,2),T(:,3),[0 0.7 0.3]);
             % faces matrix 6x4
             F = [1 2 3 4;
                  5 6 7 8;

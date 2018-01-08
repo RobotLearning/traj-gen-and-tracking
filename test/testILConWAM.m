@@ -76,8 +76,8 @@ wam.plot_outputs(traj);
 
 num_trials = 5;
 %ilc = aILC(wam,traj,10);
-%ilc = mILC(wam,traj,10); %downsample 10
-ilc = bILC(traj,wam);
+ilc = mILC(wam,traj,10); %downsample 10
+%ilc = bILC(traj,wam);
 
 for i = 1:num_trials
     % get next inputs

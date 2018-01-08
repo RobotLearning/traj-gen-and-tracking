@@ -7,11 +7,14 @@ robot_side = 'RIGHT';
 initializeWAM;
 
 % drawing related params
-OPT.draw = false; % draw the simulation
+OPT.draw.setup = true; % draw the simulation
+OPT.draw.ball.pred.in = false;
+OPT.draw.ball.act.out = true;
+OPT.draw.robot_traj = true;
 OPT.record = false; % record the simulation
 
 % planning related flags and parameters
-OPT.plan.method = 'FOCUSED'; % FOCUSED , VHP, LAZY
+OPT.plan.method = 'FOCUSED'; % FOCUSED , VHP, DEFENSIVE
 OPT.plan.vhp.flag = false;
 OPT.plan.vhp.y = -0.6;
 OPT.train = true; % train a lookup table using optimization results

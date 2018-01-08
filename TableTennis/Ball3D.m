@@ -380,6 +380,7 @@ classdef Ball3D < handle
                               
                 fprintf('Hit at x = %f, y = %f, z = %f\n',...
                      xContact(1),xContact(2),xContact(3));
+                 
             end
         end
         

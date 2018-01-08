@@ -10,7 +10,9 @@ function velOut = calcBallVelOut3D(ballDes,ballPos,time2reach,par)
     fast = par.fast;
     gravity = par.g;
     Cdrag = par.Cdrag;
-
+    dt = 0.02;
+    %t = dt:dt:time2reach;
+    
     if fast
         % desired pos is in the centre of opponents court
         ballOutVel(1) = (ballDes(1) - ballPos(1))/time2reach;
@@ -19,6 +21,8 @@ function velOut = calcBallVelOut3D(ballDes,ballPos,time2reach,par)
                         0.5*gravity*time2reach^2)/time2reach;
         % hack for now
         velOut = [1.1;1.1;1.2] .* ballOutVel(:);
+        %ballOut = ballPos + velOut * t;
+        %ballOut(3,:) = ballOut(3,:) + gravity * t/2;
         return;
     end
 
